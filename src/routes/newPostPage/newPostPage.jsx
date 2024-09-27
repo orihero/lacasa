@@ -69,7 +69,7 @@ function NewPostPage() {
       }
       console.log(extFiles);
 
-      const caption = "";
+      const caption = Object.values(form).reduce((p, c) => p + c + "\n", "");
 
       // !Upload to telegram
       try {
@@ -83,7 +83,7 @@ function NewPostPage() {
           JSON.stringify(
             photos.map((e, i) =>
               i == photos.length - 1
-                ? { type: "photo", media: e }
+                ? { type: "photo", media: e, caption }
                 : { type: "photo", media: e }
             )
           )
