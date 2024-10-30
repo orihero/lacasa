@@ -1,15 +1,28 @@
-import SearchBar from "../../components/searchBar/SearchBar";
+import { useEffect } from "react";
+import { useListStore } from "../../lib/adsListStore";
 import HorizontalList from "../horizontalList/HorizontalList";
-import ListPage from "../listPage/listPage";
 import "./homePage.scss";
 
 function HomePage() {
+  const { fetchAdsList } = useListStore();
+  useEffect(() => {
+    fetchAdsList();
+  }, []);
+
   return (
     <div className="container">
-       <div className={''}>
-                {/* <img src="/cards/bg1.png" alt="" /> */}
-                <iframe width="100%" height="640" frameBorder="0" allow="xr-spatial-tracking; gyroscope; accelerometer" allowFullScreen scrolling="no" src="https://app.cloudpano.com/tours/F_bT4A587K?disable=logo,sound,ribbon,request,controls,leadgen,floorplan,watermark"></iframe>
-            </div>
+      <div className={""}>
+        {/* <img src="/cards/bg1.png" alt="" /> */}
+        <iframe
+          width="100%"
+          height="640"
+          frameBorder="0"
+          allow="xr-spatial-tracking; gyroscope; accelerometer"
+          allowFullScreen
+          scrolling="no"
+          src="https://app.cloudpano.com/tours/F_bT4A587K?disable=logo,sound,ribbon,request,controls,leadgen,floorplan,watermark"
+        ></iframe>
+      </div>
       {/* <div className="homePage">
         <div className="textContainer">
           <div className="wrapper">

@@ -4,17 +4,10 @@
   border-radius: 8px;
   background-color: white;
   border: 1.5px solid #f0effb;
-  margin: 40px 0px;
   overflow: visible;
   position: relative;
+  transition: ease-in-out 0.25s;
   cursor: pointer;
-
-  img {
-    width: 352px;
-    height: 200px;
-    object-fit: cover;
-    border-radius: 8px 8px 0px 0px;
-  }
 
   .badge {
     position: absolute;
@@ -97,4 +90,8 @@
       height: 20px;
     }
   }
+}
+
+.hCard:hover {
+  box-shadow: 1px 1px 10px 2px rgba(0, 0, 0, 0.2);
 }

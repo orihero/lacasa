@@ -1,48 +1,53 @@
 import React from "react";
 import "./hCard.scss";
-import { Link } from "react-router-dom";
+import ImageCarusel from "../ImageCarusel/ImageCarusel";
 
-function HorizontalCard() {
+function HorizontalCard({ data }) {
   return (
-    <Link to={`/21`}>
-      <div className="hCard">
-        <img
-          src="https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
-          alt=""
-        />
-        <div className="badge">
-          <img src="/badge.png" />
-          <img src="/icons/stars.svg" alt="" className="icon" />
-          <p>Popular</p>
+    <div className="hCard">
+      <ImageCarusel items={data.photos} />
+      <div className="badge">
+        <img src="/badge.png" />
+        <img src="/icons/stars.svg" alt="" className="icon" />
+        <p>Popular</p>
+      </div>
+      <div className="textContainer">
+        <div className="price">
+          <h2>
+            ${data.price.length > 0 ? data.price : "-"}
+            <span>/month</span>
+          </h2>
+          <h1>
+            {data.title.length > 15
+              ? data.title?.slice(0, 15) + "..."
+              : data.title}
+          </h1>
         </div>
-        <div className="textContainer">
-          <div className="price">
-            <h2>
-              $2,095<span>/month</span>
-            </h2>
-            <h1>Palm Harbor</h1>
+        <p className="address">
+          {" "}
+          {data.address.length > 25
+            ? data.address?.slice(0, 25) + "..."
+            : data.address}
+        </p>
+        <div className="line" />
+        <div className="row">
+          <div className="item">
+            <img alt="" width={10} src="/icons/location.svg" />
+            <p>{data.city}</p>
           </div>
-          <p className="address">2699 Green Valley, Highland Lake, FL</p>
-          <div className="line" />
-          <div className="row">
-            <div className="item">
-              <img alt="" src="/icons/bed.svg" />
-              <p>3 beds</p>
-            </div>
-            <div className="item">
-              <img alt="" src="/icons/bath.svg" />
-              <p>2 bathrooms</p>
-            </div>
-            <div className="item">
-              <img alt="" src="/icons/meters.svg" />
-              <p>
-                5x7 m<sup>2</sup>
-              </p>
-            </div>
+          <div className="item">
+            <img alt="" src="/icons/bed.svg" />
+            <p>{data.rooms} rooms</p>
+          </div>
+          <div className="item">
+            <img alt="" src="/icons/meters.svg" />
+            <p>
+              {data.area.length > 0 ? data.area : "-"} m<sup>2</sup>
+            </p>
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

@@ -1,23 +1,40 @@
+@import "../../responsive.scss";
+
 .profileUpdatePage {
   height: 100%;
   display: flex;
 
   .formContainer {
-    flex:3;
+    flex: 3;
     display: flex;
     align-items: center;
     justify-content: center;
     form {
       display: flex;
-      flex-direction: column;
-      gap: 20px;
+      flex-direction: row-reverse;
+      justify-content: space-around;
+      align-items: flex-start;
+      width: 100%;
+      padding: 20px 0;
+
+      .inputs {
+        margin: 20px 0;
+        width: 50%;
+
+        @include md {
+          width: 100%;
+        }
+      }
 
       .item {
         display: flex;
         flex-direction: column;
         gap: 5px;
-
-        label {
+        :first-child {
+          margin-top: 20px;
+        }
+        :last-child {
+          margin-bottom: 20px;
         }
 
         input {
@@ -26,6 +43,7 @@
           border: 1px solid gray;
         }
       }
+
       button {
         padding: 20px;
         border-radius: 5px;
@@ -34,6 +52,12 @@
         color: white;
         font-weight: bold;
         cursor: pointer;
+        width: 100%;
+      }
+
+      @include md {
+        flex-direction: column;
+        gap: 15px;
       }
     }
   }
@@ -47,9 +71,13 @@
     align-items: center;
     justify-content: center;
 
-    .avatar{
+    .avatar {
       width: 50%;
       object-fit: cover;
+    }
+
+    @include md {
+      display: none;
     }
   }
 }

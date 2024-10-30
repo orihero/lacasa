@@ -1,10 +1,11 @@
 import { signInWithEmailAndPassword } from "firebase/auth";
 import "./login.scss";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { toast } from "react-toastify";
 
 function Login() {
+  const navigate = useNavigate();
   const handleLogin = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -13,11 +14,12 @@ function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       toast.success("User successfully logged in");
+      navigate("/profile");
     } catch (error) {
       console.error(Object.entries(error));
       toast.error(
         `Error
-        ${error?.code}`
+        ${error?.code}`,
       );
     }
   };

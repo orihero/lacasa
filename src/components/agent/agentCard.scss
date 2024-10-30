@@ -1,0 +1,73 @@
+@import "../../responsive.scss";
+
+.item-agent {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: space-between;
+  padding: 20px;
+  padding-right: 20px;
+  width: 60%;
+  box-shadow: 1px 1px 10px 1px rgba(1, 1, 1, 0.1);
+  border-radius: 6px;
+
+  @include md {
+    flex-direction: column;
+    width: 80%;
+  }
+  @include sm {
+    width: 80%;
+  }
+
+  .right-agent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .agent-btns {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    button {
+      padding: 12px 24px;
+      background-color: #fece51;
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+    }
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  span a {
+    color: blue;
+    text-decoration: underline;
+  }
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  img {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .stars {
+    display: flex;
+    gap: 5px;
+    .star-icon {
+      width: 10px !important;
+      height: 10px !important;
+    }
+  }
+}

@@ -33,7 +33,7 @@ function Navbar() {
           />
           <span>{currentUser.fullName}</span>
           <Link to="/profile" className="profile">
-            <div className="notification">3</div>
+            {/* <div className="notification">3</div> */}
             <span>Profile</span>
           </Link>
         </div>
@@ -57,10 +57,10 @@ function Navbar() {
           <img src="/logo.png" alt="" />
           <span>LamaEstate</span>
         </a>
-        <a href="/">Home</a>
-        <a href="/">About</a>
-        <a href="/">Contact</a>
-        <a href="/">Agents</a>
+        <Link to="/">Home</Link>
+        <Link to="/about">About</Link>
+        <Link to="/contact">Contact</Link>
+        <Link to="/agents">Agents</Link>
       </div>
       <div className="right">
         {renderRight()}

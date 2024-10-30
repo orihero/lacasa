@@ -42,32 +42,36 @@ function ProfileUpdatePage() {
   return (
     <div className="profileUpdatePage">
       <div className="formContainer">
-        <form onSubmit={onUpdateProfile}>
-          <h1>Update Profile</h1>
-          <Avatar
-            src={profimeImage}
-            onError={() => setProfimeImage("/avatar.jpg")}
-            onChange={(imgSource) => setProfimeImage(imgSource)}
-            accept=".jpg, .png, .gif, .bmp, .webp"
-            alt="Avatar"
-          />
-          <div className="item">
-            <label htmlFor="fullName">Full name</label>
-            <input id="fullName" name="fullName" type="text" />
+        <form className="form-update" onSubmit={onUpdateProfile}>
+          <div>
+            <Avatar
+              src={profimeImage}
+              onError={() => setProfimeImage("/avatar.jpg")}
+              onChange={(imgSource) => setProfimeImage(imgSource)}
+              accept=".jpg, .png, .gif, .bmp, .webp"
+              alt="Avatar"
+            />
           </div>
-          <div className="item">
-            <label htmlFor="phoneNumber">Phone number</label>
-            <input id="phoneNumber" name="phoneNumber" type="tel" />
+          <div className="inputs">
+            <h1>Update Profile</h1>
+            <div className="item">
+              <label htmlFor="fullName">Full name</label>
+              <input id="fullName" name="fullName" type="text" />
+            </div>
+            <div className="item">
+              <label htmlFor="phoneNumber">Phone number</label>
+              <input id="phoneNumber" name="phoneNumber" type="tel" />
+            </div>
+            <div className="item">
+              <label htmlFor="email">Email</label>
+              <input id="email" name="email" type="email" />
+            </div>
+            <div className="item">
+              <label htmlFor="password">Password</label>
+              <input id="password" name="password" type="password" />
+            </div>
+            <button>Update</button>
           </div>
-          <div className="item">
-            <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" />
-          </div>
-          <div className="item">
-            <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" />
-          </div>
-          <button>Update</button>
         </form>
       </div>
       <div className="sideContainer">

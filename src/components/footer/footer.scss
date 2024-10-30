@@ -1,0 +1,54 @@
+@import "../../responsive.scss";
+
+.footer {
+  background-color: #051d42;
+  padding: 10px;
+  padding-bottom: 10px;
+  padding-top: 20px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+
+  .hr-line {
+    margin: 15px 0;
+  }
+
+  .footer-list {
+    display: flex;
+    justify-content: space-between;
+
+    .links {
+      display: flex;
+      gap: 15px;
+    }
+
+    .social-icons {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    @include sm {
+      flex-direction: column;
+      gap: 15px;
+    }
+  }
+
+  .footer-copyright {
+    display: flex;
+    justify-content: space-between;
+    display: flex;
+    align-items: center;
+    span p {
+      color: #999;
+    }
+
+    img {
+      width: 50px;
+    }
+    @include sm {
+      flex-direction: column-reverse;
+      gap: 15px;
+    }
+  }
+}

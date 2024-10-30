@@ -1,11 +1,12 @@
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import "./register.scss";
-import { Link } from "react-router-dom";
-import { auth, db } from "../../lib/firebase";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { auth, db } from "../../lib/firebase";
+import "./register.scss";
 
 function Register() {
+  const navigate = useNavigate();
   const handleRegister = async (e) => {
     e.preventDefault();
 
@@ -25,14 +26,14 @@ function Register() {
       });
 
       toast.success("User successfully created");
-
+      navigate("/profile");
       //TODO create user related data
     } catch (error) {
       console.error(Object.entries(error));
       console.error(error);
       toast.error(
         `Error
-        ${error?.code}`
+        ${error?.code}`,
       );
     }
   };

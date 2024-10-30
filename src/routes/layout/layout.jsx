@@ -6,13 +6,18 @@ import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
+import Footer from "../../components/footer/Footer";
+import { useListStore } from "../../lib/adsListStore";
 
 function Layout() {
   const { fetchUserInfo } = useUserStore();
+  const { fetchAdsList } = useListStore();
   useEffect(() => {
+    fetchAdsList();
     const unSub = onAuthStateChanged(auth, (user) => {
       fetchUserInfo(user?.uid);
     });
+
     return () => {
       unSub();
     };
@@ -27,6 +32,9 @@ function Layout() {
         <Outlet />
       </div>
       <Notification />
+      <div className="footer">
+        <Footer />
+      </div>
     </div>
   );
 }
