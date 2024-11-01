@@ -75,15 +75,12 @@ function NewPostPage() {
         console.log(error);
       }
       console.log(extFiles);
-
-      const caption = Object.values(form).reduce((p, c) => p + c + "\n", "");
+      const caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
 
       // !Upload to telegram
       try {
         const form = new FormData();
-        form.append("chat_id", {
-          chat_id: import.meta.env.VITE_LECASA_CHANNEL_ID,
-        });
+        form.append("chat_id", import.meta.env.VITE_LECASA_CHANNEL_ID);
         form.append("protect_content", "true");
         form.append(
           "media",
