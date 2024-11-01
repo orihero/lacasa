@@ -1,46 +1,42 @@
 import React from "react";
 import "./agentCard.scss";
+import InstagramIcon from "./../../components/icons/InstagramIcon";
+import TelegramIcon from "./../../components/icons/TelegramIcon";
+import WebIcon from "./../../components/icons/WebIcon";
 
 const AgentCard = ({ agent }) => {
   return (
     <div key={agent.id} className="item-agent">
-      <div>
+      <div className="avatar-text">
+        <div>
+          <img
+            src={agent.avatar.length ? agent.avatar : "/avatar.jpg"}
+            alt=""
+          />
+        </div>
+        <div>
+          <span>
+            <img className="agent-icon" src="/icons/user1.svg" />{" "}
+            <b>{agent.name}</b>
+          </span>
+          <span>
+            <img className="agent-icon" src="/icons/phone.svg" />{" "}
+            <b>{agent.phone}</b>
+          </span>
+          <span>
+            <img className="agent-icon" src="/icons/email1.svg" />{" "}
+            <b>{agent.email}</b>
+          </span>
+        </div>
+      </div>
+      <div className="info">
         <span>
-          Name: <b>{agent.name}</b>
+          <img className="agent-icon" src="/icons/location.svg" />{" "}
+          <b>{agent.address}</b>
         </span>
-        <span>
-          Phone: <b>{agent.phone}</b>
-        </span>
-        <span>
-          E-mail: <b>{agent.email}</b>
-        </span>
-        <span>
-          Telegram:{" "}
-          <a href="https://t.me/@uy_bozor_joy_savdo" target="_blank">
-            {agent.telegram}
-          </a>
-        </span>
-        <span>
-          Instagram:{" "}
-          <a href="https://t.me/@uy_bozor_joy_savdo" target="_blank">
-            {agent.instagram}
-          </a>
-        </span>
-        <span>
-          Web site:{" "}
-          <a
-            href="https://ismoilabdujalilov6.wixsite.com/-site-1"
-            target="_blank"
-          >
-            {agent.website}
-          </a>
-        </span>
-        <span>
-          Address: <b>{agent.address}</b>
-        </span>
-        <span>
-          Review:{" "}
+        <span className="rev-ads">
           <span className="stars">
+            Review:
             {[1, 2, 3, 4, 5].map((item) => {
               if (item <= agent.review) {
                 return <img className="star-icon" src="/icons/star.svg" />;
@@ -49,22 +45,23 @@ const AgentCard = ({ agent }) => {
               }
             })}{" "}
           </span>
-          <b>{agent.review}</b>
-        </span>
-        <span>
-          Ads: <b>{agent.ads}</b>
+          <span>
+            Ads: <b>{agent.ads}</b>
+          </span>
         </span>
       </div>
-      <div className="right-agent">
-        <span>
-          <img
-            src={agent.avatar.length ? agent.avatar : "/avatar.jpg"}
-            alt=""
-          />
-        </span>
+
+      <div className="footer-agent">
         <span className="agent-btns">
-          <button>Contact</button>
-          <button>View Listings</button>
+          <a href="#">
+            <InstagramIcon width={25} fill="#111" />
+          </a>
+          <a href="#">
+            <TelegramIcon width={25} fill="#111" />
+          </a>
+          <a href="#">
+            <WebIcon width={33} height={33} fill="#111" />
+          </a>
         </span>
       </div>
     </div>

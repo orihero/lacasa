@@ -3,6 +3,7 @@
 .singlePage {
   display: flex;
   height: 100%;
+  margin-bottom: 40px;
 
   @include md {
     flex-direction: column;
@@ -94,8 +95,13 @@
         }
         .bottom {
           margin-top: 50px;
-          color: #555;
-          line-height: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          p {
+            color: #555;
+            line-height: 20px;
+          }
         }
       }
     }
@@ -170,7 +176,8 @@
 
       .sizes {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
+        gap: 20px;
 
         @include lg {
           font-size: 12px;

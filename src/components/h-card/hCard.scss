@@ -8,6 +8,12 @@
   position: relative;
   transition: ease-in-out 0.25s;
   cursor: pointer;
+  img {
+    width: 352px;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 6px 6px 0px 0px;
+  }
 
   .badge {
     position: absolute;

@@ -4,16 +4,27 @@ import { useUserStore } from "../../lib/userStore";
 import "./profilePage.scss";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { useEffect } from "react";
+import { useListStore } from "../../lib/adsListStore";
+import { Triangle } from "react-loader-spinner";
 
 function ProfilePage() {
   const { currentUser, logout } = useUserStore();
+  const { isLoading, fetchAdsByAgentId, myList } = useListStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (currentUser?.id && currentUser?.role === "agent") {
+      fetchAdsByAgentId(currentUser.id);
+    }
+  }, [currentUser?.id]);
 
   const handleLogout = async () => {
     await signOut(auth);
     logout();
     navigate("/");
   };
+
   return (
     <div className="profilePage">
       <div className="details">
@@ -53,14 +64,30 @@ function ProfilePage() {
                   <button>Create New Post</button>
                 </Link>
               </div>
-              <List />
+              <List data={myList} />
             </>
           ) : (
             <>
-              <div className="title">
-                <h1>Saved List</h1>
-              </div>
-              <List />
+              {!isLoading ? (
+                <>
+                  <div className="title">
+                    <h1>Saved List</h1>
+                  </div>
+                  <List />
+                </>
+              ) : (
+                <div className="loading">
+                  <Triangle
+                    visible={true}
+                    height="80"
+                    width="80"
+                    color="#4fa94d"
+                    ariaLabel="triangle-loading"
+                    wrapperStyle={{}}
+                    wrapperClass=""
+                  />
+                </div>
+              )}
             </>
           )}
         </div>

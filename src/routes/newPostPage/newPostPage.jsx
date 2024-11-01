@@ -11,10 +11,12 @@ import { assetUpload } from "../../lib/assetUpload";
 import { toast } from "react-toastify";
 import { db } from "../../lib/firebase";
 import axios from "axios";
+import { useUserStore } from "../../lib/userStore";
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
+  const { currentUser } = useUserStore();
 
   const updateFiles = (incommingFiles) => {
     console.log("incomming files", incommingFiles);
@@ -41,7 +43,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: "aborted" };
         } else return { ...ef };
-      })
+      }),
     );
   };
   const handleCancel = (id) => {
@@ -50,7 +52,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: undefined };
         } else return { ...ef };
-      })
+      }),
     );
   };
 
@@ -63,7 +65,12 @@ function NewPostPage() {
       try {
         photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-        const docRef = await addDoc(collection(db, "ads"), { ...data, photos });
+        await addDoc(collection(db, "ads"), {
+          ...data,
+          agent_id: currentUser.id,
+          photos,
+        });
+        console.log(currentUser);
       } catch (error) {
         console.log(error);
       }
@@ -84,15 +91,15 @@ function NewPostPage() {
             photos.map((e, i) =>
               i == photos.length - 1
                 ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e }
-            )
-          )
+                : { type: "photo", media: e },
+            ),
+          ),
         );
         const res = await axios.post(
           `https://api.telegram.org/bot${
             import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
-          form
+          form,
         );
         console.log(res.data);
       } catch (error) {

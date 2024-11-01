@@ -2,29 +2,73 @@ import "./singlePage.scss";
 import Slider from "../../components/slider/Slider";
 import Map from "../../components/map/Map";
 import { singlePostData, userData } from "../../lib/dummydata";
+import { useEffect } from "react";
+import { useListStore } from "../../lib/adsListStore";
+import { useParams } from "react-router-dom";
+import { Triangle } from "react-loader-spinner";
+import { useAgentsStore } from "../../lib/agentsStore";
+import { useUserStore } from "../../lib/userStore";
+import RoomsIcon from "../../components/icons/RoomsIcon";
 
 function SinglePage() {
+  const { id } = useParams();
+  const { adsData, isLoading, fetchAdsById } = useListStore();
+  const { fetchUserById, agent } = useUserStore();
+  useEffect(() => {
+    if (id) {
+      fetchAdsById(id);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (adsData?.id) {
+      console.log(adsData);
+      fetchUserById(adsData.agent_id);
+    }
+  }, [adsData?.id]);
+
+  console.log(agent);
+
+  if (isLoading) {
+    return (
+      <div className="loading">
+        <Triangle
+          visible={true}
+          height="80"
+          width="80"
+          color="#4fa94d"
+          ariaLabel="triangle-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="singlePage">
       <div className="details">
         <div className="wrapper">
-          <Slider images={singlePostData.images} />
+          <Slider images={adsData?.photos ?? []} />
           <div className="info">
             <div className="top">
               <div className="post">
-                <h1>{singlePostData.title}</h1>
+                <h1>{adsData.title}</h1>
                 <div className="address">
                   <img src="/pin.png" alt="" />
-                  <span>{singlePostData.address}</span>
+                  <span>{adsData.address}</span>
                 </div>
-                <div className="price">$ {singlePostData.price}</div>
+                <div className="price">$ {adsData.price}</div>
               </div>
               <div className="user">
-                <img src={userData.img} alt="" />
-                <span>{userData.name}</span>
+                <img src={agent.avatar ?? "/avatar.jpg"} alt="" />
+                <span>{agent.fullName}</span>
               </div>
             </div>
-            <div className="bottom">{singlePostData.description}</div>
+            <div className="bottom">
+              <span>Tasnif:</span>
+              <p>{adsData.description}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -58,16 +102,18 @@ function SinglePage() {
           <div className="sizes">
             <div className="size">
               <img src="/size.png" alt="" />
-              <span>80 sqft</span>
+              <span>
+                {adsData.area} m <sup>2</sup>
+              </span>
             </div>
             <div className="size">
-              <img src="/bed.png" alt="" />
-              <span>2 beds</span>
+              <RoomsIcon color={"#888"} />
+              <span>{adsData.rooms} rooms</span>
             </div>
-            <div className="size">
+            {/* <div className="size">
               <img src="/bath.png" alt="" />
               <span>1 bathroom</span>
-            </div>
+            </div> */}
           </div>
           <p className="title">Nearby Places</p>
           <div className="listHorizontal">

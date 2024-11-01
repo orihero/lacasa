@@ -2,40 +2,66 @@
 
 .item-agent {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   gap: 20px;
   justify-content: space-between;
   padding: 20px;
   padding-right: 20px;
-  width: 60%;
+  width: 31%;
   box-shadow: 1px 1px 10px 1px rgba(1, 1, 1, 0.1);
   border-radius: 6px;
 
-  @include md {
-    flex-direction: column;
-    width: 80%;
-  }
-  @include sm {
-    width: 80%;
-  }
-
-  .right-agent {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .agent-btns {
+  .info {
     display: flex;
     flex-direction: row;
-    gap: 10px;
-    button {
-      padding: 12px 24px;
-      background-color: #fece51;
-      cursor: pointer;
-      border: none;
-      font-weight: 600;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .rev-ads {
+      display: flex;
+      gap: 40px;
+    }
+
+    @include md {
+      flex-direction: row;
+      width: 100%;
+    }
+    @include sm {
+      flex-direction: column-reverse;
+      width: 100%;
+    }
+  }
+  .avatar-text {
+    display: flex;
+    flex-direction: row;
+  }
+
+  @include md {
+    // flex-direction: column;
+    width: 100%;
+  }
+  @include sm {
+    width: 100%;
+  }
+
+  .footer-agent {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-direction: column;
+    @include md {
+      flex-direction: row;
+    }
+    @include sm {
+      flex-direction: column;
+    }
+    .agent-btns {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
     }
   }
 
@@ -46,28 +72,34 @@
   }
 
   span a {
-    color: blue;
-    text-decoration: underline;
+    transition: all 0.25s;
+    &:hover {
+      transform: scale(1.1);
+    }
   }
 
   span {
     display: flex;
     align-items: center;
     gap: 20px;
+    .agent-icon {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   img {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+    border-radius: 5px;
     object-fit: cover;
   }
   .stars {
     display: flex;
-    gap: 5px;
+    gap: 10px;
     .star-icon {
-      width: 10px !important;
-      height: 10px !important;
+      width: 10px;
+      height: 10px;
     }
   }
 }

@@ -1,11 +1,22 @@
 import React from "react";
 import "./hCard.scss";
 import ImageCarusel from "../ImageCarusel/ImageCarusel";
+import RoomsIcon from "../icons/RoomsIcon";
+import { useNavigate } from "react-router-dom";
 
 function HorizontalCard({ data }) {
+  const navigate = useNavigate();
+
+  const handleNavigate = (id) => {
+    if (id.length) {
+      navigate("/post/" + id);
+    }
+  };
+
   return (
-    <div className="hCard">
-      <ImageCarusel items={data.photos} />
+    <div className="hCard" onClick={() => handleNavigate(data.id)}>
+      {/* <ImageCarusel items={data.photos} /> */}
+      <img src={data.photos[0]} />
       <div className="badge">
         <img src="/badge.png" />
         <img src="/icons/stars.svg" alt="" className="icon" />
@@ -36,7 +47,8 @@ function HorizontalCard({ data }) {
             <p>{data.city}</p>
           </div>
           <div className="item">
-            <img alt="" src="/icons/bed.svg" />
+            {/* <img alt="" src="/icons/bed.svg" /> */}
+            <RoomsIcon />
             <p>{data.rooms} rooms</p>
           </div>
           <div className="item">

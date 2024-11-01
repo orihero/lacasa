@@ -31,16 +31,16 @@ function App() {
           path: "/about",
           element: <AboutPage />,
         },
-        {
-          path: "/contact",
-          element: <ContactPage />,
-        },
+        // {
+        //   path: "/contact",
+        //   element: <ContactPage />,
+        // },
         {
           path: "/agents",
           element: <AgentsPage />,
         },
         {
-          path: "/:id",
+          path: "/post/:id",
           element: <SinglePage />,
         },
         {
