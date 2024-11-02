@@ -23,11 +23,11 @@ function SinglePage() {
   useEffect(() => {
     if (adsData?.id) {
       console.log(adsData);
-      fetchUserById(adsData.agent_id);
+      fetchUserById(adsData.agentId);
     }
   }, [adsData?.id]);
 
-  console.log(agent);
+  console.log(adsData);
 
   if (isLoading) {
     return (
@@ -76,27 +76,16 @@ function SinglePage() {
         <div className="wrapper">
           <p className="title">General</p>
           <div className="listVertical">
-            <div className="feature">
-              <img src="/utility.png" alt="" />
-              <div className="featureText">
-                <span>Utilities</span>
-                <p>Renter is responsible</p>
-              </div>
-            </div>
-            <div className="feature">
-              <img src="/pet.png" alt="" />
-              <div className="featureText">
-                <span>Pet Policy</span>
-                <p>Pets Allowed</p>
-              </div>
-            </div>
-            <div className="feature">
-              <img src="/fee.png" alt="" />
-              <div className="featureText">
-                <span>Property Fees</span>
-                <p>Must have 3x the rent in total household income</p>
-              </div>
-            </div>
+            {adsData?.optionList?.map((option) => {
+              return (
+                <div key={option?.id?.toString()} className="feature">
+                  <div className="featureText">
+                    <span>{option?.key}</span>
+                    <p>{option?.value}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <p className="title">Sizes</p>
           <div className="sizes">
@@ -117,7 +106,15 @@ function SinglePage() {
           </div>
           <p className="title">Nearby Places</p>
           <div className="listHorizontal">
-            <div className="feature">
+            {adsData?.nearPlacesList?.length &&
+              (adsData?.nearPlacesList ?? [])?.map((item) => {
+                return (
+                  <div className="feature">
+                    <span>{item}</span>
+                  </div>
+                );
+              })}
+            {/* <div className="feature">
               <img src="/school.png" alt="" />
               <div className="featureText">
                 <span>School</span>
@@ -137,7 +134,7 @@ function SinglePage() {
                 <span>Restaurant</span>
                 <p>200m away</p>
               </div>
-            </div>
+            </div> */}
           </div>
           <p className="title">Location</p>
           <div className="mapContainer">

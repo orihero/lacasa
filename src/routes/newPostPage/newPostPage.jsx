@@ -12,11 +12,17 @@ import { toast } from "react-toastify";
 import { db } from "../../lib/firebase";
 import axios from "axios";
 import { useUserStore } from "../../lib/userStore";
+import { useNavigate } from "react-router-dom";
+
+const nearbyPlacesList = ["Park", "School", "Market", "City", "Kafe"];
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
   const { currentUser } = useUserStore();
+  const [nearPlacesList, setNearPlaceList] = useState([]);
+  const [optionList, setOptionList] = useState([]);
+  const navigate = useNavigate();
 
   const updateFiles = (incommingFiles) => {
     console.log("incomming files", incommingFiles);
@@ -67,12 +73,16 @@ function NewPostPage() {
 
         await addDoc(collection(db, "ads"), {
           ...data,
-          agent_id: currentUser.id,
+          agentId: currentUser.id,
+          nearPlacesList: nearPlacesList,
+          active: true,
+          optionList: optionList,
           photos,
         });
-        console.log(currentUser);
+
+        navigate("/profile");
       } catch (error) {
-        console.log(error);
+        console.log({ error });
       }
       console.log(extFiles);
       const caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
@@ -109,6 +119,57 @@ function NewPostPage() {
       pending: "Creating",
       success: "Successfully created",
     });
+  };
+
+  const handleSelectPlace = (text) => {
+    let clone = [...nearPlacesList];
+    if (clone.some((item) => item == text)) {
+      clone.push(text);
+      let filter = clone.filter((item) => item != text);
+      setNearPlaceList(filter);
+    } else {
+      clone.push(text);
+      setNearPlaceList(clone);
+    }
+  };
+
+  const handleNewOption = (type, id) => {
+    let clone = [...optionList];
+    if (type == "add") {
+      clone.push({
+        id: new Date().getTime(),
+        key: "",
+        value: "",
+      });
+      setOptionList([...clone]);
+    } else if (type == "remove" && id) {
+      let filter = clone.filter((item) => item.id != id);
+      setOptionList([...filter]);
+    }
+  };
+
+  const handleChangeOption = (id, key, text) => {
+    let newArr = optionList.map((option) => {
+      if (option.id == id) {
+        if (key == "key") {
+          return {
+            ...option,
+            key: text,
+          };
+        } else if (key == "value") {
+          return {
+            ...option,
+            value: text,
+          };
+        }
+      } else {
+        return {
+          ...option,
+        };
+      }
+    });
+
+    setOptionList([...newArr]);
   };
 
   return (
@@ -212,9 +273,67 @@ function NewPostPage() {
               <label htmlFor="price">Цена</label>
               <input id="price" name="price" type="text" />
             </div>
+
+            <div className="item placeList">
+              <label htmlFor="description">Рядом есть</label>
+              <div className="place-list">
+                {nearbyPlacesList.map((item, index) => {
+                  return (
+                    <span
+                      key={index.toString()}
+                      onClick={() => handleSelectPlace(item)}
+                      className={
+                        nearPlacesList.some((place) => place == item)
+                          ? "active"
+                          : ""
+                      }
+                    >
+                      {item}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
             <div className="item description">
               <label htmlFor="description">Примечания</label>
               <textarea name="description" placeholder="Примечания"></textarea>
+            </div>
+            <div className="item add-info">
+              <label htmlFor="description">Дополнительная информация</label>
+              {optionList.map((item) => {
+                return (
+                  <span key={item?.id.toString()}>
+                    <input
+                      placeholder="Title"
+                      onChange={(e) =>
+                        handleChangeOption(item.id, "key", e.target.value)
+                      }
+                      value={item?.key}
+                    />
+                    <input
+                      placeholder="value"
+                      onChange={(e) =>
+                        handleChangeOption(item.id, "value", e.target.value)
+                      }
+                      value={item?.value}
+                    />
+                    <button
+                      onClick={() => handleNewOption("remove", item.id)}
+                      type="button"
+                      className="delete-option"
+                    >
+                      удалить
+                    </button>
+                  </span>
+                );
+              })}
+              <button
+                type="button"
+                className="add-option"
+                onClick={() => handleNewOption("add")}
+              >
+                Добавлять
+              </button>
             </div>
             <button className="sendButton">Add</button>
           </form>

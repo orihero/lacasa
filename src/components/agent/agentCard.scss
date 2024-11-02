@@ -10,6 +10,11 @@
   width: 31%;
   box-shadow: 1px 1px 10px 1px rgba(1, 1, 1, 0.1);
   border-radius: 6px;
+  transition: all 0.25s;
+  &:hover {
+    cursor: pointer;
+    transform: scale(1.05);
+  }
 
   .info {
     display: flex;

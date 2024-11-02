@@ -12,6 +12,7 @@ import AboutPage from "./pages/about/AboutPage";
 import ContactPage from "./pages/contact/ContactPage";
 import AgentsPage from "./pages/agents/AgentsPage";
 import { PrimeReactProvider } from "primereact/api";
+import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
 
 function App() {
   const router = createBrowserRouter([
@@ -35,6 +36,10 @@ function App() {
         //   path: "/contact",
         //   element: <ContactPage />,
         // },
+        {
+          path: "/agent/:id",
+          element: <AgentProfilePage />,
+        },
         {
           path: "/agents",
           element: <AgentsPage />,

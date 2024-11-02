@@ -61,6 +61,53 @@
           cursor: pointer;
           padding: 20px;
         }
+        .placeList {
+          display: flex;
+          gap: 20px;
+          .place-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            span {
+              padding: 5px 10px;
+              border: 1px solid #fece51;
+              border-radius: 20px;
+              cursor: pointer;
+            }
+            .active {
+              background-color: #fece51;
+            }
+          }
+        }
+        .add-info {
+          display: flex;
+          gap: 10px;
+          span {
+            display: flex;
+            gap: 20px;
+            input {
+              height: 15px;
+              width: 40%;
+            }
+          }
+          .add-option {
+            width: 100px;
+            padding: 5px;
+            background-color: #fece51;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+          }
+          .delete-option {
+            width: 100px;
+            padding: 5px;
+            background-color: transparent;
+            border: none;
+            color: red;
+            cursor: pointer;
+            border-radius: 5px;
+          }
+        }
       }
     }
   }
