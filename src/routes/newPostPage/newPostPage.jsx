@@ -12,6 +12,7 @@ import { toast } from "react-toastify";
 import { db } from "../../lib/firebase";
 import axios from "axios";
 import { useUserStore } from "../../lib/userStore";
+import { IgService } from "../../services/ig";
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
@@ -43,7 +44,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: "aborted" };
         } else return { ...ef };
-      }),
+      })
     );
   };
   const handleCancel = (id) => {
@@ -52,7 +53,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: undefined };
         } else return { ...ef };
-      }),
+      })
     );
   };
 
@@ -60,8 +61,14 @@ function NewPostPage() {
     e.preventDefault();
     const form = new FormData(e.target);
     const data = Object.fromEntries(form);
+    let photos = [];
+    let caption = "";
+
+    // !Upload to IG
+    const uploadIg = async () => {
+      const res = await IgService.customCreateCarousel(photos, caption);
+    };
     const upload = async () => {
-      let photos = [];
       try {
         photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
@@ -70,13 +77,15 @@ function NewPostPage() {
           agent_id: currentUser.id,
           photos,
         });
-        console.log(currentUser);
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
-      console.log(extFiles);
-      const caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
-
+      caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
+      try {
+        await uploadIg();
+      } catch (error) {
+        console.error(error);
+      }
       // !Upload to telegram
       try {
         const form = new FormData();
@@ -88,23 +97,23 @@ function NewPostPage() {
             photos.map((e, i) =>
               i == photos.length - 1
                 ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
+                : { type: "photo", media: e }
+            )
+          )
         );
         const res = await axios.post(
           `https://api.telegram.org/bot${
             import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
-          form,
+          form
         );
-        console.log(res.data);
+        console.error(res.data);
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     };
 
-    toast.promise(upload(), {
+    toast.promise(Promise.all(upload()), {
       error: "Something went wrong",
       pending: "Creating",
       success: "Successfully created",
