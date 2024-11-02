@@ -11,6 +11,7 @@ import ProfilePage from "./routes/profilePage/profilePage";
 import ProfileUpdatePage from "./routes/profileUpdatePage/profileUpdatePage";
 import Register from "./routes/register/register";
 import SinglePage from "./routes/singlePage/singlePage";
+import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
 
 function App() {
   const router = createBrowserRouter([
@@ -34,6 +35,10 @@ function App() {
         //   path: "/contact",
         //   element: <ContactPage />,
         // },
+        {
+          path: "/agent/:id",
+          element: <AgentProfilePage />,
+        },
         {
           path: "/agents",
           element: <AgentsPage />,

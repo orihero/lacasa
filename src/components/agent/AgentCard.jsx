@@ -3,10 +3,21 @@ import "./agentCard.scss";
 import InstagramIcon from "./../../components/icons/InstagramIcon";
 import TelegramIcon from "./../../components/icons/TelegramIcon";
 import WebIcon from "./../../components/icons/WebIcon";
+import { useNavigate } from "react-router-dom";
 
 const AgentCard = ({ agent }) => {
+  const navigate = useNavigate();
+
+  const handleNavigate = (id) => {
+    navigate("/agent/" + id);
+  };
+
   return (
-    <div key={agent.id} className="item-agent">
+    <div
+      key={agent.id}
+      className="item-agent"
+      onClick={() => handleNavigate(agent.userId)}
+    >
       <div className="avatar-text">
         <div>
           <img

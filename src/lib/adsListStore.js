@@ -31,7 +31,7 @@ export const useListStore = create((set) => ({
   fetchAdsByAgentId: async (agentId) => {
     try {
       const adsRef = collection(db, "ads");
-      const q = query(adsRef, where("agent_id", "==", agentId));
+      const q = query(adsRef, where("agentId", "==", agentId));
 
       const querySnapshot = await getDocs(q);
 
