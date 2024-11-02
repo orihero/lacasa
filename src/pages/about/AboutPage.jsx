@@ -1,5 +1,6 @@
 import React from "react";
 import "./about.scss";
+import TelegramIcon from "../../components/icons/TelegramIcon";
 
 const AboutPage = () => {
   return (
@@ -81,6 +82,30 @@ const AboutPage = () => {
           </div>
           <div className="item-photo">
             <img src="/about1.webp" alt="" />
+          </div>
+        </div>
+      </div>
+      <div className="about-item">
+        <div className="about-title">
+          <h1>Biz bilan bog'lanish uchun</h1>
+        </div>
+        <div className="about-content contact-content">
+          <div className="item-text contact">
+            <p>
+              <img width={30} src="/icons/phone.svg" />
+              <a href="tel:+998994480500">
+                <b>+998 99 448 05 00</b>
+              </a>
+            </p>
+            <p>
+              <TelegramIcon width={30} />
+              <a href="https://t.me/@orihero">
+                <b>Telegram</b>
+              </a>
+            </p>
+          </div>
+          <div className="item-photo contact-img">
+            <img src="/contact1.svg" alt="" />
           </div>
         </div>
       </div>

@@ -5,7 +5,7 @@ import {
   ImagePreview,
 } from "@files-ui/react";
 import "./newPostPage.scss";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { addDoc, collection } from "firebase/firestore";
 import { assetUpload } from "../../lib/assetUpload";
 import { toast } from "react-toastify";
@@ -14,6 +14,7 @@ import axios from "axios";
 import { useUserStore } from "../../lib/userStore";
 import { IgService } from "../../services/ig";
 import { useNavigate } from "react-router-dom";
+import { useUtilsStore } from "../../lib/utilsStore";
 
 const nearbyPlacesList = ["Park", "School", "Market", "City", "Kafe"];
 
@@ -23,7 +24,22 @@ function NewPostPage() {
   const { currentUser } = useUserStore();
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
+  const [price, setPrice] = useState(0);
+  const [priceType, setPriceType] = useState("uzs");
   const navigate = useNavigate();
+  const {
+    curs,
+    nearbyPlaceData = [],
+    fetchCurs,
+    fetchNearbyPlace,
+  } = useUtilsStore();
+
+  useEffect(() => {
+    fetchCurs();
+    fetchNearbyPlace();
+  }, []);
+
+  console.log(curs, nearbyPlaceData);
 
   const updateFiles = (incommingFiles) => {
     console.log("incomming files", incommingFiles);
@@ -180,6 +196,9 @@ function NewPostPage() {
     setOptionList([...newArr]);
   };
 
+  const handleChangeCurs = (text) => {};
+  const handleSelectType = () => {};
+
   return (
     <div className="newPostPage">
       <div className="formContainer">
@@ -262,9 +281,15 @@ function NewPostPage() {
                 <option value="excellent">Отличный</option>
               </select>
             </div>
-            <div className="item">
-              <label htmlFor="storey">Этаж</label>
-              <input id="storey" name="storey" type="text" />
+            <div className="item storey">
+              <span>
+                <label htmlFor="storey">Этаж</label>
+                <input id="storey" name="storey" type="text" />
+              </span>
+              <span>
+                <label htmlFor="storeys">Этажи</label>
+                <input id="storeys" name="storeys" type="text" />
+              </span>
             </div>
             <div className="item">
               <label htmlFor="furniture">Мебель</label>
@@ -277,29 +302,51 @@ function NewPostPage() {
               <label htmlFor="area">Общая площадь</label>
               <input id="area" name="area" type="text" />
             </div>
-            <div className="item">
-              <label htmlFor="price">Цена</label>
-              <input id="price" name="price" type="text" />
+            <div className="item price">
+              <span className="price-span">
+                <label htmlFor="price">Цена</label>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  onChange={(e) => setPrice(e.target.value)}
+                />
+                <i>
+                  {priceType == "uzs"
+                    ? Math.floor(price / (curs[0]?.dollar ?? 1)) + " $"
+                    : (curs[0]?.dollar ?? 0) * price + " so'm"}
+                </i>
+              </span>
+              <span>
+                <select
+                  name="priceType"
+                  onChange={(e) => setPriceType(e.target.value)}
+                >
+                  <option value="uzs">so'm</option>
+                  <option value="usd">y.e</option>
+                </select>
+              </span>
             </div>
 
             <div className="item placeList">
               <label htmlFor="description">Рядом есть</label>
               <div className="place-list">
-                {nearbyPlacesList.map((item, index) => {
-                  return (
-                    <span
-                      key={index.toString()}
-                      onClick={() => handleSelectPlace(item)}
-                      className={
-                        nearPlacesList.some((place) => place == item)
-                          ? "active"
-                          : ""
-                      }
-                    >
-                      {item}
-                    </span>
-                  );
-                })}
+                {!!nearbyPlaceData.length &&
+                  nearbyPlaceData[0]?.data?.map((item, index) => {
+                    return (
+                      <span
+                        key={index.toString()}
+                        onClick={() => handleSelectPlace(item)}
+                        className={
+                          nearPlacesList.some((place) => place == item)
+                            ? "active"
+                            : ""
+                        }
+                      >
+                        {item}
+                      </span>
+                    );
+                  })}
               </div>
             </div>
             <div className="item description">

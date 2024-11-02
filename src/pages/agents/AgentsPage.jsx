@@ -28,7 +28,7 @@ const AgentsPage = () => {
 
   return (
     <div className="list-agent">
-      {[...list, ...list, ...list, ...list].map((agent) => {
+      {list?.map((agent) => {
         return <AgentCard agent={agent} />;
       })}
     </div>

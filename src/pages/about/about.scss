@@ -21,6 +21,20 @@
           text-align: justify;
         }
       }
+      .contact {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+        width: auto;
+        p {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          &:hover {
+            color: blue;
+          }
+        }
+      }
       .item-photo {
         display: flex;
         width: 50%;
@@ -30,6 +44,19 @@
           object-fit: cover;
         }
       }
+      .contact-img {
+        img {
+          // width: 50%;
+          height: 250px;
+          object-fit: contain;
+        }
+      }
+    }
+    .contact-content {
+      display: flex;
+      gap: 50px;
+      align-items: center;
+      justify-content: center;
     }
   }
   .reverse {

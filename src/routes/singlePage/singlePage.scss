@@ -165,6 +165,12 @@
         padding: 20px;
         background-color: white;
         border-radius: 10px;
+        .feature {
+          align-items: flex-start;
+          svg {
+            margin-top: 5px;
+          }
+        }
       }
       .listHorizontal {
         display: flex;

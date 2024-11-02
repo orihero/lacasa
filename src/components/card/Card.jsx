@@ -21,7 +21,7 @@ function Card({ item }) {
           <div className="features">
             <div className="feature">
               <RoomsIcon color={"#888"} />
-              <span>{item.bedroom} bedroom</span>
+              <span>{item.rooms} rooms</span>
             </div>
             <div className="feature">
               <img src="/size.png" alt="" />

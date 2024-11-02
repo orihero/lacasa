@@ -9,11 +9,13 @@ import { Triangle } from "react-loader-spinner";
 import { useAgentsStore } from "../../lib/agentsStore";
 import { useUserStore } from "../../lib/userStore";
 import RoomsIcon from "../../components/icons/RoomsIcon";
+import InfoIcon from "../../components/icons/InfoIcon";
+import FloorIcon from "../../components/icons/FloorIcon";
 
 function SinglePage() {
   const { id } = useParams();
   const { adsData, isLoading, fetchAdsById } = useListStore();
-  const { fetchUserById, agent } = useUserStore();
+  const { fetchUserById, agent, currentUser } = useUserStore();
   useEffect(() => {
     if (id) {
       fetchAdsById(id);
@@ -74,11 +76,12 @@ function SinglePage() {
       </div>
       <div className="features">
         <div className="wrapper">
-          <p className="title">General</p>
+          <p className="title">Дополнительная информация</p>
           <div className="listVertical">
             {adsData?.optionList?.map((option) => {
               return (
                 <div key={option?.id?.toString()} className="feature">
+                  <InfoIcon width={18} />
                   <div className="featureText">
                     <span>{option?.key}</span>
                     <p>{option?.value}</p>
@@ -99,10 +102,12 @@ function SinglePage() {
               <RoomsIcon color={"#888"} />
               <span>{adsData.rooms} rooms</span>
             </div>
-            {/* <div className="size">
-              <img src="/bath.png" alt="" />
-              <span>1 bathroom</span>
-            </div> */}
+            <div className="size">
+              <FloorIcon color={"#888"} />
+              <span>
+                {adsData.storey}/{adsData.storeys}
+              </span>
+            </div>
           </div>
           <p className="title">Nearby Places</p>
           <div className="listHorizontal">
@@ -115,7 +120,6 @@ function SinglePage() {
                 );
               })}
             {/* <div className="feature">
-              <img src="/school.png" alt="" />
               <div className="featureText">
                 <span>School</span>
                 <p>250m away</p>
@@ -145,10 +149,12 @@ function SinglePage() {
               <img src="/chat.png" alt="" />
               Send a Message
             </button>
-            <button>
-              <img src="/save.png" alt="" />
-              Save the Place
-            </button>
+            {currentUser?.role != "agent" && (
+              <button>
+                <img src="/save.png" alt="" />
+                Save the Place
+              </button>
+            )}
           </div>
         </div>
       </div>
