@@ -1,21 +1,23 @@
-import "./singlePage.scss";
-import Slider from "../../components/slider/Slider";
-import Map from "../../components/map/Map";
-import { singlePostData, userData } from "../../lib/dummydata";
 import { useEffect } from "react";
-import { useListStore } from "../../lib/adsListStore";
-import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
-import { useAgentsStore } from "../../lib/agentsStore";
-import { useUserStore } from "../../lib/userStore";
-import RoomsIcon from "../../components/icons/RoomsIcon";
-import InfoIcon from "../../components/icons/InfoIcon";
+import { useParams } from "react-router-dom";
 import FloorIcon from "../../components/icons/FloorIcon";
+import InfoIcon from "../../components/icons/InfoIcon";
+import RoomsIcon from "../../components/icons/RoomsIcon";
+import Map from "../../components/map/Map";
+import Slider from "../../components/slider/Slider";
+import { useListStore } from "../../lib/adsListStore";
+import { singlePostData } from "../../lib/dummydata";
+import { useUserStore } from "../../lib/userStore";
+import "./singlePage.scss";
 
 function SinglePage() {
   const { id } = useParams();
   const { adsData, isLoading, fetchAdsById } = useListStore();
   const { fetchUserById, agent, currentUser } = useUserStore();
+  const { t } = useTranslation();
+
   useEffect(() => {
     if (id) {
       fetchAdsById(id);
@@ -58,7 +60,9 @@ function SinglePage() {
                 <h1>{adsData.title}</h1>
                 <div className="address">
                   <img src="/pin.png" alt="" />
-                  <span>{adsData.address}</span>
+                  <span>
+                    {adsData.city}, {adsData.district}
+                  </span>
                 </div>
                 <div className="price">$ {adsData.price}</div>
               </div>
@@ -68,7 +72,7 @@ function SinglePage() {
               </div>
             </div>
             <div className="bottom">
-              <span>Tasnif:</span>
+              <span>{t("classification")}:</span>
               <p>{adsData.description}</p>
             </div>
           </div>
@@ -76,7 +80,7 @@ function SinglePage() {
       </div>
       <div className="features">
         <div className="wrapper">
-          <p className="title">Дополнительная информация</p>
+          <p className="title">{t("additionalInfo")}</p>
           <div className="listVertical">
             {adsData?.optionList?.map((option) => {
               return (
@@ -90,7 +94,7 @@ function SinglePage() {
               );
             })}
           </div>
-          <p className="title">Sizes</p>
+          <p className="title">{t("sizes")}</p>
           <div className="sizes">
             <div className="size">
               <img src="/size.png" alt="" />
@@ -100,7 +104,9 @@ function SinglePage() {
             </div>
             <div className="size">
               <RoomsIcon color={"#888"} />
-              <span>{adsData.rooms} rooms</span>
+              <span>
+                {adsData.rooms} {t("room")}
+              </span>
             </div>
             <div className="size">
               <FloorIcon color={"#888"} />
@@ -109,7 +115,7 @@ function SinglePage() {
               </span>
             </div>
           </div>
-          <p className="title">Nearby Places</p>
+          <p className="title">{t("nearbyPlaces")}</p>
           <div className="listHorizontal">
             {adsData?.nearPlacesList?.length &&
               (adsData?.nearPlacesList ?? [])?.map((item) => {
@@ -140,7 +146,7 @@ function SinglePage() {
               </div>
             </div> */}
           </div>
-          <p className="title">Location</p>
+          <p className="title">{t("location")}</p>
           <div className="mapContainer">
             <Map items={[singlePostData]} />
           </div>

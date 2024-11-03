@@ -3,16 +3,19 @@ import "./footer.scss";
 import InstagramIcon from "../icons/InstagramIcon";
 import TelegramIcon from "../icons/TelegramIcon";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="footer">
       <div className="footer-list">
         <span className="links">
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
+          <Link to="/">{t("home")}</Link>
+          <Link to="/about">{t("about")}</Link>
           {/* <Link to="/contact">Contact</Link> */}
-          <Link to="/agents">Agents</Link>
+          <Link to="/agents">{t("agents")}</Link>
         </span>
         <span className="social-icons">
           <a href="/" target="_blank" title="instagram">

@@ -3,12 +3,18 @@ import { Link } from "react-router-dom";
 import { useUserStore } from "../../lib/userStore";
 import "./navbar.scss";
 import { Triangle } from "react-loader-spinner";
+import { useTranslation } from "react-i18next";
 
 function Navbar() {
   const [open, setOpen] = useState(false);
+  const { t, i18n } = useTranslation();
 
   const { currentUser, isLoading } = useUserStore();
   console.log(currentUser);
+
+  const handleChangeLang = (lang) => {
+    i18n.changeLanguage(lang);
+  };
 
   const renderRight = () => {
     if (isLoading) {
@@ -34,7 +40,7 @@ function Navbar() {
           <span>{currentUser.fullName}</span>
           <Link to="/profile" className="profile">
             {/* <div className="notification">3</div> */}
-            <span>Profile</span>
+            <span>{t("profile")}</span>
           </Link>
         </div>
       );
@@ -42,9 +48,9 @@ function Navbar() {
 
     return (
       <>
-        <a href="/login">Sign in</a>
+        <a href="/login">{t("signIn")}</a>
         <a href="/register" className="register">
-          Sign up
+          {t("signUp")}
         </a>
       </>
     );
@@ -57,13 +63,20 @@ function Navbar() {
           <img src="/logo.png" alt="" />
           <span>LamaEstate</span>
         </a>
-        <Link to="/">Home</Link>
-        <Link to="/about">About</Link>
+        <Link to="/">{t("home")}</Link>
+        <Link to="/about">{t("about")}</Link>
         {/* <Link to="/contact">Contact</Link> */}
-        <Link to="/agents">Agents</Link>
+        <Link to="/agents">{t("agents")}</Link>
       </div>
       <div className="right">
         {renderRight()}
+        <div className="lang">
+          <select onChange={(e) => handleChangeLang(e.target.value)}>
+            <option value="uz">Uz</option>
+            <option value="ru">Ru</option>
+            <option value="en">En</option>
+          </select>
+        </div>
         {/* {!!currentUser ? (
           <div className="user">
             <img

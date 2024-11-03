@@ -28,8 +28,71 @@
   }
 
   .top {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    .item {
+      width: 100%;
+    }
+    .type {
+      width: 300px;
+    }
+    .rooms {
+      width: 100px;
+    }
+    select {
+      width: 100%;
+    }
     input {
       width: 100%;
+    }
+  }
+  .bottom {
+    display: flex;
+    justify-content: flex-start !important;
+    .item {
+      position: relative;
+      #areaMin {
+        width: 70px;
+      }
+      #areaMax {
+        width: 70px;
+      }
+      .area-m2 {
+        position: absolute;
+        right: -10px;
+        top: 20px;
+      }
+    }
+    .type {
+      width: 110px;
+      select {
+        width: 100%;
+      }
+    }
+    .furniture {
+      width: 22% !important;
+      select {
+        width: 100%;
+      }
+    }
+    .repairment {
+      width: 28% !important;
+      select {
+        width: 100%;
+      }
+    }
+    .furniture {
+      width: 110px;
+      select {
+        width: 100%;
+      }
+    }
+    .sort {
+      width: 400px !important;
+      select {
+        width: 100%;
+      }
     }
   }
 
@@ -37,7 +100,7 @@
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 15px;
 
     button {
       width: 100px;

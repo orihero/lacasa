@@ -1,11 +1,13 @@
 import React from "react";
 import "./hCard.scss";
-import ImageCarusel from "../ImageCarusel/ImageCarusel";
 import RoomsIcon from "../icons/RoomsIcon";
+import LocationIcon from "../icons/LocationIcon";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 function HorizontalCard({ data }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleNavigate = (id) => {
     if (id.length) {
@@ -43,13 +45,15 @@ function HorizontalCard({ data }) {
         <div className="line" />
         <div className="row">
           <div className="item">
-            <img alt="" width={10} src="/icons/location.svg" />
+            <LocationIcon width={20} height={20} fill="#7065f0" />
             <p>{data.city}</p>
           </div>
           <div className="item">
             {/* <img alt="" src="/icons/bed.svg" /> */}
             <RoomsIcon />
-            <p>{data.rooms} rooms</p>
+            <p>
+              {data.rooms} {t("room")}
+            </p>
           </div>
           <div className="item">
             <img alt="" src="/icons/meters.svg" />

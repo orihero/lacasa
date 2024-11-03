@@ -6,7 +6,7 @@ import {
 } from "@files-ui/react";
 import "./newPostPage.scss";
 import { useEffect, useState } from "react";
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { assetUpload } from "../../lib/assetUpload";
 import { toast } from "react-toastify";
 import { db } from "../../lib/firebase";
@@ -15,8 +15,8 @@ import { useUserStore } from "../../lib/userStore";
 import { IgService } from "../../services/ig";
 import { useNavigate } from "react-router-dom";
 import { useUtilsStore } from "../../lib/utilsStore";
-
-const nearbyPlacesList = ["Park", "School", "Market", "City", "Kafe"];
+import regionData from "../../regions.json";
+import { useTranslation } from "react-i18next";
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
@@ -25,21 +25,21 @@ function NewPostPage() {
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
   const [price, setPrice] = useState(0);
+  const [regionId, setRegionId] = useState(0);
   const [priceType, setPriceType] = useState("uzs");
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const {
-    curs,
+    currency,
     nearbyPlaceData = [],
-    fetchCurs,
+    fetchCurrency,
     fetchNearbyPlace,
   } = useUtilsStore();
 
   useEffect(() => {
-    fetchCurs();
+    fetchCurrency();
     fetchNearbyPlace();
   }, []);
-
-  console.log(curs, nearbyPlaceData);
 
   const updateFiles = (incommingFiles) => {
     console.log("incomming files", incommingFiles);
@@ -66,7 +66,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: "aborted" };
         } else return { ...ef };
-      })
+      }),
     );
   };
   const handleCancel = (id) => {
@@ -75,7 +75,7 @@ function NewPostPage() {
         if (ef.id === id) {
           return { ...ef, uploadStatus: undefined };
         } else return { ...ef };
-      })
+      }),
     );
   };
 
@@ -101,6 +101,8 @@ function NewPostPage() {
           active: true,
           optionList: optionList,
           photos,
+          active: true,
+          createdAt: serverTimestamp(),
         });
       } catch (error) {
         console.error(error);
@@ -122,15 +124,15 @@ function NewPostPage() {
             photos.map((e, i) =>
               i == photos.length - 1
                 ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e }
-            )
-          )
+                : { type: "photo", media: e },
+            ),
+          ),
         );
         const res = await axios.post(
           `https://api.telegram.org/bot${
             import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
-          form
+          form,
         );
         console.error(res.data);
       } catch (error) {
@@ -196,16 +198,13 @@ function NewPostPage() {
     setOptionList([...newArr]);
   };
 
-  const handleChangeCurs = (text) => {};
-  const handleSelectType = () => {};
-
   return (
     <div className="newPostPage">
       <div className="formContainer">
-        <h1>Add New Post</h1>
+        <h1>{t("addNewPost")}</h1>
         <div className="wrapper">
           <form onSubmit={onSubmit}>
-            <label htmlFor="Images">Фото</label>
+            <label htmlFor="Images">{t("photo")}</label>
             <Dropzone
               onChange={updateFiles}
               minHeight="195px"
@@ -213,7 +212,7 @@ function NewPostPage() {
               accept="image/*"
               maxFiles={5}
               maxFileSize={5 * 1024 * 1024}
-              label="Перетащите файлы сюда или щелкните, чтобы загрузить"
+              label={t("dragFilesHere")}
             >
               {extFiles.map((file) => (
                 <FileMosaic
@@ -238,23 +237,60 @@ function NewPostPage() {
               <ImagePreview src={imageSrc} />
             </FullScreen>
             <div className="item">
-              <label htmlFor="title">Название</label>
+              <label htmlFor="title">{t("title")}</label>
               <input id="title" name="title" type="text" />
             </div>
             <div className="item">
-              <label htmlFor="city">Город</label>
-              <input id="city" name="city" type="text" />
+              <label htmlFor="city">{t("city")}</label>
+
+              <select
+                name="city"
+                id="city"
+                onChange={(e) =>
+                  setRegionId(
+                    regionData.regions.find((r) => r.name == e.target.value).id,
+                  )
+                }
+              >
+                <option key={"0"} value={""} defaultChecked></option>
+                {regionData.regions.map((region, i) => {
+                  return (
+                    <option
+                      key={region.id.toString()}
+                      value={region.name}
+                      id={region.id}
+                    >
+                      {region.name}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
             <div className="item">
-              <label htmlFor="district">Район</label>
-              <input id="district" name="district" type="text" />
+              <label htmlFor="district">{t("district")}</label>
+              {/* <input id="district" name="district" type="text" /> */}
+              <select name="district" id="district" disabled={regionId == 0}>
+                <option key={"0"} value={""} defaultChecked></option>
+                {regionData.districts
+                  .filter((item) => item.region_id == regionId)
+                  .map((district, i) => {
+                    return (
+                      <option
+                        key={district.id.toString()}
+                        value={district.name}
+                      >
+                        {district.name}
+                      </option>
+                    );
+                  })}
+              </select>
             </div>
             <div className="item">
-              <label htmlFor="address">Адрес</label>
+              <label htmlFor="address">{t("address")}</label>
               <input id="address" name="address" type="text" />
             </div>
             <div className="item">
-              <label htmlFor="type">Тип</label>
+              <label htmlFor="type">{t("type")}</label>
               <select name="type">
                 <option value="residential" defaultChecked>
                   Жилое
@@ -271,40 +307,47 @@ function NewPostPage() {
               <input id="rooms" name="rooms" type="text" />
             </div>
             <div className="item">
-              <label htmlFor="repairment">Ремонт</label>
-              <select name="type">
+              <label htmlFor="repairment">{t("repair")}</label>
+              <select name="repairment">
                 <option value="notRepaired" defaultChecked>
-                  Требуется ремонт
+                  {t("requiresRepair")}
                 </option>
                 <option value="normal">Нормальный</option>
                 <option value="good">Хороший</option>
                 <option value="excellent">Отличный</option>
               </select>
             </div>
+            <div className="item">
+              <label>{t("category")}</label>
+              <select name="category">
+                <option value="rent">{t("rental")}</option>
+                <option value="sale">Продажа</option>
+              </select>
+            </div>
             <div className="item storey">
               <span>
-                <label htmlFor="storey">Этаж</label>
+                <label htmlFor="storey">{t("storey")}</label>
                 <input id="storey" name="storey" type="text" />
               </span>
               <span>
-                <label htmlFor="storeys">Этажи</label>
+                <label htmlFor="storeys">{t("floors")}</label>
                 <input id="storeys" name="storeys" type="text" />
               </span>
             </div>
             <div className="item">
-              <label htmlFor="furniture">Мебель</label>
-              <select name="type">
-                <option value="withFurniture">С мебелью</option>
+              <label htmlFor="furniture">{t("furniture")}</label>
+              <select name="furniture">
+                <option value="withFurniture">{t("withFurniture")}</option>
                 <option value="withoutFurniture">Без мебели</option>
               </select>
             </div>
             <div className="item">
-              <label htmlFor="area">Общая площадь</label>
+              <label htmlFor="area">{t("totalArea")}</label>
               <input id="area" name="area" type="text" />
             </div>
             <div className="item price">
               <span className="price-span">
-                <label htmlFor="price">Цена</label>
+                <label htmlFor="price">{t("price")}</label>
                 <input
                   id="price"
                   name="price"
@@ -313,8 +356,8 @@ function NewPostPage() {
                 />
                 <i>
                   {priceType == "uzs"
-                    ? Math.floor(price / (curs[0]?.dollar ?? 1)) + " $"
-                    : (curs[0]?.dollar ?? 0) * price + " so'm"}
+                    ? Math.floor(price / (currency[0]?.currency ?? 1)) + " $"
+                    : (currency[0]?.currency ?? 0) * price + " so'm"}
                 </i>
               </span>
               <span>
@@ -329,7 +372,7 @@ function NewPostPage() {
             </div>
 
             <div className="item placeList">
-              <label htmlFor="description">Рядом есть</label>
+              <label htmlFor="description">{t("nearby")}</label>
               <div className="place-list">
                 {!!nearbyPlaceData.length &&
                   nearbyPlaceData[0]?.data?.map((item, index) => {
@@ -350,11 +393,11 @@ function NewPostPage() {
               </div>
             </div>
             <div className="item description">
-              <label htmlFor="description">Примечания</label>
+              <label htmlFor="description">{t("classification")}</label>
               <textarea name="description" placeholder="Примечания"></textarea>
             </div>
             <div className="item add-info">
-              <label htmlFor="description">Дополнительная информация</label>
+              <label htmlFor="description">{t("additionalInfo")}</label>
               {optionList.map((item) => {
                 return (
                   <span key={item?.id.toString()}>
@@ -377,7 +420,7 @@ function NewPostPage() {
                       type="button"
                       className="delete-option"
                     >
-                      удалить
+                      {t("delete")}
                     </button>
                   </span>
                 );
@@ -387,10 +430,10 @@ function NewPostPage() {
                 className="add-option"
                 onClick={() => handleNewOption("add")}
               >
-                Добавлять
+                {t("create")}
               </button>
             </div>
-            <button className="sendButton">Add</button>
+            <button className="sendButton">{t("create")}</button>
           </form>
         </div>
       </div>

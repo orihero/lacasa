@@ -7,10 +7,11 @@ import { assetUpload } from "../../lib/assetUpload";
 import { db } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
 import "./profileUpdatePage.scss";
+import { useTranslation } from "react-i18next";
 
 function ProfileUpdatePage() {
   const [profimeImage, setProfimeImage] = useState("/avatar.jpg");
-
+  const { t } = useTranslation();
   const { currentUser, fetchUserInfo } = useUserStore();
 
   const navigate = useNavigate();
@@ -53,24 +54,24 @@ function ProfileUpdatePage() {
             />
           </div>
           <div className="inputs">
-            <h1>Update Profile</h1>
+            <h1>{t("updateProfile")}</h1>
             <div className="item">
-              <label htmlFor="fullName">Full name</label>
+              <label htmlFor="fullName">{t("fullName")}</label>
               <input id="fullName" name="fullName" type="text" />
             </div>
             <div className="item">
-              <label htmlFor="phoneNumber">Phone number</label>
+              <label htmlFor="phoneNumber">{t("phone")}</label>
               <input id="phoneNumber" name="phoneNumber" type="tel" />
             </div>
             <div className="item">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t("email")}</label>
               <input id="email" name="email" type="email" />
             </div>
             <div className="item">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t("password")}</label>
               <input id="password" name="password" type="password" />
             </div>
-            <button>Update</button>
+            <button>{t("update")}</button>
           </div>
         </form>
       </div>

@@ -4,14 +4,18 @@ import { useUserStore } from "../../lib/userStore";
 import "./profilePage.scss";
 import { signOut } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useListStore } from "../../lib/adsListStore";
 import { Triangle } from "react-loader-spinner";
+import Filter from "../../components/filter/Filter";
+import { useTranslation } from "react-i18next";
 
 function ProfilePage() {
   const { currentUser, logout } = useUserStore();
   const { isLoading, fetchAdsByAgentId, myList } = useListStore();
   const navigate = useNavigate();
+  const [isFilter, setFilter] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (currentUser?.id && currentUser?.role === "agent") {
@@ -30,24 +34,24 @@ function ProfilePage() {
       <div className="details">
         <div className="wrapper">
           <div className="title">
-            <h1>User Information</h1>
+            <h1>{t("userInformation")}</h1>
             <div className="title-btn">
               <Link to={"/updateProfile"}>
-                <button>Update Profile</button>
+                <button>{t("updateProfile")}</button>
               </Link>
-              <button onClick={handleLogout}>Logout</button>
+              <button onClick={handleLogout}>{t("logout")}</button>
             </div>
           </div>
           <div className="info">
             <div>
               <span>
-                Full name: <b>{currentUser?.fullName}</b>
+                {t("fullName")}: <b>{currentUser?.fullName}</b>
               </span>
               <span>
-                E-mail: <b>{currentUser?.email}</b>
+                {t("email")}: <b>{currentUser?.email}</b>
               </span>
               <span>
-                Phone: <b>{currentUser?.phoneNumber}</b>
+                {t("phone")}: <b>{currentUser?.phoneNumber}</b>
               </span>
             </div>
             <div>
@@ -59,19 +63,29 @@ function ProfilePage() {
           {currentUser?.role === "agent" ? (
             <>
               <div className="title">
-                <h1>My List</h1>
-                <Link to={"/post"}>
-                  <button>Create New Post</button>
-                </Link>
+                <h1>{t("myList")}</h1>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button onClick={() => setFilter((prev) => !prev)}>
+                    {t("filter")}
+                  </button>
+                  <Link to={"/post"}>
+                    <button> {t("createNewPost")}</button>
+                  </Link>
+                </div>
               </div>
-              <List data={myList} />
+              {isFilter && (
+                <div className="filter-tools">
+                  <Filter />
+                </div>
+              )}
+              <List data={myList} isLoading={isLoading} />
             </>
           ) : (
             <>
               {!isLoading ? (
                 <>
                   <div className="title">
-                    <h1>Saved List</h1>
+                    <h1>{t("savedList")}</h1>
                   </div>
                   <List />
                 </>

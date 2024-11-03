@@ -7,12 +7,14 @@ import { auth } from "../../lib/firebase";
 import { useEffect } from "react";
 import { useListStore } from "../../lib/adsListStore";
 import { Triangle } from "react-loader-spinner";
+import { useTranslation } from "react-i18next";
 
 function AgentProfilePage() {
   const { agent, fetchUserById } = useUserStore();
   const { fetchAdsByAgentId, isLoading, myList } = useListStore();
   const navigate = useNavigate();
   const { id } = useParams();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (id) {
@@ -27,14 +29,12 @@ function AgentProfilePage() {
     navigate("/");
   };
 
-  console.log(agent);
-
   return (
     <div className="agentProfilePage">
       <div className="details">
         <div className="wrapper">
           <div className="title">
-            <h1>Agent Information</h1>
+            <h1>{t("agentInformation")}</h1>
             {/* <div className="title-btn">
               <Link to={"/updateProfile"}>
                 <button>Update Profile</button>
@@ -45,13 +45,13 @@ function AgentProfilePage() {
           <div className="info">
             <div>
               <span>
-                Full name: <b>{agent?.fullName}</b>
+                {t("fullName")}:<b>{agent?.fullName}</b>
               </span>
               <span>
-                E-mail: <b>{agent?.email}</b>
+                {t("email")}: <b>{agent?.email}</b>
               </span>
               <span>
-                Phone: <b>{agent?.phoneNumber}</b>
+                {t("phone")}: <b>{agent?.phoneNumber}</b>
               </span>
             </div>
             <div>
@@ -63,7 +63,7 @@ function AgentProfilePage() {
           {!isLoading ? (
             <>
               <div className="title">
-                <h1>Ads List</h1>
+                <h1>{t("adsList")}</h1>
               </div>
               <List data={myList} />
             </>

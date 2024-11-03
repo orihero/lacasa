@@ -3,20 +3,20 @@ import { create } from "zustand";
 import { db } from "./firebase";
 
 export const useUtilsStore = create((set) => ({
-  curs: [],
+  currency: [],
   nearbyPlaceData: [],
   isLoading: true,
-  fetchCurs: async () => {
+  fetchCurrency: async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "curs"));
-      const curs = querySnapshot.docs.map((doc) => ({
+      const querySnapshot = await getDocs(collection(db, "currency"));
+      const currency = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
-      set({ curs: curs, isLoading: false });
+      set({ currency: currency, isLoading: false });
     } catch (error) {
-      console.error("fetchCurs", error);
+      console.error("fetch currency", error);
       set({ list: [], isLoading: false });
     }
   },
