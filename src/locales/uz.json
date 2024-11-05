@@ -63,5 +63,10 @@
   "nearby": "Yaqin joylarda",
   "delete": "O'chirish",
   "create": "Yaratish",
-  "dragFilesHere": "Fayllarni shu yerga torting yoki yuklash uchun bosing"
+  "dragFilesHere": "Fayllarni shu yerga torting yoki yuklash uchun bosing",
+  "save_draft": "Qoralamaga saqlash",
+  "upload_to_social_media": "Faqat ijtimoiy tarmoqlarga yuklash",
+  "view_more": "Ko'proq ko'rish",
+  "addNewLead": "Yangi lead qo'shish",
+  "addNewCoworker": "Yangi coworker qo'shish"
 }

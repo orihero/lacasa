@@ -64,5 +64,10 @@
   "add": "Add",
   "delete": "Delete",
   "create": "Create",
-  "dragFilesHere": "Drag files here or click to upload"
+  "dragFilesHere": "Drag files here or click to upload",
+  "save_draft": "Save as Draft",
+  "upload_to_social_media": "Upload to Social Media Only",
+  "view_more": "View More",
+  "addNewLead": "Add new lead",
+  "addNewCoworker": "Add new coworker"
 }

@@ -57,19 +57,19 @@ function ProfileUpdatePage() {
             <h1>{t("updateProfile")}</h1>
             <div className="item">
               <label htmlFor="fullName">{t("fullName")}</label>
-              <input id="fullName" name="fullName" type="text" />
+              <input required id="fullName" name="fullName" type="text" />
             </div>
             <div className="item">
               <label htmlFor="phoneNumber">{t("phone")}</label>
-              <input id="phoneNumber" name="phoneNumber" type="tel" />
+              <input required id="phoneNumber" name="phoneNumber" type="tel" />
             </div>
             <div className="item">
               <label htmlFor="email">{t("email")}</label>
-              <input id="email" name="email" type="email" />
+              <input required id="email" name="email" type="email" />
             </div>
             <div className="item">
               <label htmlFor="password">{t("password")}</label>
-              <input id="password" name="password" type="password" />
+              <input required id="password" name="password" type="password" />
             </div>
             <button>{t("update")}</button>
           </div>

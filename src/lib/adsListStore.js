@@ -17,7 +17,11 @@ export const useListStore = create((set) => ({
   isLoading: true,
   fetchAdsList: async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "ads"));
+      const adsQuery = query(
+        collection(db, "ads"),
+        where("active", "==", true),
+      );
+      const querySnapshot = await getDocs(adsQuery);
       const adsList = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),

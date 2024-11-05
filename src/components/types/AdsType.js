@@ -1,0 +1,6 @@
+export const ADS_TYPE = {
+  DRAFT: "DRAFT",
+  ACTIVE: "ACTIVE",
+  ONLY_SOCIAL: "ONLY_SOCIAL",
+  SOLD: "SOLD",
+};

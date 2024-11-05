@@ -103,6 +103,12 @@
           font-weight: bold;
           cursor: pointer;
           padding: 20px;
+          &:nth-child(1) {
+            background-color: rgb(28, 28, 28);
+          }
+          &:nth-child(2) {
+            background-color: rgb(19, 76, 162);
+          }
         }
         .placeList {
           display: flex;
@@ -150,6 +156,13 @@
             cursor: pointer;
             border-radius: 5px;
           }
+        }
+        .flex-btns {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
         }
       }
     }

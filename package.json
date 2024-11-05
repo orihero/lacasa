@@ -10,7 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
     "@files-ui/react": "^1.2.4",
+    "@mui/material": "^6.1.6",
+    "@mui/x-charts": "^7.22.1",
     "axios": "^1.7.7",
     "firebase": "^10.13.1",
     "i18next": "^23.16.4",
@@ -21,6 +25,7 @@
     "primereact": "^10.8.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "^7.53.1",
     "react-i18next": "^15.1.0",
     "react-leaflet": "^4.2.1",
     "react-loader-spinner": "^6.1.6",
