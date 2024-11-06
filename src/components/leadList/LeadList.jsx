@@ -6,19 +6,21 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatCreatedAt } from "../../hooks/formatDate";
 import { useListStore } from "../../lib/adsListStore";
 import "./leadList.scss";
+import { useLeadStore } from "../../lib/useLeadStore";
+import StatusCell from "../status/StatusCell";
 
 const columns = [
   { id: "id", label: "Id", minWidth: 50 },
   {
     id: "fullName",
     label: "Ism Familiya",
-    minWidth: 120,
+    minWidth: 170,
     format: (value) => formatCreatedAt(value),
   },
   {
@@ -29,22 +31,22 @@ const columns = [
     format: (value) => value,
   },
   {
-    id: "commit",
+    id: "comment",
     label: "Commit",
-    minWidth: 170,
+    minWidth: 200,
     align: "center",
     format: (value) => value.toLocaleString("en-US"),
   },
   {
     id: "status",
     label: "Status",
-    minWidth: 120,
+    minWidth: 100,
     align: "left",
     format: (value) => value.toFixed(2),
   },
   {
     id: "source",
-    label: "",
+    label: "Source",
     minWidth: 100,
     align: "right",
   },
@@ -55,9 +57,17 @@ const AdsList = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { t } = useTranslation();
-
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const { fetchLeadList, list } = useLeadStore();
+
+  useEffect(() => {
+    if (id) {
+      fetchLeadList(id);
+    }
+  }, [id]);
+
+  console.log(list);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -73,7 +83,7 @@ const AdsList = () => {
   };
 
   const handleNavigate = (id) => {
-    navigate("/post/" + id);
+    // navigate("/post/" + id);
   };
 
   const handleNavigateNew = () => {
@@ -105,18 +115,7 @@ const AdsList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {[
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-              ]
+              {[...list]
                 ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                   return (
@@ -133,6 +132,12 @@ const AdsList = () => {
                           return (
                             <TableCell key={column.id} align={column.align}>
                               #{value.slice(0, 5)}
+                            </TableCell>
+                          );
+                        } else if (column.id == "status") {
+                          return (
+                            <TableCell key={column.id} align={column.align}>
+                              <StatusCell value={value} />
                             </TableCell>
                           );
                         }

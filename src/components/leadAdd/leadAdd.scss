@@ -41,6 +41,26 @@
             color: red;
             bottom: -15px;
           }
+          select {
+            padding: 5px;
+            border: 1px solid #dddd;
+            width: 250px;
+            outline: none;
+            &:focus {
+              border: 1px solid #fece51;
+            }
+          }
+          textarea {
+            width: 250px;
+            height: 100px;
+            resize: none;
+            padding: 5px;
+            outline: none;
+            border: 1px solid #dddd;
+            &:focus {
+              border: 1px solid #fece51;
+            }
+          }
           .error {
             border: 1px solid red;
           }

@@ -6,12 +6,13 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatCreatedAt } from "../../hooks/formatDate";
 import { useListStore } from "../../lib/adsListStore";
 import "./coworkerList.scss";
+import { useCoworkerStore } from "../../lib/useCoworkerStore";
 
 const columns = [
   { id: "id", label: "Id", minWidth: 50 },
@@ -36,7 +37,7 @@ const columns = [
     format: (value) => value.toLocaleString("en-US"),
   },
   {
-    id: "phone",
+    id: "phoneNumber",
     label: "Phone",
     minWidth: 120,
     align: "left",
@@ -49,9 +50,15 @@ const AdsList = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { t } = useTranslation();
-
+  const { fetchCoworkerList, list } = useCoworkerStore();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  useEffect(() => {
+    if (id) {
+      fetchCoworkerList(id);
+    }
+  }, [id]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -97,18 +104,7 @@ const AdsList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {[
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-              ]
+              {[...list]
                 ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                   return (

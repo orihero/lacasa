@@ -68,5 +68,11 @@
   "upload_to_social_media": "Загрузить только в социальные сети",
   "view_more": "Посмотреть больше",
   "addNewLead": "Добавить новый лид",
-  "addNewCoworker": "Добавить нового сотрудника"
+  "addNewCoworker": "Добавить нового сотрудника",
+  "new": "новый",
+  "could_not_connect": "не удалось связаться",
+  "need_to_call_back": "нужно перезвонить",
+  "date_picker": "выбор даты",
+  "rejected": "отклонено",
+  "accepted": "принято"
 }

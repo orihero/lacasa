@@ -1,58 +1,56 @@
 import React, { useState } from "react";
 import "./leadAdd.scss";
-import { Avatar } from "@files-ui/react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
+import { useUserStore } from "../../lib/userStore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../../lib/firebase";
+import { useNavigate } from "react-router-dom";
 const LeadAdd = () => {
   const { t } = useTranslation();
-  const [profimeImage, setProfimeImage] = useState("/avatar.jpg");
-  const [isEditing, setIsEditing] = useState(false);
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm({
-    defaultValues: {
-      avatar: "", // Here you can set default image URL if available
-      firstName: "John",
-      lastName: "Doe",
-      phone: "+998901234567",
-      email: "john.doe@example.com",
-      password: "",
-      confirmPassword: "",
-    },
-  });
+  } = useForm();
+  const { currentUser } = useUserStore();
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     console.log("Updated Data:", data);
-    setIsEditing(false);
-  };
 
-  const handleEdit = () => {
-    setIsEditing(true);
+    try {
+      const newLead = {
+        ...data,
+        agentId: currentUser.id,
+        coworkerId: 1,
+        active: true,
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "leads"), newLead);
+
+      toast.success("Lead successfully created!");
+      reset();
+      // navigate('/')
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      toast.error("Error creating lead: " + error.message);
+    }
   };
 
   const handleCancel = () => {
     reset(); // Reset to initial values
-    setIsEditing(false);
   };
 
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Lead Setting</h1>
+        <h1>Create lead</h1>
       </div>
       <div className="profile-content">
-        <div className="avatar">
-          <Avatar
-            src={profimeImage}
-            onError={() => setProfimeImage("/avatar.jpg")}
-            onChange={(imgSource) => setProfimeImage(imgSource)}
-            accept=".jpg, .png, .gif, .bmp, .webp"
-            alt="Avatar"
-          />
-        </div>
         <div className="inputs">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="field-list">
@@ -60,19 +58,17 @@ const LeadAdd = () => {
                 <label>{t("fullName")}:</label>
                 <input
                   type="text"
-                  disabled={!isEditing}
-                  {...register("firstName", {
+                  {...register("fullName", {
                     required: "First name is required",
                   })}
-                  className={errors.firstName ? "error" : ""}
+                  className={errors.fullName ? "error" : ""}
                 />
-                {errors.firstName && <span>{errors.firstName.message}</span>}
+                {errors.fullName && <span>{errors.fullName.message}</span>}
               </div>
               <div className="field">
                 <label>{t("phone")}:</label>
                 <input
                   type="text"
-                  disabled={!isEditing}
                   {...register("phone", {
                     required: "Phone number is required",
                     pattern: {
@@ -86,68 +82,47 @@ const LeadAdd = () => {
               </div>
               <div className="field">
                 <label>{t("email")}:</label>
-                <input
-                  type="email"
-                  disabled={!isEditing}
-                  {...register("email", { required: "Email is required" })}
-                  className={errors.email ? "error" : ""}
-                />
-                {errors.email && <span>{errors.email.message}</span>}
-              </div>
-
-              <div className="field">
-                <label>{t("password")}:</label>
-                <input
-                  type="password"
-                  disabled={!isEditing}
-                  {...register("password", {
-                    required: isEditing ? "Password is required" : false,
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters",
-                    },
-                  })}
-                  className={errors.password ? "error" : ""}
-                />
-                {errors.password && <span>{errors.password.message}</span>}
+                <input type="email" {...register("email", {})} />
               </div>
               <div className="field">
-                <label>{t("password")}:</label>
-                <input
-                  type="password"
-                  disabled={!isEditing}
-                  {...register("confirmPassword", {
-                    required: isEditing
-                      ? "Confirm password is required"
-                      : false,
-                    validate: (value) =>
-                      value === watch("password") || "Passwords do not match",
-                  })}
-                  className={errors.confirmPassword ? "error" : ""}
-                />
-                {errors.confirmPassword && (
-                  <span>{errors.confirmPassword.message}</span>
-                )}
+                <label>{t("budget")}:</label>
+                <input type="text" {...register("budget", {})} />
+              </div>
+              <div className="field">
+                <label>{t("comment")}:</label>
+                <textarea {...register("comment", {})}></textarea>
+              </div>
+              <div className="field">
+                <label>{t("status")}:</label>
+                <select name="status" {...register("status")}>
+                  <option value="new">{t("new")}</option>
+                  <option value="could_not_connect">
+                    {t("could_not_connect")}
+                  </option>
+                  <option value="need_to_call_back">
+                    {t("need_to_call_back")}
+                  </option>
+                  <option value="rejected">{t("rejected")}</option>
+                  <option value="accepted">{t("accepted")}</option>
+                </select>
+              </div>
+              <div className="field">
+                <label>{t("source")}:</label>
+                <input type="text" {...register("source", {})} />
               </div>
             </div>
 
             <div className="profile-btns">
-              {isEditing ? (
-                <div className="buttons">
-                  <button
-                    className="cancel-btn"
-                    type="button"
-                    onClick={handleCancel}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit">Save</button>
-                </div>
-              ) : (
-                <button type="button" onClick={handleEdit}>
-                  {t("create")}
+              <div className="buttons">
+                <button
+                  className="cancel-btn"
+                  type="button"
+                  onClick={handleCancel}
+                >
+                  Cancel
                 </button>
-              )}
+                <button type="submit">Save</button>
+              </div>
             </div>
           </form>
         </div>

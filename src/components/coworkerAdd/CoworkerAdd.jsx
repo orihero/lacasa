@@ -1,41 +1,49 @@
-import React, { useState } from "react";
-import "./coworkerAdd.scss";
 import { Avatar } from "@files-ui/react";
+import { addDoc, collection } from "firebase/firestore";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
+import { db } from "../../lib/firebase";
+import { useUserStore } from "../../lib/userStore";
+import "./coworkerAdd.scss";
 const CoworkerAdd = () => {
   const { t } = useTranslation();
   const [profimeImage, setProfimeImage] = useState("/avatar.jpg");
-  const [isEditing, setIsEditing] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm({
-    defaultValues: {
-      avatar: "", // Here you can set default image URL if available
-      firstName: "John",
-      lastName: "Doe",
-      phone: "+998901234567",
-      email: "john.doe@example.com",
-      password: "",
-      confirmPassword: "",
-    },
-  });
+  } = useForm();
+  const { currentUser } = useUserStore();
 
-  const onSubmit = (data) => {
-    console.log("Updated Data:", data);
-    setIsEditing(false);
+  const onSubmit = async (data) => {
+    console.log(" Data:", data);
+
+    const { phone, email, password, fullName } = data;
+
+    try {
+      await addDoc(collection(db, "users"), {
+        fullName,
+        email,
+        password,
+        role: "coworker",
+        phoneNumber: phone,
+        agentId: currentUser.id,
+      });
+
+      toast.success("User successfully created");
+      reset(); // Reset to initial values
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
+  const handleEdit = () => {};
 
   const handleCancel = () => {
     reset(); // Reset to initial values
-    setIsEditing(false);
   };
 
   return (
@@ -60,19 +68,17 @@ const CoworkerAdd = () => {
                 <label>{t("fullName")}:</label>
                 <input
                   type="text"
-                  disabled={!isEditing}
-                  {...register("firstName", {
-                    required: "First name is required",
+                  {...register("fullName", {
+                    required: "Full Name is required",
                   })}
-                  className={errors.firstName ? "error" : ""}
+                  className={errors.fullName ? "error" : ""}
                 />
-                {errors.firstName && <span>{errors.firstName.message}</span>}
+                {errors.fullName && <span>{errors.fullName.message}</span>}
               </div>
               <div className="field">
                 <label>{t("phone")}:</label>
                 <input
                   type="text"
-                  disabled={!isEditing}
                   {...register("phone", {
                     required: "Phone number is required",
                     pattern: {
@@ -88,7 +94,6 @@ const CoworkerAdd = () => {
                 <label>{t("email")}:</label>
                 <input
                   type="email"
-                  disabled={!isEditing}
                   {...register("email", { required: "Email is required" })}
                   className={errors.email ? "error" : ""}
                 />
@@ -99,9 +104,8 @@ const CoworkerAdd = () => {
                 <label>{t("password")}:</label>
                 <input
                   type="password"
-                  disabled={!isEditing}
                   {...register("password", {
-                    required: isEditing ? "Password is required" : false,
+                    required: "Password is required",
                     minLength: {
                       value: 6,
                       message: "Password must be at least 6 characters",
@@ -112,16 +116,13 @@ const CoworkerAdd = () => {
                 {errors.password && <span>{errors.password.message}</span>}
               </div>
               <div className="field">
-                <label>{t("password")}:</label>
+                <label>{t("confirmPassword")}:</label>
                 <input
                   type="password"
-                  disabled={!isEditing}
                   {...register("confirmPassword", {
-                    required: isEditing
-                      ? "Confirm password is required"
-                      : false,
-                    validate: (value) =>
-                      value === watch("password") || "Passwords do not match",
+                    required: "Confirm password is required",
+                    // validate: (value) =>
+                    //   value === watch("password") || "Passwords do not match",
                   })}
                   className={errors.confirmPassword ? "error" : ""}
                 />
@@ -132,22 +133,16 @@ const CoworkerAdd = () => {
             </div>
 
             <div className="profile-btns">
-              {isEditing ? (
-                <div className="buttons">
-                  <button
-                    className="cancel-btn"
-                    type="button"
-                    onClick={handleCancel}
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit">Save</button>
-                </div>
-              ) : (
-                <button type="button" onClick={handleEdit}>
-                  {t("create")}
+              <div className="buttons">
+                <button
+                  className="cancel-btn"
+                  type="button"
+                  onClick={handleCancel}
+                >
+                  Cancel
                 </button>
-              )}
+                <button type="submit">Save</button>
+              </div>
             </div>
           </form>
         </div>
