@@ -5,10 +5,29 @@
   flex-direction: column;
   padding: 5px;
   gap: 10px;
+  width: 100%;
   .profile-content {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    width: 100%;
+    .setting-left {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 40%;
+      border: 1px solid red;
+      .avatar {
+        display: flex;
+      }
+    }
+    .setting-right {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 40%;
+      border: 1px solid red;
+    }
 
     .inputs {
       display: flex;

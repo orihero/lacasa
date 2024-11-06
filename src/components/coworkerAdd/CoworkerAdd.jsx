@@ -41,7 +41,7 @@ const CoworkerAdd = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Coworker Setting</h1>
+        <h1>Create coworker</h1>
       </div>
       <div className="profile-content">
         <div className="avatar">

@@ -1,11 +1,3 @@
-import React from "react";
-import "./coworkerList.scss";
-import { useListStore } from "../../lib/adsListStore";
-import { useNavigate, useParams } from "react-router-dom";
-import { formatCreatedAt } from "../../hooks/formatDate";
-import EditIcon from "../../components/icons/EditIcon";
-import DeleteIcon from "../../components/icons/DeleteIcon";
-import { useTranslation } from "react-i18next";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -14,41 +6,41 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { formatCreatedAt } from "../../hooks/formatDate";
+import { useListStore } from "../../lib/adsListStore";
+import "./coworkerList.scss";
 
 const columns = [
-  { id: "title", label: "Title", minWidth: 170 },
+  { id: "id", label: "Id", minWidth: 50 },
   {
-    id: "createdAt",
-    label: "Created",
+    id: "photo",
+    label: "Photo",
     minWidth: 100,
     format: (value) => formatCreatedAt(value),
   },
   {
-    id: "city",
-    label: "Address",
+    id: "fullName",
+    label: "Ism Familiyasi",
     minWidth: 170,
     align: "left",
     format: (value) => value,
   },
   {
-    id: "status",
-    label: "Status",
-    minWidth: 170,
+    id: "adsCount",
+    label: "Ads Count",
+    minWidth: 80,
     align: "left",
     format: (value) => value.toLocaleString("en-US"),
   },
   {
-    id: "author",
-    label: "Author",
-    minWidth: 170,
+    id: "phone",
+    label: "Phone",
+    minWidth: 120,
     align: "left",
     format: (value) => value.toFixed(2),
-  },
-  {
-    id: "delete-edit",
-    label: "",
-    minWidth: 80,
-    align: "right",
   },
 ];
 
@@ -129,23 +121,10 @@ const AdsList = () => {
                     >
                       {columns.map((column) => {
                         const value = row[column.id];
-                        if (column.id == "delete-edit") {
+                        if (column.id == "id") {
                           return (
                             <TableCell key={column.id} align={column.align}>
-                              <div className="icons">
-                                <span
-                                  style={{ padding: "8px", cursor: "pointer" }}
-                                  onClick={() => handleDeleteEdit()}
-                                >
-                                  <EditIcon width={15} fill="#2b2d42" />
-                                </span>
-                                <span
-                                  style={{ padding: "8px", cursor: "pointer" }}
-                                  onClick={() => handleDeleteEdit()}
-                                >
-                                  <DeleteIcon width={15} fill="#e63946" />
-                                </span>
-                              </div>
+                              #{value.slice(0, 5)}
                             </TableCell>
                           );
                         }

@@ -19,6 +19,7 @@ import Chart from "./components/Chart/Chart";
 import ProfileSetting from "./components/profileSetting/ProfileSetting";
 import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
 import LeadAdd from "./components/leadAdd/leadAdd";
+import AdsAdd from "./components/adsAdd/AdsAdd";
 
 function App() {
   const router = createBrowserRouter([
@@ -38,10 +39,6 @@ function App() {
           path: "/about",
           element: <AboutPage />,
         },
-        // {
-        //   path: "/contact",
-        //   element: <ContactPage />,
-        // },
         {
           path: "/agent/:id",
           element: <AgentProfilePage />,
@@ -68,7 +65,7 @@ function App() {
             },
             {
               path: ":id/create/ads",
-              element: <ProfileSetting />,
+              element: <AdsAdd />,
             },
             {
               path: ":id/leads",

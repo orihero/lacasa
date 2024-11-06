@@ -1,12 +1,3 @@
-import React from "react";
-import "./adsList.scss";
-import { useListStore } from "../../lib/adsListStore";
-import { useNavigate } from "react-router-dom";
-import { formatCreatedAt } from "../../hooks/formatDate";
-import EditIcon from "../../components/icons/EditIcon";
-import DeleteIcon from "../../components/icons/DeleteIcon";
-import Filter from "../filter/Filter";
-import { useTranslation } from "react-i18next";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -15,10 +6,24 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
+import { t } from "i18next";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import EditIcon from "../../components/icons/EditIcon";
+import { formatCreatedAt } from "../../hooks/formatDate";
+import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
+import "./adsList.scss";
 
 const columns = [
-  { id: "title", label: "Title", minWidth: 170 },
+  { id: "id", label: "Id", minWidth: 50 },
+  {
+    id: "photos",
+    label: "Photo",
+    minWidth: 80,
+    format: (value) => value[0],
+  },
   {
     id: "createdAt",
     label: "Created",
@@ -42,14 +47,28 @@ const columns = [
   {
     id: "author",
     label: "Author",
-    minWidth: 170,
+    minWidth: 120,
     align: "left",
     format: (value) => value.toFixed(2),
   },
   {
-    id: "delete-edit",
+    id: "rooms",
+    label: t("room"),
+    minWidth: 60,
+    align: "center",
+    format: (value) => value.toFixed(2),
+  },
+  {
+    id: "area",
+    label: t("area"),
+    minWidth: 70,
+    align: "center",
+    format: (value) => value.toFixed(2),
+  },
+  {
+    id: "edit",
     label: "",
-    minWidth: 80,
+    minWidth: 60,
     align: "right",
   },
 ];
@@ -133,7 +152,7 @@ const AdsList = () => {
                     >
                       {columns.map((column) => {
                         const value = row[column.id];
-                        if (column.id == "delete-edit") {
+                        if (column.id == "edit") {
                           return (
                             <TableCell key={column.id} align={column.align}>
                               <div className="icons">
@@ -143,13 +162,23 @@ const AdsList = () => {
                                 >
                                   <EditIcon width={15} fill="#2b2d42" />
                                 </span>
-                                <span
-                                  style={{ padding: "8px", cursor: "pointer" }}
-                                  onClick={() => handleDeleteEdit()}
-                                >
-                                  <DeleteIcon width={15} fill="#e63946" />
-                                </span>
                               </div>
+                            </TableCell>
+                          );
+                        } else if (column.id == "id") {
+                          return (
+                            <TableCell key={column.id} align={column.align}>
+                              #{value.slice(0, 5)}
+                            </TableCell>
+                          );
+                        } else if (column.id == "photos") {
+                          return (
+                            <TableCell key={column.id} align={column.align}>
+                              <img
+                                style={{ width: "70px" }}
+                                src={column.format(value)}
+                                alt=""
+                              />
                             </TableCell>
                           );
                         }

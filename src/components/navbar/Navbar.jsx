@@ -65,13 +65,7 @@ function Navbar() {
         </a>
         <Link to="/">{t("home")}</Link>
         <Link to="/about">{t("about")}</Link>
-        {currentUser?.role == "agent" ? (
-          <></>
-        ) : (
-          <>
-            <Link to="/agents">{t("agents")}</Link>
-          </>
-        )}
+        <Link to="/agents">{t("agents")}</Link>
       </div>
       <div className="right">
         {renderRight()}
