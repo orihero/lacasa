@@ -23,11 +23,16 @@
           position: relative;
           display: flex;
           justify-content: space-between;
+          align-items: center;
           width: 400px;
           input {
             padding: 5px;
             border: 1px solid #dddd;
             width: 250px;
+            outline: none;
+            &:focus {
+              border: 1px solid #fece51;
+            }
           }
           span {
             position: absolute;
@@ -48,6 +53,10 @@
       .buttons {
         display: flex;
         gap: 10px;
+        .cancel-btn {
+          background-color: #051d42;
+          color: #fff;
+        }
       }
       button {
         padding: 12px 24px;

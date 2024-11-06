@@ -134,10 +134,14 @@ const ProfileSetting = () => {
             <div className="profile-btns">
               {isEditing ? (
                 <div className="buttons">
-                  <button type="submit">Save</button>
-                  <button type="button" onClick={handleCancel}>
+                  <button
+                    className="cancel-btn"
+                    type="button"
+                    onClick={handleCancel}
+                  >
                     Cancel
                   </button>
+                  <button type="submit">Save</button>
                 </div>
               ) : (
                 <button type="button" onClick={handleEdit}>
