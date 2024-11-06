@@ -17,6 +17,8 @@ import LeadList from "./components/leadList/LeadList";
 import CoworkerList from "./components/coworkerList/CoworkerList";
 import Chart from "./components/Chart/Chart";
 import ProfileSetting from "./components/profileSetting/ProfileSetting";
+import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
+import LeadAdd from "./components/leadAdd/leadAdd";
 
 function App() {
   const router = createBrowserRouter([
@@ -65,12 +67,24 @@ function App() {
               element: <AdsList />,
             },
             {
+              path: ":id/create/ads",
+              element: <ProfileSetting />,
+            },
+            {
               path: ":id/leads",
               element: <LeadList />,
             },
             {
+              path: ":id/create/leads",
+              element: <LeadAdd />,
+            },
+            {
               path: ":id/coworkers",
               element: <CoworkerList />,
+            },
+            {
+              path: ":id/create/coworkers",
+              element: <CoworkerAdd />,
             },
             {
               path: ":id/setting",

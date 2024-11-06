@@ -63,12 +63,12 @@ function Navbar() {
           <img src="/logo.png" alt="" />
           <span>LamaEstate</span>
         </a>
+        <Link to="/">{t("home")}</Link>
+        <Link to="/about">{t("about")}</Link>
         {currentUser?.role == "agent" ? (
           <></>
         ) : (
           <>
-            <Link to="/">{t("home")}</Link>
-            <Link to="/about">{t("about")}</Link>
             <Link to="/agents">{t("agents")}</Link>
           </>
         )}

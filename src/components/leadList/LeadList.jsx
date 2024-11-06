@@ -1,7 +1,7 @@
 import React from "react";
 import "./leadList.scss";
 import { useListStore } from "../../lib/adsListStore";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { formatCreatedAt } from "../../hooks/formatDate";
 import EditIcon from "../../components/icons/EditIcon";
 import DeleteIcon from "../../components/icons/DeleteIcon";
@@ -56,6 +56,7 @@ const columns = [
 const AdsList = () => {
   const { myList } = useListStore();
   const navigate = useNavigate();
+  const { id } = useParams();
   const { t } = useTranslation();
 
   const [page, setPage] = React.useState(0);
@@ -78,13 +79,17 @@ const AdsList = () => {
     navigate("/post/" + id);
   };
 
+  const handleNavigateNew = () => {
+    navigate("/profile/" + id + "/create/leads");
+  };
+
   console.log(myList);
 
   return (
     <div className="ads-list-content">
       {/* <div className="filter-tools">filter</div> */}
       <div className="ads-new">
-        <button>{t("addNewLead")}</button>
+        <button onClick={handleNavigateNew}>{t("addNewLead")}</button>
       </div>
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer sx={{ maxHeight: 580 }}>

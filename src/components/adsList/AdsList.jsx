@@ -15,6 +15,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
+import { useUserStore } from "../../lib/userStore";
 
 const columns = [
   { id: "title", label: "Title", minWidth: 170 },
@@ -55,6 +56,7 @@ const columns = [
 
 const AdsList = () => {
   const { myList } = useListStore();
+  const { currentUser } = useUserStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -79,7 +81,7 @@ const AdsList = () => {
   };
 
   const handleNewPost = () => {
-    navigate("/post");
+    navigate("/profile/" + currentUser.id + "/create/ads");
   };
 
   console.log(myList);
