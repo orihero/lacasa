@@ -1,16 +1,23 @@
 import { Avatar } from "@files-ui/react";
-import { addDoc, collection } from "firebase/firestore";
-import React, { useState } from "react";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { db } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
-import "./coworkerAdd.scss";
+import "./coworkerUpdate.scss";
 import { Triangle } from "react-loader-spinner";
 import { assetUpload } from "../../lib/assetUpload";
-import { useNavigate } from "react-router-dom";
-const CoworkerAdd = () => {
+import { useNavigate, useParams } from "react-router-dom";
+import { useCoworkerStore } from "../../lib/useCoworkerStore";
+const CoworkerUpdate = () => {
   const { t } = useTranslation();
   const [profimeImage, setProfimeImage] = useState("/avatar.jpg");
   const {
@@ -20,8 +27,29 @@ const CoworkerAdd = () => {
     reset,
   } = useForm();
   const { currentUser } = useUserStore();
+  const { fetchCoworkerById, coworker } = useCoworkerStore();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams();
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      fetchCoworkerById(id, currentUser.id);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (coworker) {
+      reset({
+        fullName: coworker.fullName || "",
+        email: coworker.email || "",
+        phone: coworker.phoneNumber || "",
+        password: coworker.password || "",
+      });
+      setProfimeImage(coworker.avatar);
+    }
+  }, [coworker]);
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -31,36 +59,59 @@ const CoworkerAdd = () => {
     try {
       let r = null;
       const updater = async () => {
-        if (profimeImage !== "/avatar.jpg") {
+        if (profimeImage !== coworker.avatar) {
           r = await assetUpload(profimeImage);
         }
 
-        await addDoc(collection(db, "users"), {
+        const docRef = doc(db, "users", coworker.id);
+
+        await updateDoc(docRef, {
           fullName,
           email,
           password,
-          role: "coworker",
           phoneNumber: phone,
-          agentId: currentUser.id,
-          avatar: r ?? "/avatar.jpg",
+          avatar: r ?? profimeImage,
           adsCount: 0,
         });
 
-        toast.success("Coworker successfully created!");
+        toast.success("Coworker successfully updated!");
         navigate("/profile/" + currentUser.id + "/coworkers");
         reset(); // Reset to initial values
+        setLoading(false);
       };
 
       toast.promise(updater, {
         error: "Something went wrong!",
-        pending: "Uploading",
-        success: "Coworker successfully created",
+        pending: "Updating",
+        success: "Coworker successfully updated",
       });
-      setLoading(false);
     } catch (error) {
       console.error(error);
-      toast.error("Error creating coworker: " + error.message);
+      toast.error("Error updating coworker: " + error.message);
+      setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+
+    try {
+      const coworkerRef = doc(db, "users", coworker.id);
+
+      await deleteDoc(coworkerRef);
+
+      toast.success("Coworker successfully deleted!");
+      navigate("/profile/" + currentUser.id + "/coworkers");
+    } catch (error) {
+      console.error("Error deleting coworker:", error);
+      toast.error("Error deleting coworker: " + error?.message);
+    }
+
+    setLoading(false);
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
   };
 
   const handleCancel = () => {
@@ -87,7 +138,7 @@ const CoworkerAdd = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Create coworker</h1>
+        <h1>Update coworker</h1>
       </div>
       <div className="profile-content">
         <div className="avatar">
@@ -140,17 +191,32 @@ const CoworkerAdd = () => {
 
               <div className="field">
                 <label>{t("password")}:</label>
-                <input
-                  type="password"
-                  {...register("password", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters",
-                    },
-                  })}
-                  className={errors.password ? "error" : ""}
-                />
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    {...register("password", {
+                      required: "Password is required",
+                      minLength: {
+                        value: 6,
+                        message: "Password must be at least 6 characters",
+                      },
+                    })}
+                    className={errors.password ? "error" : ""}
+                  />
+                  <span
+                    onClick={togglePasswordVisibility}
+                    style={{
+                      position: "absolute",
+                      right: "10px",
+                      top: "17px",
+                      transform: "translateY(-50%)",
+                      cursor: "pointer",
+                      color: "#888",
+                    }}
+                  >
+                    {showPassword ? "👁️" : "🙈"}
+                  </span>
+                </div>
                 {errors.password && <span>{errors.password.message}</span>}
               </div>
             </div>
@@ -165,6 +231,13 @@ const CoworkerAdd = () => {
                   Cancel
                 </button>
                 <button type="submit">Save</button>
+                <button
+                  className="delete-btn"
+                  type="button"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </form>
@@ -174,4 +247,4 @@ const CoworkerAdd = () => {
   );
 };
 
-export default CoworkerAdd;
+export default CoworkerUpdate;

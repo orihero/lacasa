@@ -43,6 +43,7 @@ const StatusCell = ({ value }) => {
         display: "inline-block",
         fontWeight: "bold",
         textTransform: "capitalize",
+        fontSize: "10px",
       }}
     >
       {value}

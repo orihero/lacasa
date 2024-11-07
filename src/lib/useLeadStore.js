@@ -13,6 +13,7 @@ import { db } from "./firebase";
 export const useLeadStore = create((set) => ({
   list: [],
   isLoading: true,
+  lead: {},
   fetchLeadList: async (agentId) => {
     try {
       const leadsQuery = query(
@@ -32,21 +33,21 @@ export const useLeadStore = create((set) => ({
       set({ list: [], isLoading: false });
     }
   },
+  fetchLeadById: async (leadId) => {
+    try {
+      const leadRef = doc(db, "leads", leadId);
+      const leadDoc = await getDoc(leadRef);
 
-  // fetchAdsById: async (id) => {
-  //   try {
-  //     const adRef = doc(db, "ads", id);
-  //     const docSnap = await getDoc(adRef);
-
-  //     if (docSnap.exists()) {
-  //       const adData = { id: docSnap.id, ...docSnap.data() };
-  //       set({ adsData: adData, isLoading: false });
-  //     } else {
-  //       set({ adsData: {}, isLoading: false });
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching ad by ID: ", error);
-  //     set({ adsData: {}, isLoading: false });
-  //   }
-  // },
+      if (leadDoc.exists()) {
+        const leadData = { id: leadDoc.id, ...leadDoc.data() };
+        set({ lead: leadData, isLoading: false });
+      } else {
+        console.error("Lead not found");
+        set({ lead: null, isLoading: false });
+      }
+    } catch (error) {
+      console.error("Error fetching lead by id:", error);
+      set({ lead: null, isLoading: false });
+    }
+  },
 }));

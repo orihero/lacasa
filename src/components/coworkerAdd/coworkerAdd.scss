@@ -9,6 +9,11 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    .avatar {
+      width: 220px;
+      height: 220px;
+      display: block;
+    }
 
     .inputs {
       display: flex;

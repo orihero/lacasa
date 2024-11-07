@@ -5,29 +5,14 @@
   flex-direction: column;
   padding: 5px;
   gap: 10px;
-  width: 100%;
-  .profile-container {
+  .profile-content {
     position: relative;
     display: flex;
-    flex-direction: row;
-    width: 100%;
-    .left {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      width: 65%;
-
-      .avatar {
-        width: 220px;
-        height: 220px;
-        display: block;
-      }
-    }
-    .right {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      width: 30%;
+    flex-direction: column;
+    .avatar {
+      width: 220px;
+      height: 220px;
+      display: block;
     }
 
     .inputs {
@@ -75,6 +60,10 @@
         gap: 10px;
         .cancel-btn {
           background-color: #051d42;
+          color: #fff;
+        }
+        .delete-btn {
+          background-color: rgb(216, 72, 53);
           color: #fff;
         }
       }

@@ -1,62 +1,106 @@
 import React, { useEffect, useState } from "react";
-import "./leadAdd.scss";
+import "./leadUpdate.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { useUserStore } from "../../lib/userStore";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
-const LeadAdd = () => {
+import { useLeadStore } from "../../lib/useLeadStore";
+const LeadUpdate = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { fetchCoworkerList, list } = useCoworkerStore();
+  const { fetchLeadById, lead, isLoading } = useLeadStore();
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm();
+  } = useForm({});
   const { currentUser } = useUserStore();
   const [loading, setLoading] = useState(false);
   const { id } = useParams();
 
   useEffect(() => {
+    if (currentUser?.id) {
+      fetchCoworkerList(currentUser.id);
+    }
+  }, [currentUser.id]);
+
+  useEffect(() => {
     if (id) {
-      fetchCoworkerList(id);
+      fetchLeadById(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    if (lead) {
+      reset({
+        fullName: lead.fullName || "",
+        email: lead.email || "",
+        phone: lead.phone || "",
+        budget: lead.budget || "",
+        comment: lead.comment || "",
+        status: lead.status || "",
+        source: lead.source || "",
+        coworkerId: lead.coworkerId || "",
+      });
+    }
+  }, [lead]);
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const newLead = {
+      const updatedLead = {
         ...data,
-        agentId: currentUser.id,
-        active: true,
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, "leads"), newLead);
+      const leadRef = doc(db, "leads", id);
+      await updateDoc(leadRef, updatedLead);
 
-      toast.success("Lead successfully created!");
+      toast.success("Lead successfully updated!");
       reset();
       navigate("/profile/" + currentUser.id + "/leads");
     } catch (error) {
-      console.error("Error creating lead:", error);
-      toast.error("Error creating lead: " + error.message);
+      console.error("Error updating lead:", error);
+      toast.error("Error updating lead: " + error?.message);
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const leadRef = doc(db, "leads", id);
+      await deleteDoc(leadRef);
+
+      toast.success("Lead successfully deleted!");
+      navigate("/profile/" + currentUser.id + "/leads");
+    } catch (error) {
+      console.error("Error deleting lead:", error);
+      toast.error("Error deleting lead: " + error?.message);
     }
     setLoading(false);
   };
 
   const handleCancel = () => {
     reset(); // Reset to initial values
-    navigate("/profile/" + id + "/leads");
+    navigate("/profile/" + currentUser.id + "/leads");
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="loading">
         <Triangle
@@ -75,7 +119,7 @@ const LeadAdd = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Create lead</h1>
+        <h1>Update lead</h1>
       </div>
       <div className="profile-content">
         <div className="inputs">
@@ -143,7 +187,15 @@ const LeadAdd = () => {
                   <select name="coworkerId" {...register("coworkerId")}>
                     <option value={"0"}></option>;
                     {list?.map((item) => {
-                      return <option value={item?.id}>{item?.fullName}</option>;
+                      return (
+                        <option
+                          key={item.id}
+                          value={item?.id}
+                          defaultChecked={item?.id == lead?.coworkerId}
+                        >
+                          {item?.fullName}
+                        </option>
+                      );
                     })}
                   </select>
                 </div>
@@ -160,6 +212,13 @@ const LeadAdd = () => {
                   Cancel
                 </button>
                 <button type="submit">Save</button>
+                <button
+                  className="delete-btn"
+                  type="button"
+                  onClick={handleDelete}
+                >
+                  Delete
+                </button>
               </div>
             </div>
           </form>
@@ -169,4 +228,4 @@ const LeadAdd = () => {
   );
 };
 
-export default LeadAdd;
+export default LeadUpdate;

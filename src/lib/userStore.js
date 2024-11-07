@@ -17,9 +17,9 @@ export const useUserStore = create((set) => ({
         //* INIT SERVICES
         const igAccounts = await IGService.init(docSnap.data().igTokens);
         const tgAccounts = await TGService.init(docSnap.data().tgChatIds);
-        console.log('====================================');
-        console.log({igAccounts});
-        console.log('====================================');
+        console.log("====================================");
+        console.log({ igAccounts });
+        console.log("====================================");
         set({
           currentUser: { ...docSnap.data(), tgAccounts, igAccounts },
           isLoading: false,

@@ -5,30 +5,10 @@
   flex-direction: column;
   padding: 5px;
   gap: 10px;
-  width: 100%;
-  .profile-container {
+  .profile-content {
     position: relative;
     display: flex;
-    flex-direction: row;
-    width: 100%;
-    .left {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      width: 65%;
-
-      .avatar {
-        width: 220px;
-        height: 220px;
-        display: block;
-      }
-    }
-    .right {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      width: 30%;
-    }
+    flex-direction: column;
 
     .inputs {
       display: flex;
@@ -61,6 +41,26 @@
             color: red;
             bottom: -15px;
           }
+          select {
+            padding: 5px;
+            border: 1px solid #dddd;
+            width: 250px;
+            outline: none;
+            &:focus {
+              border: 1px solid #fece51;
+            }
+          }
+          textarea {
+            width: 250px;
+            height: 100px;
+            resize: none;
+            padding: 5px;
+            outline: none;
+            border: 1px solid #dddd;
+            &:focus {
+              border: 1px solid #fece51;
+            }
+          }
           .error {
             border: 1px solid red;
           }
@@ -75,6 +75,10 @@
         gap: 10px;
         .cancel-btn {
           background-color: #051d42;
+          color: #fff;
+        }
+        .delete-btn {
+          background-color: rgb(216, 72, 53);
           color: #fff;
         }
       }

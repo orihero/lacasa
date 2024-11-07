@@ -9,18 +9,18 @@ import TableRow from "@mui/material/TableRow";
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { formatCreatedAt } from "../../hooks/formatDate";
 import { useListStore } from "../../lib/adsListStore";
 import "./coworkerList.scss";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 
 const columns = [
-  { id: "id", label: "Id", minWidth: 50 },
+  { id: "id", label: "Id", minWidth: 30 },
   {
-    id: "photo",
+    id: "avatar",
     label: "Photo",
-    minWidth: 100,
-    format: (value) => formatCreatedAt(value),
+    minWidth: 60,
+    align: "center",
+    format: (value) => value,
   },
   {
     id: "fullName",
@@ -69,12 +69,8 @@ const AdsList = () => {
     setPage(0);
   };
 
-  const handleDeleteEdit = () => {
-    alert("Delete");
-  };
-
   const handleNavigate = (id) => {
-    navigate("/post/" + id);
+    navigate("/profile/" + id + "/update/coworkers");
   };
 
   const handleNavigateNew = () => {
@@ -117,6 +113,7 @@ const AdsList = () => {
                     >
                       {columns.map((column) => {
                         const value = row[column.id];
+
                         if (column.id == "id") {
                           return (
                             <TableCell key={column.id} align={column.align}>
@@ -124,13 +121,26 @@ const AdsList = () => {
                             </TableCell>
                           );
                         }
+                        if (column.id == "avatar") {
+                          return (
+                            <TableCell key={column.id} align={column.align}>
+                              <img
+                                style={{
+                                  width: "50px",
+                                  height: "50px",
+                                  objectFit: "cover",
+                                }}
+                                src={value ?? "/avatar.jpg"}
+                                alt=""
+                              />
+                            </TableCell>
+                          );
+                        }
                         return (
                           <TableCell key={column.id} align={column.align}>
                             {column.format && typeof value === "number"
                               ? column.format(value)
-                              : column.format && column.id == "createdAt"
-                              ? column.format(value)
-                              : value}
+                              : value ?? 0}
                           </TableCell>
                         );
                       })}

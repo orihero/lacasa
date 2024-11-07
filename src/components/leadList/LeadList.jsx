@@ -10,7 +10,6 @@ import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatCreatedAt } from "../../hooks/formatDate";
-import { useListStore } from "../../lib/adsListStore";
 import "./leadList.scss";
 import { useLeadStore } from "../../lib/useLeadStore";
 import StatusCell from "../status/StatusCell";
@@ -53,7 +52,6 @@ const columns = [
 ];
 
 const AdsList = () => {
-  const { myList } = useListStore();
   const navigate = useNavigate();
   const { id } = useParams();
   const { t } = useTranslation();
@@ -83,14 +81,12 @@ const AdsList = () => {
   };
 
   const handleNavigate = (id) => {
-    // navigate("/post/" + id);
+    navigate("/profile/" + id + "/update/leads");
   };
 
   const handleNavigateNew = () => {
     navigate("/profile/" + id + "/create/leads");
   };
-
-  console.log(myList);
 
   return (
     <div className="ads-list-content">
@@ -160,7 +156,7 @@ const AdsList = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
           component="div"
-          count={myList?.length}
+          count={list?.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
