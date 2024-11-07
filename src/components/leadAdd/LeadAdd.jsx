@@ -34,10 +34,15 @@ const LeadAdd = () => {
     try {
       const newLead = {
         ...data,
-        agentId: currentUser.id,
+        agentId:
+          currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
         active: true,
         createdAt: serverTimestamp(),
       };
+
+      if (currentUser.role == "coworker") {
+        newLead["coworkerId"] = currentUser.id;
+      }
 
       await addDoc(collection(db, "leads"), newLead);
 

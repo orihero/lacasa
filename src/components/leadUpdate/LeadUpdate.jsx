@@ -17,7 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useLeadStore } from "../../lib/useLeadStore";
-const LeadUpdate = () => {
+const LeadUpdate = ({ leadId, onClose }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { fetchCoworkerList, list } = useCoworkerStore();
@@ -27,22 +27,24 @@ const LeadUpdate = () => {
     handleSubmit,
     formState: { errors },
     reset,
+    watch,
   } = useForm({});
   const { currentUser } = useUserStore();
   const [loading, setLoading] = useState(false);
+  // const [selectValue, setSelectValue] = useState("");
   const { id } = useParams();
-
+  const statusValue = watch("status", "new");
   useEffect(() => {
-    if (currentUser?.id) {
+    if (currentUser?.id && currentUser.role == "agent") {
       fetchCoworkerList(currentUser.id);
     }
   }, [currentUser.id]);
 
   useEffect(() => {
-    if (id) {
-      fetchLeadById(id);
+    if (leadId) {
+      fetchLeadById(leadId);
     }
-  }, [id]);
+  }, [leadId]);
 
   useEffect(() => {
     if (lead) {
@@ -54,6 +56,7 @@ const LeadUpdate = () => {
         comment: lead.comment || "",
         status: lead.status || "",
         source: lead.source || "",
+        callbackDate: lead?.callbackDate || "",
         coworkerId: lead.coworkerId || "",
       });
     }
@@ -67,12 +70,13 @@ const LeadUpdate = () => {
         updatedAt: serverTimestamp(),
       };
 
-      const leadRef = doc(db, "leads", id);
+      const leadRef = doc(db, "leads", leadId);
       await updateDoc(leadRef, updatedLead);
 
       toast.success("Lead successfully updated!");
       reset();
-      navigate("/profile/" + currentUser.id + "/leads");
+      // navigate("/profile/" + currentUser.id + "/leads");
+      onClose();
     } catch (error) {
       console.error("Error updating lead:", error);
       toast.error("Error updating lead: " + error?.message);
@@ -83,7 +87,7 @@ const LeadUpdate = () => {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const leadRef = doc(db, "leads", id);
+      const leadRef = doc(db, "leads", leadId);
       await deleteDoc(leadRef);
 
       toast.success("Lead successfully deleted!");
@@ -97,7 +101,7 @@ const LeadUpdate = () => {
 
   const handleCancel = () => {
     reset(); // Reset to initial values
-    navigate("/profile/" + currentUser.id + "/leads");
+    onClose();
   };
 
   if (loading || isLoading) {
@@ -117,11 +121,11 @@ const LeadUpdate = () => {
   }
 
   return (
-    <div className="profile-setting">
+    <div className="profile-setting-update">
       <div className="profile-header">
         <h1>Update lead</h1>
       </div>
-      <div className="profile-content">
+      <div className="profile-content-update">
         <div className="inputs">
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="field-list">
@@ -177,6 +181,16 @@ const LeadUpdate = () => {
                   <option value="accepted">{t("accepted")}</option>
                 </select>
               </div>
+              {statusValue == "need_to_call_back" && (
+                <div className="field">
+                  <label>{t("qo'ng'iroq qilish vaqti")}:</label>
+                  <input
+                    type="datetime-local"
+                    {...register("callbackDate")}
+                    placeholder={t("select_date")}
+                  />
+                </div>
+              )}
               <div className="field">
                 <label>{t("source")}:</label>
                 <input type="text" {...register("source", {})} />

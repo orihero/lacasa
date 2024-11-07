@@ -50,4 +50,23 @@ export const useLeadStore = create((set) => ({
       set({ lead: null, isLoading: false });
     }
   },
+  fetchLeadListByCwrk: async (coworkerId) => {
+    try {
+      const leadsQuery = query(
+        collection(db, "leads"),
+        where("coworkerId", "==", coworkerId),
+      );
+
+      const querySnapshot = await getDocs(leadsQuery);
+      const leadsList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      set({ list: leadsList, isLoading: false });
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      set({ list: [], isLoading: false });
+    }
+  },
 }));

@@ -6,13 +6,16 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { formatCreatedAt } from "../../hooks/formatDate";
 import "./leadList.scss";
 import { useLeadStore } from "../../lib/useLeadStore";
 import StatusCell from "../status/StatusCell";
+import { useUserStore } from "../../lib/userStore";
+import { Box, Divider, Drawer } from "@mui/material";
+import LeadUpdate from "../leadUpdate/LeadUpdate";
 
 const columns = [
   { id: "id", label: "Id", minWidth: 50 },
@@ -57,15 +60,18 @@ const AdsList = () => {
   const { t } = useTranslation();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const { fetchLeadList, list } = useLeadStore();
+  const { fetchLeadList, list, fetchLeadListByCwrk } = useLeadStore();
+  const { currentUser } = useUserStore();
+  const [isOpenDrawer, setIsOpenDrawer] = useState(false);
+  const [leadId, setLeadId] = useState(0);
 
   useEffect(() => {
-    if (id) {
+    if (currentUser.role == "coworker") {
+      fetchLeadListByCwrk(currentUser.id);
+    } else if (id && currentUser.role == "agent") {
       fetchLeadList(id);
     }
   }, [id]);
-
-  console.log(list);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -74,10 +80,6 @@ const AdsList = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
-  };
-
-  const handleDeleteEdit = () => {
-    alert("Delete");
   };
 
   const handleNavigate = (id) => {
@@ -120,7 +122,10 @@ const AdsList = () => {
                       role="checkbox"
                       tabIndex={-1}
                       key={row.code}
-                      onClick={() => handleNavigate(row?.id)}
+                      onClick={() => {
+                        setIsOpenDrawer(true);
+                        setLeadId(row?.id);
+                      }}
                     >
                       {columns.map((column) => {
                         const value = row[column.id];
@@ -140,8 +145,6 @@ const AdsList = () => {
                         return (
                           <TableCell key={column.id} align={column.align}>
                             {column.format && typeof value === "number"
-                              ? column.format(value)
-                              : column.format && column.id == "createdAt"
                               ? column.format(value)
                               : value}
                           </TableCell>
@@ -163,6 +166,13 @@ const AdsList = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+      <Drawer
+        anchor={"right"}
+        open={isOpenDrawer}
+        onClose={() => setIsOpenDrawer(false)}
+      >
+        <LeadUpdate leadId={leadId} onClose={() => setIsOpenDrawer(false)} />
+      </Drawer>
     </div>
   );
 };
