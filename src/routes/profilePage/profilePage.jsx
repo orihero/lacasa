@@ -18,8 +18,8 @@ import { useTranslation } from "react-i18next";
 import Sidebar from "../../components/sidebar/Sidebar";
 
 function ProfilePage() {
-  const { currentUser, logout } = useUserStore();
-  const { isLoading, fetchAdsByAgentId, myList } = useListStore();
+  const { currentUser, logout, isLoading } = useUserStore();
+  const { fetchAdsByAgentId, myList } = useListStore();
   const navigate = useNavigate();
 
   const [isFilter, setFilter] = useState(false);
@@ -55,7 +55,7 @@ function ProfilePage() {
 
   return (
     <>
-      {currentUser?.role == "agent" ? (
+      {currentUser?.role !== "user" ? (
         <div className="agent-content">
           <Sidebar currentUser={currentUser} handleLogout={handleLogout} />
           <div className="content-list">
