@@ -12,12 +12,12 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { db } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
-import { IgService } from "../../services/ig";
 import { useNavigate } from "react-router-dom";
 import { useUtilsStore } from "../../lib/utilsStore";
 import regionData from "../../regions.json";
 import { useTranslation } from "react-i18next";
 import { ADS_TYPE } from "../../components/types/AdsType";
+import { IGService } from "../../services/ig";
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
@@ -90,7 +90,7 @@ function NewPostPage() {
 
     // !Upload to IG
     const uploadIg = async () => {
-      const res = await IgService.customCreateCarousel(photos, caption);
+      const res = await IGService.publishMedia(photos, caption);
     };
     const upload = async () => {
       try {

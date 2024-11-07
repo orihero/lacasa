@@ -7,6 +7,10 @@ import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import { useUserStore } from "../../lib/userStore";
+import { IGService } from "../../services/ig";
+import IgProfileCard from "../igProfileCard/IgProfileCard";
+import { TGService } from "../../services/tg";
+import TgProfileCard from "../tgProfileCard/TgProfileCard";
 const ProfileSetting = () => {
   const { t } = useTranslation();
   const { currentUser } = useUserStore();
@@ -162,13 +166,23 @@ const ProfileSetting = () => {
           <div className="right">
             <FormGroup>
               <FormControlLabel
-                control={<Switch defaultChecked />}
+                control={
+                  <Switch checked={!!currentUser.igTokens} defaultChecked />
+                }
                 label="Instagram post yaratish"
               />
+              {!!currentUser.igTokens &&
+                currentUser?.igAccounts?.map((e) => <IgProfileCard data={e} />)}
+
               <FormControlLabel
-                control={<Switch defaultChecked />}
+                control={
+                  <Switch checked={!!currentUser.tgChatIds} defaultChecked />
+                }
                 label="Telegram post yaratish"
               />
+              {!!currentUser.tgChatIds &&
+                !!currentUser.tgAccounts &&
+                currentUser?.tgAccounts.map((e) => <TgProfileCard data={e} />)}
               <FormControlLabel
                 control={<Switch defaultChecked />}
                 label="Youtube post yaratish"

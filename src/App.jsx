@@ -1,6 +1,15 @@
 import { PrimeReactProvider } from "primereact/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import AdsAdd from "./components/adsAdd/AdsAdd";
+import AdsList from "./components/adsList/AdsList";
+import Chart from "./components/Chart/Chart";
+import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
+import CoworkerList from "./components/coworkerList/CoworkerList";
+import LeadAdd from "./components/leadAdd/leadAdd";
+import LeadList from "./components/leadList/LeadList";
+import ProfileSetting from "./components/profileSetting/ProfileSetting";
 import AboutPage from "./pages/about/AboutPage";
+import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
 import AgentsPage from "./pages/agents/AgentsPage";
 import HomePage from "./routes/homePage/homePage";
 import Layout from "./routes/layout/layout";
@@ -11,15 +20,6 @@ import ProfilePage from "./routes/profilePage/profilePage";
 import ProfileUpdatePage from "./routes/profileUpdatePage/profileUpdatePage";
 import Register from "./routes/register/register";
 import SinglePage from "./routes/singlePage/singlePage";
-import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
-import AdsList from "./components/adsList/AdsList";
-import LeadList from "./components/leadList/LeadList";
-import CoworkerList from "./components/coworkerList/CoworkerList";
-import Chart from "./components/Chart/Chart";
-import ProfileSetting from "./components/profileSetting/ProfileSetting";
-import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
-import LeadAdd from "./components/leadAdd/leadAdd";
-import AdsAdd from "./components/adsAdd/AdsAdd";
 
 function App() {
   const router = createBrowserRouter([

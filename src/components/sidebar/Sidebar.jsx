@@ -34,7 +34,7 @@ const Sidebar = ({ currentUser, handleLogout }) => {
         <span>
           <PhoneIcon width={15} fill={"#8d99ae"} />{" "}
           <a href={"tel:" + currentUser?.phoneNumber}>
-            <b>{currentUser?.phoneNumber}999999999</b>
+            <b>{currentUser?.phoneNumber}</b>
           </a>
         </span>
       </div>

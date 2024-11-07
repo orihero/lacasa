@@ -51,7 +51,7 @@ const AdsAdd = () => {
 
     // !Upload to IG
     const uploadIg = async () => {
-      const res = await IgService.customCreateCarousel(photos, caption);
+      const res = await IGService.customCreateCarousel(photos, caption);
     };
     const upload = async () => {
       try {
@@ -86,15 +86,15 @@ const AdsAdd = () => {
             photos.map((e, i) =>
               i == photos.length - 1
                 ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
+                : { type: "photo", media: e }
+            )
+          )
         );
         const res = await axios.post(
           `https://api.telegram.org/bot${
             import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
-          form,
+          form
         );
         console.error(res.data);
       } catch (error) {
@@ -170,7 +170,7 @@ const AdsAdd = () => {
                   onChange={(e) =>
                     setRegionId(
                       regionData.regions.find((r) => r.name == e.target.value)
-                        .id,
+                        .id
                     )
                   }
                   className={errors.city ? "error" : ""}
