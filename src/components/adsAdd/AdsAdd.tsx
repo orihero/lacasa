@@ -15,6 +15,17 @@ import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { assetUpload } from "../../lib/assetUpload";
 import axios from "axios";
 import { db } from "../../lib/firebase";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Avatar,
+  Typography,
+} from "@mui/material";
+import ExpandIcon from "@mui/icons-material/ExpandMore";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import { useUserStore } from "../../lib/userStore";
+import Carousel from 'react-material-ui-carousel'
 
 const AdsAdd = () => {
   const {
@@ -23,13 +34,19 @@ const AdsAdd = () => {
     formState: { errors },
   } = useForm();
   const { t } = useTranslation();
+  const { currentUser } = useUserStore();
   const [regionId, setRegionId] = useState(0);
   const [price, setPrice] = useState(0);
   const [extFiles, setExtFiles] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
+  const [videoSrc, setVideoSrc] = useState(undefined);
   const [priceType, setPriceType] = useState("uzs");
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
+  const [accordionExpanded, setAccordionExpanded] = useState<string | false>(
+    false
+  );
+
   const {
     currency,
     nearbyPlaceData = [],
@@ -91,8 +108,7 @@ const AdsAdd = () => {
           )
         );
         const res = await axios.post(
-          `https://api.telegram.org/bot${
-            import.meta.env.VITE_TG_BOT_TOKEN
+          `https://api.telegram.org/bot${import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
           form
         );
@@ -112,6 +128,38 @@ const AdsAdd = () => {
   const updateFiles = (incommingFiles) => {
     console.log("incomming files", incommingFiles);
     setExtFiles(incommingFiles);
+  };
+
+  const onDelete = (id) => {
+    setExtFiles(extFiles.filter((x) => x.id !== id));
+  };
+  const handleSee = (imageSource) => {
+    console.log('====================================');
+    console.log({ imageSource });
+    console.log('====================================');
+    setImageSrc(imageSource);
+  };
+  const handleWatch = (videoSource) => {
+    setVideoSrc(videoSource);
+  };
+
+  const handleAbort = (id) => {
+    setExtFiles(
+      extFiles.map((ef) => {
+        if (ef.id === id) {
+          return { ...ef, uploadStatus: "aborted" };
+        } else return { ...ef };
+      })
+    );
+  };
+  const handleCancel = (id) => {
+    setExtFiles(
+      extFiles.map((ef) => {
+        if (ef.id === id) {
+          return { ...ef, uploadStatus: undefined };
+        } else return { ...ef };
+      })
+    );
   };
 
   const handleSelectPlace = (text) => {
@@ -140,6 +188,11 @@ const AdsAdd = () => {
       setOptionList([...filter]);
     }
   };
+
+  const handleAccordionChange =
+    (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+      setAccordionExpanded(isExpanded ? panel : false);
+    };
 
   return (
     <div className="new-post-container">
@@ -497,6 +550,104 @@ const AdsAdd = () => {
             </div>
           </div>
         </div>
+        {!!currentUser.igAccounts && currentUser.igAccounts?.length >= 1 && <Accordion
+          expanded={accordionExpanded === "ig"}
+          onChange={handleAccordionChange("ig")}
+          sx={{ margin: '6px' }}
+        >
+          <AccordionSummary
+            expandIcon={<ExpandIcon />}
+            aria-controls="igbh-content"
+            id="igbh-header"
+          >
+            <Avatar
+              sx={{ width: 30, height: 30 }}
+              src="https://static.cdnlogo.com/logos/i/93/instagram.svg"
+            />
+            <Typography variant="h5" sx={{ ml: 1 }}>
+              Instagram
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <div className="ig-preview-container">
+              <img src="/social-preview/iphone-bar.png" alt="" />
+              <img src="/social-preview/ig-header.png" alt="" />
+              <div className="ig-stories">
+                {currentUser.igAccounts?.map((e) => {
+                  return (
+                    <div className="igAvatar">
+                      <img
+                        src="/social-preview/gradient.svg"
+                        className="ig-gradient"
+                        alt=""
+                      />
+                      <Avatar
+                        sx={{
+                          width: 55,
+                          height: 55,
+                          margin: "12px",
+                        }}
+                        src={e.profile_picture_url}
+                      />
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          textAlign: "center",
+                          fontWeight: "530",
+                        }}
+                      >
+                        {e.username}
+                      </Typography>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="ig-content">
+                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div className="ig-profile-container">
+                    <Avatar
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        margin: "12px",
+                      }}
+                      src={currentUser.igAccounts[0].profile_picture_url}
+                    />
+                    <div className="ig-profile-name">
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {currentUser.igAccounts[0].username}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 10,
+                          fontWeight: "500",
+                        }}
+                      >
+                        {document.getElementById('city')?.value}
+                      </Typography>
+                    </div>
+                  </div>
+                  <MoreHoriz />
+                </div>
+                <Carousel>
+                  {extFiles.map(e => {
+                    return <img src={URL.createObjectURL(e.file)} />
+                  })}
+                </Carousel>
+              </div>
+              <img
+                className="ig-iphone-bar"
+                src="/social-preview/ig-nav.png"
+                alt=""
+              />
+            </div>
+          </AccordionDetails>
+        </Accordion>}
         <div className="footer-new-post">
           <button type="submit">{t("create")}</button>
         </div>

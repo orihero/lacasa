@@ -1,6 +1,6 @@
 import { PrimeReactProvider } from "primereact/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import AdsAdd from "./components/adsAdd/AdsAdd";
+import AdsAdd from "./components/adsAdd/AdsAdd.tsx";
 import AdsList from "./components/adsList/AdsList";
 import Chart from "./components/Chart/Chart";
 import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";

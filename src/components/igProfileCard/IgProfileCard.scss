@@ -1,11 +1,11 @@
-.container {
+.ig-container {
   width: 100%;
   display: flex;
   flex-direction: row;
   margin: 10px 0px;
 }
 
-.username {
+.ig-username {
   display: flex;
   flex-direction: row;
   padding: 0px 10px;
@@ -22,13 +22,13 @@
   }
 }
 
-.avatar {
+.ig-avatar {
   width: 60px;
   height: 60px;
   border-radius: 50px;
 }
 
-.info {
+.ig-info {
   display: flex;
   flex-direction: column;
   .followers {

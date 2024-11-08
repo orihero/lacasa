@@ -9,10 +9,10 @@ export interface IgProfileCardProps {
 
 function IgProfileCard({ data }: IgProfileCardProps) {
   return (
-    <div className="container">
-      <img src={data.profile_picture_url} className="avatar" />
-      <div className="info">
-        <div className="username">
+    <div className="ig-container">
+      <img src={data.profile_picture_url} className="ig-avatar" />
+      <div className="ig-info">
+        <div className="ig-username">
           <img
             className="igLogo"
             src="https://static.cdnlogo.com/logos/i/93/instagram.svg"

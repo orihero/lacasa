@@ -9,10 +9,10 @@ export interface TgProfileCardProps {
 
 function TgProfileCard({ data }: TgProfileCardProps) {
   return (
-    <div className="container">
-      <img src={data.file_path} className="avatar" />
-      <div className="info">
-        <div className="username">
+    <div className="tg-container">
+      <img src={data.file_path} className="tg-avatar" />
+      <div className="tg-info">
+        <div className="tg-username">
           <img
             className="igLogo"
             src="https://www.cdnlogo.com/logos/t/39/telegram.svg"

@@ -1,13 +1,11 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { Triangle } from "react-loader-spinner";
+import { useNavigate, useParams } from "react-router-dom";
 import List from "../../components/list/List";
+import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import "./agentProfile.scss";
-import { signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
-import { useEffect } from "react";
-import { useListStore } from "../../lib/adsListStore";
-import { Triangle } from "react-loader-spinner";
-import { useTranslation } from "react-i18next";
 
 function AgentProfilePage() {
   const { agent, fetchUserById } = useUserStore();

@@ -186,3 +186,46 @@
     }
   }
 }
+
+.ig-preview-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 375px;
+  min-width: 375px;
+  max-width: 375px;
+  height: 812px;
+  min-height: 812px;
+  max-height: 812px;
+  img {
+    width: 100%;
+  }
+  .ig-stories {
+    display: flex;
+    flex-direction: row;
+    padding-bottom: 10px;
+    border-bottom: 1.8px solid rgba(0, 0, 0, 0.15);
+  }
+  .ig-gradient {
+    position: absolute;
+    width: 63px;
+    height: 63px;
+    margin: 8px;
+  }
+  .ig-iphone-bar {
+    width: 100%;
+    vertical-align: bottom;
+  }
+  .ig-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    .ig-profile-container{
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+    img{
+    }
+  }
+}
