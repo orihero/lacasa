@@ -21,7 +21,7 @@ i18n
         translation: uz,
       },
     },
-    fallbackLng: "uz",
+    fallbackLng: "en",
     interpolation: {
       escapeValue: false,
     },

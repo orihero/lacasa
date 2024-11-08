@@ -71,45 +71,13 @@ function Navbar() {
         {renderRight()}
         <div className="lang">
           <select onChange={(e) => handleChangeLang(e.target.value)}>
+            <option value="en" defaultChecked>
+              En
+            </option>
             <option value="uz">Uz</option>
             <option value="ru">Ru</option>
-            <option value="en">En</option>
           </select>
         </div>
-        {/* {!!currentUser ? (
-          <div className="user">
-            <img
-              src={currentUser.avatar ? currentUser.avatar : "/avatar.jpg"}
-              alt=""
-            />
-            <span>{currentUser.fullName}</span>
-            <Link to="/profile" className="profile">
-              <div className="notification">3</div>
-              <span>Profile</span>
-            </Link>
-          </div>
-        ) : (
-          <>
-            {isLoading ? (
-              <Triangle
-                visible={true}
-                height="80"
-                width="80"
-                color="#4fa94d"
-                ariaLabel="triangle-loading"
-                wrapperStyle={{}}
-                wrapperClass=""
-              />
-            ) : (
-              <>
-                <a href="/login">Sign in</a>
-                <a href="/register" className="register">
-                  Sign up
-                </a>
-              </>
-            )}
-          </>
-        )} */}
         <div className="menuIcon">
           <img
             src="/menu.png"

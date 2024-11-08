@@ -3,6 +3,7 @@ import { LineChart } from "@mui/x-charts/LineChart";
 import { PieChart } from "@mui/x-charts/PieChart";
 import React from "react";
 import "./chart.scss";
+import { useTranslation } from "react-i18next";
 
 const otherProps = {
   width: 400,
@@ -103,10 +104,12 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 }).format;
 
 const Chart = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="chart">
       <div className="chart-header">
-        <h1>Statistika</h1>
+        <h1>{t("statistics")}</h1>
       </div>
       <div>
         <LineChart

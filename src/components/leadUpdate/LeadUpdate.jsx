@@ -1,22 +1,15 @@
+import { deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
-import "./leadUpdate.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
-import { useUserStore } from "../../lib/userStore";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
-import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { db } from "../../lib/firebase";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useLeadStore } from "../../lib/useLeadStore";
+import { useUserStore } from "../../lib/userStore";
+import "./leadUpdate.scss";
 const LeadUpdate = ({ leadId, onClose }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -123,7 +116,7 @@ const LeadUpdate = ({ leadId, onClose }) => {
   return (
     <div className="profile-setting-update">
       <div className="profile-header">
-        <h1>Update lead</h1>
+        <h1>{t("updateLead")}</h1>
       </div>
       <div className="profile-content-update">
         <div className="inputs">
@@ -164,7 +157,7 @@ const LeadUpdate = ({ leadId, onClose }) => {
                 <input type="text" {...register("budget", {})} />
               </div>
               <div className="field">
-                <label>{t("comment")}:</label>
+                <label>{t("commit")}:</label>
                 <textarea {...register("comment", {})}></textarea>
               </div>
               <div className="field">
@@ -183,7 +176,7 @@ const LeadUpdate = ({ leadId, onClose }) => {
               </div>
               {statusValue == "need_to_call_back" && (
                 <div className="field">
-                  <label>{t("qo'ng'iroq qilish vaqti")}:</label>
+                  <label>{t("callTime")}:</label>
                   <input
                     type="datetime-local"
                     {...register("callbackDate")}
@@ -223,15 +216,15 @@ const LeadUpdate = ({ leadId, onClose }) => {
                   type="button"
                   onClick={handleCancel}
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
-                <button type="submit">Save</button>
+                <button type="submit">{t("save")}</button>
                 <button
                   className="delete-btn"
                   type="button"
                   onClick={handleDelete}
                 >
-                  Delete
+                  {t("delete")}
                 </button>
               </div>
             </div>

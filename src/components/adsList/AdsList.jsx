@@ -6,7 +6,6 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import { t } from "i18next";
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -16,68 +15,68 @@ import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import "./adsList.scss";
 
-const columns = [
-  { id: "id", label: "Id", minWidth: 50 },
-  {
-    id: "photos",
-    label: "Photo",
-    minWidth: 80,
-    format: (value) => value[0],
-  },
-  {
-    id: "createdAt",
-    label: "Created",
-    minWidth: 100,
-    format: (value) => formatCreatedAt(value),
-  },
-  {
-    id: "city",
-    label: "Address",
-    minWidth: 170,
-    align: "left",
-    format: (value) => value,
-  },
-  {
-    id: "status",
-    label: "Status",
-    minWidth: 170,
-    align: "left",
-    format: (value) => value.toLocaleString("en-US"),
-  },
-  {
-    id: "author",
-    label: "Author",
-    minWidth: 120,
-    align: "left",
-    format: (value) => value.toFixed(2),
-  },
-  {
-    id: "rooms",
-    label: t("room"),
-    minWidth: 60,
-    align: "center",
-    format: (value) => value.toFixed(2),
-  },
-  {
-    id: "area",
-    label: t("area"),
-    minWidth: 70,
-    align: "center",
-    format: (value) => value.toFixed(2),
-  },
-  {
-    id: "edit",
-    label: "",
-    minWidth: 60,
-    align: "right",
-  },
-];
-
 const AdsList = () => {
   const { myList } = useListStore();
   const { currentUser } = useUserStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const columns = [
+    { id: "id", label: t("id"), minWidth: 50 },
+    {
+      id: "photos",
+      label: t("photo"),
+      minWidth: 80,
+      format: (value) => value[0],
+    },
+    {
+      id: "createdAt",
+      label: t("createdAt"),
+      minWidth: 100,
+      format: (value) => formatCreatedAt(value),
+    },
+    {
+      id: "city",
+      label: t("city"),
+      minWidth: 170,
+      align: "left",
+      format: (value) => value,
+    },
+    {
+      id: "status",
+      label: t("status"),
+      minWidth: 170,
+      align: "left",
+      format: (value) => value.toLocaleString("en-US"),
+    },
+    {
+      id: "author",
+      label: t("author"),
+      minWidth: 120,
+      align: "left",
+      format: (value) => value.toFixed(2),
+    },
+    {
+      id: "rooms",
+      label: t("room"),
+      minWidth: 60,
+      align: "center",
+      format: (value) => value.toFixed(2),
+    },
+    {
+      id: "area",
+      label: t("totalArea"),
+      minWidth: 70,
+      align: "center",
+      format: (value) => value.toFixed(2),
+    },
+    {
+      id: "edit",
+      label: "",
+      minWidth: 60,
+      align: "right",
+    },
+  ];
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -102,8 +101,6 @@ const AdsList = () => {
   const handleNewPost = () => {
     navigate("/profile/" + currentUser.id + "/create/ads");
   };
-
-  console.log(myList);
 
   return (
     <div className="ads-list-content">
