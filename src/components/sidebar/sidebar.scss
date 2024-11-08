@@ -1,0 +1,69 @@
+@import "../../responsive.scss";
+
+.sidebar {
+  position: relative;
+  width: 300px;
+  background-color: #fff;
+  height: 80vh;
+  .info {
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    .agent-avatar {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      img {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+      }
+      .user-role {
+        position: absolute;
+        background-color: #fece51;
+        top: 5px;
+        left: 5px;
+        padding: 3px;
+        text-transform: capitalize;
+      }
+    }
+    span {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+  }
+  .menu-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 15px 0;
+    border-top: 1px solid #dddd;
+    span {
+      padding: 10px 20px;
+      cursor: pointer;
+      display: flex;
+      gap: 10px;
+    }
+  }
+  .logout {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    button {
+      padding: 10px 25px;
+      border: none;
+      background-color: transparent;
+      color: red;
+      cursor: pointer;
+    }
+  }
+  .active-menu {
+    background-color: #fece51;
+  }
+}

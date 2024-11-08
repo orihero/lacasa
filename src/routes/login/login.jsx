@@ -29,8 +29,13 @@ function Login() {
       <div className="formContainer">
         <form onSubmit={handleLogin}>
           <h1>Welcome back</h1>
-          <input name="email" type="text" placeholder="Email" />
-          <input name="password" type="password" placeholder="Password" />
+          <input required name="email" type="text" placeholder="Email" />
+          <input
+            required
+            name="password"
+            type="password"
+            placeholder="Password"
+          />
           <button>Login</button>
           <Link to="/register">{"Don't"} you have an account?</Link>
         </form>

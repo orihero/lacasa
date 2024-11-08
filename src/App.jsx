@@ -1,6 +1,14 @@
 import { PrimeReactProvider } from "primereact/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import AdsAdd from "./components/adsAdd/AdsAdd.tsx";
+import AdsList from "./components/adsList/AdsList";
+import Chart from "./components/Chart/Chart";
+import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
+import CoworkerList from "./components/coworkerList/CoworkerList";
+import LeadList from "./components/leadList/LeadList";
+import ProfileSetting from "./components/profileSetting/ProfileSetting";
 import AboutPage from "./pages/about/AboutPage";
+import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
 import AgentsPage from "./pages/agents/AgentsPage";
 import HomePage from "./routes/homePage/homePage";
 import Layout from "./routes/layout/layout";
@@ -11,7 +19,9 @@ import ProfilePage from "./routes/profilePage/profilePage";
 import ProfileUpdatePage from "./routes/profileUpdatePage/profileUpdatePage";
 import Register from "./routes/register/register";
 import SinglePage from "./routes/singlePage/singlePage";
-import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
+import LeadUpdate from "./components/leadUpdate/LeadUpdate";
+import LeadAdd from "./components/leadAdd/LeadAdd";
+import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
 
 function App() {
   const router = createBrowserRouter([
@@ -31,10 +41,6 @@ function App() {
           path: "/about",
           element: <AboutPage />,
         },
-        // {
-        //   path: "/contact",
-        //   element: <ContactPage />,
-        // },
         {
           path: "/agent/:id",
           element: <AgentProfilePage />,
@@ -50,6 +56,48 @@ function App() {
         {
           path: "/profile",
           element: <ProfilePage />,
+          children: [
+            {
+              path: "",
+              element: <Chart />,
+            },
+            {
+              path: ":id/ads",
+              element: <AdsList />,
+            },
+            {
+              path: ":id/create/ads",
+              element: <AdsAdd />,
+            },
+            {
+              path: ":id/leads",
+              element: <LeadList />,
+            },
+            {
+              path: ":id/create/leads",
+              element: <LeadAdd />,
+            },
+            {
+              path: ":id/update/leads",
+              element: <LeadUpdate />,
+            },
+            {
+              path: ":id/coworkers",
+              element: <CoworkerList />,
+            },
+            {
+              path: ":id/create/coworkers",
+              element: <CoworkerAdd />,
+            },
+            {
+              path: ":id/update/coworkers",
+              element: <CoworkerUpdate />,
+            },
+            {
+              path: ":id/setting",
+              element: <ProfileSetting />,
+            },
+          ],
         },
         {
           path: "/updateProfile",

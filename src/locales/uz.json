@@ -63,5 +63,16 @@
   "nearby": "Yaqin joylarda",
   "delete": "O'chirish",
   "create": "Yaratish",
-  "dragFilesHere": "Fayllarni shu yerga torting yoki yuklash uchun bosing"
+  "dragFilesHere": "Fayllarni shu yerga torting yoki yuklash uchun bosing",
+  "save_draft": "Qoralamaga saqlash",
+  "upload_to_social_media": "Faqat ijtimoiy tarmoqlarga yuklash",
+  "view_more": "Ko'proq ko'rish",
+  "addNewLead": "Yangi lead qo'shish",
+  "addNewCoworker": "Yangi coworker qo'shish",
+  "new": "yangi",
+  "could_not_connect": "bog'lanib bo'lmadi",
+  "need_to_call_back": "qayta qo'ng'iroq qilish kk",
+  "date_picker": "sana tanlash",
+  "rejected": "rad etildi",
+  "accepted": "qabul qilindi"
 }

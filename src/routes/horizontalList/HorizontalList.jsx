@@ -3,10 +3,18 @@ import { Triangle } from "react-loader-spinner";
 import HorizontalCard from "../../components/h-card/HCard";
 import { useListStore } from "../../lib/adsListStore";
 import "./horizontalList.scss";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function HorizontalList() {
   const { list, isLoading } = useListStore();
-  console.log("HorizontalList", list);
+  const { t } = useTranslation();
+
+  const navigate = useNavigate();
+
+  const handleNavigationList = () => {
+    navigate("/list");
+  };
 
   if (isLoading) {
     return (
@@ -25,10 +33,15 @@ export default function HorizontalList() {
   }
 
   return (
-    <div className="hList">
-      {list.map((item) => {
-        return <HorizontalCard data={item} />;
-      })}
-    </div>
+    <>
+      <div className="hList">
+        {list.map((item) => {
+          return <HorizontalCard data={item} />;
+        })}
+      </div>
+      <button onClick={handleNavigationList} className="btn-more">
+        {t("view_more")}
+      </button>
+    </>
   );
 }

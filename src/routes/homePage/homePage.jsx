@@ -12,7 +12,6 @@ function HomePage() {
   return (
     <div className="container">
       <div className={""}>
-        {/* <img src="/cards/bg1.png" alt="" /> */}
         <iframe
           width="100%"
           height="640"

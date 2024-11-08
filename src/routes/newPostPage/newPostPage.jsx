@@ -9,14 +9,15 @@ import { useEffect, useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { assetUpload } from "../../lib/assetUpload";
 import { toast } from "react-toastify";
-import { db } from "../../lib/firebase";
 import axios from "axios";
+import { db } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
-import { IgService } from "../../services/ig";
 import { useNavigate } from "react-router-dom";
 import { useUtilsStore } from "../../lib/utilsStore";
 import regionData from "../../regions.json";
 import { useTranslation } from "react-i18next";
+import { ADS_TYPE } from "../../components/types/AdsType";
+import { IGService } from "../../services/ig";
 
 function NewPostPage() {
   const [extFiles, setExtFiles] = useState([]);
@@ -26,6 +27,7 @@ function NewPostPage() {
   const [optionList, setOptionList] = useState([]);
   const [price, setPrice] = useState(0);
   const [regionId, setRegionId] = useState(0);
+  const [type, setType] = useState(0);
   const [priceType, setPriceType] = useState("uzs");
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -88,7 +90,7 @@ function NewPostPage() {
 
     // !Upload to IG
     const uploadIg = async () => {
-      const res = await IgService.customCreateCarousel(photos, caption);
+      const res = await IGService.publishMedia(photos, caption);
     };
     const upload = async () => {
       try {
@@ -98,10 +100,9 @@ function NewPostPage() {
           ...data,
           agentId: currentUser.id,
           nearPlacesList: nearPlacesList,
-          active: true,
+          active: type,
           optionList: optionList,
           photos,
-          active: true,
           createdAt: serverTimestamp(),
         });
       } catch (error) {
@@ -200,244 +201,269 @@ function NewPostPage() {
 
   return (
     <div className="newPostPage">
-      <div className="formContainer">
-        <h1>{t("addNewPost")}</h1>
-        <div className="wrapper">
-          <form onSubmit={onSubmit}>
-            <label htmlFor="Images">{t("photo")}</label>
-            <Dropzone
-              onChange={updateFiles}
-              minHeight="195px"
-              value={extFiles}
-              accept="image/*"
-              maxFiles={5}
-              maxFileSize={5 * 1024 * 1024}
-              label={t("dragFilesHere")}
-            >
-              {extFiles.map((file) => (
-                <FileMosaic
-                  {...file}
-                  key={file.id}
-                  onDelete={onDelete}
-                  onSee={handleSee}
-                  onWatch={handleWatch}
-                  onAbort={handleAbort}
-                  onCancel={handleCancel}
-                  resultOnTooltip
-                  alwaysActive
-                  preview
-                  info
-                />
-              ))}
-            </Dropzone>
-            <FullScreen
-              open={imageSrc !== undefined}
-              onClose={() => setImageSrc(undefined)}
-            >
-              <ImagePreview src={imageSrc} />
-            </FullScreen>
-            <div className="item">
-              <label htmlFor="title">{t("title")}</label>
-              <input id="title" name="title" type="text" />
-            </div>
-            <div className="item">
-              <label htmlFor="city">{t("city")}</label>
-
-              <select
-                name="city"
-                id="city"
-                onChange={(e) =>
-                  setRegionId(
-                    regionData.regions.find((r) => r.name == e.target.value).id,
-                  )
-                }
+      <div className="content">
+        <div className="formContainer">
+          <h1>{t("addNewPost")}</h1>
+          <div className="wrapper">
+            <form onSubmit={onSubmit}>
+              <label htmlFor="Images">{t("photo")}</label>
+              <Dropzone
+                onChange={updateFiles}
+                minHeight="195px"
+                value={extFiles}
+                accept="image/*"
+                maxFiles={5}
+                maxFileSize={5 * 1024 * 1024}
+                label={t("dragFilesHere")}
               >
-                <option key={"0"} value={""} defaultChecked></option>
-                {regionData.regions.map((region, i) => {
-                  return (
-                    <option
-                      key={region.id.toString()}
-                      value={region.name}
-                      id={region.id}
-                    >
-                      {region.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="item">
-              <label htmlFor="district">{t("district")}</label>
-              {/* <input id="district" name="district" type="text" /> */}
-              <select name="district" id="district" disabled={regionId == 0}>
-                <option key={"0"} value={""} defaultChecked></option>
-                {regionData.districts
-                  .filter((item) => item.region_id == regionId)
-                  .map((district, i) => {
+                {extFiles.map((file) => (
+                  <FileMosaic
+                    {...file}
+                    key={file.id}
+                    onDelete={onDelete}
+                    onSee={handleSee}
+                    onWatch={handleWatch}
+                    onAbort={handleAbort}
+                    onCancel={handleCancel}
+                    resultOnTooltip
+                    alwaysActive
+                    preview
+                    info
+                  />
+                ))}
+              </Dropzone>
+              <FullScreen
+                open={imageSrc !== undefined}
+                onClose={() => setImageSrc(undefined)}
+              >
+                <ImagePreview src={imageSrc} />
+              </FullScreen>
+              <div className="item">
+                <label htmlFor="title">{t("title")}</label>
+                <input id="title" name="title" type="text" />
+              </div>
+              <div className="item">
+                <label htmlFor="city">{t("city")}</label>
+
+                <select
+                  name="city"
+                  id="city"
+                  onChange={(e) =>
+                    setRegionId(
+                      regionData.regions.find((r) => r.name == e.target.value)
+                        .id,
+                    )
+                  }
+                >
+                  <option key={"0"} value={""} defaultChecked></option>
+                  {regionData.regions.map((region, i) => {
                     return (
                       <option
-                        key={district.id.toString()}
-                        value={district.name}
+                        key={region.id.toString()}
+                        value={region.name}
+                        id={region.id}
                       >
-                        {district.name}
+                        {region.name}
                       </option>
                     );
                   })}
-              </select>
-            </div>
-            <div className="item">
-              <label htmlFor="address">{t("address")}</label>
-              <input id="address" name="address" type="text" />
-            </div>
-            <div className="item">
-              <label htmlFor="type">{t("type")}</label>
-              <select name="type">
-                <option value="residential" defaultChecked>
-                  Жилое
-                </option>
-                <option value="nonresidential">Не Жилое</option>
-              </select>
-            </div>
-            <div className="item">
-              <label htmlFor="reference">Ориентир</label>
-              <input id="reference" name="reference" type="text" />
-            </div>
-            <div className="item">
-              <label htmlFor="rooms">Кол.комнат</label>
-              <input id="rooms" name="rooms" type="text" />
-            </div>
-            <div className="item">
-              <label htmlFor="repairment">{t("repair")}</label>
-              <select name="repairment">
-                <option value="notRepaired" defaultChecked>
-                  {t("requiresRepair")}
-                </option>
-                <option value="normal">Нормальный</option>
-                <option value="good">Хороший</option>
-                <option value="excellent">Отличный</option>
-              </select>
-            </div>
-            <div className="item">
-              <label>{t("category")}</label>
-              <select name="category">
-                <option value="rent">{t("rental")}</option>
-                <option value="sale">Продажа</option>
-              </select>
-            </div>
-            <div className="item storey">
-              <span>
-                <label htmlFor="storey">{t("storey")}</label>
-                <input id="storey" name="storey" type="text" />
-              </span>
-              <span>
-                <label htmlFor="storeys">{t("floors")}</label>
-                <input id="storeys" name="storeys" type="text" />
-              </span>
-            </div>
-            <div className="item">
-              <label htmlFor="furniture">{t("furniture")}</label>
-              <select name="furniture">
-                <option value="withFurniture">{t("withFurniture")}</option>
-                <option value="withoutFurniture">Без мебели</option>
-              </select>
-            </div>
-            <div className="item">
-              <label htmlFor="area">{t("totalArea")}</label>
-              <input id="area" name="area" type="text" />
-            </div>
-            <div className="item price">
-              <span className="price-span">
-                <label htmlFor="price">{t("price")}</label>
-                <input
-                  id="price"
-                  name="price"
-                  type="number"
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-                <i>
-                  {priceType == "uzs"
-                    ? Math.floor(price / (currency[0]?.currency ?? 1)) + " $"
-                    : (currency[0]?.currency ?? 0) * price + " so'm"}
-                </i>
-              </span>
-              <span>
-                <select
-                  name="priceType"
-                  onChange={(e) => setPriceType(e.target.value)}
-                >
-                  <option value="uzs">so'm</option>
-                  <option value="usd">y.e</option>
                 </select>
-              </span>
-            </div>
-
-            <div className="item placeList">
-              <label htmlFor="description">{t("nearby")}</label>
-              <div className="place-list">
-                {!!nearbyPlaceData.length &&
-                  nearbyPlaceData[0]?.data?.map((item, index) => {
-                    return (
-                      <span
-                        key={index.toString()}
-                        onClick={() => handleSelectPlace(item)}
-                        className={
-                          nearPlacesList.some((place) => place == item)
-                            ? "active"
-                            : ""
-                        }
-                      >
-                        {item}
-                      </span>
-                    );
-                  })}
               </div>
-            </div>
-            <div className="item description">
-              <label htmlFor="description">{t("classification")}</label>
-              <textarea name="description" placeholder="Примечания"></textarea>
-            </div>
-            <div className="item add-info">
-              <label htmlFor="description">{t("additionalInfo")}</label>
-              {optionList.map((item) => {
-                return (
-                  <span key={item?.id.toString()}>
-                    <input
-                      placeholder="Title"
-                      onChange={(e) =>
-                        handleChangeOption(item.id, "key", e.target.value)
-                      }
-                      value={item?.key}
-                    />
-                    <input
-                      placeholder="value"
-                      onChange={(e) =>
-                        handleChangeOption(item.id, "value", e.target.value)
-                      }
-                      value={item?.value}
-                    />
-                    <button
-                      onClick={() => handleNewOption("remove", item.id)}
-                      type="button"
-                      className="delete-option"
-                    >
-                      {t("delete")}
-                    </button>
-                  </span>
-                );
-              })}
-              <button
-                type="button"
-                className="add-option"
-                onClick={() => handleNewOption("add")}
-              >
-                {t("create")}
-              </button>
-            </div>
-            <button className="sendButton">{t("create")}</button>
-          </form>
+              <div className="item">
+                <label htmlFor="district">{t("district")}</label>
+                {/* <input id="district" name="district" type="text" /> */}
+                <select name="district" id="district" disabled={regionId == 0}>
+                  <option key={"0"} value={""} defaultChecked></option>
+                  {regionData.districts
+                    .filter((item) => item.region_id == regionId)
+                    .map((district, i) => {
+                      return (
+                        <option
+                          key={district.id.toString()}
+                          value={district.name}
+                        >
+                          {district.name}
+                        </option>
+                      );
+                    })}
+                </select>
+              </div>
+              <div className="item">
+                <label htmlFor="address">{t("address")}</label>
+                <input id="address" name="address" type="text" />
+              </div>
+              <div className="item">
+                <label htmlFor="type">{t("type")}</label>
+                <select name="type">
+                  <option value="residential" defaultChecked>
+                    Жилое
+                  </option>
+                  <option value="nonresidential">Не Жилое</option>
+                </select>
+              </div>
+              <div className="item">
+                <label htmlFor="reference">Ориентир</label>
+                <input id="reference" name="reference" type="text" />
+              </div>
+              <div className="item">
+                <label htmlFor="rooms">Кол.комнат</label>
+                <input id="rooms" name="rooms" type="text" />
+              </div>
+              <div className="item">
+                <label htmlFor="repairment">{t("repair")}</label>
+                <select name="repairment">
+                  <option value="notRepaired" defaultChecked>
+                    {t("requiresRepair")}
+                  </option>
+                  <option value="normal">Нормальный</option>
+                  <option value="good">Хороший</option>
+                  <option value="excellent">Отличный</option>
+                </select>
+              </div>
+              <div className="item">
+                <label>{t("category")}</label>
+                <select name="category">
+                  <option value="rent">{t("rental")}</option>
+                  <option value="sale">Продажа</option>
+                </select>
+              </div>
+              <div className="item storey">
+                <span>
+                  <label htmlFor="storey">{t("storey")}</label>
+                  <input id="storey" name="storey" type="text" />
+                </span>
+                <span>
+                  <label htmlFor="storeys">{t("floors")}</label>
+                  <input id="storeys" name="storeys" type="text" />
+                </span>
+              </div>
+              <div className="item">
+                <label htmlFor="furniture">{t("furniture")}</label>
+                <select name="furniture">
+                  <option value="withFurniture">{t("withFurniture")}</option>
+                  <option value="withoutFurniture">Без мебели</option>
+                </select>
+              </div>
+              <div className="item">
+                <label htmlFor="area">{t("totalArea")}</label>
+                <input id="area" name="area" type="text" />
+              </div>
+              <div className="item price">
+                <span className="price-span">
+                  <label htmlFor="price">{t("price")}</label>
+                  <input
+                    id="price"
+                    name="price"
+                    type="number"
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                  <i>
+                    {priceType == "uzs"
+                      ? Math.floor(price / (currency[0]?.currency ?? 1)) + " $"
+                      : (currency[0]?.currency ?? 0) * price + " so'm"}
+                  </i>
+                </span>
+                <span>
+                  <select
+                    name="priceType"
+                    onChange={(e) => setPriceType(e.target.value)}
+                  >
+                    <option value="uzs">so'm</option>
+                    <option value="usd">y.e</option>
+                  </select>
+                </span>
+              </div>
+
+              <div className="item placeList">
+                <label htmlFor="description">{t("nearby")}</label>
+                <div className="place-list">
+                  {!!nearbyPlaceData.length &&
+                    nearbyPlaceData[0]?.data?.map((item, index) => {
+                      return (
+                        <span
+                          key={index.toString()}
+                          onClick={() => handleSelectPlace(item)}
+                          className={
+                            nearPlacesList.some((place) => place == item)
+                              ? "active"
+                              : ""
+                          }
+                        >
+                          {item}
+                        </span>
+                      );
+                    })}
+                </div>
+              </div>
+              <div className="item description">
+                <label htmlFor="description">{t("classification")}</label>
+                <textarea
+                  name="description"
+                  placeholder="Примечания"
+                ></textarea>
+              </div>
+              <div className="item add-info">
+                <label htmlFor="description">{t("additionalInfo")}</label>
+                {optionList.map((item) => {
+                  return (
+                    <span key={item?.id.toString()}>
+                      <input
+                        placeholder="Title"
+                        onChange={(e) =>
+                          handleChangeOption(item.id, "key", e.target.value)
+                        }
+                        value={item?.key}
+                      />
+                      <input
+                        placeholder="value"
+                        onChange={(e) =>
+                          handleChangeOption(item.id, "value", e.target.value)
+                        }
+                        value={item?.value}
+                      />
+                      <button
+                        onClick={() => handleNewOption("remove", item.id)}
+                        type="button"
+                        className="delete-option"
+                      >
+                        {t("delete")}
+                      </button>
+                    </span>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="add-option"
+                  onClick={() => handleNewOption("add")}
+                >
+                  {t("create")}
+                </button>
+              </div>
+              <div className="flex-btns">
+                <button
+                  className="sendButton"
+                  onClick={() => setType(ADS_TYPE.DRAFT)}
+                >
+                  {t("save_draft")}
+                </button>
+                <button
+                  className="sendButton"
+                  onClick={() => setType(ADS_TYPE.ONLY_SOCIAL)}
+                >
+                  {t("upload_to_social_media")}
+                </button>
+                <button
+                  className="sendButton"
+                  onClick={() => setType(ADS_TYPE.ACTIVE)}
+                >
+                  {t("create")}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+        <div className="sideContainer"></div>
       </div>
-      <div className="sideContainer"></div>
     </div>
   );
 }

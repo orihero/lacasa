@@ -1,0 +1,45 @@
+.ig-container {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  margin: 10px 0px;
+}
+
+.ig-username {
+  display: flex;
+  flex-direction: row;
+  padding: 0px 10px;
+  .igLogo {
+    width: 20px;
+    height: 20px;
+  }
+  p {
+    color: #696969;
+    font-weight: bold;
+    margin-left: 5px;
+    line-height: 18px;
+    text-align: center;
+  }
+}
+
+.ig-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50px;
+}
+
+.ig-info {
+  display: flex;
+  flex-direction: column;
+  .followers {
+    display: flex;
+    flex-direction: row;
+    margin-left: 10px;
+    margin-top: 10px;
+    p {
+      font-size: 13px;
+      text-transform: lowercase;
+      margin-right: 10px;
+    }
+  }
+}

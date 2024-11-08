@@ -1,6 +1,8 @@
 import { doc, getDoc } from "firebase/firestore";
 import { create } from "zustand";
 import { db } from "./firebase";
+import { IGService } from "../services/ig";
+import { TGService } from "../services/tg";
 
 export const useUserStore = create((set) => ({
   currentUser: null,
@@ -12,9 +14,16 @@ export const useUserStore = create((set) => ({
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        set({ currentUser: docSnap.data(), isLoading: false });
-        console.log(docSnap.data());
-        console.log("SNAP");
+        //* INIT SERVICES
+        const igAccounts = await IGService.init(docSnap.data().igTokens);
+        const tgAccounts = await TGService.init(docSnap.data().tgChatIds);
+        console.log("====================================");
+        console.log({ igAccounts });
+        console.log("====================================");
+        set({
+          currentUser: { ...docSnap.data(), tgAccounts, igAccounts },
+          isLoading: false,
+        });
       } else {
         set({ currentUser: null, isLoading: false });
       }

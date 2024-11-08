@@ -64,5 +64,16 @@
   "add": "Add",
   "delete": "Delete",
   "create": "Create",
-  "dragFilesHere": "Drag files here or click to upload"
+  "dragFilesHere": "Drag files here or click to upload",
+  "save_draft": "Save as Draft",
+  "upload_to_social_media": "Upload to Social Media Only",
+  "view_more": "View More",
+  "addNewLead": "Add new lead",
+  "addNewCoworker": "Add new coworker",
+  "new": "new",
+  "could_not_connect": "could not connect",
+  "need_to_call_back": "need to call back",
+  "date_picker": "date picker",
+  "rejected": "rejected",
+  "accepted": "accepted"
 }

@@ -43,10 +43,20 @@ function Register() {
       <div className="formContainer">
         <form onSubmit={handleRegister}>
           <h1>Create an Account</h1>
-          <input name="fullName" type="text" placeholder="Full name" />
-          <input name="phoneNumber" type="tel" placeholder="Phone number" />
-          <input name="email" type="text" placeholder="Email" />
-          <input name="password" type="password" placeholder="Password" />
+          <input required name="fullName" type="text" placeholder="Full name" />
+          <input
+            required
+            name="phoneNumber"
+            type="tel"
+            placeholder="Phone number"
+          />
+          <input required name="email" type="text" placeholder="Email" />
+          <input
+            required
+            name="password"
+            type="password"
+            placeholder="Password"
+          />
           <button>Register</button>
           <Link to="/login">Do you have an account?</Link>
         </form>

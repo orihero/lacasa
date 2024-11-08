@@ -65,7 +65,6 @@ function Navbar() {
         </a>
         <Link to="/">{t("home")}</Link>
         <Link to="/about">{t("about")}</Link>
-        {/* <Link to="/contact">Contact</Link> */}
         <Link to="/agents">{t("agents")}</Link>
       </div>
       <div className="right">
