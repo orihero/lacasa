@@ -22,7 +22,7 @@ const Sidebar = ({ currentUser, handleLogout }) => {
         <div className="agent-avatar">
           <span className="user-role">{currentUser?.role}</span>
           <span>
-            <img src={currentUser.avatar || "/avatar.jpg"} alt="" />
+            <img src={currentUser?.avatar || "/avatar.jpg"} alt="" />
           </span>
         </div>
         <span>

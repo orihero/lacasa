@@ -128,18 +128,7 @@ const AdsList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {[
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-                ...myList,
-              ]
+              {[...myList]
                 ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                   return (
