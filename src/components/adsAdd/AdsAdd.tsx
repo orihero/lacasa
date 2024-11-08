@@ -20,18 +20,22 @@ import {
   AccordionDetails,
   AccordionSummary,
   Avatar,
+  Paper,
   Typography,
 } from "@mui/material";
 import ExpandIcon from "@mui/icons-material/ExpandMore";
 import MoreHoriz from "@mui/icons-material/MoreHoriz";
 import { useUserStore } from "../../lib/userStore";
-import Carousel from 'react-material-ui-carousel'
+import Carousel from "react-material-ui-carousel";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import ImageGrid from "./components/ImageGrid";
 
 const AdsAdd = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm();
   const { t } = useTranslation();
   const { currentUser } = useUserStore();
@@ -43,8 +47,13 @@ const AdsAdd = () => {
   const [priceType, setPriceType] = useState("uzs");
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
+  const descriptionValue = watch("description", "");
+  const priceValue = watch("price", "");
+  const titleValue = watch("title", "");
+  const cityValue = watch("city", "");
+  const districtValue = watch("district", "");
   const [accordionExpanded, setAccordionExpanded] = useState<string | false>(
-    false
+    false,
   );
 
   const {
@@ -103,14 +112,15 @@ const AdsAdd = () => {
             photos.map((e, i) =>
               i == photos.length - 1
                 ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e }
-            )
-          )
+                : { type: "photo", media: e },
+            ),
+          ),
         );
         const res = await axios.post(
-          `https://api.telegram.org/bot${import.meta.env.VITE_TG_BOT_TOKEN
+          `https://api.telegram.org/bot${
+            import.meta.env.VITE_TG_BOT_TOKEN
           }/sendMediaGroup`,
-          form
+          form,
         );
         console.error(res.data);
       } catch (error) {
@@ -134,9 +144,9 @@ const AdsAdd = () => {
     setExtFiles(extFiles.filter((x) => x.id !== id));
   };
   const handleSee = (imageSource) => {
-    console.log('====================================');
+    console.log("====================================");
     console.log({ imageSource });
-    console.log('====================================');
+    console.log("====================================");
     setImageSrc(imageSource);
   };
   const handleWatch = (videoSource) => {
@@ -149,7 +159,7 @@ const AdsAdd = () => {
         if (ef.id === id) {
           return { ...ef, uploadStatus: "aborted" };
         } else return { ...ef };
-      })
+      }),
     );
   };
   const handleCancel = (id) => {
@@ -158,7 +168,7 @@ const AdsAdd = () => {
         if (ef.id === id) {
           return { ...ef, uploadStatus: undefined };
         } else return { ...ef };
-      })
+      }),
     );
   };
 
@@ -223,7 +233,7 @@ const AdsAdd = () => {
                   onChange={(e) =>
                     setRegionId(
                       regionData.regions.find((r) => r.name == e.target.value)
-                        .id
+                        .id,
                     )
                   }
                   className={errors.city ? "error" : ""}
@@ -550,104 +560,204 @@ const AdsAdd = () => {
             </div>
           </div>
         </div>
-        {!!currentUser.igAccounts && currentUser.igAccounts?.length >= 1 && <Accordion
-          expanded={accordionExpanded === "ig"}
-          onChange={handleAccordionChange("ig")}
-          sx={{ margin: '6px' }}
-        >
-          <AccordionSummary
-            expandIcon={<ExpandIcon />}
-            aria-controls="igbh-content"
-            id="igbh-header"
+        {!!currentUser.igAccounts && currentUser.igAccounts?.length >= 1 && (
+          <Accordion
+            expanded={accordionExpanded === "ig"}
+            onChange={handleAccordionChange("ig")}
+            sx={{ margin: "6px" }}
           >
-            <Avatar
-              sx={{ width: 30, height: 30 }}
-              src="https://static.cdnlogo.com/logos/i/93/instagram.svg"
-            />
-            <Typography variant="h5" sx={{ ml: 1 }}>
-              Instagram
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <div className="ig-preview-container">
-              <img src="/social-preview/iphone-bar.png" alt="" />
-              <img src="/social-preview/ig-header.png" alt="" />
-              <div className="ig-stories">
-                {currentUser.igAccounts?.map((e) => {
-                  return (
-                    <div className="igAvatar">
-                      <img
-                        src="/social-preview/gradient.svg"
-                        className="ig-gradient"
-                        alt=""
-                      />
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
+            >
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://static.cdnlogo.com/logos/i/93/instagram.svg"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Instagram
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="ig-preview-container">
+                <img src="/social-preview/iphone-bar.png" alt="" />
+                <img src="/social-preview/ig-header.png" alt="" />
+                <div className="ig-stories">
+                  {currentUser.igAccounts?.map((e) => {
+                    return (
+                      <div className="igAvatar">
+                        <img
+                          src="/social-preview/gradient.svg"
+                          className="ig-gradient"
+                          alt=""
+                        />
+                        <Avatar
+                          sx={{
+                            width: 55,
+                            height: 55,
+                            margin: "12px",
+                          }}
+                          src={e.profile_picture_url}
+                        />
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            textAlign: "center",
+                            fontWeight: "530",
+                          }}
+                        >
+                          {e.username}
+                        </Typography>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="ig-content">
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div className="ig-profile-container">
                       <Avatar
                         sx={{
-                          width: 55,
-                          height: 55,
+                          width: 32,
+                          height: 32,
                           margin: "12px",
                         }}
-                        src={e.profile_picture_url}
+                        src={currentUser.igAccounts[0].profile_picture_url}
                       />
-                      <Typography
-                        sx={{
-                          fontSize: 12,
-                          textAlign: "center",
-                          fontWeight: "530",
-                        }}
-                      >
-                        {e.username}
-                      </Typography>
+                      <div className="ig-profile-name">
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            fontWeight: "600",
+                          }}
+                        >
+                          {currentUser.igAccounts[0].username}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: 10,
+                            fontWeight: "500",
+                          }}
+                        >
+                          {document.getElementById("city")?.value}
+                        </Typography>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-              <div className="ig-content">
-                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div className="ig-profile-container">
-                    <Avatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        margin: "12px",
-                      }}
-                      src={currentUser.igAccounts[0].profile_picture_url}
-                    />
-                    <div className="ig-profile-name">
-                      <Typography
-                        sx={{
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {currentUser.igAccounts[0].username}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontSize: 10,
-                          fontWeight: "500",
-                        }}
-                      >
-                        {document.getElementById('city')?.value}
-                      </Typography>
+                    <MoreHoriz />
+                  </div>
+                  <Carousel sx={{ height: "400px" }}>
+                    {extFiles.map((e) => {
+                      return (
+                        <div style={{ height: "400px" }}>
+                          <img
+                            className="insta-post-img"
+                            src={URL.createObjectURL(e.file)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </Carousel>
+                  <div className="post-footer">
+                    <div className="post-icons">
+                      <img
+                        src="/social-preview/Снимок экрана 2024-11-09 в 00.52.25.png"
+                        alt=""
+                      />
+                    </div>
+                    <div className="post-text">
+                      <b>142 likes</b>
                     </div>
                   </div>
-                  <MoreHoriz />
                 </div>
-                <Carousel>
-                  {extFiles.map(e => {
-                    return <img src={URL.createObjectURL(e.file)} />
-                  })}
-                </Carousel>
+                <img
+                  className="ig-iphone-bar"
+                  src="/social-preview/ig-nav.png"
+                  alt=""
+                />
               </div>
-              <img
-                className="ig-iphone-bar"
-                src="/social-preview/ig-nav.png"
-                alt=""
-              />
-            </div>
-          </AccordionDetails>
-        </Accordion>}
+            </AccordionDetails>
+          </Accordion>
+        )}
+        {!!currentUser.tgChatIds &&
+          !!currentUser.tgAccounts &&
+          currentUser.tgChatIds?.length >= 1 && (
+            <Accordion
+              expanded={accordionExpanded === "tg"}
+              onChange={handleAccordionChange("tg")}
+              sx={{ margin: "6px" }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandIcon />}
+                aria-controls="igbh-content"
+                id="igbh-header"
+              >
+                <Avatar
+                  sx={{ width: 30, height: 30 }}
+                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
+                />
+                <Typography variant="h5" sx={{ ml: 1 }}>
+                  Telegram
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div className="tg-content-preview">
+                  <div className="tg-channel-logo">
+                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                  </div>
+                  <div className="tg-post-content">
+                    <div className="tg-post-header">
+                      <h5>{currentUser?.tgAccounts[0].title}</h5>
+                    </div>
+                    <div className="tg-post-img-div">
+                      <ImageGrid images={extFiles} />
+                    </div>
+                    <div className="tg-text-content">
+                      <div className="tg-text-comment">
+                        <h4>{titleValue}</h4>
+                        <p>{descriptionValue}</p>
+                        <p>
+                          {t("price")}
+                          {":"}
+                          {priceValue}$
+                        </p>
+                        <p>
+                          {t("address")}
+                          {": "} {cityValue}, {districtValue}
+                        </p>
+                      </div>
+                      <div className="tg-footer-text">
+                        <a
+                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
+                        >
+                          t.me/{currentUser?.tgAccounts[0].username}
+                        </a>
+                        <div className="tg-createAt">
+                          <span>12.7 K</span>
+                          <span>
+                            <VisibilityIcon fontSize="18px" />
+                          </span>
+                          <span>
+                            {new Date().toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AccordionDetails>
+            </Accordion>
+          )}
         <div className="footer-new-post">
           <button type="submit">{t("create")}</button>
         </div>
