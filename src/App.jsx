@@ -2,7 +2,6 @@ import { PrimeReactProvider } from "primereact/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import AdsAdd from "./components/adsAdd/AdsAdd.tsx";
 import AdsList from "./components/adsList/AdsList";
-import Chart from "./components/Chart/Chart";
 import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
 import CoworkerList from "./components/coworkerList/CoworkerList";
 import LeadList from "./components/leadList/LeadList";
@@ -22,7 +21,7 @@ import SinglePage from "./routes/singlePage/singlePage";
 import LeadUpdate from "./components/leadUpdate/LeadUpdate";
 import LeadAdd from "./components/leadAdd/LeadAdd";
 import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
-
+import Chart from "./components/chart/Chart.jsx";
 function App() {
   const router = createBrowserRouter([
     {
