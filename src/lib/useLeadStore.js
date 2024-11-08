@@ -3,7 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   where,
 } from "firebase/firestore";
@@ -18,7 +17,7 @@ export const useLeadStore = create((set) => ({
     try {
       const leadsQuery = query(
         collection(db, "leads"),
-        where("agentId", "==", agentId),
+        where("agentId", "==", agentId)
       );
 
       const querySnapshot = await getDocs(leadsQuery);
@@ -54,7 +53,7 @@ export const useLeadStore = create((set) => ({
     try {
       const leadsQuery = query(
         collection(db, "leads"),
-        where("coworkerId", "==", coworkerId),
+        where("coworkerId", "==", coworkerId)
       );
 
       const querySnapshot = await getDocs(leadsQuery);

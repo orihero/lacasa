@@ -9,6 +9,7 @@ import SettingIcon from "../icons/SettingIcon";
 import ChartIcon from "../icons/ChartIcon";
 import WorkIcon from "../icons/WorkIcon";
 import ListIcon from "../icons/ListIcon";
+import KanbanIcon from "@mui/icons-material/ViewKanbanOutlined";
 
 const Sidebar = ({ currentUser, handleLogout }) => {
   const { t } = useTranslation();
@@ -59,6 +60,14 @@ const Sidebar = ({ currentUser, handleLogout }) => {
         >
           <GroupIcon width={15} /> Leads
         </span>
+        <span
+          className={lastSegment == "kanban" ? "active-menu" : ""}
+          onClick={() => navigate(currentUser?.id + "/kanban")}
+        >
+          <KanbanIcon
+            sx={{ margin: 0, padding: 0, fontSize: 21, marginLeft: '-2px',marginRight:'-3px' }}
+          />Kanban
+        </span>
         {currentUser?.role == "agent" && (
           <span
             className={lastSegment == "coworkers" ? "active-menu" : ""}
@@ -73,7 +82,7 @@ const Sidebar = ({ currentUser, handleLogout }) => {
           onClick={() => navigate(currentUser?.id + "/setting")}
         >
           <SettingIcon width={15} />
-          Profile Setting
+          Profile Settings
         </span>
       </div>
       <span className="logout">

@@ -16,7 +16,7 @@ const StatusCell = ({ value }) => {
       backgroundColor = "#FFC107";
       color = "#FFFFFF";
       break;
-    case "sana tanlash":
+    case "pick_date":
       backgroundColor = "#E0E0E0";
       color = "#000000";
       break;

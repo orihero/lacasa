@@ -22,6 +22,7 @@ import SinglePage from "./routes/singlePage/singlePage";
 import LeadUpdate from "./components/leadUpdate/LeadUpdate";
 import LeadAdd from "./components/leadAdd/LeadAdd";
 import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
+import LeadKanbanList from "./components/leadList/LeadKanbanList.tsx";
 
 function App() {
   const router = createBrowserRouter([
@@ -72,6 +73,10 @@ function App() {
             {
               path: ":id/leads",
               element: <LeadList />,
+            },
+            {
+              path: ":id/kanban",
+              element: <LeadKanbanList />,
             },
             {
               path: ":id/create/leads",

@@ -14,21 +14,11 @@ import "./leadList.scss";
 import { useLeadStore } from "../../lib/useLeadStore";
 import StatusCell from "../status/StatusCell";
 import { useUserStore } from "../../lib/userStore";
-import { Drawer } from "@mui/material";
+import { Drawer, styled, Typography } from "@mui/material";
 import LeadUpdate from "../leadUpdate/LeadUpdate";
-// import { UncontrolledBoard } from "@caldwell619/react-kanban";
-// import { board } from "./kanban/data";
-// import {
-//   Filters,
-//   renderCard,
-//   Header,
-//   renderColumnHeader,
-// } from "./kanban/components";
-// import {
-//   KanbanComponent,
-//   ColumnsDirective,
-//   ColumnDirective,
-// } from "@syncfusion/ej2-react-kanban";
+import { Filters, renderCard, renderColumnHeader } from "./kanban/components";
+import { UncontrolledBoard } from "@caldwell619/react-kanban";
+import { board } from "./kanban/data";
 
 const columns = [
   { id: "id", label: "Id", minWidth: 50 },
@@ -164,41 +154,10 @@ const AdsList = () => {
 
   return (
     <div className="ads-list-content">
-      {/* <div className="filter-tools">filter</div> */}
       <div className="ads-new">
         <button onClick={handleNavigateNew}>{t("addNewLead")}</button>
       </div>
-      {/* <div
-        style={{
-          width: "1050px",
-          maxHeight: "650px",
-          overflow: "scroll",
-          backgroundColor: "dodgerblue",
-        }}
-      >
-        <KanbanComponent
-          id="kanban"
-          keyField="Status"
-          dataSource={data}
-          cardSettings={{ contentField: "Summary", headerField: "Id" }}
-        >
-          <ColumnsDirective>
-            <ColumnDirective headerText="To Do" keyField="Open" />
-            <ColumnDirective headerText="In Progress" keyField="InProgress" />
-            <ColumnDirective headerText="Testing" keyField="Testing" />
-            <ColumnDirective headerText="Done" keyField="Close" />
-          </ColumnsDirective>
-        </KanbanComponent>
 
-        <UncontrolledBoard
-          initialBoard={board}
-          renderCard={renderCard}
-          renderColumnHeader={renderColumnHeader}
-          allowAddCard={true}
-          allowAddColumn={true}
-          onColumnNew={(column) => console.log("New column", column)}
-        />
-      </div> */}
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer sx={{ maxHeight: 580 }}>
           <Table stickyHeader aria-label="sticky table">
