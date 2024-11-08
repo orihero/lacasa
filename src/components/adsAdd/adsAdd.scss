@@ -220,12 +220,112 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    .ig-profile-container{
+    .ig-profile-container {
       display: flex;
       flex-direction: row;
       align-items: center;
     }
-    img{
+    .insta-post-img {
+      // width: 100%;
+      height: 400px;
+      object-fit: cover;
+      border-radius: 3px;
+    }
+    .post-footer {
+      margin-top: 10px;
+      .post-text {
+        b {
+          font-size: 12px;
+        }
+      }
     }
   }
+}
+
+.tg-content-preview {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  .tg-channel-logo {
+    img {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+    }
+  }
+  .tg-post-content {
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    width: 400px;
+    // height: 350px;
+    .tg-post-header {
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      color: dodgerblue;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 10px;
+      align-items: center;
+    }
+    .tg-post-img-div {
+      overflow: hidden;
+      .tg-post-img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 0px;
+      }
+    }
+    .tg-text-content {
+      padding: 10px;
+      font-size: 14px;
+      .tg-text-comment {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .tg-footer-text {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 15px;
+        a {
+          color: dodgerblue;
+          text-decoration: underline;
+        }
+        .tg-createAt {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: #888;
+          span {
+            display: flex;
+            font-size: 12px;
+          }
+        }
+      }
+    }
+  }
+}
+.image-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.image-grid.grid-1 {
+  grid-template-columns: 1fr;
+}
+
+.image-grid.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.image-grid.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.image-grid.grid-4,
+.image-grid.grid-5 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 150px;
 }
