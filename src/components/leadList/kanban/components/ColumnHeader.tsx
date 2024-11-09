@@ -29,6 +29,7 @@ export const renderColumnHeader: UncontrolledBoardProps<CustomCard>["renderColum
           border: "1px solid #dddd",
           padding: "5px",
           borderRadius: "5px",
+          minWidth: '200px'
         }}
       >
         <Box sx={{ flexGrow: 1, display: "flex", gap: "10px" }}>

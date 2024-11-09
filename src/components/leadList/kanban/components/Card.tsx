@@ -29,17 +29,15 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
       sx={{
         width: "300px",
         margin: "5px",
-        boxShadow: "none",
-        border: "1px solid #ddd",
+        // boxShadow: "none",
+        // border: "1px solid #ddd",
         cursor: "pointer",
-        fontFamily: "Plus Jakarta Sans",
       }}
       onClick={() => card.handleOpenModal(card)}
     >
       <CardContent component={(p) => <Grid {...p} container spacing={1} />}>
         <Grid>
           <Typography
-            fontFamily={"Plus Jakarta Sans"}
             sx={{ fontWeight: "bold" }}
           >
             {card.title}
@@ -47,7 +45,6 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
         </Grid>
         <Grid size={{ xs: 12 }}>
           <Typography
-            fontFamily={"Plus Jakarta Sans"}
             sx={{ fontWeight: "bold" }}
           >
             {card.storyPoints}
@@ -56,7 +53,6 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
         </Grid>
         <Grid size={{ xs: 12 }}>
           <Typography
-            fontFamily={"Roboto, sans-serif"}
             sx={{ fontWeight: "500" }}
           >
             {card.comment}
@@ -69,7 +65,6 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
             borderRadius={1}
             fontSize={14}
             color="#fff"
-            fontFamily={"Roboto, sans-serif"}
           >
             {formatCallbackDate(card?.callbackDate)}
           </Typography>
@@ -117,7 +112,7 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
   );
 };
 
-export const ColoredBgText = styled("span", { shouldForwardProp })<{
+export const ColoredBgText = styled("span", { shouldForwardProp }) <{
   bgColor: string;
 }>`
   background-color: ${({ bgColor }) => bgColor};

@@ -8,7 +8,8 @@ export const formatCreatedAt = (createdAt) => {
       month: "2-digit",
       year: "numeric",
     })
-    .replace(",", " | ");
+    .replace(",", " | ")
+    .replaceAll("/", ".");
 };
 export const formatCallbackDate = (callbackDate) => {
   return new Date(callbackDate).toLocaleString("en-GB", {

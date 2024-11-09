@@ -88,7 +88,7 @@ export default function LeadKanbanList() {
                     coworkerList?.find((i) => i.id == c.coworkerId)?.avatar ??
                     "/avatar.jpg",
                   createdAt: c.createdAt,
-                  storyPoints: c.budget,
+                  storyPoints: c.phone,
                   title: c.fullName,
                   comment: c.comment,
                   callbackDate: c.callbackDate,
@@ -291,7 +291,7 @@ export default function LeadKanbanList() {
 
 const NotionStyles = styled("div")`
   & * {
-    font-family: "Roboto" !important;
+    font-family: "Segoe" !important;
   }
   & h1,
   h2,
@@ -299,7 +299,7 @@ const NotionStyles = styled("div")`
   h4,
   h5,
   h6 {
-    font-family: "Roboto" !important;
+    font-family: "Segoe Bold" !important;
   }
   & .react-kanban-column {
     padding: 0;

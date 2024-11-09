@@ -23,6 +23,7 @@ import LeadAdd from "./components/leadAdd/LeadAdd";
 import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
 import LeadKanbanList from "./components/leadList/LeadKanbanList.tsx";
 import Chart from "./components/chart/Chart.jsx";
+import './index.css'
 function App() {
   const router = createBrowserRouter([
     {
