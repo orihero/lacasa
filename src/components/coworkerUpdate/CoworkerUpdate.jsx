@@ -138,7 +138,7 @@ const CoworkerUpdate = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Update coworker</h1>
+        <h1>{t("updateCoworker")}</h1>
       </div>
       <div className="profile-content">
         <div className="avatar">
@@ -158,7 +158,7 @@ const CoworkerUpdate = () => {
                 <input
                   type="text"
                   {...register("fullName", {
-                    required: "Full Name is required",
+                    required: t("firstNameRequired"),
                   })}
                   className={errors.fullName ? "error" : ""}
                 />
@@ -169,10 +169,10 @@ const CoworkerUpdate = () => {
                 <input
                   type="text"
                   {...register("phone", {
-                    required: "Phone number is required",
+                    required: t("phoneNumberRequired"),
                     pattern: {
                       value: /^\+998\d{9}$/,
-                      message: "Invalid Uzbekistan phone number",
+                      message: t("invalidUzbekistanPhoneNumber"),
                     },
                   })}
                   className={errors.phone ? "error" : ""}
@@ -228,15 +228,15 @@ const CoworkerUpdate = () => {
                   type="button"
                   onClick={handleCancel}
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
-                <button type="submit">Save</button>
+                <button type="submit">{t("save")}</button>
                 <button
                   className="delete-btn"
                   type="button"
                   onClick={handleDelete}
                 >
-                  Delete
+                  {t("delete")}
                 </button>
               </div>
             </div>

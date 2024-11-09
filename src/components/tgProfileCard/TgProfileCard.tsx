@@ -1,5 +1,5 @@
 import { ITGAccount } from "../../services/tg";
-import "./TgProfileCard.scss";
+import "./tgProfileCard.scss";
 
 import React from "react";
 

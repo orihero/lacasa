@@ -107,7 +107,7 @@ const ProfileSetting = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Profile Setting</h1>
+        <h1>{t("profileSettings")}</h1>
       </div>
       <div className="profile-container">
         <div className="left">
@@ -129,7 +129,7 @@ const ProfileSetting = () => {
                     type="text"
                     disabled={!isEditing}
                     {...register("fullName", {
-                      required: "First name is required",
+                      required: t("firstNameRequired"),
                     })}
                     className={errors.fullName ? "error" : ""}
                   />
@@ -141,10 +141,10 @@ const ProfileSetting = () => {
                     type="text"
                     disabled={!isEditing}
                     {...register("phone", {
-                      required: "Phone number is required",
+                      required: t("phoneNumberRequired"),
                       pattern: {
                         value: /^\+998\d{9}$/,
-                        message: "Invalid Uzbekistan phone number",
+                        message: t("invalidUzbekistanPhoneNumber"),
                       },
                     })}
                     className={errors.phone ? "error" : ""}
@@ -156,7 +156,7 @@ const ProfileSetting = () => {
                   <input
                     type="email"
                     disabled={!isEditing}
-                    {...register("email", { required: "Email is required" })}
+                    {...register("email", { required: t("emailRequired") })}
                     className={errors.email ? "error" : ""}
                   />
                   {errors.email && <span>{errors.email.message}</span>}
@@ -168,10 +168,10 @@ const ProfileSetting = () => {
                     type={showPassword ? "text" : "password"}
                     disabled={!isEditing}
                     {...register("password", {
-                      required: isEditing ? "Password is required" : false,
+                      required: isEditing ? t("passwordRequired") : false,
                       minLength: {
                         value: 6,
-                        message: "Password must be at least 6 characters",
+                        message: t("passwordMinLength"),
                       },
                     })}
                     className={errors.password ? "error" : ""}
@@ -201,13 +201,13 @@ const ProfileSetting = () => {
                       type="button"
                       onClick={handleCancel}
                     >
-                      Cancel
+                      {t("cancel")}
                     </button>
-                    <button type="submit">Save</button>
+                    <button type="submit">{t("save")}</button>
                   </div>
                 ) : (
                   <button type="button" onClick={handleEdit}>
-                    Update
+                    {t("update")}
                   </button>
                 )}
               </div>
@@ -219,7 +219,7 @@ const ProfileSetting = () => {
             <FormGroup>
               <FormControlLabel
                 control={<IOSSwitch checked={!!currentUser.igTokens} />}
-                label="Instagram post yaratish"
+                label={t("createInstagramPost")}
               />
               {!!currentUser.igTokens &&
                 currentUser?.igAccounts?.map((e, index) => (
@@ -228,7 +228,7 @@ const ProfileSetting = () => {
 
               <FormControlLabel
                 control={<IOSSwitch checked={!!currentUser.tgChatIds} />}
-                label="Telegram post yaratish"
+                label={t("createTelegramPost")}
               />
               {!!currentUser.tgChatIds &&
                 !!currentUser.tgAccounts &&
@@ -237,7 +237,7 @@ const ProfileSetting = () => {
                 ))}
               <FormControlLabel
                 control={<IOSSwitch />}
-                label="Youtube post yaratish"
+                label={t("createYoutubePost")}
               />
             </FormGroup>
           </div>

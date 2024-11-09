@@ -1,23 +1,27 @@
-import React from 'react';
-import { FC } from 'react'
-import { Box, Button, Divider, IconButton, styled } from '@mui/material'
-import AddIcon from '@mui/icons-material/Add'
-import SearchIcon from '@mui/icons-material/Search'
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import React from "react";
+import { FC } from "react";
+import { Box, Button, Divider, IconButton, styled } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import SearchIcon from "@mui/icons-material/Search";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 
-import { NewMenu } from './Header'
+import { NewMenu } from "./Header";
 
 export const Filters: FC = () => {
   return (
     <>
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: "flex" }}>
         <Box sx={{ flexGrow: 1 }}>
-          <NormalCaseButton size='small' variant='text' startIcon={<AddIcon fontSize='small' />}>
+          {/* <NormalCaseButton
+            size="small"
+            variant="text"
+            startIcon={<AddIcon fontSize="small" />}
+          >
             Add a view
-          </NormalCaseButton>
+          </NormalCaseButton> */}
         </Box>
         <Box>
-          <NormalCaseButton size='small' variant='text'>
+          {/* <NormalCaseButton size='small' variant='text'>
             Properties
           </NormalCaseButton>
           <NormalCaseButton size='small' variant='text'>
@@ -31,18 +35,18 @@ export const Filters: FC = () => {
           </NormalCaseButton>
           <NormalCaseButton size='small' variant='text' endIcon={<SearchIcon />}>
             Search
-          </NormalCaseButton>
-          <IconButton>
+          </NormalCaseButton> */}
+          {/* <IconButton>
             <MoreHorizIcon />
-          </IconButton>
+          </IconButton> */}
           <NewMenu />
         </Box>
       </Box>
       <Divider />
     </>
-  )
-}
+  );
+};
 
 const NormalCaseButton = styled(Button)`
   text-transform: none;
-`
+`;

@@ -45,28 +45,35 @@ const Sidebar = ({ currentUser, handleLogout }) => {
           onClick={() => navigate("/profile")}
         >
           <ChartIcon width={15} />
-          Statistika
+          {t("statistics")}
         </span>
         <span
           className={lastSegment == "ads" ? "active-menu" : ""}
           onClick={() => navigate(currentUser?.id + "/ads")}
         >
           <ListIcon width={15} />
-          Ads
+          {t("ads")}
         </span>
         <span
           className={lastSegment == "leads" ? "active-menu" : ""}
           onClick={() => navigate(currentUser?.id + "/leads")}
         >
-          <GroupIcon width={15} /> Leads
+          <GroupIcon width={15} /> {t("leads")}
         </span>
         <span
           className={lastSegment == "kanban" ? "active-menu" : ""}
           onClick={() => navigate(currentUser?.id + "/kanban")}
         >
           <KanbanIcon
-            sx={{ margin: 0, padding: 0, fontSize: 21, marginLeft: '-2px',marginRight:'-3px' }}
-          />Kanban
+            sx={{
+              margin: 0,
+              padding: 0,
+              fontSize: 21,
+              marginLeft: "-2px",
+              marginRight: "-3px",
+            }}
+          />
+          Kanban
         </span>
         {currentUser?.role == "agent" && (
           <span
@@ -74,7 +81,7 @@ const Sidebar = ({ currentUser, handleLogout }) => {
             onClick={() => navigate(currentUser?.id + "/coworkers")}
           >
             <WorkIcon width={15} />
-            Coworkers
+            {t("coworkers")}
           </span>
         )}
         <span
@@ -82,7 +89,7 @@ const Sidebar = ({ currentUser, handleLogout }) => {
           onClick={() => navigate(currentUser?.id + "/setting")}
         >
           <SettingIcon width={15} />
-          Profile Settings
+          {t("profileSettings")}
         </span>
       </div>
       <span className="logout">

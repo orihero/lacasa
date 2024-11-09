@@ -13,38 +13,6 @@ import { useListStore } from "../../lib/adsListStore";
 import "./coworkerList.scss";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 
-const columns = [
-  { id: "id", label: "Id", minWidth: 30 },
-  {
-    id: "avatar",
-    label: "Photo",
-    minWidth: 60,
-    align: "center",
-    format: (value) => value,
-  },
-  {
-    id: "fullName",
-    label: "Ism Familiyasi",
-    minWidth: 170,
-    align: "left",
-    format: (value) => value,
-  },
-  {
-    id: "adsCount",
-    label: "Ads Count",
-    minWidth: 80,
-    align: "left",
-    format: (value) => value.toLocaleString("en-US"),
-  },
-  {
-    id: "phoneNumber",
-    label: "Phone",
-    minWidth: 120,
-    align: "left",
-    format: (value) => value.toFixed(2),
-  },
-];
-
 const AdsList = () => {
   const { myList } = useListStore();
   const navigate = useNavigate();
@@ -53,6 +21,38 @@ const AdsList = () => {
   const { fetchCoworkerList, list } = useCoworkerStore();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  const columns = [
+    { id: "id", label: t("id"), minWidth: 30 },
+    {
+      id: "avatar",
+      label: t("photo"),
+      minWidth: 60,
+      align: "center",
+      format: (value) => value,
+    },
+    {
+      id: "fullName",
+      label: t("fullName"),
+      minWidth: 170,
+      align: "left",
+      format: (value) => value,
+    },
+    {
+      id: "adsCount",
+      label: t("adsCount"),
+      minWidth: 80,
+      align: "left",
+      format: (value) => value.toLocaleString("en-US"),
+    },
+    {
+      id: "phoneNumber",
+      label: t("phone"),
+      minWidth: 120,
+      align: "left",
+      format: (value) => value.toFixed(2),
+    },
+  ];
 
   useEffect(() => {
     if (id) {

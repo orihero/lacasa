@@ -80,7 +80,7 @@ const LeadAdd = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>Create lead</h1>
+        <h1>{t("createLead")}</h1>
       </div>
       <div className="profile-content">
         <div className="inputs">
@@ -91,7 +91,7 @@ const LeadAdd = () => {
                 <input
                   type="text"
                   {...register("fullName", {
-                    required: "First name is required",
+                    required: t("firstNameRequired"),
                   })}
                   className={errors.fullName ? "error" : ""}
                 />
@@ -102,10 +102,10 @@ const LeadAdd = () => {
                 <input
                   type="text"
                   {...register("phone", {
-                    required: "Phone number is required",
+                    required: t("phoneNumberRequired"),
                     pattern: {
                       value: /^\+998\d{9}$/,
-                      message: "Invalid Uzbekistan phone number",
+                      message: t("invalidUzbekistanPhoneNumber"),
                     },
                   })}
                   className={errors.phone ? "error" : ""}
@@ -121,7 +121,7 @@ const LeadAdd = () => {
                 <input type="text" {...register("budget", {})} />
               </div>
               <div className="field">
-                <label>{t("comment")}:</label>
+                <label>{t("commit")}:</label>
                 <textarea {...register("comment", {})}></textarea>
               </div>
               <div className="field">
@@ -162,9 +162,9 @@ const LeadAdd = () => {
                   type="button"
                   onClick={handleCancel}
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
-                <button type="submit">Save</button>
+                <button type="submit">{t("save")}</button>
               </div>
             </div>
           </form>
