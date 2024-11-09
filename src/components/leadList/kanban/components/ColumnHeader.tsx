@@ -11,11 +11,11 @@ import StatusCell from "../../../status/StatusCell";
 import { useNavigate, useParams } from "react-router-dom";
 
 export const renderColumnHeader: UncontrolledBoardProps<CustomCard>["renderColumnHeader"] =
-  (column, { addCard }) => {
+  (column) => {
     const navigate = useNavigate();
     const { id } = useParams();
     const onAddCard = () => {
-      navigate("/profile/" + id + "/create/leads");
+      // navigate("/profile/" + id + "/create/leads");
       // const newCard = createNewCard();
       // Can be async, do mutation here awaiting result, then call `addCard`
       // addCard(newCard, { on: "top" });
@@ -41,9 +41,9 @@ export const renderColumnHeader: UncontrolledBoardProps<CustomCard>["renderColum
           {/* <IconButton>
             <MoreHorizIcon />
           </IconButton> */}
-          <IconButton onClick={onAddCard}>
+          {/* <IconButton onClick={onAddCard}>
             <AddIcon />
-          </IconButton>
+          </IconButton> */}
         </Box>
       </Box>
     );

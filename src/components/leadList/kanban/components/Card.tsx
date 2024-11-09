@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { UncontrolledBoardProps } from "@caldwell619/react-kanban";
 import {
   Grid2 as Grid,
@@ -16,10 +16,13 @@ import {
   formatCreatedAt,
 } from "../../../../hooks/formatDate";
 
-export const renderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
+export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
   card,
 ) => {
-  const bgColor = ticketTypeToBgColor[card.ticketType];
+  useEffect(() => {
+    //
+  }, [card.isUpdate]);
+
   console.log(card);
   return (
     <Card
@@ -28,7 +31,9 @@ export const renderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
         margin: "5px",
         boxShadow: "none",
         border: "1px solid #ddd",
+        cursor: "pointer",
       }}
+      onClick={() => card.handleOpenModal(card)}
     >
       <CardContent component={(p) => <Grid {...p} container spacing={1} />}>
         <Grid>
@@ -43,7 +48,7 @@ export const renderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
         <Grid size={{ xs: 12 }}>
           <Typography sx={{ fontWeight: "500" }}>{card.comment}</Typography>
         </Grid>
-        {card?.callbackDate && (
+        {card.status == "need_to_call_back" && card?.callbackDate && (
           <Typography
             bgcolor={"red"}
             padding={"3px"}
@@ -54,6 +59,18 @@ export const renderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
             {formatCallbackDate(card?.callbackDate)}
           </Typography>
         )}
+        {(card.status == "rejected" || card.status == "accepted") &&
+          card?.conversationComment && (
+            <Typography
+              bgcolor={"red"}
+              padding={"3px"}
+              borderRadius={1}
+              fontSize={14}
+              color="#fff"
+            >
+              {card.conversationComment}
+            </Typography>
+          )}
         <Box
           sx={{
             display: "flex",

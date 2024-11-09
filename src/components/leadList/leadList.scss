@@ -61,8 +61,49 @@
 }
 
 .kanban-content {
-  max-width: 1100px;
+  max-width: 1000px;
   max-height: 690px;
   height: 690px;
-  overflow: auto;
+  overflow: hidden;
+  flex: 1;
+}
+
+.kanban-modal {
+  .field {
+    position: relative;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+    input {
+      padding: 5px;
+      border: 1px solid #dddd;
+      width: 100%;
+      outline: none;
+      &:focus {
+        border: 1px solid #fece51;
+      }
+    }
+  }
+  .buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    .cancel-btn {
+      background-color: #051d42;
+      color: #fff;
+    }
+    .delete-btn {
+      background-color: rgb(216, 72, 53);
+      color: #fff;
+    }
+    button {
+      padding: 12px 24px;
+      background-color: #fece51;
+      cursor: pointer;
+      border: none;
+    }
+  }
 }
