@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import regionData from "../../regions.json";
 import { useUtilsStore } from "../../lib/utilsStore";
+import ShareIcon from "@mui/icons-material/Share";
 import {
   Dropzone,
   FileMosaic,
@@ -36,6 +37,7 @@ const AdsAdd = () => {
     handleSubmit,
     formState: { errors },
     watch,
+    getValues,
   } = useForm();
   const { t } = useTranslation();
   const { currentUser } = useUserStore();
@@ -44,6 +46,7 @@ const AdsAdd = () => {
   const [extFiles, setExtFiles] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
   const [videoSrc, setVideoSrc] = useState(undefined);
+  const [resTG, setResTg] = useState([]);
   const [priceType, setPriceType] = useState("uzs");
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
@@ -52,6 +55,15 @@ const AdsAdd = () => {
   const titleValue = watch("title", "");
   const cityValue = watch("city", "");
   const districtValue = watch("district", "");
+  const roomValue = watch("rooms", "");
+  const categoryValue = watch("category", "");
+  const storeyValue = watch("storey", "");
+  const floorsValue = watch("floors", "");
+  const areaValue = watch("area", "");
+  const repairmentValue = watch("repairment", "");
+  const furnitureValue = watch("furniture", "");
+  const addressValue = watch("address", "");
+  const typeValue = watch("type", "");
   const [accordionExpanded, setAccordionExpanded] = useState<string | false>(
     false,
   );
@@ -197,6 +209,43 @@ const AdsAdd = () => {
       let filter = clone.filter((item) => item.id != id);
       setOptionList([...filter]);
     }
+  };
+
+  const onSubmitTG = async (item) => {
+    let photos = [];
+    const allValues = getValues();
+    const form = new FormData();
+    photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+
+    const caption = Object.entries(allValues).reduce(
+      (result, [key, value]) =>
+        result + `${t(key)}: ${value} ${key == "price" ? priceType : ""} \n`,
+      "",
+    );
+    form.append("chat_id", item.id);
+    form.append("protect_content", "true");
+    form.append(
+      "media",
+      JSON.stringify(
+        photos.map((e, i) =>
+          i == photos.length - 1
+            ? { type: "photo", media: e, caption }
+            : { type: "photo", media: e },
+        ),
+      ),
+    );
+    const res = await axios
+      .post(
+        `https://api.telegram.org/bot${
+          import.meta.env.VITE_TG_BOT_TOKEN
+        }/sendMediaGroup`,
+        form,
+      )
+      .catch((error) => console.error(error));
+    console.error(res.data);
+    let cloneRes = [...resTG];
+    cloneRes.push(res.data?.result[0]);
+    setResTg([...cloneRes]);
   };
 
   const handleAccordionChange =
@@ -652,7 +701,11 @@ const AdsAdd = () => {
                     </div>
                     <MoreHoriz />
                   </div>
-                  <Carousel sx={{ height: "400px" }}>
+                  <Carousel
+                    indicatorContainerProps={{ style: { margin: "0" } }}
+                    indicators
+                    sx={{ height: "auto" }}
+                  >
                     {extFiles.map((e) => {
                       return (
                         <div style={{ height: "400px" }}>
@@ -720,17 +773,72 @@ const AdsAdd = () => {
                     </div>
                     <div className="tg-text-content">
                       <div className="tg-text-comment">
+                        {!!categoryValue.length && (
+                          <span>#{categoryValue}</span>
+                        )}
                         <h4>{titleValue}</h4>
                         <p>{descriptionValue}</p>
-                        <p>
-                          {t("price")}
-                          {":"}
-                          {priceValue}$
-                        </p>
-                        <p>
-                          {t("address")}
-                          {": "} {cityValue}, {districtValue}
-                        </p>
+                        {!!priceValue.length && (
+                          <p>
+                            {t("price")}
+                            {":"}
+                            {priceValue}$
+                          </p>
+                        )}
+                        {!!cityValue.length && (
+                          <p>
+                            {t("city")}
+                            {": "} {cityValue}, {districtValue}
+                          </p>
+                        )}
+                        {!!roomValue && (
+                          <p>
+                            {t("rooms")}
+                            {": "} {roomValue}
+                          </p>
+                        )}
+                        {!!storeyValue && (
+                          <p>
+                            {t("storey")}
+                            {": "} {storeyValue}
+                          </p>
+                        )}
+                        {!!floorsValue && (
+                          <p>
+                            {t("floors")}
+                            {": "} {floorsValue}
+                          </p>
+                        )}
+                        {!!areaValue && (
+                          <p>
+                            {t("area")}
+                            {": "} {areaValue} m <sup>2</sup>
+                          </p>
+                        )}
+                        {!!repairmentValue && (
+                          <p>
+                            {t("repairment")}
+                            {": "} {repairmentValue}
+                          </p>
+                        )}
+                        {!!furnitureValue && (
+                          <p>
+                            {t("furniture")}
+                            {": "} {furnitureValue}
+                          </p>
+                        )}
+                        {!!addressValue && (
+                          <p>
+                            {t("address")}
+                            {": "} {addressValue}
+                          </p>
+                        )}
+                        {!!typeValue && (
+                          <p>
+                            {t("type")}
+                            {": "} {typeValue}
+                          </p>
+                        )}
                       </div>
                       <div className="tg-footer-text">
                         <a
@@ -753,6 +861,49 @@ const AdsAdd = () => {
                         </div>
                       </div>
                     </div>
+                  </div>
+                  <div className="tg-channel-list">
+                    {currentUser?.tgAccounts.length > 1 &&
+                      currentUser?.tgAccounts.map((item) => {
+                        return (
+                          <>
+                            <div
+                              onClick={() => onSubmitTG(item)}
+                              className="tg-channel-item"
+                            >
+                              <img src={item.file_path} alt="" />
+                              <p>{item.title}</p>
+                            </div>
+                            {resTG.map((e) => {
+                              if (e.chat.id == item.id) {
+                                return (
+                                  <div
+                                    onClick={() => {
+                                      const url = `https://t.me/${item.username}/${e.message_id}`;
+                                      navigator.clipboard
+                                        .writeText(url)
+                                        .then(() => {
+                                          alert(
+                                            "Link copied to clipboard: " + url,
+                                          );
+                                        })
+                                        .catch((error) => {
+                                          console.error(
+                                            "Failed to copy text: ",
+                                            error,
+                                          );
+                                        });
+                                    }}
+                                    className="tg-message-share-icon"
+                                  >
+                                    <ShareIcon />
+                                  </div>
+                                );
+                              }
+                            })}
+                          </>
+                        );
+                      })}
                   </div>
                 </div>
               </AccordionDetails>

@@ -66,6 +66,7 @@
   height: 690px;
   overflow: hidden;
   flex: 1;
+  font-family: "Plus Jakarta Sans", sans-serif;
 }
 
 .kanban-modal {
@@ -77,6 +78,7 @@
     flex-direction: column;
     gap: 10px;
     width: 300px;
+    font-family: "Plus Jakarta Sans", sans-serif;
     input {
       padding: 5px;
       border: 1px solid #dddd;

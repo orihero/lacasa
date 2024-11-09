@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@caldwell619/react-kanban": "^0.0.11",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@files-ui/react": "^1.2.4",
+    "@hello-pangea/dnd": "^17.0.0",
     "@mui/icons-material": "^6.1.6",
     "@mui/material": "^6.1.6",
     "@mui/x-charts": "^7.22.1",

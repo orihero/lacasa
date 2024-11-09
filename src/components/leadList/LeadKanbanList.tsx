@@ -1,6 +1,5 @@
 import {
   KanbanBoard,
-  UncontrolledBoard,
   ControlledBoard,
   moveCard,
   OnDragEndNotification,
