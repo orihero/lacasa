@@ -21,6 +21,10 @@ import {
   AccordionDetails,
   AccordionSummary,
   Avatar,
+  Box,
+  Button,
+  Checkbox,
+  Modal,
   Paper,
   Typography,
 } from "@mui/material";
@@ -30,6 +34,9 @@ import { useUserStore } from "../../lib/userStore";
 import Carousel from "react-material-ui-carousel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import ImageGrid from "./components/ImageGrid";
+import IgProfileCard from "../igProfileCard/IgProfileCard";
+import TgProfileCard from "../tgProfileCard/TgProfileCard";
+import YtVideoCard from "../ytVideoCard/YtvideoCard";
 
 const AdsAdd = () => {
   const {
@@ -44,8 +51,10 @@ const AdsAdd = () => {
   const [regionId, setRegionId] = useState(0);
   const [price, setPrice] = useState(0);
   const [extFiles, setExtFiles] = useState([]);
+  const [publishSelectSocial, setPublishSelectSocial] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
   const [videoSrc, setVideoSrc] = useState(undefined);
+  const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
   const [priceType, setPriceType] = useState("uzs");
   const [nearPlacesList, setNearPlaceList] = useState([]);
@@ -211,47 +220,77 @@ const AdsAdd = () => {
     }
   };
 
-  const onSubmitTG = async (item) => {
-    let photos = [];
+  const onSubmitTG = async () => {
     const allValues = getValues();
-    const form = new FormData();
-    photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+    const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
     const caption = Object.entries(allValues).reduce(
       (result, [key, value]) =>
-        result + `${t(key)}: ${value} ${key == "price" ? priceType : ""} \n`,
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
       "",
     );
-    form.append("chat_id", item.id);
-    form.append("protect_content", "true");
-    form.append(
-      "media",
-      JSON.stringify(
-        photos.map((e, i) =>
-          i == photos.length - 1
-            ? { type: "photo", media: e, caption }
-            : { type: "photo", media: e },
-        ),
-      ),
+
+    const responses = await Promise.all(
+      publishSelectSocial.map(async (socialItem) => {
+        const formData = new FormData();
+        formData.append("chat_id", socialItem.id);
+        formData.append("protect_content", "true");
+        formData.append(
+          "media",
+          JSON.stringify(
+            photos.map((e, i) =>
+              i === photos.length - 1
+                ? { type: "photo", media: e, caption }
+                : { type: "photo", media: e },
+            ),
+          ),
+        );
+
+        try {
+          const res = await axios.post(
+            `https://api.telegram.org/bot${
+              import.meta.env.VITE_TG_BOT_TOKEN
+            }/sendMediaGroup`,
+            formData,
+          );
+          return res.data?.result[0];
+        } catch (error) {
+          console.error(error);
+          return null;
+        }
+      }),
     );
-    const res = await axios
-      .post(
-        `https://api.telegram.org/bot${
-          import.meta.env.VITE_TG_BOT_TOKEN
-        }/sendMediaGroup`,
-        form,
-      )
-      .catch((error) => console.error(error));
-    console.error(res.data);
-    let cloneRes = [...resTG];
-    cloneRes.push(res.data?.result[0]);
-    setResTg([...cloneRes]);
+
+    const successfulResponses = responses.filter(
+      (response) => response !== null,
+    );
+    setResTg([...resTG, ...successfulResponses]);
   };
 
   const handleAccordionChange =
     (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
       setAccordionExpanded(isExpanded ? panel : false);
     };
+
+  const handleCheckboxChange = (item) => {
+    setPublishSelectSocial((prev) => {
+      if (prev.some((social) => social.id === item.id)) {
+        return prev.filter((social) => social.id !== item.id);
+      }
+      return [...prev, item];
+    });
+  };
+
+  const style = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    // width: 400,
+    bgcolor: "background.paper",
+    boxShadow: 24,
+    p: 4,
+  };
 
   return (
     <div className="new-post-container">
@@ -628,7 +667,7 @@ const AdsAdd = () => {
                 Instagram
               </Typography>
             </AccordionSummary>
-            <AccordionDetails>
+            <AccordionDetails className="ig-content-flex">
               <div className="ig-preview-container">
                 <img src="/social-preview/iphone-bar.png" alt="" />
                 <img src="/social-preview/ig-header.png" alt="" />
@@ -734,6 +773,11 @@ const AdsAdd = () => {
                   src="/social-preview/ig-nav.png"
                   alt=""
                 />
+              </div>
+              <div className="tg-btn-publish">
+                <Button variant="contained" onClick={() => setOpenModal("ig")}>
+                  Опубликовать
+                </Button>
               </div>
             </AccordionDetails>
           </Accordion>
@@ -862,49 +906,49 @@ const AdsAdd = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="tg-channel-list">
-                    {currentUser?.tgAccounts.length > 1 &&
-                      currentUser?.tgAccounts.map((item) => {
-                        return (
-                          <>
-                            <div
-                              onClick={() => onSubmitTG(item)}
-                              className="tg-channel-item"
-                            >
-                              <img src={item.file_path} alt="" />
-                              <p>{item.title}</p>
-                            </div>
-                            {resTG.map((e) => {
-                              if (e.chat.id == item.id) {
-                                return (
-                                  <div
-                                    onClick={() => {
-                                      const url = `https://t.me/${item.username}/${e.message_id}`;
-                                      navigator.clipboard
-                                        .writeText(url)
-                                        .then(() => {
-                                          alert(
-                                            "Link copied to clipboard: " + url,
-                                          );
-                                        })
-                                        .catch((error) => {
-                                          console.error(
-                                            "Failed to copy text: ",
-                                            error,
-                                          );
-                                        });
-                                    }}
-                                    className="tg-message-share-icon"
-                                  >
-                                    <ShareIcon />
-                                  </div>
-                                );
-                              }
-                            })}
-                          </>
-                        );
-                      })}
+
+                  <div className="tg-btn-publish">
+                    <Button
+                      variant="contained"
+                      onClick={() => setOpenModal("tg")}
+                    >
+                      Опубликовать
+                    </Button>
                   </div>
+                </div>
+              </AccordionDetails>
+            </Accordion>
+          )}
+        {!!currentUser.tgChatIds &&
+          !!currentUser.tgAccounts &&
+          currentUser.tgChatIds?.length >= 1 && (
+            <Accordion
+              expanded={accordionExpanded === "yt"}
+              onChange={handleAccordionChange("yt")}
+              sx={{ margin: "6px" }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandIcon />}
+                aria-controls="igbh-content"
+                id="igbh-header"
+              >
+                <Avatar
+                  sx={{ width: 30, height: 30 }}
+                  src="https://static.vecteezy.com/system/resources/previews/011/998/173/non_2x/youtube-icon-free-vector.jpg"
+                />
+                <Typography variant="h5" sx={{ ml: 1 }}>
+                  YouTube
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <div className="tg-content-preview">
+                  <YtVideoCard />
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenModal("yt")}
+                  >
+                    Опубликовать
+                  </Button>
                 </div>
               </AccordionDetails>
             </Accordion>
@@ -913,6 +957,97 @@ const AdsAdd = () => {
           <button type="submit">{t("create")}</button>
         </div>
       </form>
+
+      <Modal
+        open={
+          openModal == "tg" ||
+          openModal == "ig" ||
+          openModal == "yt" ||
+          openModal == "fb"
+        }
+        onClose={() => setOpenModal("")}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box sx={style}>
+          <div className="tg-channel-list">
+            <h3>Nashir qilmoqchi bo'lgan kannallaringizni tanlang!</h3>
+            {openModal == "ig" ? (
+              <>
+                <div className="tg-flex">
+                  {!!currentUser.igTokens &&
+                    currentUser?.igAccounts?.map((e, index) => (
+                      <div className="tg-channel-item-flex">
+                        <IgProfileCard key={index} data={e} />
+                        <Checkbox onChange={() => handleCheckboxChange(e)} />
+                      </div>
+                    ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="tg-flex">
+                  {currentUser?.tgAccounts.length > 1 &&
+                    currentUser?.tgAccounts.map((item, index) => {
+                      return (
+                        <div className="tg-channel-item-flex">
+                          <TgProfileCard key={index} data={item} />
+                          <Checkbox
+                            onChange={() => handleCheckboxChange(item)}
+                          />
+
+                          {resTG.map((e) => {
+                            if (e.chat.id == item.id) {
+                              return (
+                                <div
+                                  onClick={() => {
+                                    const url = `https://t.me/${item.username}/${e.message_id}`;
+                                    navigator.clipboard
+                                      .writeText(url)
+                                      .then(() => {
+                                        alert(
+                                          "Link copied to clipboard: " + url,
+                                        );
+                                      })
+                                      .catch((error) => {
+                                        console.error(
+                                          "Failed to copy text: ",
+                                          error,
+                                        );
+                                      });
+                                  }}
+                                  className="tg-message-share-icon"
+                                >
+                                  <ShareIcon />
+                                </div>
+                              );
+                            }
+                          })}
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
+            )}
+
+            <Box sx={{ display: "flex", gap: "10px" }}>
+              <Button
+                onClick={() => {
+                  setOpenModal("");
+                  setPublishSelectSocial([]);
+                }}
+                variant="outlined"
+                color="error"
+              >
+                {t("cancel")}
+              </Button>
+              <Button onClick={onSubmitTG} variant="contained">
+                {t("publish")}
+              </Button>
+            </Box>
+          </div>
+        </Box>
+      </Modal>
     </div>
   );
 };
