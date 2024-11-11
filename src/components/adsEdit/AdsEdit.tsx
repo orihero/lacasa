@@ -1,22 +1,14 @@
-import React, { useEffect, useState } from "react";
-import "./adsAdd.scss";
-import { useForm } from "react-hook-form";
-import { useTranslation } from "react-i18next";
-import regionData from "../../regions.json";
-import { useUtilsStore } from "../../lib/utilsStore";
-import ShareIcon from "@mui/icons-material/Share";
 import {
   Dropzone,
   FileMosaic,
   FullScreen,
   ImagePreview,
-  VideoPreview,
 } from "@files-ui/react";
-import { toast } from "react-toastify";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { assetUpload } from "../../lib/assetUpload";
-import axios from "axios";
-import { db } from "../../lib/firebase";
+import CloseIcon from "@mui/icons-material/Close";
+import ExpandIcon from "@mui/icons-material/ExpandMore";
+import MoreHoriz from "@mui/icons-material/MoreHoriz";
+import ShareIcon from "@mui/icons-material/Share";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   Accordion,
   AccordionDetails,
@@ -25,46 +17,55 @@ import {
   Box,
   Button,
   Checkbox,
-  FormControlLabel,
   Modal,
-  Paper,
   Typography,
 } from "@mui/material";
-import ExpandIcon from "@mui/icons-material/ExpandMore";
-import MoreHoriz from "@mui/icons-material/MoreHoriz";
-import { useUserStore } from "../../lib/userStore";
+import axios from "axios";
+import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
+import { Triangle } from "react-loader-spinner";
 import Carousel from "react-material-ui-carousel";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import ImageGrid from "./components/ImageGrid";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useListStore } from "../../lib/adsListStore";
+import { assetUpload } from "../../lib/assetUpload";
+import { db } from "../../lib/firebase";
+import { useUserStore } from "../../lib/userStore";
+import { useUtilsStore } from "../../lib/utilsStore";
+import regionData from "../../regions.json";
+import { IGService } from "../../services/ig";
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import YtVideoCard from "../ytVideoCard/YtvideoCard";
-import { IGService } from "../../services/ig";
-import { useNavigate } from "react-router-dom";
+import "./adsEdit.scss";
+import ImageGrid from "./components/ImageGrid";
 
-const AdsAdd = () => {
+const AdsEdit = () => {
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
     getValues,
+    reset,
   } = useForm();
   const { t } = useTranslation();
+  const { id } = useParams();
   const { currentUser } = useUserStore();
+  const { fetchAdsById, adsData, isLoading } = useListStore();
   const [regionId, setRegionId] = useState(0);
-  const navigate = useNavigate();
   const [price, setPrice] = useState(0);
+  const navigate = useNavigate();
   const [extFiles, setExtFiles] = useState([]);
-  const [extFilesVideo, setExtFilesVideo] = useState([]);
+  const [photoUrl, setPhotoUrl] = useState([]);
   const [publishSelectSocial, setPublishSelectSocial] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
   const [videoSrc, setVideoSrc] = useState(undefined);
   const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
   const [priceType, setPriceType] = useState("uzs");
-  const [isShort, setIsShort] = useState(false);
-  const [photoOrVideo, setPhotoOrVideo] = useState([]);
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
   const descriptionValue = watch("description", "");
@@ -74,7 +75,6 @@ const AdsAdd = () => {
   const districtValue = watch("district", "");
   const roomValue = watch("rooms", "");
   const categoryValue = watch("category", "");
-  const hashtagsValue = watch("hashtags", "");
   const storeyValue = watch("storey", "");
   const floorsValue = watch("floors", "");
   const areaValue = watch("area", "");
@@ -94,75 +94,65 @@ const AdsAdd = () => {
   } = useUtilsStore();
 
   useEffect(() => {
-    fetchCurrency();
-    fetchNearbyPlace();
-  }, []);
+    if (id) {
+      fetchAdsById(id);
+      fetchCurrency();
+      fetchNearbyPlace();
+    }
+  }, [id]);
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    const data = Object.fromEntries(form);
-    let photos = [];
-    let caption = "";
+  useEffect(() => {
+    if (adsData.id) {
+      setPhotoUrl(
+        adsData.photos.map((e, index) => ({
+          id: index,
+          url: e,
+          uploadStatus: "done",
+        })),
+      );
+      setNearPlaceList(adsData.nearPlacesList);
+      setOptionList(adsData.optionList);
+      setRegionId(regionData.regions.find((r) => r.name == adsData.city).id);
+      reset({ ...adsData });
+    }
+  }, [adsData]);
 
-    // !Upload to IG
-    const uploadIg = async () => {
-      const res = await IGService.customCreateCarousel(photos, caption);
-    };
+  const onSubmit = (data) => {
+    let photos: string[] = [];
+
     const upload = async () => {
       try {
-        photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+        // Upload all photos and get their URLs
+        if (extFiles.length > 0) {
+          photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+        }
 
-        await addDoc(collection(db, "ads"), {
+        // Update the specified document in Firestore
+        await updateDoc(doc(db, "ads", id), {
           ...data,
           agentId: currentUser.id,
           nearPlacesList: nearPlacesList,
           active: true,
           optionList: optionList,
-          photos,
-          createdAt: serverTimestamp(),
+          photos:
+            photoUrl?.length > 0
+              ? [...photoUrl.map((e) => e.url), ...photos]
+              : photos,
+          updatedAt: serverTimestamp(),
         });
-      } catch (error) {
-        console.error(error);
-      }
-      caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
-      try {
-        await uploadIg();
-      } catch (error) {
-        console.error(error);
-      }
-      // !Upload to telegram
-      try {
-        const form = new FormData();
-        form.append("chat_id", import.meta.env.VITE_LECASA_CHANNEL_ID);
-        form.append("protect_content", "true");
-        form.append(
-          "media",
-          JSON.stringify(
-            photos.map((e, i) =>
-              i == photos.length - 1
-                ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
-        );
-        const res = await axios.post(
-          `https://api.telegram.org/bot${
-            import.meta.env.VITE_TG_BOT_TOKEN
-          }/sendMediaGroup`,
-          form,
-        );
-        console.error(res.data);
+        navigate("/profile/" + currentUser.id + "/ads");
       } catch (error) {
         console.error(error);
       }
     };
-    toast.promise(Promise.all(upload()), {
+
+    toast.promise(upload(), {
       error: "Something went wrong",
-      pending: "Creating",
-      success: "Successfully created",
+      pending: "Updating",
+      success: "Successfully updated",
     });
-    navigate("/profile");
+
+    // Navigate to the profile page after update
   };
 
   const updateFiles = (incommingFiles) => {
@@ -170,29 +160,15 @@ const AdsAdd = () => {
     setExtFiles(incommingFiles);
   };
 
-  const updateFilesVideo = (incommingFiles) => {
-    console.log("incomming files", incommingFiles);
-    setExtFilesVideo(incommingFiles);
-  };
-
   const onDelete = (id) => {
     setExtFiles(extFiles.filter((x) => x.id !== id));
   };
-  const onDeleteVideo = (id) => {
-    setExtFilesVideo(extFilesVideo.filter((x) => x.id !== id));
-  };
-
   const handleSee = (imageSource) => {
     console.log("====================================");
     console.log({ imageSource });
     console.log("====================================");
     setImageSrc(imageSource);
   };
-
-  const handleSeeVideo = (videoSource) => {
-    setVideoSrc(videoSource);
-  };
-
   const handleWatch = (videoSource) => {
     setVideoSrc(videoSource);
   };
@@ -206,27 +182,9 @@ const AdsAdd = () => {
       }),
     );
   };
-  const handleAbortVideo = (id) => {
-    setExtFilesVideo(
-      extFilesVideo.map((ef) => {
-        if (ef.id === id) {
-          return { ...ef, uploadStatus: "aborted" };
-        } else return { ...ef };
-      }),
-    );
-  };
   const handleCancel = (id) => {
     setExtFiles(
       extFiles.map((ef) => {
-        if (ef.id === id) {
-          return { ...ef, uploadStatus: undefined };
-        } else return { ...ef };
-      }),
-    );
-  };
-  const handleCancelVideo = (id) => {
-    setExtFilesVideo(
-      extFilesVideo.map((ef) => {
         if (ef.id === id) {
           return { ...ef, uploadStatus: undefined };
         } else return { ...ef };
@@ -267,9 +225,7 @@ const AdsAdd = () => {
 
     const caption = Object.entries(allValues).reduce(
       (result, [key, value]) =>
-        result + key != "hashtags"
-          ? `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`
-          : "",
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
       "",
     );
 
@@ -283,11 +239,7 @@ const AdsAdd = () => {
           JSON.stringify(
             photos.map((e, i) =>
               i === photos.length - 1
-                ? {
-                    type: "photo",
-                    media: e,
-                    caption: hashtagsValue + "\n" + caption,
-                  }
+                ? { type: "photo", media: e, caption }
                 : { type: "photo", media: e },
             ),
           ),
@@ -314,6 +266,37 @@ const AdsAdd = () => {
     setResTg([...resTG, ...successfulResponses]);
   };
 
+  const onSubmitIG = async () => {
+    const allValues = getValues();
+    let photos = [];
+
+    if (extFiles.length > 0) {
+      photos = extFiles.map((e) => e.file);
+    }
+
+    const caption = Object.entries(allValues).reduce(
+      (result, [key, value]) =>
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
+      "",
+    );
+
+    try {
+      await Promise.all(
+        publishSelectSocial.map((socialItem) =>
+          IGService.publishMedia(
+            photos,
+            caption,
+            socialItem,
+            socialItem.access_token,
+          ),
+        ),
+      );
+      console.log("All posts published successfully!");
+    } catch (error) {
+      console.error("Error publishing posts:", error);
+    }
+  };
+
   const handleAccordionChange =
     (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
       setAccordionExpanded(isExpanded ? panel : false);
@@ -328,16 +311,6 @@ const AdsAdd = () => {
     });
   };
 
-  const handleCheckboxPhotoOrVideo = (checkedValue) => {
-    setPhotoOrVideo((prevPhotos) => {
-      if (prevPhotos.includes(checkedValue)) {
-        return prevPhotos.filter((item) => item !== checkedValue);
-      } else {
-        return [...prevPhotos, checkedValue];
-      }
-    });
-  };
-
   const style = {
     position: "absolute",
     top: "50%",
@@ -348,6 +321,22 @@ const AdsAdd = () => {
     boxShadow: 24,
     p: 4,
   };
+
+  if (isLoading || !adsData.id) {
+    return (
+      <div className="loading">
+        <Triangle
+          visible={true}
+          height="80"
+          width="80"
+          color="#4fa94d"
+          ariaLabel="triangle-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="new-post-container">
@@ -563,15 +552,6 @@ const AdsAdd = () => {
                 {errors.furniture && <span>{errors.furniture.message}</span>}
               </div>
             </div>
-            <div className="field">
-              <label>Hashtags</label>
-              <input
-                {...register("hashtags", {})}
-                placeholder="Hashtags: #yangi #2024"
-                className={errors.hashtags ? "error" : ""}
-              />
-              {errors.hashtags && <span>{errors.hashtags.message}</span>}
-            </div>
             <div className="field price">
               <div>
                 <label htmlFor="price">{t("price")}</label>
@@ -711,40 +691,26 @@ const AdsAdd = () => {
                 <ImagePreview src={imageSrc} />
               </FullScreen>
             </div>
-            <div className="field photo">
-              <label htmlFor="Videos">{t("video")}</label>
-              <Dropzone
-                onChange={updateFilesVideo}
-                minHeight="195px"
-                value={extFilesVideo}
-                accept="video/*"
-                maxFiles={1}
-                maxFileSize={70 * 1024 * 1024}
-                label={t("dragFilesHere")}
-              >
-                {extFilesVideo.map((file) => (
-                  <FileMosaic
-                    {...file}
-                    key={file.id}
-                    onDelete={onDeleteVideo}
-                    onSee={handleSeeVideo}
-                    onWatch={handleWatch}
-                    onAbort={handleAbortVideo}
-                    onCancel={handleCancelVideo}
-                    resultOnTooltip
-                    alwaysActive
-                    preview
-                    info
-                  />
-                ))}
-              </Dropzone>
-              <FullScreen
-                open={videoSrc !== undefined}
-                onClose={() => setVideoSrc(undefined)}
-              >
-                <VideoPreview src={videoSrc} />
-              </FullScreen>
-            </div>
+            {photoUrl.length && (
+              <div className="field gallery">
+                <label htmlFor="Images">{t("photo")}</label>
+                <div className="gallery-list">
+                  {photoUrl.map((item, index) => {
+                    return (
+                      <div key={index.toString()} className="gallery-item">
+                        <CloseIcon
+                          className="delete"
+                          onClick={() =>
+                            setPhotoUrl(photoUrl.filter((e, i) => i !== index))
+                          }
+                        />
+                        <img src={item.url} alt="" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         {!!currentUser.igAccounts && currentUser.igAccounts?.length >= 1 && (
@@ -771,9 +737,9 @@ const AdsAdd = () => {
                 <img src="/social-preview/iphone-bar.png" alt="" />
                 <img src="/social-preview/ig-header.png" alt="" />
                 <div className="ig-stories">
-                  {currentUser.igAccounts?.map((e, index) => {
+                  {currentUser.igAccounts?.map((e) => {
                     return (
-                      <div key={index.toString()} className="igAvatar">
+                      <div className="igAvatar">
                         <img
                           src="/social-preview/gradient.svg"
                           className="ig-gradient"
@@ -844,36 +810,16 @@ const AdsAdd = () => {
                     indicators
                     sx={{ height: "auto" }}
                   >
-                    {photoOrVideo.includes("photo") && (
-                      <>
-                        {extFiles.map((e) => {
-                          return (
-                            <div style={{ height: "400px" }}>
-                              <img
-                                className="insta-post-img"
-                                src={URL.createObjectURL(e.file)}
-                              />
-                            </div>
-                          );
-                        })}
-                      </>
-                    )}
-                    {photoOrVideo.includes("video") && (
-                      <>
-                        {extFilesVideo.map((e) => (
-                          <div style={{ height: "400px" }} key={e.file.name}>
-                            <video
-                              className="insta-post-video"
-                              src={URL.createObjectURL(e.file)}
-                              // controls
-                              style={{ width: "100%", height: "100%" }}
-                              muted
-                              autoPlay
-                            />
-                          </div>
-                        ))}
-                      </>
-                    )}
+                    {extFiles.map((e) => {
+                      return (
+                        <div style={{ height: "400px" }}>
+                          <img
+                            className="insta-post-img"
+                            src={URL.createObjectURL(e.file)}
+                          />
+                        </div>
+                      );
+                    })}
                   </Carousel>
                   <div className="post-footer">
                     <div className="post-icons">
@@ -883,7 +829,6 @@ const AdsAdd = () => {
                       />
                     </div>
                     <div className="post-text">
-                      <span className="hashtags-text">{hashtagsValue}</span>
                       <b>142 likes</b>
                     </div>
                   </div>
@@ -895,22 +840,6 @@ const AdsAdd = () => {
                 />
               </div>
               <div className="tg-btn-publish">
-                <FormControlLabel
-                  label="Photo"
-                  control={
-                    <Checkbox
-                      onChange={() => handleCheckboxPhotoOrVideo("photo")}
-                    />
-                  }
-                />
-                <FormControlLabel
-                  label="Video"
-                  control={
-                    <Checkbox
-                      onChange={() => handleCheckboxPhotoOrVideo("video")}
-                    />
-                  }
-                />
                 <Button variant="contained" onClick={() => setOpenModal("ig")}>
                   Опубликовать
                 </Button>
@@ -941,107 +870,103 @@ const AdsAdd = () => {
               </AccordionSummary>
               <AccordionDetails>
                 <div className="tg-content-preview">
-                  <div className="tg-content-flex">
-                    <div className="tg-channel-logo">
-                      <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                  <div className="tg-channel-logo">
+                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                  </div>
+                  <div className="tg-post-content">
+                    <div className="tg-post-header">
+                      <h5>{currentUser?.tgAccounts[0].title}</h5>
                     </div>
-                    <div className="tg-post-content">
-                      <div className="tg-post-header">
-                        <h5>{currentUser?.tgAccounts[0].title}</h5>
+                    <div className="tg-post-img-div">
+                      <ImageGrid images={extFiles} />
+                    </div>
+                    <div className="tg-text-content">
+                      <div className="tg-text-comment">
+                        {!!categoryValue.length && (
+                          <span>#{categoryValue}</span>
+                        )}
+                        <h4>{titleValue}</h4>
+                        <p>{descriptionValue}</p>
+                        {!!priceValue.length && (
+                          <p>
+                            {t("price")}
+                            {":"}
+                            {priceValue}$
+                          </p>
+                        )}
+                        {!!cityValue.length && (
+                          <p>
+                            {t("city")}
+                            {": "} {cityValue}, {districtValue}
+                          </p>
+                        )}
+                        {!!roomValue && (
+                          <p>
+                            {t("rooms")}
+                            {": "} {roomValue}
+                          </p>
+                        )}
+                        {!!storeyValue && (
+                          <p>
+                            {t("storey")}
+                            {": "} {storeyValue}
+                          </p>
+                        )}
+                        {!!floorsValue && (
+                          <p>
+                            {t("floors")}
+                            {": "} {floorsValue}
+                          </p>
+                        )}
+                        {!!areaValue && (
+                          <p>
+                            {t("area")}
+                            {": "} {areaValue} m <sup>2</sup>
+                          </p>
+                        )}
+                        {!!repairmentValue && (
+                          <p>
+                            {t("repairment")}
+                            {": "} {repairmentValue}
+                          </p>
+                        )}
+                        {!!furnitureValue && (
+                          <p>
+                            {t("furniture")}
+                            {": "} {furnitureValue}
+                          </p>
+                        )}
+                        {!!addressValue && (
+                          <p>
+                            {t("address")}
+                            {": "} {addressValue}
+                          </p>
+                        )}
+                        {!!typeValue && (
+                          <p>
+                            {t("type")}
+                            {": "} {typeValue}
+                          </p>
+                        )}
                       </div>
-                      <div className="tg-post-img-div">
-                        <ImageGrid images={extFiles} />
-                      </div>
-                      <div className="tg-text-content">
-                        <div className="tg-text-comment">
-                          {!!hashtagsValue.length && (
-                            <span className="hashtags-text">
-                              {hashtagsValue}
-                            </span>
-                          )}
-                          <h4>{titleValue}</h4>
-                          <p>{descriptionValue}</p>
-                          {!!priceValue.length && (
-                            <p>
-                              {t("price")}
-                              {":"}
-                              {priceValue}$
-                            </p>
-                          )}
-                          {!!cityValue.length && (
-                            <p>
-                              {t("city")}
-                              {": "} {cityValue}, {districtValue}
-                            </p>
-                          )}
-                          {!!roomValue && (
-                            <p>
-                              {t("rooms")}
-                              {": "} {roomValue}
-                            </p>
-                          )}
-                          {!!storeyValue && (
-                            <p>
-                              {t("storey")}
-                              {": "} {storeyValue}
-                            </p>
-                          )}
-                          {!!floorsValue && (
-                            <p>
-                              {t("floors")}
-                              {": "} {floorsValue}
-                            </p>
-                          )}
-                          {!!areaValue && (
-                            <p>
-                              {t("area")}
-                              {": "} {areaValue} m <sup>2</sup>
-                            </p>
-                          )}
-                          {!!repairmentValue && (
-                            <p>
-                              {t("repairment")}
-                              {": "} {repairmentValue}
-                            </p>
-                          )}
-                          {!!furnitureValue && (
-                            <p>
-                              {t("furniture")}
-                              {": "} {furnitureValue}
-                            </p>
-                          )}
-                          {!!addressValue && (
-                            <p>
-                              {t("address")}
-                              {": "} {addressValue}
-                            </p>
-                          )}
-                          {!!typeValue && (
-                            <p>
-                              {t("type")}
-                              {": "} {typeValue}
-                            </p>
-                          )}
-                        </div>
-                        <div className="tg-footer-text">
-                          <a
-                            href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                          >
-                            t.me/{currentUser?.tgAccounts[0].username}
-                          </a>
-                          <div className="tg-createAt">
-                            <span>12.7 K</span>
-                            <span>
-                              <VisibilityIcon fontSize="18px" />
-                            </span>
-                            <span>
-                              {new Date().toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </div>
+                      <div className="tg-footer-text">
+                        <a
+                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
+                        >
+                          t.me/{currentUser?.tgAccounts[0].username}
+                        </a>
+                        <div className="tg-createAt">
+                          <span>12.7 K</span>
+                          <span>
+                            <VisibilityIcon fontSize="18px" />
+                          </span>
+                          <span>
+                            {new Date().toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1081,29 +1006,14 @@ const AdsAdd = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <YtVideoCard
-                  hashtags={hashtagsValue}
+                  hashtags={"#yangi"}
                   title={titleValue}
-                  bannerImg={
-                    extFiles.length > 0
-                      ? URL.createObjectURL(extFiles[0]?.file)
-                      : ""
-                  }
-                  isShort={isShort}
+                  bannerImg={URL.createObjectURL(extFiles[0].file)}
+                  isShort={true}
                 />
-                <div className="tg-btn-publish">
-                  <FormControlLabel
-                    label="Short"
-                    control={
-                      <Checkbox onChange={() => setIsShort((prev) => !prev)} />
-                    }
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={() => setOpenModal("yt")}
-                  >
-                    Опубликовать
-                  </Button>
-                </div>
+                <Button variant="contained" onClick={() => setOpenModal("yt")}>
+                  Опубликовать
+                </Button>
               </div>
             </AccordionDetails>
           </Accordion>
@@ -1130,6 +1040,7 @@ const AdsAdd = () => {
             </AccordionSummary>
             <AccordionDetails>
               <div className="tg-content-preview">
+                <YtVideoCard bannerImg={""} isShort={true} />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
                   Опубликовать
                 </Button>
@@ -1159,6 +1070,7 @@ const AdsAdd = () => {
             </AccordionSummary>
             <AccordionDetails>
               <div className="tg-content-preview">
+                <YtVideoCard bannerImg={""} />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
                   Опубликовать
                 </Button>
@@ -1167,7 +1079,7 @@ const AdsAdd = () => {
           </Accordion>
         )}
         <div className="footer-new-post">
-          <button type="submit">{t("create")}</button>
+          <button type="submit">{t("save")}</button>
         </div>
       </form>
 
@@ -1203,10 +1115,7 @@ const AdsAdd = () => {
                   {currentUser?.tgAccounts.length > 1 &&
                     currentUser?.tgAccounts.map((item, index) => {
                       return (
-                        <div
-                          key={index.toString()}
-                          className="tg-channel-item-flex"
-                        >
+                        <div className="tg-channel-item-flex">
                           <TgProfileCard key={index} data={item} />
                           <Checkbox
                             onChange={() => handleCheckboxChange(item)}
@@ -1257,7 +1166,16 @@ const AdsAdd = () => {
               >
                 {t("cancel")}
               </Button>
-              <Button onClick={onSubmitTG} variant="contained">
+              <Button
+                onClick={() => {
+                  if (accordionExpanded === "tg") {
+                    onSubmitTG();
+                  } else if (accordionExpanded === "ig") {
+                    onSubmitIG();
+                  }
+                }}
+                variant="contained"
+              >
                 {t("publish")}
               </Button>
             </Box>
@@ -1268,4 +1186,4 @@ const AdsAdd = () => {
   );
 };
 
-export default AdsAdd;
+export default AdsEdit;

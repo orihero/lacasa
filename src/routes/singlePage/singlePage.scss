@@ -80,6 +80,7 @@
             border-radius: 10px;
             background-color: rgba(254, 205, 81, 0.209);
             font-weight: 600;
+            cursor: pointer;
 
             @include sm {
               padding: 20px 50px;
@@ -91,6 +92,21 @@
               border-radius: 50%;
               object-fit: cover;
             }
+          }
+        }
+        .ads-info-list {
+          display: flex;
+          gap: 10px;
+          margin-top: 40px;
+          background-color: #fcf5f3;
+          padding: 20px;
+          border-radius: 10px;
+          justify-content: space-around;
+          .ads-info-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
           }
         }
         .bottom {

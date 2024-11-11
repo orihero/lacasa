@@ -6,6 +6,9 @@ import List from "../../components/list/List";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import "./agentProfile.scss";
+import InstagramIcon from "../../components/icons/InstagramIcon";
+import TelegramIcon from "../../components/icons/TelegramIcon";
+import WebIcon from "../../components/icons/WebIcon";
 
 function AgentProfilePage() {
   const { agent, fetchUserById } = useUserStore();
@@ -51,6 +54,19 @@ function AgentProfilePage() {
               <span>
                 {t("phone")}: <b>{agent?.phoneNumber}</b>
               </span>
+              <div className="footer-agent">
+                <span className="agent-btns">
+                  <a href="#">
+                    <InstagramIcon width={25} fill="#111" />
+                  </a>
+                  <a href="#">
+                    <TelegramIcon width={25} fill="#111" />
+                  </a>
+                  <a href="#">
+                    <WebIcon width={33} height={33} fill="#111" />
+                  </a>
+                </span>
+              </div>
             </div>
             <div>
               <span>

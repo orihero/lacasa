@@ -5,7 +5,7 @@ import {
   OnDragEndNotification,
   Card,
 } from "@caldwell619/react-kanban";
-import { Box, Drawer, Modal, styled, Typography } from "@mui/material";
+import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -180,21 +180,21 @@ export default function LeadKanbanList() {
     p: 4,
   };
 
-  if (isUpdated) {
-    return (
-      <div className="loading">
-        <Triangle
-          visible={true}
-          height="80"
-          width="80"
-          color="#4fa94d"
-          ariaLabel="triangle-loading"
-          wrapperStyle={{}}
-          wrapperClass=""
-        />
-      </div>
-    );
-  }
+  // if (isUpdated) {
+  //   return (
+  //     <div className="loading">
+  //       <Triangle
+  //         visible={true}
+  //         height="80"
+  //         width="80"
+  //         color="#4fa94d"
+  //         ariaLabel="triangle-loading"
+  //         wrapperStyle={{}}
+  //         wrapperClass=""
+  //       />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="ads-list-content">
@@ -267,12 +267,19 @@ export default function LeadKanbanList() {
               </div>
             </div>
           )}
-          <div className="buttons">
-            <button onClick={handleClose} className="cancel-btn">
+          <Box sx={{ gap: "10px", display: "flex" }}>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleClose}
+              className="cancel-btn"
+            >
               {t("cancel")}
-            </button>
-            <button onClick={handleSave}>{t("save")}</button>
-          </div>
+            </Button>
+            <Button variant="contained" onClick={handleSave}>
+              {t("save")}
+            </Button>
+          </Box>
         </Box>
       </Modal>
       <Drawer

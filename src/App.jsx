@@ -23,7 +23,8 @@ import LeadAdd from "./components/leadAdd/LeadAdd";
 import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
 import LeadKanbanList from "./components/leadList/LeadKanbanList.tsx";
 import Chart from "./components/chart/Chart.jsx";
-import './index.css'
+import "./index.css";
+import AdsEdit from "./components/adsEdit/AdsEdit.tsx";
 function App() {
   const router = createBrowserRouter([
     {
@@ -69,6 +70,10 @@ function App() {
             {
               path: ":id/create/ads",
               element: <AdsAdd />,
+            },
+            {
+              path: ":id/update/ads",
+              element: <AdsEdit />,
             },
             {
               path: ":id/leads",
