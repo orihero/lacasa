@@ -14,6 +14,9 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
+import YtProfileCard from "../ytProfileCard/YtProfileCard";
+import YouTubeAccountInfo from "../ytProfileCard/YouTubeAccountInfo";
+import { Button } from "@mui/material";
 const ProfileSetting = () => {
   const { t } = useTranslation();
   const { currentUser, fetchUserInfo } = useUserStore();
@@ -239,6 +242,9 @@ const ProfileSetting = () => {
                 control={<IOSSwitch />}
                 label={t("createYoutubePost")}
               />
+              <YtProfileCard />
+              <YouTubeAccountInfo />
+              <Button variant="text">Add account</Button>
             </FormGroup>
           </div>
         )}

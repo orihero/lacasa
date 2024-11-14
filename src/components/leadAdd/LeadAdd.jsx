@@ -78,14 +78,14 @@ const LeadAdd = () => {
   }
 
   return (
-    <div className="profile-setting">
+    <div className="profile-setting-add">
       <div className="profile-header">
         <h1>{t("createLead")}</h1>
       </div>
-      <div className="profile-content">
-        <div className="inputs">
+      <div className="profile-content-add">
+        <div className="inputs-add">
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="field-list">
+            <div className="field-list-add">
               <div className="field">
                 <label>{t("fullName")}:</label>
                 <input

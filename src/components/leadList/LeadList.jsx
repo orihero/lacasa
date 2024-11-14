@@ -14,7 +14,7 @@ import "./leadList.scss";
 import { useLeadStore } from "../../lib/useLeadStore";
 import StatusCell from "../status/StatusCell";
 import { useUserStore } from "../../lib/userStore";
-import { Drawer } from "@mui/material";
+import { Drawer, styled, Typography } from "@mui/material";
 import LeadUpdate from "../leadUpdate/LeadUpdate";
 
 const AdsList = () => {
@@ -23,7 +23,7 @@ const AdsList = () => {
   const { t } = useTranslation();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const { fetchLeadList, list, fetchLeadListByCwrk } = useLeadStore();
+  const { fetchLeadList, list } = useLeadStore();
   const { currentUser } = useUserStore();
   const [isOpenDrawer, setIsOpenDrawer] = useState(false);
   const [leadId, setLeadId] = useState(0);
@@ -73,10 +73,12 @@ const AdsList = () => {
   //   }
   // }, [id]);
   useEffect(() => {
-    if (currentUser?.agentId) {
+    if (currentUser.role == "coworker") {
       fetchLeadList(currentUser?.agentId);
+    } else if (currentUser.role == "agent") {
+      fetchLeadList(id);
     }
-  }, [currentUser?.agentId]);
+  }, [currentUser?.agentId, id]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

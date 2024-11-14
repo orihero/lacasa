@@ -1,7 +1,9 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 const StatusCell = ({ value }) => {
   let backgroundColor, color;
+  const { t } = useTranslation();
 
   switch (value) {
     case "new":
@@ -16,7 +18,7 @@ const StatusCell = ({ value }) => {
       backgroundColor = "#FFC107";
       color = "#FFFFFF";
       break;
-    case "sana tanlash":
+    case "pick_date":
       backgroundColor = "#E0E0E0";
       color = "#000000";
       break;
@@ -46,7 +48,7 @@ const StatusCell = ({ value }) => {
         fontSize: "10px",
       }}
     >
-      {value}
+      {t(value)}
     </span>
   );
 };

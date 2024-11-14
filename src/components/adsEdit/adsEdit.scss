@@ -171,6 +171,34 @@
         width: 90px;
       }
     }
+    .gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      .gallery-list {
+        display: flex;
+        gap: 10px;
+        .gallery-item {
+          display: flex;
+          gap: 10px;
+          align-items: flex-start;
+          flex-direction: row-reverse;
+          img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+          }
+          .delete {
+            padding: 5px;
+            background-color: red;
+            color: white;
+            border: none;
+            cursor: pointer;
+          }
+        }
+      }
+    }
   }
   .footer-new-post {
     display: flex;
@@ -278,22 +306,9 @@
       object-fit: cover;
       border-radius: 3px;
     }
-    .insta-post-video {
-      width: 100%;
-      height: 400px;
-      object-fit: cover;
-      border-radius: 3px;
-    }
     .post-footer {
       // margin-top: 10px;
       .post-text {
-        display: flex;
-        flex-direction: column;
-        .hashtags-text {
-          font-size: 12px;
-          margin-bottom: 5px;
-          color: #00376b;
-        }
         b {
           font-size: 12px;
         }
@@ -305,25 +320,13 @@
 .ig-content-flex {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
   gap: 20px;
-}
-.tg-btn-publish {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
 }
 
 .tg-content-preview {
   display: flex;
   gap: 10px;
   align-items: flex-end;
-  justify-content: space-between;
-  .tg-content-flex {
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-  }
   .tg-channel-logo {
     img {
       width: 35px;
@@ -361,11 +364,6 @@
         display: flex;
         flex-direction: column;
         gap: 3px;
-        .hashtags-text {
-          font-size: 12px;
-          margin-bottom: 5px;
-          color: #00376b;
-        }
       }
       .tg-footer-text {
         display: flex;

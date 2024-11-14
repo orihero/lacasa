@@ -3,8 +3,8 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { create } from "zustand";
@@ -14,6 +14,7 @@ export const useLeadStore = create((set) => ({
   list: [],
   isLoading: true,
   lead: {},
+  isUpdated: false,
   fetchLeadList: async (agentId) => {
     try {
       const leadsQuery = query(
@@ -67,6 +68,25 @@ export const useLeadStore = create((set) => ({
     } catch (error) {
       console.error("Error fetching leads:", error);
       set({ list: [], isLoading: false });
+    }
+  },
+  updateLeadById: async (leadId, updateData) => {
+    set({ isUpdated: true });
+
+    try {
+      const leadRef = doc(db, "leads", leadId);
+
+      const filteredData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, value]) => value !== undefined),
+      );
+
+      await updateDoc(leadRef, filteredData);
+
+      console.log("Lead successfully updated");
+      set({ isUpdated: false });
+    } catch (error) {
+      console.error("Error updating lead by id:", error);
+      set({ isUpdated: false });
     }
   },
 }));

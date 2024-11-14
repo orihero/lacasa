@@ -17,7 +17,7 @@ export const useUtilsStore = create((set) => ({
       set({ currency: currency, isLoading: false });
     } catch (error) {
       console.error("fetch currency", error);
-      set({ list: [], isLoading: false });
+      set({ currency: [], isLoading: false });
     }
   },
   fetchNearbyPlace: async () => {
@@ -31,7 +31,7 @@ export const useUtilsStore = create((set) => ({
       set({ nearbyPlaceData: nearbyPlaceData, isLoading: false });
     } catch (error) {
       console.error("Error fetchNearbyPlace: ", error);
-      set({ myList: [], isLoading: false });
+      set({ nearbyPlaceData: [], isLoading: false });
     }
   },
 }));

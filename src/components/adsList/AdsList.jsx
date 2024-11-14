@@ -90,8 +90,8 @@ const AdsList = () => {
     setPage(0);
   };
 
-  const handleDeleteEdit = () => {
-    alert("Delete");
+  const handleDeleteEdit = (id) => {
+    navigate("/profile/" + id + "/update/ads");
   };
 
   const handleNavigate = (id) => {
@@ -134,7 +134,6 @@ const AdsList = () => {
                       role="checkbox"
                       tabIndex={-1}
                       key={row.code}
-                      onClick={() => handleNavigate(row?.id)}
                     >
                       {columns.map((column) => {
                         const value = row[column.id];
@@ -144,7 +143,7 @@ const AdsList = () => {
                               <div className="icons">
                                 <span
                                   style={{ padding: "8px", cursor: "pointer" }}
-                                  onClick={() => handleDeleteEdit()}
+                                  onClick={() => handleDeleteEdit(row?.id)}
                                 >
                                   <EditIcon width={15} fill="#2b2d42" />
                                 </span>
@@ -153,13 +152,21 @@ const AdsList = () => {
                           );
                         } else if (column.id == "id") {
                           return (
-                            <TableCell key={column.id} align={column.align}>
+                            <TableCell
+                              onClick={() => handleNavigate(row?.id)}
+                              key={column.id}
+                              align={column.align}
+                            >
                               #{value.slice(0, 5)}
                             </TableCell>
                           );
                         } else if (column.id == "photos") {
                           return (
-                            <TableCell key={column.id} align={column.align}>
+                            <TableCell
+                              onClick={() => handleNavigate(row?.id)}
+                              key={column.id}
+                              align={column.align}
+                            >
                               <img
                                 style={{ width: "70px" }}
                                 src={column.format(value)}
@@ -169,7 +176,11 @@ const AdsList = () => {
                           );
                         }
                         return (
-                          <TableCell key={column.id} align={column.align}>
+                          <TableCell
+                            onClick={() => handleNavigate(row?.id)}
+                            key={column.id}
+                            align={column.align}
+                          >
                             {column.format && typeof value === "number"
                               ? column.format(value)
                               : column.format && column.id == "createdAt"

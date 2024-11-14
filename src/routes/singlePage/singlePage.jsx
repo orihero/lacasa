@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import FloorIcon from "../../components/icons/FloorIcon";
 import InfoIcon from "../../components/icons/InfoIcon";
 import RoomsIcon from "../../components/icons/RoomsIcon";
@@ -17,6 +17,7 @@ function SinglePage() {
   const { adsData, isLoading, fetchAdsById } = useListStore();
   const { fetchUserById, agent, currentUser } = useUserStore();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (id) {
@@ -26,12 +27,13 @@ function SinglePage() {
 
   useEffect(() => {
     if (adsData?.id) {
-      console.log(adsData);
       fetchUserById(adsData.agentId);
     }
   }, [adsData?.id]);
 
-  console.log(adsData);
+  const handleNavigateAgent = () => {
+    navigate("/agent/" + adsData.agentId);
+  };
 
   if (isLoading) {
     return (
@@ -66,10 +68,24 @@ function SinglePage() {
                 </div>
                 <div className="price">$ {adsData.price}</div>
               </div>
-              <div className="user">
+              <div onClick={handleNavigateAgent} className="user">
                 <img src={agent.avatar ?? "/avatar.jpg"} alt="" />
                 <span>{agent.fullName}</span>
               </div>
+            </div>
+            <div className="ads-info-list">
+              <span className="ads-info-item">
+                {t("type")}: {adsData.type}
+              </span>
+              <span className="ads-info-item">
+                {t("category")}: {adsData.category}
+              </span>
+              <span className="ads-info-item">
+                {t("repairment")}: {adsData.repairment}
+              </span>
+              <span className="ads-info-item">
+                {t("furniture")}: {adsData.furniture}
+              </span>
             </div>
             <div className="bottom">
               <span>{t("classification")}:</span>
