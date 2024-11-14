@@ -265,12 +265,10 @@ const AdsAdd = () => {
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-    const caption = Object.entries(allValues).reduce(
-      (result, [key, value]) =>
-        result + key != "hashtags"
-          ? `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`
-          : "",
-      "",
+    const caption = Object.entries(allValues).reduce((result, [key, value]) =>
+      result + key != "hashtags"
+        ? `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`
+        : "",
     );
 
     const responses = await Promise.all(
