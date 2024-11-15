@@ -155,7 +155,7 @@ const YtProfileCard = () => {
           <button onClick={uploadVideoToYouTube}>Upload Video</button>
         </div>
       )}
-      {/* <p>Status: {uploadStatus}</p> */}
+      <p>Status: {uploadStatus}</p>
     </div>
   );
 };
