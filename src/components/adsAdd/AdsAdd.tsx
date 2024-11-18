@@ -38,7 +38,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import ImageGrid from "./components/ImageGrid";
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
-import YtVideoCard from "../ytVideoCard/YtvideoCard";
+import YtVideoCard from "../ytVideoCard/YtVideoCard";
 import { IGService } from "../../services/ig";
 import { useNavigate } from "react-router-dom";
 
