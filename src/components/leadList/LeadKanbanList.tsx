@@ -54,7 +54,8 @@ export default function LeadKanbanList() {
   }, [currentUser?.agentId, id, isUpdated]);
 
   useEffect(() => {
-    if (!isLoading && list.length > 0 && coworkerList?.length) generateBoard();
+    if ((!isLoading && list.length > 0) || coworkerList?.length)
+      generateBoard();
   }, [list?.length, coworkerList.length]);
 
   const handleNavigateNew = () => {

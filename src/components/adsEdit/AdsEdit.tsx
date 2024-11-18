@@ -38,7 +38,7 @@ import regionData from "../../regions.json";
 import { IGService } from "../../services/ig";
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
-import YtVideoCard from "../ytVideoCard/YtvideoCard";
+import YtVideoCard from "../ytVideoCard/YtVideoCard";
 import "./adsEdit.scss";
 import ImageGrid from "./components/ImageGrid";
 
