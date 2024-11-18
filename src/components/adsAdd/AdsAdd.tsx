@@ -336,6 +336,8 @@ const AdsAdd = () => {
     });
   };
 
+  console.log(photoOrVideo);
+
   const style = {
     position: "absolute",
     top: "50%",
@@ -842,36 +844,86 @@ const AdsAdd = () => {
                     indicators
                     sx={{ height: "auto" }}
                   >
-                    {photoOrVideo.includes("photo") && (
-                      <>
-                        {extFiles.map((e) => {
-                          return (
-                            <div style={{ height: "400px" }}>
-                              <img
-                                className="insta-post-img"
-                                src={URL.createObjectURL(e.file)}
-                              />
-                            </div>
-                          );
-                        })}
-                      </>
-                    )}
-                    {photoOrVideo.includes("video") && (
-                      <>
-                        {extFilesVideo.map((e) => (
-                          <div style={{ height: "400px" }} key={e.file.name}>
+                    {[...extFiles, ...extFilesVideo].map((e, index) => {
+                      if (
+                        photoOrVideo.includes("photo") &&
+                        e?.type.includes("image")
+                      ) {
+                        return (
+                          <div
+                            key={`photo-${index}`}
+                            style={{ height: "400px" }}
+                          >
+                            <img
+                              className="insta-post-img"
+                              src={URL.createObjectURL(e.file)}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                              alt={`photo-${index}`}
+                            />
+                          </div>
+                        );
+                      } else if (
+                        photoOrVideo.includes("video") &&
+                        e?.type?.includes("video")
+                      ) {
+                        return (
+                          <div
+                            key={`video-${index}`}
+                            style={{ height: "400px" }}
+                          >
                             <video
                               className="insta-post-video"
                               src={URL.createObjectURL(e.file)}
-                              // controls
-                              style={{ width: "100%", height: "100%" }}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
                               muted
                               autoPlay
+                              loop
                             />
                           </div>
-                        ))}
-                      </>
-                    )}
+                        );
+                      }
+                    })}
+                    {/* {photoOrVideo.includes("photo") &&
+                      extFiles.map((e, index) => (
+                        <div key={`photo-${index}`} style={{ height: "400px" }}>
+                          <img
+                            className="insta-post-img"
+                            src={URL.createObjectURL(e.file)}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                            alt={`photo-${index}`}
+                          />
+                        </div>
+                      ))} */}
+
+                    {/* {photoOrVideo.includes("video") &&
+                      extFilesVideo.map((e, index) => (
+                        <div key={`video-${index}`} style={{ height: "400px" }}>
+                          <video
+                            className="insta-post-video"
+                            src={URL.createObjectURL(e.file)}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                            muted
+                            autoPlay
+                            loop
+                          />
+                        </div>
+                      ))} */}
                   </Carousel>
                   <div className="post-footer">
                     <div className="post-icons">
