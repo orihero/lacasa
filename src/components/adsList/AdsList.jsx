@@ -43,11 +43,12 @@ const AdsList = () => {
       format: (value) => value,
     },
     {
-      id: "status",
+      id: "stage",
       label: t("status"),
       minWidth: 170,
       align: "left",
-      format: (value) => value.toLocaleString("en-US"),
+      format: (value) =>
+        value == 1 ? "Active" : value == 2 ? "Sold" : "Draft",
     },
     {
       id: "author",
@@ -184,6 +185,8 @@ const AdsList = () => {
                             {column.format && typeof value === "number"
                               ? column.format(value)
                               : column.format && column.id == "createdAt"
+                              ? column.format(value)
+                              : column.format && column.id == "stage"
                               ? column.format(value)
                               : value}
                           </TableCell>

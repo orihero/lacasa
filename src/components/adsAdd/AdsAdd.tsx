@@ -98,26 +98,20 @@ const AdsAdd = () => {
     fetchNearbyPlace();
   }, []);
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    const data = Object.fromEntries(form);
+  const onSubmit = () => {
+    // const form = new FormData(e.target);
+    // const data = Object.fromEntries(form);
+    const allValues = getValues();
     let photos = [];
-    let caption = "";
 
-    // !Upload to IG
-    const uploadIg = async () => {
-      const res = await IGService.customCreateCarousel(photos, caption);
-    };
     const upload = async () => {
       try {
         photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
         await addDoc(collection(db, "ads"), {
-          ...data,
+          ...allValues,
           agentId: currentUser.id,
           nearPlacesList: nearPlacesList,
-          active: true,
           optionList: optionList,
           photos,
           createdAt: serverTimestamp(),
@@ -125,44 +119,13 @@ const AdsAdd = () => {
       } catch (error) {
         console.error(error);
       }
-      caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
-      try {
-        await uploadIg();
-      } catch (error) {
-        console.error(error);
-      }
-      // !Upload to telegram
-      try {
-        const form = new FormData();
-        form.append("chat_id", import.meta.env.VITE_LECASA_CHANNEL_ID);
-        form.append("protect_content", "true");
-        form.append(
-          "media",
-          JSON.stringify(
-            photos.map((e, i) =>
-              i == photos.length - 1
-                ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
-        );
-        const res = await axios.post(
-          `https://api.telegram.org/bot${
-            import.meta.env.VITE_TG_BOT_TOKEN
-          }/sendMediaGroup`,
-          form,
-        );
-        console.error(res.data);
-      } catch (error) {
-        console.error(error);
-      }
     };
-    toast.promise(Promise.all(upload()), {
+    toast.promise(upload, {
       error: "Something went wrong",
       pending: "Creating",
       success: "Successfully created",
     });
-    navigate("/profile");
+    // navigate("/profile");
   };
 
   const updateFiles = (incommingFiles) => {
@@ -336,7 +299,12 @@ const AdsAdd = () => {
     });
   };
 
-  console.log(photoOrVideo);
+  const handleChangeOption = (id, type, value) => {
+    let clone = [...optionList];
+    let index = clone.findIndex((item) => item.id == id);
+    clone[index] = { ...clone[index], [type]: value };
+    setOptionList([...clone]);
+  };
 
   const style = {
     position: "absolute",
@@ -354,7 +322,7 @@ const AdsAdd = () => {
       <div className="new-post-header">
         <h2>Add New Post</h2>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form>
         <div className="content">
           <div className="left">
             <div className="field">
@@ -600,6 +568,22 @@ const AdsAdd = () => {
                   </option>
                   <option value="usd">y.e</option>
                 </select>
+              </div>
+            </div>
+            <div className="field status">
+              <div>
+                <label htmlFor="stage">{t("status")}</label>
+                <select
+                  {...register("stage", {
+                    required: "Status is required",
+                  })}
+                  name="stage"
+                >
+                  <option value="1">{t("active")}</option>
+                  <option value="2">{t("sold")}</option>
+                  <option value="3">{t("draft")}</option>
+                </select>
+                {errors.stage && <span>{errors.stage.message}</span>}
               </div>
             </div>
           </div>
@@ -1217,7 +1201,9 @@ const AdsAdd = () => {
           </Accordion>
         )}
         <div className="footer-new-post">
-          <button type="submit">{t("create")}</button>
+          <button type="button" onClick={onSubmit}>
+            {t("create")}
+          </button>
         </div>
       </form>
 

@@ -106,6 +106,7 @@
         height: 200px;
         resize: none;
         padding: 5px;
+        border: 1px solid #9999;
       }
     }
     input {
@@ -169,6 +170,27 @@
       }
       .priceType {
         width: 90px;
+      }
+    }
+    .status {
+      flex-direction: row;
+      width: 100%;
+      div {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        width: 100%;
+        select {
+          padding: 5px;
+          width: 100%;
+          outline: none;
+          border: 1px solid #9999;
+          font-size: 16px;
+          &:focus {
+            outline: 2px solid dodgerblue;
+          }
+        }
       }
     }
   }
