@@ -1,117 +1,116 @@
-import { legendClasses } from "@mui/x-charts/ChartsLegend";
-import { LineChart } from "@mui/x-charts/LineChart";
-import { PieChart } from "@mui/x-charts/PieChart";
-import React from "react";
+// import { legendClasses } from "@mui/x-charts/ChartsLegend";
+// import { LineChart } from "@mui/x-charts/LineChart";
+// import { PieChart } from "@mui/x-charts/PieChart";
+import React, { useEffect } from "react";
 import "./chart.scss";
 import { useTranslation } from "react-i18next";
+import HeaderCard from "./components/HeaderCard";
+import AdsChart from "./components/AdsChart";
+import CoworkerList from "./components/CoworkerList";
+import CoworkerChart from "./components/CoworkerChart";
+import { useCoworkerStore } from "../../lib/useCoworkerStore";
+import { useUserStore } from "../../lib/userStore";
 
-const otherProps = {
-  width: 400,
-  height: 200,
-  sx: {
-    [`.${legendClasses.root}`]: {
-      transform: "translate(20px, 0)",
-    },
-  },
-};
+// const otherProps = {
+//   width: 400,
+//   height: 200,
+//   sx: {
+//     [`.${legendClasses.root}`]: {
+//       transform: "translate(20px, 0)",
+//     },
+//   },
+// };
 
-const data = [
-  { team: "Amber Ants", rank: 3, points: 31 },
-  { team: "Eagle Warriors", rank: 1, points: 50 },
-  { team: "Elephant Trunk", rank: 4, points: 18 },
-  { team: "Jaguars", rank: 2, points: 37 },
-  { team: "Smooth Pandas", rank: 5, points: 6 },
-];
-const years = [
-  new Date(1990, 0, 1),
-  new Date(1991, 0, 1),
-  new Date(1992, 0, 1),
-  new Date(1993, 0, 1),
-  new Date(1994, 0, 1),
-  new Date(1995, 0, 1),
-  new Date(1996, 0, 1),
-  new Date(1997, 0, 1),
-  new Date(1998, 0, 1),
-  new Date(1999, 0, 1),
-  new Date(2000, 0, 1),
-  new Date(2001, 0, 1),
-  new Date(2002, 0, 1),
-  new Date(2003, 0, 1),
-  new Date(2004, 0, 1),
-  new Date(2005, 0, 1),
-  new Date(2006, 0, 1),
-  new Date(2007, 0, 1),
-  new Date(2008, 0, 1),
-  new Date(2009, 0, 1),
-  new Date(2010, 0, 1),
-  new Date(2011, 0, 1),
-  new Date(2012, 0, 1),
-  new Date(2013, 0, 1),
-  new Date(2014, 0, 1),
-  new Date(2015, 0, 1),
-  new Date(2016, 0, 1),
-  new Date(2017, 0, 1),
-  new Date(2018, 0, 1),
-];
+// const data = [
+//   { team: "Amber Ants", rank: 3, points: 31 },
+//   { team: "Eagle Warriors", rank: 1, points: 50 },
+//   { team: "Elephant Trunk", rank: 4, points: 18 },
+//   { team: "Jaguars", rank: 2, points: 37 },
+//   { team: "Smooth Pandas", rank: 5, points: 6 },
+// ];
+// const years = [
+//   new Date(1990, 0, 1),
+//   new Date(1991, 0, 1),
+//   new Date(1992, 0, 1),
+//   new Date(1993, 0, 1),
+//   new Date(1994, 0, 1),
+//   new Date(1995, 0, 1),
+//   new Date(1996, 0, 1),
+//   new Date(1997, 0, 1),
+//   new Date(1998, 0, 1),
+//   new Date(1999, 0, 1),
+//   new Date(2000, 0, 1),
+//   new Date(2001, 0, 1),
+//   new Date(2002, 0, 1),
+//   new Date(2003, 0, 1),
+//   new Date(2004, 0, 1),
+//   new Date(2005, 0, 1),
+//   new Date(2006, 0, 1),
+//   new Date(2007, 0, 1),
+//   new Date(2008, 0, 1),
+//   new Date(2009, 0, 1),
+//   new Date(2010, 0, 1),
+//   new Date(2011, 0, 1),
+//   new Date(2012, 0, 1),
+//   new Date(2013, 0, 1),
+//   new Date(2014, 0, 1),
+//   new Date(2015, 0, 1),
+//   new Date(2016, 0, 1),
+//   new Date(2017, 0, 1),
+//   new Date(2018, 0, 1),
+// ];
 
-const FranceGDPperCapita = [
-  28129, 28294.264, 28619.805, 28336.16, 28907.977, 29418.863, 29736.645,
-  30341.807, 31323.078, 32284.611, 33409.68, 33920.098, 34152.773, 34292.03,
-  35093.824, 35495.465, 36166.16, 36845.684, 36761.793, 35534.926, 36086.727,
-  36691, 36571, 36632, 36527, 36827, 37124, 37895, 38515.918,
-];
+// const FranceGDPperCapita = [
+//   28129, 28294.264, 28619.805, 28336.16, 28907.977, 29418.863, 29736.645,
+//   30341.807, 31323.078, 32284.611, 33409.68, 33920.098, 34152.773, 34292.03,
+//   35093.824, 35495.465, 36166.16, 36845.684, 36761.793, 35534.926, 36086.727,
+//   36691, 36571, 36632, 36527, 36827, 37124, 37895, 38515.918,
+// ];
 
-const UKGDPperCapita = [
-  26189, 25792.014, 25790.186, 26349.342, 27277.543, 27861.215, 28472.248,
-  29259.764, 30077.385, 30932.537, 31946.037, 32660.441, 33271.3, 34232.426,
-  34865.78, 35623.625, 36214.07, 36816.676, 36264.79, 34402.36, 34754.473,
-  34971, 35185, 35618, 36436, 36941, 37334, 37782.83, 38058.086,
-];
+// const UKGDPperCapita = [
+//   26189, 25792.014, 25790.186, 26349.342, 27277.543, 27861.215, 28472.248,
+//   29259.764, 30077.385, 30932.537, 31946.037, 32660.441, 33271.3, 34232.426,
+//   34865.78, 35623.625, 36214.07, 36816.676, 36264.79, 34402.36, 34754.473,
+//   34971, 35185, 35618, 36436, 36941, 37334, 37782.83, 38058.086,
+// ];
 
-const GermanyGDPperCapita = [
-  25391, 26769.96, 27385.055, 27250.701, 28140.057, 28868.945, 29349.982,
-  30186.945, 31129.584, 32087.604, 33367.285, 34260.29, 34590.93, 34716.44,
-  35528.715, 36205.574, 38014.137, 39752.207, 40715.434, 38962.938, 41109.582,
-  43189, 43320, 43413, 43922, 44293, 44689, 45619.785, 46177.617,
-];
+// const GermanyGDPperCapita = [
+//   25391, 26769.96, 27385.055, 27250.701, 28140.057, 28868.945, 29349.982,
+//   30186.945, 31129.584, 32087.604, 33367.285, 34260.29, 34590.93, 34716.44,
+//   35528.715, 36205.574, 38014.137, 39752.207, 40715.434, 38962.938, 41109.582,
+//   43189, 43320, 43413, 43922, 44293, 44689, 45619.785, 46177.617,
+// ];
 
-const lineChartsParams = {
-  series: [
-    {
-      label: "French GDP per capita",
-      data: FranceGDPperCapita,
-      showMark: false,
-    },
-    {
-      label: "German GDP per capita",
-      data: GermanyGDPperCapita,
-      showMark: false,
-    },
-    {
-      label: "UK GDP per capita",
-      data: UKGDPperCapita,
-      showMark: false,
-    },
-  ],
-  width: 1000,
-  height: 400,
-};
+// const lineChartsParams = {
+//   series: [
+//     {
+//       label: "French GDP per capita",
+//       data: FranceGDPperCapita,
+//       showMark: false,
+//     },
+//     {
+//       label: "German GDP per capita",
+//       data: GermanyGDPperCapita,
+//       showMark: false,
+//     },
+//     {
+//       label: "UK GDP per capita",
+//       data: UKGDPperCapita,
+//       showMark: false,
+//     },
+//   ],
+//   width: 1000,
+//   height: 400,
+// };
 
-const yearFormatter = (date) => date.getFullYear().toString();
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-}).format;
+// const yearFormatter = (date) => date.getFullYear().toString();
+// const currencyFormatter = new Intl.NumberFormat("en-US", {
+//   style: "currency",
+//   currency: "USD",
+// }).format;
 
-const Chart = () => {
-  const { t } = useTranslation();
-
-  return (
-    <div className="chart">
-      <div className="chart-header">
-        <h1>{t("statistics")}</h1>
-      </div>
-      <div>
+{
+  /* <div>
         <LineChart
           {...lineChartsParams}
           xAxis={[
@@ -140,6 +139,45 @@ const Chart = () => {
           ]}
           {...otherProps}
         />
+      </div> */
+}
+
+const Chart = () => {
+  const { t } = useTranslation();
+  const { fetchCoworkerList, list } = useCoworkerStore();
+  const { currentUser } = useUserStore();
+  useEffect(() => {
+    if (currentUser?.id && currentUser.role == "agent") {
+      fetchCoworkerList(currentUser?.id);
+    }
+  }, [currentUser.id]);
+
+  return (
+    <div className="chart-container">
+      <div className="chart-header mt-1 mb-2 flex justify-center">
+        <h2>Analytics</h2>
+        <div>
+          <select className="chart-select-time">
+            <option value="all">All</option>
+            <option value="month">This month</option>
+            <option value="week">This week</option>
+            <option value="day">This day</option>
+          </select>
+        </div>
+      </div>
+      <div className="">
+        <h1 className="text-xl">Ads statistics</h1>
+        <div className="flex gap-2 mt-2 justify-between">
+          <HeaderCard />
+          <AdsChart />
+        </div>
+      </div>
+      <div className="mt-3">
+        <h1 className="text-xl">Coworker statistics</h1>
+        <div className="flex gap-2 mt-2 justify-between">
+          <CoworkerList data={list} />
+          <CoworkerChart data={list} />
+        </div>
       </div>
     </div>
   );
