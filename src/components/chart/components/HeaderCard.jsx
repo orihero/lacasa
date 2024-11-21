@@ -4,22 +4,22 @@ function StatCard({ icon, label, value }) {
     <div className="chart-header-card flex flex-col gap-2 items-center text-center">
       <div className="mr-2 text-yellow-400">{icon}</div>
       <p className="text-2xl text-gray-600 text-muted-foreground">{label}</p>
-      <p className="text-5xl text-yellow-400 font-semibold">{value}</p>
+      <p className="text-5xl text-black font-bold font-semibold">{value}</p>
     </div>
   );
 }
 
-export default function HeaderCard() {
+export default function HeaderCard({ data }) {
   const stats = [
     {
       icon: <HousePlus size={60} />,
       label: "Yaratilgan e'lonlar soni:",
-      value: 14,
+      value: data.stage1,
     },
     {
-      icon: <HandCoins size={60} />,
+      icon: <HandCoins size={60} color="#82ca9d" />,
       label: "Sotilgan e'lonlar soni:",
-      value: 14,
+      value: data.stage2,
     },
   ];
 

@@ -83,12 +83,22 @@ const AdsChart = () => {
               <stop offset="5%" stopColor="#fece51" stopOpacity={0.8} />
               <stop offset="95%" stopColor="#fece51" stopOpacity={0} />
             </linearGradient>
+            <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+            </linearGradient>
           </defs>
           <Area
             type="monotone"
             dataKey="pv"
             stroke="#fece51"
             fill="url(#colorUv)"
+          />
+          <Area
+            type="monotone"
+            dataKey="uv"
+            stroke="#82ca9d"
+            fill="url(#colorPv)"
           />
         </AreaChart>
       </ResponsiveContainer>

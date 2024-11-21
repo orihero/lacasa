@@ -15,8 +15,6 @@ const CoworkerList = ({ data }) => {
     { name: "Salzburger Nockerl", sales: 962, stock: 34 },
   ];
 
-  console.log(data);
-
   return (
     <div className="w-full p-3 bg-white chart-coworker-content">
       {/* <h2 className="text-2xl font-semibold text-gray-900 mb-6">Coworkers</h2> */}

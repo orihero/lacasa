@@ -10,6 +10,7 @@ import CoworkerList from "./components/CoworkerList";
 import CoworkerChart from "./components/CoworkerChart";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useUserStore } from "../../lib/userStore";
+import { useListStore } from "../../lib/adsListStore";
 
 // const otherProps = {
 //   width: 400,
@@ -146,9 +147,11 @@ const Chart = () => {
   const { t } = useTranslation();
   const { fetchCoworkerList, list } = useCoworkerStore();
   const { currentUser } = useUserStore();
+  const { fetchAdsByStage, stageCount } = useListStore();
   useEffect(() => {
     if (currentUser?.id && currentUser.role == "agent") {
       fetchCoworkerList(currentUser?.id);
+      fetchAdsByStage(currentUser?.id);
     }
   }, [currentUser.id]);
 
@@ -168,7 +171,7 @@ const Chart = () => {
       <div className="">
         <h1 className="text-xl">Ads statistics</h1>
         <div className="flex gap-2 mt-2 justify-between">
-          <HeaderCard />
+          <HeaderCard data={stageCount} />
           <AdsChart />
         </div>
       </div>

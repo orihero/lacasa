@@ -3,7 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
+  limitToLast,
   query,
   where,
 } from "firebase/firestore";
@@ -14,6 +14,7 @@ export const useListStore = create((set) => ({
   list: [],
   myList: [],
   adsData: {},
+  stageCount: { stage1: 0, stage2: 0 },
   isLoading: true,
   fetchAdsList: async () => {
     try {
@@ -119,6 +120,32 @@ export const useListStore = create((set) => ({
     } catch (error) {
       console.error("Error fetching ad by ID: ", error);
       set({ adsData: {}, isLoading: false });
+    }
+  },
+  fetchAdsByStage: async (agentId) => {
+    try {
+      const adsRef = collection(db, "ads");
+
+      const adsQuery = query(adsRef, [where("agentId", "==", agentId)]);
+
+      const querySnapshot = await getDocs(adsQuery);
+
+      const adsList = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      let filterStage1 = adsList.filter((ad) => ad.stage == "1").length;
+      let filterStage2 = adsList.filter((ad) => ad.stage == "2").length;
+
+      console.log(adsList);
+      set({
+        stageCount: { stage1: filterStage1, stage2: filterStage2 },
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error(error);
+      set({ stage1Count: [], isLoading: false });
     }
   },
 }));
