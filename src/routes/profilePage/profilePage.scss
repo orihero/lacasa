@@ -84,6 +84,24 @@
         }
       }
     }
+    .profile-user-agent {
+      display: flex;
+      justify-content: flex-end;
+      .profile-user-agent-btn {
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        padding: 12px 20px;
+        background-color: #fece51;
+        cursor: pointer;
+        border: none;
+        font-size: 14px;
+        a {
+          text-decoration: underline;
+        }
+      }
+    }
   }
   .chatContainer {
     flex: 2;

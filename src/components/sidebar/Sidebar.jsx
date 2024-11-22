@@ -40,13 +40,15 @@ const Sidebar = ({ currentUser, handleLogout }) => {
         </span>
       </div>
       <div className="menu-list">
-        <span
-          className={lastSegment == "profile" ? "active-menu" : ""}
-          onClick={() => navigate("/profile")}
-        >
-          <ChartIcon width={15} />
-          {t("statistics")}
-        </span>
+        {currentUser?.role == "agent" && (
+          <span
+            className={lastSegment == "profile" ? "active-menu" : ""}
+            onClick={() => navigate("/profile")}
+          >
+            <ChartIcon width={15} />
+            {t("statistics")}
+          </span>
+        )}
         <span
           className={lastSegment == "ads" ? "active-menu" : ""}
           onClick={() => navigate(currentUser?.id + "/ads")}

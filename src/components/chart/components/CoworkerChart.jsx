@@ -9,27 +9,27 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-const data = [
-  {
-    name: "Coworker",
-    AC: 40,
-    LC: 24,
-    SC: 30,
-  },
-  {
-    name: "cwrk",
-    AC: 30,
-    LC: 13,
-    SC: 20,
-  },
-  {
-    name: "update cwrk",
-    AC: 20,
-    LC: 90,
-    SC: 40,
-  },
-];
-const CoworkerChart = () => {
+// const data = [
+//   {
+//     name: "Coworker",
+//     AC: 40,
+//     LC: 24,
+//     SC: 30,
+//   },
+//   {
+//     name: "cwrk",
+//     AC: 30,
+//     LC: 13,
+//     SC: 20,
+//   },
+//   {
+//     name: "update cwrk",
+//     AC: 20,
+//     LC: 90,
+//     SC: 40,
+//   },
+// ];
+const CoworkerChart = ({ data }) => {
   return (
     <div className="chart-coworker-chart">
       <ResponsiveContainer width="100%" height={"100%"}>
@@ -39,9 +39,9 @@ const CoworkerChart = () => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="AC" fill="#fece51" />
-          <Bar dataKey="LC" fill="#82ca9d" />
-          <Bar dataKey="SC" fill="#051d42" />
+          <Bar dataKey="adsCount" fill="#fece51" />
+          <Bar dataKey="leadCount" fill="#82ca9d" />
+          <Bar dataKey="soldCount" fill="#051d42" />
         </BarChart>
       </ResponsiveContainer>
     </div>

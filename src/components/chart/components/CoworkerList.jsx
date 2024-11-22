@@ -1,20 +1,6 @@
 import React from "react";
 
 const CoworkerList = ({ data }) => {
-  const products = [
-    { name: "Marble Cake", sales: 1647, stock: 62 },
-    { name: "Fat Rascal", sales: 1240, stock: 48 },
-    { name: "Chocolate Cake", sales: 1080, stock: 57 },
-    { name: "Goose Breast", sales: 1014, stock: 41 },
-    { name: "Petit Gâteau", sales: 985, stock: 23 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-    { name: "Salzburger Nockerl", sales: 962, stock: 34 },
-  ];
-
   return (
     <div className="w-full p-3 bg-white chart-coworker-content">
       {/* <h2 className="text-2xl font-semibold text-gray-900 mb-6">Coworkers</h2> */}
@@ -42,14 +28,12 @@ const CoworkerList = ({ data }) => {
                 <span>{coworker.fullName}</span>
               </div>
               <div className="grid grid-cols-3 gap-1">
+                <div className="text-sm text-gray-500">{coworker.adsCount}</div>
                 <div className="text-sm text-gray-500">
-                  {products[index].sales}
+                  {coworker.soldCount}
                 </div>
                 <div className="text-sm text-gray-500">
-                  {products[index].sales}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {products[index].stock}
+                  {coworker.leadCount}
                 </div>
               </div>
             </div>

@@ -14,12 +14,12 @@ export default function HeaderCard({ data }) {
     {
       icon: <HousePlus size={60} />,
       label: "Yaratilgan e'lonlar soni:",
-      value: data.stage1,
+      value: data.newCount,
     },
     {
       icon: <HandCoins size={60} color="#82ca9d" />,
       label: "Sotilgan e'lonlar soni:",
-      value: data.stage2,
+      value: data.soldCount,
     },
   ];
 

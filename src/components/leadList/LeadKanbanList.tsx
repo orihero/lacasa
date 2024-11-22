@@ -17,6 +17,8 @@ import "./leadList.scss";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { Triangle } from "react-loader-spinner";
 import LeadUpdate from "../leadUpdate/LeadUpdate";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 
 export default function LeadKanbanList() {
   const navigate = useNavigate();
@@ -131,6 +133,19 @@ export default function LeadKanbanList() {
         ..._card,
         status: destination?.toColumnId,
       });
+
+      if (_card?.id) {
+        await addDoc(collection(db, "statistics"), {
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+          stage: 5,
+          leadId: _card?.id,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+      }
+
       setKanbanBoard((currentBoard) => {
         return moveCard(currentBoard, source, destination);
       });
@@ -144,6 +159,18 @@ export default function LeadKanbanList() {
         conversationComment: commentConver,
         status: moveObject?.destination?.toColumnId,
       });
+
+      if (selectCard?.id) {
+        await addDoc(collection(db, "statistics"), {
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+          stage: 5,
+          leadId: selectCard?.id,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+      }
 
       setKanbanBoard((currentBoard) => {
         return moveCard(
@@ -159,6 +186,18 @@ export default function LeadKanbanList() {
         callbackDate: callBackTime,
         status: moveObject?.destination?.toColumnId,
       });
+
+      if (selectCard?.id) {
+        await addDoc(collection(db, "statistics"), {
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+          stage: 5,
+          leadId: selectCard?.id,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+      }
       setKanbanBoard((currentBoard) => {
         return moveCard(
           currentBoard,

@@ -6,7 +6,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
-import React from "react";
+import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import EditIcon from "../../components/icons/EditIcon";
@@ -16,7 +16,7 @@ import { useUserStore } from "../../lib/userStore";
 import "./adsList.scss";
 
 const AdsList = () => {
-  const { myList } = useListStore();
+  const { myList, fetchAdsByAgentId } = useListStore();
   const { currentUser } = useUserStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -81,6 +81,12 @@ const AdsList = () => {
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  useEffect(() => {
+    if (currentUser?.agentId) {
+      fetchAdsByAgentId(currentUser.agentId);
+    }
+  });
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

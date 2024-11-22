@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./adsAdd.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -108,14 +108,30 @@ const AdsAdd = () => {
       try {
         photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-        await addDoc(collection(db, "ads"), {
+        const res = await addDoc(collection(db, "ads"), {
           ...allValues,
-          agentId: currentUser.id,
           nearPlacesList: nearPlacesList,
           optionList: optionList,
           photos,
           createdAt: serverTimestamp(),
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
         });
+
+        if (res?.id) {
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: res.id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: 1,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          });
+        }
       } catch (error) {
         console.error(error);
       }
@@ -228,11 +244,14 @@ const AdsAdd = () => {
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-    const caption = Object.entries(allValues).reduce((result, [key, value]) =>
-      result + key != "hashtags"
-        ? `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`
-        : "",
-    );
+    const caption = Object.entries(allValues).reduce((result, [key, value]) => {
+      if (key === "hashtags") {
+        return `${value}\n` + result;
+      }
+      return (
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""}\n`
+      );
+    }, "");
 
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
@@ -261,6 +280,21 @@ const AdsAdd = () => {
             }/sendMediaGroup`,
             formData,
           );
+
+          if (res.data?.result?.length) {
+            await addDoc(collection(db, "statistics"), {
+              agentId:
+                currentUser.role == "agent"
+                  ? currentUser.id
+                  : currentUser.agentId,
+              postId: "",
+              coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+              stage: 1,
+              updatedAt: serverTimestamp(),
+              createdAt: serverTimestamp(),
+              type: 2,
+            });
+          }
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -273,6 +307,33 @@ const AdsAdd = () => {
       (response) => response !== null,
     );
     setResTg([...resTG, ...successfulResponses]);
+  };
+  const onSubmitIG = async () => {
+    const allValues = getValues();
+    let photos = [];
+
+    if (extFiles.length > 0) {
+      photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+    }
+
+    const caption = Object.entries(allValues).reduce(
+      (result, [key, value]) =>
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
+      "",
+    );
+
+    try {
+      console.log(photos);
+      await Promise.all(
+        publishSelectSocial.map((socialItem, index) => {
+          let access_token = currentUser?.igTokens[index] ?? "";
+          IGService.publishMedia(photos, caption, socialItem, access_token);
+        }),
+      );
+      console.log("All posts published successfully!");
+    } catch (error) {
+      console.error("Error publishing posts:", error);
+    }
   };
 
   const handleAccordionChange =
@@ -875,39 +936,6 @@ const AdsAdd = () => {
                         );
                       }
                     })}
-                    {/* {photoOrVideo.includes("photo") &&
-                      extFiles.map((e, index) => (
-                        <div key={`photo-${index}`} style={{ height: "400px" }}>
-                          <img
-                            className="insta-post-img"
-                            src={URL.createObjectURL(e.file)}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                            alt={`photo-${index}`}
-                          />
-                        </div>
-                      ))} */}
-
-                    {/* {photoOrVideo.includes("video") &&
-                      extFilesVideo.map((e, index) => (
-                        <div key={`video-${index}`} style={{ height: "400px" }}>
-                          <video
-                            className="insta-post-video"
-                            src={URL.createObjectURL(e.file)}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                            muted
-                            autoPlay
-                            loop
-                          />
-                        </div>
-                      ))} */}
                   </Carousel>
                   <div className="post-footer">
                     <div className="post-icons">
@@ -952,147 +980,143 @@ const AdsAdd = () => {
             </AccordionDetails>
           </Accordion>
         )}
-        {!!currentUser.tgChatIds &&
-          !!currentUser.tgAccounts &&
-          currentUser.tgChatIds?.length >= 1 && (
-            <Accordion
-              expanded={accordionExpanded === "tg"}
-              onChange={handleAccordionChange("tg")}
-              sx={{ margin: "6px" }}
+        {!!currentUser?.tgAccounts && currentUser.tgAccounts?.length >= 0 && (
+          <Accordion
+            expanded={accordionExpanded === "tg"}
+            onChange={handleAccordionChange("tg")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
             >
-              <AccordionSummary
-                expandIcon={<ExpandIcon />}
-                aria-controls="igbh-content"
-                id="igbh-header"
-              >
-                <Avatar
-                  sx={{ width: 30, height: 30 }}
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
-                />
-                <Typography variant="h5" sx={{ ml: 1 }}>
-                  Telegram
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <div className="tg-content-preview">
-                  <div className="tg-content-flex">
-                    <div className="tg-channel-logo">
-                      <img src={currentUser?.tgAccounts[0].file_path} alt="" />
-                    </div>
-                    <div className="tg-post-content">
-                      <div className="tg-post-header">
-                        <h5>{currentUser?.tgAccounts[0].title}</h5>
-                      </div>
-                      <div className="tg-post-img-div">
-                        <ImageGrid images={extFiles} />
-                      </div>
-                      <div className="tg-text-content">
-                        <div className="tg-text-comment">
-                          {!!hashtagsValue.length && (
-                            <span className="hashtags-text">
-                              {hashtagsValue}
-                            </span>
-                          )}
-                          <h4>{titleValue}</h4>
-                          <p>{descriptionValue}</p>
-                          {!!priceValue.length && (
-                            <p>
-                              {t("price")}
-                              {":"}
-                              {priceValue}$
-                            </p>
-                          )}
-                          {!!cityValue.length && (
-                            <p>
-                              {t("city")}
-                              {": "} {cityValue}, {districtValue}
-                            </p>
-                          )}
-                          {!!roomValue && (
-                            <p>
-                              {t("rooms")}
-                              {": "} {roomValue}
-                            </p>
-                          )}
-                          {!!storeyValue && (
-                            <p>
-                              {t("storey")}
-                              {": "} {storeyValue}
-                            </p>
-                          )}
-                          {!!floorsValue && (
-                            <p>
-                              {t("floors")}
-                              {": "} {floorsValue}
-                            </p>
-                          )}
-                          {!!areaValue && (
-                            <p>
-                              {t("area")}
-                              {": "} {areaValue} m <sup>2</sup>
-                            </p>
-                          )}
-                          {!!repairmentValue && (
-                            <p>
-                              {t("repairment")}
-                              {": "} {repairmentValue}
-                            </p>
-                          )}
-                          {!!furnitureValue && (
-                            <p>
-                              {t("furniture")}
-                              {": "} {furnitureValue}
-                            </p>
-                          )}
-                          {!!addressValue && (
-                            <p>
-                              {t("address")}
-                              {": "} {addressValue}
-                            </p>
-                          )}
-                          {!!typeValue && (
-                            <p>
-                              {t("type")}
-                              {": "} {typeValue}
-                            </p>
-                          )}
-                        </div>
-                        <div className="tg-footer-text">
-                          <a
-                            href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                          >
-                            t.me/{currentUser?.tgAccounts[0].username}
-                          </a>
-                          <div className="tg-createAt">
-                            <span>12.7 K</span>
-                            <span>
-                              <VisibilityIcon fontSize="18px" />
-                            </span>
-                            <span>
-                              {new Date().toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Telegram
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <div className="tg-content-flex">
+                  <div className="tg-channel-logo">
+                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
                   </div>
-
-                  <div className="tg-btn-publish">
-                    <Button
-                      variant="contained"
-                      onClick={() => setOpenModal("tg")}
-                    >
-                      Опубликовать
-                    </Button>
+                  <div className="tg-post-content">
+                    <div className="tg-post-header">
+                      <h5>{currentUser?.tgAccounts[0].title}</h5>
+                    </div>
+                    <div className="tg-post-img-div">
+                      <ImageGrid images={extFiles} />
+                    </div>
+                    <div className="tg-text-content">
+                      <div className="tg-text-comment">
+                        {!!hashtagsValue.length && (
+                          <span className="hashtags-text">{hashtagsValue}</span>
+                        )}
+                        <h4>{titleValue}</h4>
+                        <p>{descriptionValue}</p>
+                        {!!priceValue.length && (
+                          <p>
+                            {t("price")}
+                            {":"}
+                            {priceValue}$
+                          </p>
+                        )}
+                        {!!cityValue.length && (
+                          <p>
+                            {t("city")}
+                            {": "} {cityValue}, {districtValue}
+                          </p>
+                        )}
+                        {!!roomValue && (
+                          <p>
+                            {t("rooms")}
+                            {": "} {roomValue}
+                          </p>
+                        )}
+                        {!!storeyValue && (
+                          <p>
+                            {t("storey")}
+                            {": "} {storeyValue}
+                          </p>
+                        )}
+                        {!!floorsValue && (
+                          <p>
+                            {t("floors")}
+                            {": "} {floorsValue}
+                          </p>
+                        )}
+                        {!!areaValue && (
+                          <p>
+                            {t("area")}
+                            {": "} {areaValue} m <sup>2</sup>
+                          </p>
+                        )}
+                        {!!repairmentValue && (
+                          <p>
+                            {t("repairment")}
+                            {": "} {repairmentValue}
+                          </p>
+                        )}
+                        {!!furnitureValue && (
+                          <p>
+                            {t("furniture")}
+                            {": "} {furnitureValue}
+                          </p>
+                        )}
+                        {!!addressValue && (
+                          <p>
+                            {t("address")}
+                            {": "} {addressValue}
+                          </p>
+                        )}
+                        {!!typeValue && (
+                          <p>
+                            {t("type")}
+                            {": "} {typeValue}
+                          </p>
+                        )}
+                      </div>
+                      <div className="tg-footer-text">
+                        <a
+                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
+                        >
+                          t.me/{currentUser?.tgAccounts[0].username}
+                        </a>
+                        <div className="tg-createAt">
+                          <span>12.7 K</span>
+                          <span>
+                            <VisibilityIcon fontSize="18px" />
+                          </span>
+                          <span>
+                            {new Date().toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </AccordionDetails>
-            </Accordion>
-          )}
+
+                <div className="tg-btn-publish">
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenModal("tg")}
+                  >
+                    Опубликовать
+                  </Button>
+                </div>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         {true && (
           <Accordion
             expanded={accordionExpanded === "yt"}
@@ -1236,8 +1260,8 @@ const AdsAdd = () => {
             ) : (
               <>
                 <div className="tg-flex">
-                  {currentUser?.tgAccounts.length > 1 &&
-                    currentUser?.tgAccounts.map((item, index) => {
+                  {currentUser?.tgAccounts?.length > 1 &&
+                    currentUser?.tgAccounts?.map((item, index) => {
                       return (
                         <div
                           key={index.toString()}
@@ -1293,7 +1317,16 @@ const AdsAdd = () => {
               >
                 {t("cancel")}
               </Button>
-              <Button onClick={onSubmitTG} variant="contained">
+              <Button
+                onClick={() => {
+                  if (openModal == "ig") {
+                    onSubmitIG();
+                  } else if (openModal == "tg") {
+                    onSubmitTG();
+                  }
+                }}
+                variant="contained"
+              >
                 {t("publish")}
               </Button>
             </Box>

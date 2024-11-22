@@ -21,7 +21,13 @@ import {
   Typography,
 } from "@mui/material";
 import axios from "axios";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -140,6 +146,21 @@ const AdsEdit = () => {
               : photos,
           updatedAt: serverTimestamp(),
         });
+
+        if (id) {
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: data.stage == "2" ? 2 : 3,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            type: 1,
+          });
+        }
         navigate("/profile/" + currentUser.id + "/ads");
       } catch (error) {
         console.error(error);
@@ -252,6 +273,20 @@ const AdsEdit = () => {
             }/sendMediaGroup`,
             formData,
           );
+
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: 2,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            type: 2,
+          });
+
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -580,6 +615,22 @@ const AdsEdit = () => {
                   </option>
                   <option value="usd">y.e</option>
                 </select>
+              </div>
+            </div>
+            <div className="field status">
+              <div>
+                <label htmlFor="stage">{t("status")}</label>
+                <select
+                  {...register("stage", {
+                    required: "Status is required",
+                  })}
+                  name="stage"
+                >
+                  <option value="1">{t("active")}</option>
+                  <option value="2">{t("sold")}</option>
+                  <option value="3">{t("draft")}</option>
+                </select>
+                {errors.stage && <span>{errors.stage.message}</span>}
               </div>
             </div>
           </div>
@@ -1008,7 +1059,11 @@ const AdsEdit = () => {
                 <YtVideoCard
                   hashtags={"#yangi"}
                   title={titleValue}
-                  bannerImg={URL.createObjectURL(extFiles[0].file)}
+                  bannerImg={
+                    extFiles.length
+                      ? URL.createObjectURL(extFiles[0]?.file)
+                      : ""
+                  }
                   isShort={true}
                 />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
