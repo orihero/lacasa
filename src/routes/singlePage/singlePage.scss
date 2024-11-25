@@ -116,7 +116,9 @@
           gap: 10px;
           p {
             color: #555;
-            line-height: 20px;
+            // line-height: 20px;
+            white-space: pre-wrap;
+            // font-family: "Plus Jakarta Sans", sans-serif;
           }
         }
       }

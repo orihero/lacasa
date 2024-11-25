@@ -27,11 +27,11 @@ function HorizontalCard({ data }) {
       <div className="textContainer">
         <div className="price">
           <h2>
-            ${data.price.length > 0 ? data.price : "-"}
+            ${data.price?.length > 0 ? data.price : "-"}
             <span>/month</span>
           </h2>
           <h1>
-            {data.title.length > 15
+            {data.title?.length > 15
               ? data.title?.slice(0, 15) + "..."
               : data.title}
           </h1>

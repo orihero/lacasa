@@ -3,7 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  limitToLast,
   query,
   where,
 } from "firebase/firestore";
@@ -18,10 +17,7 @@ export const useListStore = create((set) => ({
   isLoading: true,
   fetchAdsList: async () => {
     try {
-      const adsQuery = query(
-        collection(db, "ads"),
-        where("active", "==", true),
-      );
+      const adsQuery = query(collection(db, "ads"), where("stage", "==", "1"));
       const querySnapshot = await getDocs(adsQuery);
       const adsList = querySnapshot.docs.map((doc) => ({
         id: doc.id,

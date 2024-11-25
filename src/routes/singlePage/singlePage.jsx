@@ -127,7 +127,7 @@ function SinglePage() {
             <div className="size">
               <FloorIcon color={"#888"} />
               <span>
-                {adsData.storey}/{adsData.storeys}
+                {adsData.storey}/{adsData.floors}
               </span>
             </div>
           </div>
@@ -136,7 +136,7 @@ function SinglePage() {
             {adsData?.nearPlacesList?.length &&
               (adsData?.nearPlacesList ?? [])?.map((item) => {
                 return (
-                  <div className="feature">
+                  <div key={item} className="feature">
                     <span>{item}</span>
                   </div>
                 );
@@ -159,7 +159,7 @@ function SinglePage() {
               <div className="featureText">
                 <span>Restaurant</span>
                 <p>200m away</p>
-              </div>
+              </div> 
             </div> */}
           </div>
           <p className="title">{t("location")}</p>
