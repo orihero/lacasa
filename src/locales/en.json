@@ -1,6 +1,6 @@
 {
   "home": "Home",
-  "about": "About",
+  "about": "About Us",
   "agents": "Agents",
   "profile": "Profile",
   "userInformation": "User Information",
@@ -104,5 +104,65 @@
   "emailRequired": "Email is required",
   "createInstagramPost": "Create Instagram post",
   "createTelegramPost": "Create Telegram post",
-  "createYoutubePost": "Create Youtube post"
+  "createYoutubePost": "Create Youtube post",
+  "headline": {
+    "title": "Close More Deals,",
+    "titleSpan": "With Less Effort",
+    "subtitle": "Real estate agents like you face endless challenges—managing listings, finding the right clients, and closing deals efficiently. Lacasa is here to change that. Simplify your process, boost your productivity, and focus on what really matters: growing your business.",
+    "btn": "Request Demo",
+    "watchDemo": "Watch Video"
+  },
+  "aboutItem1": {
+    "title": "Keeping track of property ads can feel like juggling too many things at once, leading to missed updates and confusion.",
+    "subtitle": "Imagine a clutter-free workspace where all your property listings are stored systematically. With Lacasa, you can effortlessly update, edit, and manage your portfolio, whether you're in the office or on the go. Say goodbye to losing track of important ads—our platform ensures your listings are always at your fingertips, saving you time and making your workflow smoother than ever."
+  },
+  "aboutItem2": {
+    "title": "Sharing ads across different social media platforms manually takes time and effort, often resulting in inconsistent branding",
+    "subtitle": " Expand your reach without lifting a finger! With Lacasa, you can connect your property listings to platforms like Instagram, Facebook, and LinkedIn in just seconds. Schedule posts, maintain a professional brand image, and maximize your online presence effortlessly. You no longer need to jump between apps; Lacasa keeps your workflow efficient and your audience engaged."
+  },
+  "aboutItem3": {
+    "title": "Sorting through client inquiries manually can lead to missed opportunities and wasted time on unqualified leads.",
+    "subtitle": "Focus your energy on what truly matters—closing deals. With Lacasa, you can easily identify serious buyers or renters without spending hours sifting through contacts. Our system organizes and highlights high-potential leads so you never miss a chance to convert interest into action. Simplify your workflow and grow your business with a tool designed to keep you ahead."
+  },
+  "aboutItem4": {
+    "title": "Traditional photos and videos fail to truly immerse potential buyers, leading to missed opportunities and reduced engagement.",
+    "subtitle": "Studies show that properties with 3D tours receive 44% more inquiries than those without, and buyers spend 5 times longer exploring listings with 3D virtual tours. With Lacasa, you can give potential clients a walk-through experience without them even needing to leave their homes. This technology offers a fully interactive and immersive environment, increasing engagement and conversion rates. Providing a 3D tour adds a professional touch and builds trust, as clients can explore every corner of a property before making a decision."
+  },
+  "aboutItem5": {
+    "title": "Managing a team of real estate agents can be overwhelming, especially when coordinating tasks and deadlines across multiple people",
+    "subtitle": "Lacasa’s coworker management system gives you the power to efficiently delegate tasks and monitor team performance. With built-in notifications and a visual timeline, you’ll always know the status of each task. Whether you have a small team or a large network of agents, managing workflows has never been easier. Track the progress of each project and ensure everyone is on the same page, improving team productivity and reducing mistakes"
+  },
+  "aboutItem6": {
+    "title": "Keeping track of business performance through manual reports and scattered data can be overwhelming and lead to misinterpretations.",
+    "subtitle": "Tracking your success should be effortless. With Lacasa’s data analytics tools, you can see exactly how your properties are performing in real-time. From leads generated to sales closed, everything is visualized in clear charts, making it easier to spot trends, evaluate progress, and make informed decisions. The data is not just displayed, but analyzed so you can uncover hidden opportunities and improve your strategies."
+  },
+  "aboutBtn": "Book 30 Minutes FREE Consultation",
+  "featuresTitle": "Features &",
+  "featuresServices": "Services",
+  "featuresSubtitle": "What we offer",
+  "featuresItem1": {
+    "title": "Organized Ad Storage",
+    "subtitle": "Keep all your listings in one place with a well-organized, easy-to-access storage system. Never worry about misplaced ads again – everything is neatly categorized and searchable, saving you time and keeping your workflow smooth."
+  },
+  "featuresItem2": {
+    "title": "Social Media Integration",
+    "subtitle": "Effortlessly share your listings across all your social media platforms. With one click, publish to Facebook, Instagram, LinkedIn, and more. This ensures maximum exposure for your properties without extra work."
+  },
+  "featuresItem3": {
+    "title": "Lead Sorting",
+    "subtitle": "Sort potential clients by different criteria like interest, budget, and location. Easily track and manage leads to help prioritize which clients to follow up with first."
+  },
+  "featuresItem4": {
+    "title": "3D Property Tours",
+    "subtitle": "Provide your clients with immersive 3D tours of your properties. Studies show that listings with 3D tours sell 44% faster than those without. Help buyers feel more connected to the property before they even step inside."
+  },
+  "featuresItem5": {
+    "title": "Team Management",
+    "subtitle": "Manage your team with ease by assigning roles and keeping everyone on track. Whether you're handling a few or many agents, our platform helps you stay organized and efficient."
+  },
+  "featuresItem6": {
+    "title": "Performance Analytics",
+    "subtitle": "Track your results with easy-to-read charts and data analysis. Monitor your sales, engagement, and other key metrics to optimize your strategies and boost success."
+  },
+  "learnMore": "Learn more"
 }

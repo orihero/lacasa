@@ -1,15 +1,21 @@
 import {
+  archiveIcon,
   Assign,
+  barChartIcon,
   Calendar,
+  cameraIcon,
   certificate,
   facebook,
+  filterIcon,
   instagram,
   linkedin,
   Messages,
   MoneyGraph,
+  shareIcon,
   Support,
   twitter,
   userImg,
+  usersIcon,
 } from "../assets";
 
 export const navbarLink = [
@@ -34,84 +40,72 @@ export const navbarLink = [
 export const aboutInfo = [
   {
     id: 1,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem1.title",
+    info: "aboutItem1.subtitle",
   },
   {
     id: 2,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem2.title",
+    info: "aboutItem2.subtitle",
   },
   {
     id: 3,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem3.title",
+    info: "aboutItem3.subtitle",
   },
   {
     id: 4,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem4.title",
+    info: "aboutItem4.subtitle",
   },
   {
     id: 5,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem5.title",
+    info: "aboutItem5.subtitle",
   },
   {
     id: 6,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
-  },
-  {
-    id: 7,
-    title:
-      "Do you Keep getting frustrated with managing your client needs and employee deadlines",
-    info: "Look no further, with our CRM orem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem. Veritatis obcaecati tenetur iure eius earum ut molestias architecto voluptate aliquam nihil, eveniet aliquid culpa officia aut! Impedit",
+    title: "aboutItem6.title",
+    info: "aboutItem6.subtitle",
   },
 ];
 
 export const features = [
   {
     id: 1,
-    title: "messages",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: Messages,
+    title: "featuresItem1.title",
+    info: "featuresItem1.subtitle",
+    img: archiveIcon,
   },
   {
     id: 2,
-    title: "dashboard",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: Messages,
+    title: "featuresItem2.title",
+    info: "featuresItem2.subtitle",
+    img: shareIcon,
   },
   {
     id: 3,
-    title: "Tasks & PROJECTS",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: MoneyGraph,
+    title: "featuresItem3.title",
+    info: "featuresItem3.subtitle",
+    img: filterIcon,
   },
   {
     id: 4,
-    title: "CALENDAR",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: Calendar,
+    title: "featuresItem4.title",
+    info: "featuresItem4.subtitle",
+    img: cameraIcon,
   },
   {
     id: 5,
-    title: "ASSIGN ROLES",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: Assign,
+    title: "featuresItem5.title",
+    info: "featuresItem5.subtitle",
+    img: usersIcon,
   },
   {
     id: 6,
-    title: "CONTACTs",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint  ",
-    img: Support,
+    title: "featuresItem6.title",
+    info: "featuresItem6.subtitle",
+    img: barChartIcon,
   },
 ];
 

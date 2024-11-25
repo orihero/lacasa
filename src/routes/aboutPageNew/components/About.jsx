@@ -2,10 +2,12 @@ import React, { useRef, useState } from "react";
 import { AboutImg, RightArrow } from "../../../assets";
 import { style } from "../../../util/styles";
 import { aboutInfo } from "../../../util/constants";
+import { useTranslation } from "react-i18next";
 
 const About = () => {
   const cardRef = useRef(null);
   const [width, setWidth] = useState(0);
+  const { t } = useTranslation();
 
   const rightBtn = () => {
     if (cardRef.current) {
@@ -17,7 +19,7 @@ const About = () => {
     e.preventDefault();
   };
 
-  if (width >= 4410) {
+  if (width >= 3702) {
     setWidth(0);
   }
 
@@ -38,7 +40,7 @@ const About = () => {
       <div className={`xl:w-[48%] w-full ${style.fCol} gap-5`}>
         <div>
           <p className={`${style.p} uppercase !font-bold !text-blue`}>
-            About Us
+            {t("about")}
           </p>
           <div className={`w-full z-10 bg-backgroundAboutImg h-[2px] relative`}>
             <span
@@ -65,8 +67,8 @@ const About = () => {
                 className="!touch-none transition-transform duration-500"
                 ref={cardRef}
               >
-                <h3 className={`${style.h3} mb-5`}>{i.title}</h3>
-                <p className={`${style.span}`}>{i.info}</p>
+                <h3 className={`${style.h3} mb-5`}>{t(i.title)}</h3>
+                <p className={`${style.span}`}>{t(i.info)}</p>
               </li>
             );
           })}
@@ -75,7 +77,7 @@ const About = () => {
           onClick={rightBtn}
           className={`text-blue cursor-pointer transition hover:scale-105 active:scale-100 font-[700] ${style.f} gap-2 sm:text-[1rem] text-[14px]`}
         >
-          <span>Book 30 Minutes FREE Consultation</span>
+          <span>{t("aboutBtn")}</span>
           <img src={RightArrow} alt="" />
         </button>
       </div>

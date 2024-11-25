@@ -105,5 +105,12 @@
   "emailRequired": "Email kiritilishi shart",
   "createInstagramPost": "Instagram post yaratish",
   "createTelegramPost": "Telegram post yaratish",
-  "createYoutubePost": "Youtube post yaratish"
+  "createYoutubePost": "Youtube post yaratish",
+  "headline": {
+    "title": "Kam harakat,",
+    "titleSpan": "Ko’proq sotuvlar",
+    "subtitle": "Ko’chmas mulk agentlari doimo elonlarni boshqarish, mijozlarni tartiblash va sotuvlarni ko’paytirish kabi  muammolarga duch kelishadi. Biz ushbu muammolaringizni yechishga yordam beramiz. Muammolaringizni bizga qo’yib bering siz esa faqat biznesingizni rivojlantirishga e’tibor qarating",
+    "btn": "Sinab ko’rish",
+    "watchDemo": "Videoni ko’rish"
+  }
 }

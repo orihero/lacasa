@@ -2,7 +2,6 @@ import React from "react";
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -12,50 +11,6 @@ import {
   generateRandomData,
   getTimeIntervals,
 } from "../../../hooks/formatDate";
-const data = [
-  {
-    name: "09:00",
-    uv: 40,
-    pv: 24,
-    amt: 24,
-  },
-  {
-    name: "10:00",
-    uv: 30,
-    pv: 13,
-    amt: 22,
-  },
-  {
-    name: "Page C",
-    uv: 20,
-    pv: 98,
-    amt: 22,
-  },
-  {
-    name: "Page D",
-    uv: 27,
-    pv: 39,
-    amt: 20,
-  },
-  {
-    name: "Page E",
-    uv: 18,
-    pv: 48,
-    amt: 21,
-  },
-  {
-    name: "Page F",
-    uv: 23,
-    pv: 38,
-    amt: 25,
-  },
-  {
-    name: "Page G",
-    uv: 34,
-    pv: 43,
-    amt: 21,
-  },
-];
 
 const AdsChart = () => {
   //   console.log(generateRandomData(getTimeIntervals()));
@@ -90,13 +45,13 @@ const AdsChart = () => {
           </defs>
           <Area
             type="monotone"
-            dataKey="pv"
+            dataKey="create"
             stroke="#fece51"
             fill="url(#colorUv)"
           />
           <Area
             type="monotone"
-            dataKey="uv"
+            dataKey="sold"
             stroke="#82ca9d"
             fill="url(#colorPv)"
           />

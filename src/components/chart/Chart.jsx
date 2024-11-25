@@ -54,18 +54,21 @@ const Chart = () => {
       });
       return coworkerStats;
     }
-  }, [currentUser?.id, listCwrkST?.length, list?.length]);
+  }, [currentUser?.id, listCwrkST, list]);
 
   return (
     <div className="chart-container">
       <div className="chart-header mt-1 mb-2 flex justify-center">
         <h2>Analytics</h2>
         <div>
-          <select className="chart-select-time">
+          <select
+            className="chart-select-time"
+            onChange={(e) => getAdsStatistics(currentUser?.id, e.target.value)}
+          >
             <option value="all">All</option>
-            <option value="month">This month</option>
-            <option value="week">This week</option>
-            <option value="day">This day</option>
+            <option value="thisMonth">This month</option>
+            <option value="thisWeek">This week</option>
+            <option value="today">Today</option>
           </select>
         </div>
       </div>

@@ -103,6 +103,7 @@ export const useListStore = create((set) => ({
     }
   },
   fetchAdsById: async (id) => {
+    set({ adsData: {}, isLoading: true });
     try {
       const adRef = doc(db, "ads", id);
       const docSnap = await getDoc(adRef);

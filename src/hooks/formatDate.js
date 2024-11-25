@@ -46,8 +46,7 @@ export const generateRandomData = (timeArray) => {
 
   return timeArray.map((time) => ({
     name: time,
-    uv: getRandomNumber(10, 50),
-    pv: getRandomNumber(10, 100),
-    amt: getRandomNumber(20, 30),
+    create: getRandomNumber(10, 50),
+    sold: getRandomNumber(10, 100),
   }));
 };

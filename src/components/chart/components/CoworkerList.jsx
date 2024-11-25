@@ -13,7 +13,7 @@ const CoworkerList = ({ data }) => {
             <div className="text-sm font-medium text-gray-900">Sale count</div>
           </div>
         </div>
-        <div className="overflow-scroll chart-coworker-list">
+        <div className="overflow-y-scroll chart-coworker-list">
           {data.map((coworker, index) => (
             <div
               key={coworker.id}

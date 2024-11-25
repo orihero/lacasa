@@ -2,9 +2,11 @@ import React from "react";
 import { style } from "../../../util/styles";
 import Button from "./Button";
 import { BtnPlay, HeadImg, HeadImg2 } from "../../../assets";
+import { useTranslation } from "react-i18next";
 
 const Head = () => {
   let sum = [1, 2, 3, 4, 5];
+  const { t } = useTranslation();
 
   return (
     <div
@@ -13,20 +15,17 @@ const Head = () => {
     >
       <div className={`${style.fCol} xl:w-[50%] w-full gap-5`}>
         <h1 className={`${style.h1}`}>
-          Strengthen your client Relationships with our{" "}
-          <span className="text-blue">CRM Solutions</span>
+          {t("headline.title")}
+          <span className="text-blue">{t("headline.titleSpan")}</span>
         </h1>
-        <p className={`${style.p}`}>
-          Well we’re setting the record straight, this is not just another
-          CRM...Its time re-focus on your contacts{" "}
-        </p>
+        <p className={`${style.p}`}>{t("headline.subtitle")}</p>
         <div className={`${style.f} sm:gap-5 gap-2`}>
-          <Button title={"Try it for FREE"} btnClass={``} />
+          <Button title={t("headline.btn")} btnClass={``} />
           <button
             className={`${style.f} sm:text-[1rem] text-[14px] sm:gap-3 gap-1 transition hover:scale-110 text-blue font-[500]`}
           >
             <img className="sm:w-[46px] w-[35px] " src={BtnPlay} alt="" />
-            <span>Watch Demo</span>
+            <span>{t("headline.watchDemo")}</span>
           </button>
         </div>
       </div>

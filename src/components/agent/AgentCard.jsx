@@ -1,9 +1,9 @@
 import React from "react";
-import "./agentCard.scss";
+import { useNavigate } from "react-router-dom";
 import InstagramIcon from "./../../components/icons/InstagramIcon";
 import TelegramIcon from "./../../components/icons/TelegramIcon";
 import WebIcon from "./../../components/icons/WebIcon";
-import { useNavigate } from "react-router-dom";
+import "./agentCard.scss";
 
 const AgentCard = ({ agent }) => {
   const navigate = useNavigate();
@@ -16,23 +16,23 @@ const AgentCard = ({ agent }) => {
     <div
       key={agent.id}
       className="item-agent"
-      onClick={() => handleNavigate(agent.userId)}
+      onClick={() => handleNavigate(agent.id)}
     >
       <div className="avatar-text">
         <div>
           <img
-            src={agent.avatar.length ? agent.avatar : "/avatar.jpg"}
+            src={agent.avatar?.length ? agent.avatar : "/avatar.jpg"}
             alt=""
           />
         </div>
         <div>
           <span>
             <img className="agent-icon" src="/icons/user1.svg" />{" "}
-            <b>{agent.name}</b>
+            <b>{agent.fullName}</b>
           </span>
           <span>
             <img className="agent-icon" src="/icons/phone.svg" />{" "}
-            <b>{agent.phone}</b>
+            <b>{agent.phoneNumber}</b>
           </span>
           <span>
             <img className="agent-icon" src="/icons/email1.svg" />{" "}
@@ -57,7 +57,7 @@ const AgentCard = ({ agent }) => {
             })}{" "}
           </span>
           <span>
-            Ads: <b>{agent.ads}</b>
+            Ads: <b>{agent.adsCount}</b>
           </span>
         </span>
       </div>
