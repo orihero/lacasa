@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import List from "../../components/list/List";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
@@ -13,7 +13,6 @@ import WebIcon from "../../components/icons/WebIcon";
 function AgentProfilePage() {
   const { agent, fetchUserById } = useUserStore();
   const { fetchAdsByAgentId, isLoading, myList } = useListStore();
-  const navigate = useNavigate();
   const { id } = useParams();
   const { t } = useTranslation();
 
@@ -23,12 +22,6 @@ function AgentProfilePage() {
       fetchAdsByAgentId(id);
     }
   }, [id]);
-
-  const handleLogout = async () => {
-    // await signOut(auth);
-    logout();
-    navigate("/");
-  };
 
   return (
     <div className="agentProfilePage">

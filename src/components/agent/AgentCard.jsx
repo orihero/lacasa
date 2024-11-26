@@ -50,9 +50,17 @@ const AgentCard = ({ agent }) => {
             Review:
             {[1, 2, 3, 4, 5].map((item) => {
               if (item <= agent.review) {
-                return <img className="star-icon" src="/icons/star.svg" />;
+                return (
+                  <img key={item} className="star-icon" src="/icons/star.svg" />
+                );
               } else {
-                return <img className="star-icon" src="/icons/star1.svg" />;
+                return (
+                  <img
+                    key={item}
+                    className="star-icon"
+                    src="/icons/star1.svg"
+                  />
+                );
               }
             })}{" "}
           </span>

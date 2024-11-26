@@ -255,5 +255,6 @@
   "draft": "Draft",
   "publish": "Publish",
   "select_channels": "Select the channels you want to publish to!",
-  "updateNewPost": "Update New Post"
+  "updateNewPost": "Update New Post",
+  "registerAsAgent": "Register as Agent"
 }

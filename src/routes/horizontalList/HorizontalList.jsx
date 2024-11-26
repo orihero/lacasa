@@ -36,7 +36,7 @@ export default function HorizontalList() {
     <>
       <div className="hList">
         {list.map((item) => {
-          return <HorizontalCard data={item} />;
+          return <HorizontalCard key={item?.id} data={item} />;
         })}
       </div>
       <button onClick={handleNavigationList} className="btn-more">

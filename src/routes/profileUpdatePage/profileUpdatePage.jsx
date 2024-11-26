@@ -26,7 +26,7 @@ function ProfileUpdatePage() {
 
       const formData = new FormData(e.target);
       let data = Object.fromEntries(formData);
-      if (!!r) {
+      if (r) {
         data = { ...data, avatar: r };
       }
       await updateDoc(doc(db, "users", currentUser.id), data);

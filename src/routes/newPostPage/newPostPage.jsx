@@ -27,6 +27,7 @@ function NewPostPage() {
   const [optionList, setOptionList] = useState([]);
   const [price, setPrice] = useState(0);
   const [regionId, setRegionId] = useState(0);
+  const [videoSrc, setVideoSrc] = useState(undefined);
   const [type, setType] = useState(0);
   const [priceType, setPriceType] = useState("uzs");
   const navigate = useNavigate();
@@ -368,7 +369,7 @@ function NewPostPage() {
                     name="priceType"
                     onChange={(e) => setPriceType(e.target.value)}
                   >
-                    <option value="uzs">so'm</option>
+                    <option value="uzs">so&apos;m</option>
                     <option value="usd">y.e</option>
                   </select>
                 </span>

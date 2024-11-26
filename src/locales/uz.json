@@ -256,5 +256,6 @@
   "draft": "Qoralama",
   "publish": "Nashr qilish",
   "select_channels": "Nashir qilmoqchi bo'lgan kannallaringizni tanlang!",
-  "updateNewPost": "E'lonni yangilash"
+  "updateNewPost": "E'lonni yangilash",
+  "registerAsAgent": "Agent sifatida ro'yxatdan o'tish"
 }
