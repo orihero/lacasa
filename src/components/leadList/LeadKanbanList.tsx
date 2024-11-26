@@ -1,24 +1,24 @@
 import {
-  KanbanBoard,
+  Card,
   ControlledBoard,
+  KanbanBoard,
   moveCard,
   OnDragEndNotification,
-  Card,
 } from "@caldwell619/react-kanban";
 import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { useLeadStore } from "../../lib/useLeadStore";
-import { Filters, RenderCard, renderColumnHeader } from "./kanban/components";
-import { board, CustomCard } from "./kanban/data";
-import { useUserStore } from "../../lib/userStore";
-import "./leadList.scss";
-import { useCoworkerStore } from "../../lib/useCoworkerStore";
-import { Triangle } from "react-loader-spinner";
-import LeadUpdate from "../leadUpdate/LeadUpdate";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useCoworkerStore } from "../../lib/useCoworkerStore";
+import { useLeadStore } from "../../lib/useLeadStore";
+import { useUserStore } from "../../lib/userStore";
+import LeadUpdate from "../leadUpdate/LeadUpdate";
+import { Filters, RenderCard, renderColumnHeader } from "./kanban/components";
+import { CustomCard } from "./kanban/data";
+import "./leadList.scss";
+import { Triangle } from "react-loader-spinner";
 
 export default function LeadKanbanList() {
   const navigate = useNavigate();
@@ -220,27 +220,24 @@ export default function LeadKanbanList() {
     p: 4,
   };
 
-  // if (isUpdated) {
-  //   return (
-  //     <div className="loading">
-  //       <Triangle
-  //         visible={true}
-  //         height="80"
-  //         width="80"
-  //         color="#4fa94d"
-  //         ariaLabel="triangle-loading"
-  //         wrapperStyle={{}}
-  //         wrapperClass=""
-  //       />
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="ads-list-content">
       <div className="ads-new">
         <button onClick={handleNavigateNew}>{t("addNewLead")}</button>
       </div>
+      {isUpdated && (
+        <div className="loading-kanban">
+          <Triangle
+            visible={true}
+            height="80"
+            width="80"
+            color="#4fa94d"
+            ariaLabel="triangle-loading"
+            wrapperStyle={{}}
+            wrapperClass=""
+          />
+        </div>
+      )}
       <div className="kanban-content">
         {kanbanBoard.columns.length > 0 && (
           <NotionStyles>

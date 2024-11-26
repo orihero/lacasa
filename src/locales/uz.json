@@ -1,6 +1,6 @@
 {
   "home": "Bosh sahifa",
-  "about": "Haqida",
+  "about": "Biz haqimizda",
   "agents": "Agentlar",
   "profile": "Profile",
   "userInformation": "Foydalanuvchi ma'lumoti",
@@ -52,7 +52,6 @@
   "repair": "Ta'mir",
   "requiresRepair": "Ta'mir talab etiladi",
   "category": "Kategoriya",
-  "rental": "Ijaraga",
   "storey": "Qavat",
   "floors": "Qavatlar",
   "furniture": "Mebel",
@@ -240,5 +239,22 @@
         "title": "Pro rejadagi barcha funksiyalar"
       }
     ]
-  }
+  },
+  "orientation": "Yo'nalish",
+  "nonresidential": "Noturar joy",
+  "sale": "Sotish",
+  "rent": "Ijaraga berish",
+  "rental": "Ijaraga olish",
+  "normal": "Oddiy",
+  "good": "Yaxshi",
+  "excellent": "A'lo",
+  "room_count": "Xonalar soni",
+  "withoutFurniture": "Mebelsiz",
+  "hashtags": "Hashtaglar",
+  "active": "Faol",
+  "sold": "Sotilgan",
+  "draft": "Qoralama",
+  "publish": "Nashr qilish",
+  "select_channels": "Nashir qilmoqchi bo'lgan kannallaringizni tanlang!",
+  "updateNewPost": "E'lonni yangilash"
 }

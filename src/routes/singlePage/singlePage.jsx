@@ -55,7 +55,10 @@ function SinglePage() {
     <div className="singlePage">
       <div className="details">
         <div className="wrapper">
-          <Slider images={adsData?.photos ?? []} />
+          <Slider
+            tour3dLink={adsData?.tour3dLink}
+            images={adsData?.photos ?? []}
+          />
           <div className="info">
             <div className="top">
               <div className="post">

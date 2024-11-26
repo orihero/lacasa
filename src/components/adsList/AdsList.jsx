@@ -14,6 +14,8 @@ import { formatCreatedAt } from "../../hooks/formatDate";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import "./adsList.scss";
+import StatusAds from "../status/StatusAds";
+import Filter from "../filter/Filter";
 
 const AdsList = () => {
   const { myList, fetchAdsByAgentId } = useListStore();
@@ -47,8 +49,7 @@ const AdsList = () => {
       label: t("status"),
       minWidth: 170,
       align: "left",
-      format: (value) =>
-        value == 1 ? "Active" : value == 2 ? "Sold" : "Draft",
+      format: (value) => <StatusAds value={value} />,
     },
     {
       id: "author",
@@ -111,7 +112,9 @@ const AdsList = () => {
 
   return (
     <div className="ads-list-content">
-      {/* <div className="filter-tools">filter</div> */}
+      {/* <div className="filter-tools">
+        <Filter />
+      </div> */}
       <div className="ads-new">
         <button onClick={handleNewPost}>{t("createNewPost")}</button>
       </div>
@@ -136,12 +139,7 @@ const AdsList = () => {
                 ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                   return (
-                    <TableRow
-                      hover
-                      role="checkbox"
-                      tabIndex={-1}
-                      key={row.code}
-                    >
+                    <TableRow hover role="checkbox" tabIndex={-1} key={row.id}>
                       {columns.map((column) => {
                         const value = row[column.id];
                         if (column.id == "edit") {

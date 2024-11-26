@@ -381,7 +381,7 @@ const AdsAdd = () => {
   return (
     <div className="new-post-container">
       <div className="new-post-header">
-        <h2>Add New Post</h2>
+        <h2>{t("addNewPost")}</h2>
       </div>
       <form>
         <div className="content">
@@ -465,7 +465,7 @@ const AdsAdd = () => {
               {errors.address && <span>{errors.address.message}</span>}
             </div>
             <div className="field">
-              <label>Ориентир</label>
+              <label>{t("orientation")}</label>
               <input
                 {...register("reference", {
                   required: "Reference is required",
@@ -485,9 +485,9 @@ const AdsAdd = () => {
                   name="type"
                 >
                   <option value="residential" defaultChecked>
-                    Жилое
+                    {t("residential")}
                   </option>
-                  <option value="nonresidential">Не Жилое</option>
+                  <option value="nonresidential">{t("nonresidential")}</option>
                 </select>
                 {errors.type && <span>{errors.type.message}</span>}
               </div>
@@ -499,8 +499,8 @@ const AdsAdd = () => {
                   })}
                   name="category"
                 >
-                  <option value="rent">{t("rental")}</option>
-                  <option value="sale">Продажа</option>
+                  <option value="rent">{t("rent")}</option>
+                  <option value="sale">{t("sale")}</option>
                 </select>
                 {errors.category && <span>{errors.category.message}</span>}
               </div>
@@ -517,16 +517,16 @@ const AdsAdd = () => {
                   <option value="notRepaired" defaultChecked>
                     {t("requiresRepair")}
                   </option>
-                  <option value="normal">Нормальный</option>
-                  <option value="good">Хороший</option>
-                  <option value="excellent">Отличный</option>
+                  <option value="normal">{t("normal")}</option>
+                  <option value="good">{t("good")}</option>
+                  <option value="excellent">{t("excellent")}</option>
                 </select>
                 {errors.repairment && <span>{errors.repairment.message}</span>}
               </div>
             </div>
             <div className="field city">
               <div>
-                <label>Кол.комнат</label>
+                <label>{t("room_count")}</label>
                 <input
                   {...register("rooms", {
                     required: "Rooms is required",
@@ -587,16 +587,18 @@ const AdsAdd = () => {
                   name="furniture"
                 >
                   <option value="withFurniture">{t("withFurniture")}</option>
-                  <option value="withoutFurniture">Без мебели</option>
+                  <option value="withoutFurniture">
+                    {t("withoutFurniture")}
+                  </option>
                 </select>
                 {errors.furniture && <span>{errors.furniture.message}</span>}
               </div>
             </div>
             <div className="field">
-              <label>Hashtags</label>
+              <label>{t("hashtags")}</label>
               <input
                 {...register("hashtags", {})}
-                placeholder="Hashtags: #yangi #2024"
+                placeholder={`${t("hashtags")}: #new #2024`}
                 className={errors.hashtags ? "error" : ""}
               />
               {errors.hashtags && <span>{errors.hashtags.message}</span>}
@@ -974,7 +976,7 @@ const AdsAdd = () => {
                   }
                 />
                 <Button variant="contained" onClick={() => setOpenModal("ig")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1110,7 +1112,7 @@ const AdsAdd = () => {
                     variant="contained"
                     onClick={() => setOpenModal("tg")}
                   >
-                    Опубликовать
+                    {t("publish")}
                   </Button>
                 </div>
               </div>
@@ -1159,7 +1161,7 @@ const AdsAdd = () => {
                     variant="contained"
                     onClick={() => setOpenModal("yt")}
                   >
-                    Опубликовать
+                    {t("publish")}
                   </Button>
                 </div>
               </div>
@@ -1189,7 +1191,7 @@ const AdsAdd = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1244,7 +1246,7 @@ const AdsAdd = () => {
       >
         <Box sx={style}>
           <div className="tg-channel-list">
-            <h3>Nashir qilmoqchi bo'lgan kannallaringizni tanlang!</h3>
+            <h3>{t("select_channels")}</h3>
             {openModal == "ig" ? (
               <>
                 <div className="tg-flex">

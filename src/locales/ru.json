@@ -238,5 +238,21 @@
         "title": "Все функции из плана 'Pro'"
       }
     ]
-  }
+  },
+  "orientation": "Ориентир",
+  "nonresidential": "Не Жилое",
+  "sale": "Продажа",
+  "rent": "Аренда",
+  "normal": "Нормальный",
+  "good": "Хороший",
+  "excellent": "Отличный",
+  "room_count": "Кол.комнат",
+  "withoutFurniture": "Без мебели",
+  "hashtags": "Хэштеги",
+  "active": "Активный",
+  "sold": "Продано",
+  "draft": "Черновик",
+  "publish": "Опубликовать",
+  "select_channels": "Выберите каналы для публикации!",
+  "updateNewPost": "Обновить объявление"
 }

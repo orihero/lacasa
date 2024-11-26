@@ -239,5 +239,21 @@
         "title": "All Pro plan features"
       }
     ]
-  }
+  },
+  "orientation": "Orientation",
+  "nonresidential": "Nonresidential",
+  "sale": "Sale",
+  "rent": "Rent",
+  "normal": "Normal",
+  "good": "Good",
+  "excellent": "Excellent",
+  "room_count": "Number of rooms",
+  "withoutFurniture": "Without Furniture",
+  "hashtags": "Hashtags",
+  "active": "Active",
+  "sold": "Sold",
+  "draft": "Draft",
+  "publish": "Publish",
+  "select_channels": "Select the channels you want to publish to!",
+  "updateNewPost": "Update New Post"
 }

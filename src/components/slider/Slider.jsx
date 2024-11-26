@@ -1,11 +1,11 @@
 import { useState } from "react";
 import "./slider.scss";
 
-function Slider({ images }) {
+function Slider({ images, tour3dLink }) {
   const [imageIndex, setImageIndex] = useState(null);
 
   const changeSlide = (direction) => {
-    if (direction === "left") {
+    if (direction === "left" && !tour3dLink?.length) {
       if (imageIndex === 0) {
         setImageIndex(images.length - 1);
       } else {
@@ -39,7 +39,21 @@ function Slider({ images }) {
         </div>
       )}
       <div className="bigImage">
-        <img src={images[0]} alt="" onClick={() => setImageIndex(0)} />
+        {tour3dLink?.length ? (
+          <iframe
+            width="100%"
+            height="100%"
+            src={tour3dLink}
+            title="3D Tour"
+            frameBorder="0"
+            allow="xr-spatial-tracking; gyroscope; accelerometer"
+            allowFullScreen
+            scrolling="no"
+            style={{ borderRadius: "10px" }}
+          ></iframe>
+        ) : (
+          <img src={images[0]} alt="" onClick={() => setImageIndex(0)} />
+        )}
       </div>
       <div className="smallImages">
         {images.slice(1).map((image, index) => (

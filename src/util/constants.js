@@ -149,7 +149,6 @@ export const pricing = [
       "pricingItem3.completeds.2.title",
       "pricingItem3.completeds.3.title",
       "pricingItem3.completeds.4.title",
-      "pricingItem3.completeds.5.title",
     ],
   },
 ];

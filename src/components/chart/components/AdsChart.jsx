@@ -12,15 +12,15 @@ import {
   getTimeIntervals,
 } from "../../../hooks/formatDate";
 
-const AdsChart = () => {
-  //   console.log(generateRandomData(getTimeIntervals()));
+const AdsChart = ({ selectedTime }) => {
   return (
     <div className="chart-ads-content">
       <ResponsiveContainer width="100%" height={"100%"}>
         <AreaChart
           width={"100%"}
           height={"100%"}
-          data={generateRandomData(getTimeIntervals())}
+          data={generateRandomData(getTimeIntervals(selectedTime))}
+          // data={[]}
           syncId="anyId"
           margin={{
             top: 10,

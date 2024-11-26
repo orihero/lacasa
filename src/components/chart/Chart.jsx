@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./chart.scss";
 import { useTranslation } from "react-i18next";
 import HeaderCard from "./components/HeaderCard";
@@ -15,6 +15,7 @@ const Chart = () => {
   const { fetchCoworkerList, list } = useCoworkerStore();
   const { currentUser } = useUserStore();
   const { fetchAdsByStage } = useListStore();
+  const [selectedTime, setSelectedTime] = useState("thisMonth");
   const {
     getAdsStatistics,
     adsNewCount,
@@ -63,7 +64,10 @@ const Chart = () => {
         <div>
           <select
             className="chart-select-time"
-            onChange={(e) => getAdsStatistics(currentUser?.id, e.target.value)}
+            onChange={(e) => {
+              getAdsStatistics(currentUser?.id, e.target.value);
+              setSelectedTime(e.target.value);
+            }}
           >
             <option value="all">All</option>
             <option value="thisMonth">This month</option>
@@ -78,7 +82,7 @@ const Chart = () => {
           <HeaderCard
             data={{ newCount: adsNewCount, soldCount: adsSoldCount }}
           />
-          <AdsChart />
+          <AdsChart selectedTime={selectedTime} />
         </div>
       </div>
       <div className="mt-3">
