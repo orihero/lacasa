@@ -31,7 +31,7 @@ function Navbar() {
       );
     }
 
-    if (!!currentUser) {
+    if (currentUser) {
       return (
         <div className="user">
           <img

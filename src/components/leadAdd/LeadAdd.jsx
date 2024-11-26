@@ -159,7 +159,11 @@ const LeadAdd = () => {
                   <select name="coworkerId" {...register("coworkerId")}>
                     <option value={"0"}></option>;
                     {list?.map((item) => {
-                      return <option value={item?.id}>{item?.fullName}</option>;
+                      return (
+                        <option key={item?.id} value={item?.id}>
+                          {item?.fullName}
+                        </option>
+                      );
                     })}
                   </select>
                 </div>

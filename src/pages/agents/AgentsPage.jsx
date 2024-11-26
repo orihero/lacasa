@@ -29,7 +29,7 @@ const AgentsPage = () => {
   return (
     <div className="list-agent">
       {list?.map((agent) => {
-        return <AgentCard agent={agent} />;
+        return <AgentCard key={agent?.id} agent={agent} />;
       })}
     </div>
   );

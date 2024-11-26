@@ -99,7 +99,7 @@ function ProfilePage() {
               <div className="profile-user-agent">
                 <button className="profile-user-agent-btn">
                   <a target="_blank" href="https://forms.gle/1Kr71PzWjqqCQcVTA">
-                    Agent sifatida ro'yxatdan o'tish
+                    {t("registerAsAgent")}
                   </a>{" "}
                   <ExternalLink />
                 </button>
