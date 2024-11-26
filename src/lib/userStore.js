@@ -13,15 +13,44 @@ export const useUserStore = create((set) => ({
       if (!uid) return set({ currentUser: null, isLoading: false });
       const docRef = doc(db, "users", uid);
       const docSnap = await getDoc(docRef);
+
       if (docSnap.exists()) {
-        //* INIT SERVICES
-        const igAccounts = await IGService.init(docSnap.data().igTokens);
-        const tgAccounts = await TGService.init(docSnap.data().tgChatIds);
+        const userData = docSnap.data();
+        let igAccounts = [];
+        let tgAccounts = [];
+        let agentInfo = null;
+
+        if (userData.role === "coworker" && userData.agentId) {
+          // Agent ma'lumotlarini olish
+          const agentRef = doc(db, "users", userData.agentId);
+          const agentSnap = await getDoc(agentRef);
+          if (agentSnap.exists()) {
+            const agentData = agentSnap.data();
+            igAccounts = await IGService.init(agentData.igTokens);
+            tgAccounts = await TGService.init(agentData.tgChatIds);
+            agentInfo = {
+              id: userData.agentId,
+              ...agentData,
+            };
+          }
+        } else {
+          // Foydalanuvchi o'z tokenlari bilan ish yuritadi
+          igAccounts = await IGService.init(userData.igTokens);
+          tgAccounts = await TGService.init(userData.tgChatIds);
+        }
+
         console.log("====================================");
-        console.log({ igAccounts });
+        console.log({ igAccounts, tgAccounts });
         console.log("====================================");
+
         set({
-          currentUser: { ...docSnap.data(), tgAccounts, igAccounts },
+          currentUser: {
+            ...userData,
+            igAccounts,
+            tgAccounts,
+            tgChatIds: agentInfo?.tgChatIds,
+            igTokens: agentInfo?.igTokens,
+          },
           isLoading: false,
         });
       } else {
@@ -29,9 +58,10 @@ export const useUserStore = create((set) => ({
       }
     } catch (error) {
       console.error(error);
-      return set({ currentUser: null, isLoading: false });
+      set({ currentUser: null, isLoading: false });
     }
   },
+
   logout: async () => {
     set({ currentUser: null, isLoading: false });
   },

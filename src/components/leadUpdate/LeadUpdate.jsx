@@ -1,4 +1,11 @@
-import { deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -65,6 +72,17 @@ const LeadUpdate = ({ leadId, onClose }) => {
 
       const leadRef = doc(db, "leads", leadId);
       await updateDoc(leadRef, updatedLead);
+      if (leadId) {
+        await addDoc(collection(db, "statistics"), {
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+          stage: 5,
+          leadId: leadId,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+      }
 
       toast.success("Lead successfully updated!");
       reset();

@@ -1,6 +1,6 @@
 {
   "home": "Bosh sahifa",
-  "about": "Haqida",
+  "about": "Biz haqimizda",
   "agents": "Agentlar",
   "profile": "Profile",
   "userInformation": "Foydalanuvchi ma'lumoti",
@@ -52,7 +52,6 @@
   "repair": "Ta'mir",
   "requiresRepair": "Ta'mir talab etiladi",
   "category": "Kategoriya",
-  "rental": "Ijaraga",
   "storey": "Qavat",
   "floors": "Qavatlar",
   "furniture": "Mebel",
@@ -105,5 +104,157 @@
   "emailRequired": "Email kiritilishi shart",
   "createInstagramPost": "Instagram post yaratish",
   "createTelegramPost": "Telegram post yaratish",
-  "createYoutubePost": "Youtube post yaratish"
+  "createYoutubePost": "Youtube post yaratish",
+  "headline": {
+    "title": "Kam harakat,",
+    "titleSpan": "Ko’proq sotuvlar",
+    "subtitle": "Ko’chmas mulk agentlari doimo elonlarni boshqarish, mijozlarni tartiblash va sotuvlarni ko’paytirish kabi  muammolarga duch kelishadi. Biz ushbu muammolaringizni yechishga yordam beramiz. Muammolaringizni bizga qo’yib bering siz esa faqat biznesingizni rivojlantirishga e’tibor qarating",
+    "btn": "Sinab ko’rish",
+    "watchDemo": "Videoni ko’rish"
+  },
+  "aboutItem1": {
+    "title": "Ko'chmas mulk e'lonlarini boshqarish juda qiyin bo'lib, chalkashlik va yangilanishlarni o'tkazib yuborishga olib kelishi mumkin",
+    "subtitle": "Barcha e'lonlaringiz tartibli saqlanadigan joyni tasavvur qiling. Lacasa yordamida e'lonlaringizni osongina yangilang, tahrirlash va boshqarishni istalgan joyda amalga oshirishingiz mumkin. Shunday qilib, e'lonlaringizni yo'qotishdan xalos bo'lasiz va vaqtni samarali tejaysiz."
+  },
+  "aboutItem2": {
+    "title": "E'lonlarni turli ijtimoiy tarmoqlarda qo'lda almashish ko'p vaqt va kuch talab qiladi, natijada brend imijida nomutanosiblik yuzaga kelad",
+    "subtitle": "Kuch sarflamasdan mijozlarga erishing! Lacasa sizga Instagram, Facebook va LinkedIn kabi platformalarda e'lonlarni bir necha soniya ichida ulash imkonini beradi. Postlarni rejalashtirish, brend imijingizni saqlash va auditoriyangiz bilan samarali aloqada bo'lish endi juda oson."
+  },
+  "aboutItem3": {
+    "title": "Mijozlar murojaatlarini qo'lda tahlil qilish ko'p vaqtni sarflaydi va muhim mijozlar bilan ishlash imkoniyatini boy berishingiz mumkin",
+    "subtitle": "Muhim narsalarga e'tibor qarating — bitimlarni tuzing. Lacasa yordamida yuqori ehtimolga ega xaridorlarni osongina aniqlang va ularga e'tiboringizni qarating."
+  },
+  "aboutItem4": {
+    "title": "An'anaviy rasmlar va videolar ko'pincha mijozlarni to'liq qamrab olmadi, bu esa imkoniyatlarning yo'qolishiga va pasaygan ishtirokga olib keladi.",
+    "subtitle": "Tadqiqotlarga ko'ra, 3D turga ega bo'lgan ko'chmas mulklar 44% ko'proq so'rovlar olishadi. Bu texnologiya mijozlarga mulkni ular uydan chiqmasdan turib ko'rish imkonini beradi. 3D tur yordamida ko'chmas mulkni yanada batafsil va interaktiv tarzda namoyish qilish mumkin, bu esa ishtirokni va konversiyani oshiradi."
+  },
+  "aboutItem5": {
+    "title": "Ko'chmas mulk agentlarini boshqarish juda murakkab bo'lishi mumkin, ayniqsa bir nechta odam bilan vazifalar va muddatlarni muvofiqlashtirishda.",
+    "subtitle": "Lacasa yordamida har bir agentning vazifalarini belgilash va jamoa samaradorligini kuzatish juda oson. Kiritilgan bildirishnomalar va vizual jadval yordamida har bir vazifaning holatini doimo bilib turishingiz mumkin. Bu vosita kichik yoki katta jamoa bilan ishlashda samaradorlikni oshiradi."
+  },
+  "aboutItem6": {
+    "title": "Biznesning samaradorligini qo'lda tayyorlangan hisobotlar va tarqatilgan ma'lumotlar orqali kuzatish juda murakkab va noto'g'ri talqinlarga olib kelishi mumkin.",
+    "subtitle": "Samaradorlikni kuzatish endi juda oson. Lacasa tahliliy vositalari yordamida mulkingizning qanday ishlayotganini real vaqtda ko'rishingiz mumkin. Yangi mijozlar, sotilgan mulklar va boshqa ko'rsatkichlar hammasi aniq diagrammalar orqali taqdim etiladi, bu esa sizga tendentsiyalarni aniqlashda yordam beradi."
+  },
+  "aboutBtn": "30 daqiqa bepul konsultatsiya rezervatsiyasi",
+  "featuresTitle": "Xususiyatlar &",
+  "featuresServices": "Xizmatlar",
+  "featuresSubtitle": "Biz nimani taklif qilamiz",
+  "featuresItem1": {
+    "title": "E'lonlarni tartibli saqlash",
+    "subtitle": "Barcha e'lonlaringizni bir joyda saqlang, yaxshi tashkil etilgan va osongina kirish mumkin bo‘lgan tizim bilan. Hech qachon e'lonlaringizni yo‘qotish haqida xavotir olmang – hammasi tartibga solingan va izlanishi mumkin, va bu sizning vaqtingizni tejaydi."
+  },
+  "featuresItem2": {
+    "title": "Ijtimoiy tarmoqlar integratsiyasi",
+    "subtitle": "Barcha ijtimoiy tarmoqlarga e'lonlaringizni osongina ulashing. Bir marta bosish orqali Facebook, Instagram, LinkedIn va boshqalarga joylashtiring. Bu sizning mulkingizni maksimal darajada ko‘rsatadi va qo‘shimcha ishni talab qilmaydi."
+  },
+  "featuresItem3": {
+    "title": "Lidlarga tartib berish",
+    "subtitle": "Potensial mijozlarni qiziqish, byudjet va joylashuv kabi turli mezonlarga qarab saralang. Mijozlarga eng birinchi navbatda murojaat qilishni osonlashtirish uchun ularni kuzatib boring va boshqaring."
+  },
+  "featuresItem4": {
+    "title": "3D mulk sayohatlari",
+    "subtitle": "Mijozlaringizga mulkingizning 3D turini taqdim eting. T adqiqotlar shuni ko‘rsatadiki, 3D turli e'lonlar odatdagilarga qaraganda 44% tezroq sotiladi. Xaridorlarga mulk bilan yanada bog‘lanishni ta'minlash, ular ichkariga kirishdan oldin."
+  },
+  "featuresItem5": {
+    "title": "Jamoani boshqarish",
+    "subtitle": "Jamoangizni ro‘yxatga olish va har birini nazorat qilish orqali boshqaring. Bir nechta yoki ko‘plab agentlarni boshqarayotganingizdan qat'iy nazar, bizning platformamiz sizni tartibli va samarali saqlaydi."
+  },
+  "featuresItem6": {
+    "title": "Ish faoliyatini tahlil qilish",
+    "subtitle": "Oson o'qilishi mumkin bo‘lgan diagrammalar va ma'lumotlarni tahlil qilish orqali natijalaringizni kuzatib boring. Sotuvlar, ishtirok va boshqa muhim ko‘rsatkichlarni monitoring qilib, strategiyalaringizni optimallashtiring va muvaffaqiyatni oshiring."
+  },
+  "learnMore": "Ko'proq o'rganish",
+  "pricingTitle": "Bizning narxlar planlari",
+  "pricingSubtitle": "Bizning arzon narxlar plani lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime",
+  "pricingBtn": "Boshlash",
+  "pricingItem1": {
+    "title": "Standard",
+    "price": "129,000 so'm",
+    "info": "Asosiy funksiyalar bilan boshlang.",
+    "completeds": [
+      {
+        "title": "5 tagacha e’lon joylash"
+      },
+      {
+        "title": "1 bepul 3D turdan foydalanish"
+      },
+      {
+        "title": "Vazifalarni boshqarish va eslatmalar"
+      },
+      {
+        "title": "Ijtimoiy tarmoqlar bilan integratsiya"
+      },
+      {
+        "title": "Asosiy tahliliy panel"
+      },
+      {
+        "title": "E’lonlaringiz uchun xavfsiz saqlash joyi"
+      }
+    ]
+  },
+  "pricingItem2": {
+    "title": "Pro",
+    "price": "349,000 so'm",
+    "info": "O‘sish uchun rivojlangan vositalarni oching.",
+    "completeds": [
+      {
+        "title": "50 tagacha e’lon joylash"
+      },
+      {
+        "title": "5 bepul 3D turdan foydalanish"
+      },
+      {
+        "title": "Shaxsiy onboarding va birga maslahat"
+      },
+      {
+        "title": "Kengaytirilgan tahlil va batafsil hisobotlar"
+      },
+      {
+        "title": "Ustuvor mijozlarni qo‘llab-quvvatlash"
+      },
+      {
+        "title": "Standart rejadagi barcha funksiyalar"
+      }
+    ]
+  },
+  "pricingItem3": {
+    "title": "Custom",
+    "price": "Moslashtirilgan narx",
+    "info": "Hammasi va undan ham ko‘p, ehtiyojlaringizga moslashtirilgan.",
+    "completeds": [
+      {
+        "title": "Cheksiz e’lonlar va 3D turlar"
+      },
+      {
+        "title": "Dasturiy ta’minotning o‘zingizga moslashtirilgan versiyasi (White-labeling)"
+      },
+      {
+        "title": "O‘z vositalaringiz bilan integratsiya uchun API mavjudligi"
+      },
+      {
+        "title": "Shaxsiy menejer"
+      },
+      {
+        "title": "Pro rejadagi barcha funksiyalar"
+      }
+    ]
+  },
+  "orientation": "Yo'nalish",
+  "nonresidential": "Noturar joy",
+  "sale": "Sotish",
+  "rent": "Ijaraga berish",
+  "rental": "Ijaraga olish",
+  "normal": "Oddiy",
+  "good": "Yaxshi",
+  "excellent": "A'lo",
+  "room_count": "Xonalar soni",
+  "withoutFurniture": "Mebelsiz",
+  "hashtags": "Hashtaglar",
+  "active": "Faol",
+  "sold": "Sotilgan",
+  "draft": "Qoralama",
+  "publish": "Nashr qilish",
+  "select_channels": "Nashir qilmoqchi bo'lgan kannallaringizni tanlang!",
+  "updateNewPost": "E'lonni yangilash"
 }

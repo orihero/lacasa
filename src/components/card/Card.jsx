@@ -41,7 +41,7 @@ function Card({ item }) {
             <div className="feature">
               <FloorIcon color={"#888"} />
               <span>
-                {item.storey}/{item.storeys}
+                {item.storey}/{item.floors}
               </span>
             </div>
           </div>

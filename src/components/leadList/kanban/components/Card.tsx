@@ -29,6 +29,7 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
       sx={{
         width: "300px",
         margin: "5px",
+
         // boxShadow: "none",
         // border: "1px solid #ddd",
         cursor: "pointer",
@@ -37,26 +38,16 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
     >
       <CardContent component={(p) => <Grid {...p} container spacing={1} />}>
         <Grid>
-          <Typography
-            sx={{ fontWeight: "bold" }}
-          >
-            {card.title}
-          </Typography>
+          <Typography sx={{ fontWeight: "bold" }}>{card.title}</Typography>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <Typography
-            sx={{ fontWeight: "bold" }}
-          >
+          <Typography sx={{ fontWeight: "bold" }}>
             {card.storyPoints}
             {card.ticketType}
           </Typography>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          <Typography
-            sx={{ fontWeight: "500" }}
-          >
-            {card.comment}
-          </Typography>
+          <Typography sx={{ fontWeight: "500" }}>{card.comment}</Typography>
         </Grid>
         {card.status == "need_to_call_back" && card?.callbackDate && (
           <Typography
@@ -112,7 +103,7 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
   );
 };
 
-export const ColoredBgText = styled("span", { shouldForwardProp }) <{
+export const ColoredBgText = styled("span", { shouldForwardProp })<{
   bgColor: string;
 }>`
   background-color: ${({ bgColor }) => bgColor};

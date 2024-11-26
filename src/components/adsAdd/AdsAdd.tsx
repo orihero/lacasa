@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./adsAdd.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -98,71 +98,50 @@ const AdsAdd = () => {
     fetchNearbyPlace();
   }, []);
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    const data = Object.fromEntries(form);
+  const onSubmit = () => {
+    // const form = new FormData(e.target);
+    // const data = Object.fromEntries(form);
+    const allValues = getValues();
     let photos = [];
-    let caption = "";
 
-    // !Upload to IG
-    const uploadIg = async () => {
-      const res = await IGService.customCreateCarousel(photos, caption);
-    };
     const upload = async () => {
       try {
         photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-        await addDoc(collection(db, "ads"), {
-          ...data,
-          agentId: currentUser.id,
+        const res = await addDoc(collection(db, "ads"), {
+          ...allValues,
           nearPlacesList: nearPlacesList,
-          active: true,
           optionList: optionList,
           photos,
           createdAt: serverTimestamp(),
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
         });
-      } catch (error) {
-        console.error(error);
-      }
-      caption = Object.values(data).reduce((p, c) => p + c + "\n", "");
-      try {
-        await uploadIg();
-      } catch (error) {
-        console.error(error);
-      }
-      // !Upload to telegram
-      try {
-        const form = new FormData();
-        form.append("chat_id", import.meta.env.VITE_LECASA_CHANNEL_ID);
-        form.append("protect_content", "true");
-        form.append(
-          "media",
-          JSON.stringify(
-            photos.map((e, i) =>
-              i == photos.length - 1
-                ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
-        );
-        const res = await axios.post(
-          `https://api.telegram.org/bot${
-            import.meta.env.VITE_TG_BOT_TOKEN
-          }/sendMediaGroup`,
-          form,
-        );
-        console.error(res.data);
+
+        if (res?.id) {
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: res.id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: 1,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          });
+        }
       } catch (error) {
         console.error(error);
       }
     };
-    toast.promise(Promise.all(upload()), {
+    toast.promise(upload, {
       error: "Something went wrong",
       pending: "Creating",
       success: "Successfully created",
     });
-    navigate("/profile");
+    // navigate("/profile");
   };
 
   const updateFiles = (incommingFiles) => {
@@ -265,11 +244,14 @@ const AdsAdd = () => {
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-    const caption = Object.entries(allValues).reduce((result, [key, value]) =>
-      result + key != "hashtags"
-        ? `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`
-        : "",
-    );
+    const caption = Object.entries(allValues).reduce((result, [key, value]) => {
+      if (key === "hashtags") {
+        return `${value}\n` + result;
+      }
+      return (
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""}\n`
+      );
+    }, "");
 
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
@@ -298,6 +280,21 @@ const AdsAdd = () => {
             }/sendMediaGroup`,
             formData,
           );
+
+          if (res.data?.result?.length) {
+            await addDoc(collection(db, "statistics"), {
+              agentId:
+                currentUser.role == "agent"
+                  ? currentUser.id
+                  : currentUser.agentId,
+              postId: "",
+              coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+              stage: 1,
+              updatedAt: serverTimestamp(),
+              createdAt: serverTimestamp(),
+              type: 2,
+            });
+          }
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -310,6 +307,33 @@ const AdsAdd = () => {
       (response) => response !== null,
     );
     setResTg([...resTG, ...successfulResponses]);
+  };
+  const onSubmitIG = async () => {
+    const allValues = getValues();
+    let photos = [];
+
+    if (extFiles.length > 0) {
+      photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
+    }
+
+    const caption = Object.entries(allValues).reduce(
+      (result, [key, value]) =>
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
+      "",
+    );
+
+    try {
+      console.log(photos);
+      await Promise.all(
+        publishSelectSocial.map((socialItem, index) => {
+          let access_token = currentUser?.igTokens[index] ?? "";
+          IGService.publishMedia(photos, caption, socialItem, access_token);
+        }),
+      );
+      console.log("All posts published successfully!");
+    } catch (error) {
+      console.error("Error publishing posts:", error);
+    }
   };
 
   const handleAccordionChange =
@@ -336,7 +360,12 @@ const AdsAdd = () => {
     });
   };
 
-  console.log(photoOrVideo);
+  const handleChangeOption = (id, type, value) => {
+    let clone = [...optionList];
+    let index = clone.findIndex((item) => item.id == id);
+    clone[index] = { ...clone[index], [type]: value };
+    setOptionList([...clone]);
+  };
 
   const style = {
     position: "absolute",
@@ -352,9 +381,9 @@ const AdsAdd = () => {
   return (
     <div className="new-post-container">
       <div className="new-post-header">
-        <h2>Add New Post</h2>
+        <h2>{t("addNewPost")}</h2>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <form>
         <div className="content">
           <div className="left">
             <div className="field">
@@ -436,7 +465,7 @@ const AdsAdd = () => {
               {errors.address && <span>{errors.address.message}</span>}
             </div>
             <div className="field">
-              <label>Ориентир</label>
+              <label>{t("orientation")}</label>
               <input
                 {...register("reference", {
                   required: "Reference is required",
@@ -456,9 +485,9 @@ const AdsAdd = () => {
                   name="type"
                 >
                   <option value="residential" defaultChecked>
-                    Жилое
+                    {t("residential")}
                   </option>
-                  <option value="nonresidential">Не Жилое</option>
+                  <option value="nonresidential">{t("nonresidential")}</option>
                 </select>
                 {errors.type && <span>{errors.type.message}</span>}
               </div>
@@ -470,8 +499,8 @@ const AdsAdd = () => {
                   })}
                   name="category"
                 >
-                  <option value="rent">{t("rental")}</option>
-                  <option value="sale">Продажа</option>
+                  <option value="rent">{t("rent")}</option>
+                  <option value="sale">{t("sale")}</option>
                 </select>
                 {errors.category && <span>{errors.category.message}</span>}
               </div>
@@ -488,16 +517,16 @@ const AdsAdd = () => {
                   <option value="notRepaired" defaultChecked>
                     {t("requiresRepair")}
                   </option>
-                  <option value="normal">Нормальный</option>
-                  <option value="good">Хороший</option>
-                  <option value="excellent">Отличный</option>
+                  <option value="normal">{t("normal")}</option>
+                  <option value="good">{t("good")}</option>
+                  <option value="excellent">{t("excellent")}</option>
                 </select>
                 {errors.repairment && <span>{errors.repairment.message}</span>}
               </div>
             </div>
             <div className="field city">
               <div>
-                <label>Кол.комнат</label>
+                <label>{t("room_count")}</label>
                 <input
                   {...register("rooms", {
                     required: "Rooms is required",
@@ -558,16 +587,18 @@ const AdsAdd = () => {
                   name="furniture"
                 >
                   <option value="withFurniture">{t("withFurniture")}</option>
-                  <option value="withoutFurniture">Без мебели</option>
+                  <option value="withoutFurniture">
+                    {t("withoutFurniture")}
+                  </option>
                 </select>
                 {errors.furniture && <span>{errors.furniture.message}</span>}
               </div>
             </div>
             <div className="field">
-              <label>Hashtags</label>
+              <label>{t("hashtags")}</label>
               <input
                 {...register("hashtags", {})}
-                placeholder="Hashtags: #yangi #2024"
+                placeholder={`${t("hashtags")}: #new #2024`}
                 className={errors.hashtags ? "error" : ""}
               />
               {errors.hashtags && <span>{errors.hashtags.message}</span>}
@@ -600,6 +631,22 @@ const AdsAdd = () => {
                   </option>
                   <option value="usd">y.e</option>
                 </select>
+              </div>
+            </div>
+            <div className="field status">
+              <div>
+                <label htmlFor="stage">{t("status")}</label>
+                <select
+                  {...register("stage", {
+                    required: "Status is required",
+                  })}
+                  name="stage"
+                >
+                  <option value="1">{t("active")}</option>
+                  <option value="2">{t("sold")}</option>
+                  <option value="3">{t("draft")}</option>
+                </select>
+                {errors.stage && <span>{errors.stage.message}</span>}
               </div>
             </div>
           </div>
@@ -891,39 +938,6 @@ const AdsAdd = () => {
                         );
                       }
                     })}
-                    {/* {photoOrVideo.includes("photo") &&
-                      extFiles.map((e, index) => (
-                        <div key={`photo-${index}`} style={{ height: "400px" }}>
-                          <img
-                            className="insta-post-img"
-                            src={URL.createObjectURL(e.file)}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                            alt={`photo-${index}`}
-                          />
-                        </div>
-                      ))} */}
-
-                    {/* {photoOrVideo.includes("video") &&
-                      extFilesVideo.map((e, index) => (
-                        <div key={`video-${index}`} style={{ height: "400px" }}>
-                          <video
-                            className="insta-post-video"
-                            src={URL.createObjectURL(e.file)}
-                            style={{
-                              width: "100%",
-                              height: "100%",
-                              objectFit: "cover",
-                            }}
-                            muted
-                            autoPlay
-                            loop
-                          />
-                        </div>
-                      ))} */}
                   </Carousel>
                   <div className="post-footer">
                     <div className="post-icons">
@@ -962,153 +976,149 @@ const AdsAdd = () => {
                   }
                 />
                 <Button variant="contained" onClick={() => setOpenModal("ig")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
           </Accordion>
         )}
-        {!!currentUser.tgChatIds &&
-          !!currentUser.tgAccounts &&
-          currentUser.tgChatIds?.length >= 1 && (
-            <Accordion
-              expanded={accordionExpanded === "tg"}
-              onChange={handleAccordionChange("tg")}
-              sx={{ margin: "6px" }}
+        {!!currentUser?.tgAccounts && currentUser.tgAccounts?.length >= 0 && (
+          <Accordion
+            expanded={accordionExpanded === "tg"}
+            onChange={handleAccordionChange("tg")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
             >
-              <AccordionSummary
-                expandIcon={<ExpandIcon />}
-                aria-controls="igbh-content"
-                id="igbh-header"
-              >
-                <Avatar
-                  sx={{ width: 30, height: 30 }}
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
-                />
-                <Typography variant="h5" sx={{ ml: 1 }}>
-                  Telegram
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <div className="tg-content-preview">
-                  <div className="tg-content-flex">
-                    <div className="tg-channel-logo">
-                      <img src={currentUser?.tgAccounts[0].file_path} alt="" />
-                    </div>
-                    <div className="tg-post-content">
-                      <div className="tg-post-header">
-                        <h5>{currentUser?.tgAccounts[0].title}</h5>
-                      </div>
-                      <div className="tg-post-img-div">
-                        <ImageGrid images={extFiles} />
-                      </div>
-                      <div className="tg-text-content">
-                        <div className="tg-text-comment">
-                          {!!hashtagsValue.length && (
-                            <span className="hashtags-text">
-                              {hashtagsValue}
-                            </span>
-                          )}
-                          <h4>{titleValue}</h4>
-                          <p>{descriptionValue}</p>
-                          {!!priceValue.length && (
-                            <p>
-                              {t("price")}
-                              {":"}
-                              {priceValue}$
-                            </p>
-                          )}
-                          {!!cityValue.length && (
-                            <p>
-                              {t("city")}
-                              {": "} {cityValue}, {districtValue}
-                            </p>
-                          )}
-                          {!!roomValue && (
-                            <p>
-                              {t("rooms")}
-                              {": "} {roomValue}
-                            </p>
-                          )}
-                          {!!storeyValue && (
-                            <p>
-                              {t("storey")}
-                              {": "} {storeyValue}
-                            </p>
-                          )}
-                          {!!floorsValue && (
-                            <p>
-                              {t("floors")}
-                              {": "} {floorsValue}
-                            </p>
-                          )}
-                          {!!areaValue && (
-                            <p>
-                              {t("area")}
-                              {": "} {areaValue} m <sup>2</sup>
-                            </p>
-                          )}
-                          {!!repairmentValue && (
-                            <p>
-                              {t("repairment")}
-                              {": "} {repairmentValue}
-                            </p>
-                          )}
-                          {!!furnitureValue && (
-                            <p>
-                              {t("furniture")}
-                              {": "} {furnitureValue}
-                            </p>
-                          )}
-                          {!!addressValue && (
-                            <p>
-                              {t("address")}
-                              {": "} {addressValue}
-                            </p>
-                          )}
-                          {!!typeValue && (
-                            <p>
-                              {t("type")}
-                              {": "} {typeValue}
-                            </p>
-                          )}
-                        </div>
-                        <div className="tg-footer-text">
-                          <a
-                            href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                          >
-                            t.me/{currentUser?.tgAccounts[0].username}
-                          </a>
-                          <div className="tg-createAt">
-                            <span>12.7 K</span>
-                            <span>
-                              <VisibilityIcon fontSize="18px" />
-                            </span>
-                            <span>
-                              {new Date().toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Telegram
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <div className="tg-content-flex">
+                  <div className="tg-channel-logo">
+                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
                   </div>
-
-                  <div className="tg-btn-publish">
-                    <Button
-                      variant="contained"
-                      onClick={() => setOpenModal("tg")}
-                    >
-                      Опубликовать
-                    </Button>
+                  <div className="tg-post-content">
+                    <div className="tg-post-header">
+                      <h5>{currentUser?.tgAccounts[0].title}</h5>
+                    </div>
+                    <div className="tg-post-img-div">
+                      <ImageGrid images={extFiles} />
+                    </div>
+                    <div className="tg-text-content">
+                      <div className="tg-text-comment">
+                        {!!hashtagsValue.length && (
+                          <span className="hashtags-text">{hashtagsValue}</span>
+                        )}
+                        <h4>{titleValue}</h4>
+                        <p>{descriptionValue}</p>
+                        {!!priceValue.length && (
+                          <p>
+                            {t("price")}
+                            {":"}
+                            {priceValue}$
+                          </p>
+                        )}
+                        {!!cityValue.length && (
+                          <p>
+                            {t("city")}
+                            {": "} {cityValue}, {districtValue}
+                          </p>
+                        )}
+                        {!!roomValue && (
+                          <p>
+                            {t("rooms")}
+                            {": "} {roomValue}
+                          </p>
+                        )}
+                        {!!storeyValue && (
+                          <p>
+                            {t("storey")}
+                            {": "} {storeyValue}
+                          </p>
+                        )}
+                        {!!floorsValue && (
+                          <p>
+                            {t("floors")}
+                            {": "} {floorsValue}
+                          </p>
+                        )}
+                        {!!areaValue && (
+                          <p>
+                            {t("area")}
+                            {": "} {areaValue} m <sup>2</sup>
+                          </p>
+                        )}
+                        {!!repairmentValue && (
+                          <p>
+                            {t("repairment")}
+                            {": "} {repairmentValue}
+                          </p>
+                        )}
+                        {!!furnitureValue && (
+                          <p>
+                            {t("furniture")}
+                            {": "} {furnitureValue}
+                          </p>
+                        )}
+                        {!!addressValue && (
+                          <p>
+                            {t("address")}
+                            {": "} {addressValue}
+                          </p>
+                        )}
+                        {!!typeValue && (
+                          <p>
+                            {t("type")}
+                            {": "} {typeValue}
+                          </p>
+                        )}
+                      </div>
+                      <div className="tg-footer-text">
+                        <a
+                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
+                        >
+                          t.me/{currentUser?.tgAccounts[0].username}
+                        </a>
+                        <div className="tg-createAt">
+                          <span>12.7 K</span>
+                          <span>
+                            <VisibilityIcon fontSize="18px" />
+                          </span>
+                          <span>
+                            {new Date().toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </AccordionDetails>
-            </Accordion>
-          )}
+
+                <div className="tg-btn-publish">
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenModal("tg")}
+                  >
+                    {t("publish")}
+                  </Button>
+                </div>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         {true && (
           <Accordion
             expanded={accordionExpanded === "yt"}
@@ -1151,7 +1161,7 @@ const AdsAdd = () => {
                     variant="contained"
                     onClick={() => setOpenModal("yt")}
                   >
-                    Опубликовать
+                    {t("publish")}
                   </Button>
                 </div>
               </div>
@@ -1181,7 +1191,7 @@ const AdsAdd = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1217,7 +1227,9 @@ const AdsAdd = () => {
           </Accordion>
         )}
         <div className="footer-new-post">
-          <button type="submit">{t("create")}</button>
+          <button type="button" onClick={onSubmit}>
+            {t("create")}
+          </button>
         </div>
       </form>
 
@@ -1234,7 +1246,7 @@ const AdsAdd = () => {
       >
         <Box sx={style}>
           <div className="tg-channel-list">
-            <h3>Nashir qilmoqchi bo'lgan kannallaringizni tanlang!</h3>
+            <h3>{t("select_channels")}</h3>
             {openModal == "ig" ? (
               <>
                 <div className="tg-flex">
@@ -1250,8 +1262,8 @@ const AdsAdd = () => {
             ) : (
               <>
                 <div className="tg-flex">
-                  {currentUser?.tgAccounts.length > 1 &&
-                    currentUser?.tgAccounts.map((item, index) => {
+                  {currentUser?.tgAccounts?.length > 1 &&
+                    currentUser?.tgAccounts?.map((item, index) => {
                       return (
                         <div
                           key={index.toString()}
@@ -1307,7 +1319,16 @@ const AdsAdd = () => {
               >
                 {t("cancel")}
               </Button>
-              <Button onClick={onSubmitTG} variant="contained">
+              <Button
+                onClick={() => {
+                  if (openModal == "ig") {
+                    onSubmitIG();
+                  } else if (openModal == "tg") {
+                    onSubmitTG();
+                  }
+                }}
+                variant="contained"
+              >
                 {t("publish")}
               </Button>
             </Box>

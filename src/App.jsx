@@ -25,6 +25,7 @@ import LeadKanbanList from "./components/leadList/LeadKanbanList.tsx";
 import Chart from "./components/chart/Chart.jsx";
 import "./index.css";
 import AdsEdit from "./components/adsEdit/AdsEdit.tsx";
+import AboutPageNew from "./routes/aboutPageNew/AboutPageNew.jsx";
 function App() {
   const router = createBrowserRouter([
     {
@@ -41,7 +42,7 @@ function App() {
         },
         {
           path: "/about",
-          element: <AboutPage />,
+          element: <AboutPageNew />,
         },
         {
           path: "/agent/:id",

@@ -13,7 +13,7 @@ export interface IIgAccount {
 export class IGService {
   private static axiosInstance: AxiosInstance;
   private static ACCESS_TOKENS: string[] = [];
-  public static initialized = false;
+  public static initialized = true;
   public static IgAccounts: IIgAccount[] = [];
 
   public static init = async (access_tokens: string[]) => {
@@ -22,7 +22,7 @@ export class IGService {
       baseURL: "https://graph.instagram.com",
     });
     const localAccounts: [] = JSON.parse(
-      localStorage.getItem("IgAccounts") || "[]"
+      localStorage.getItem("IgAccounts") || "[]",
     );
     if (!!localAccounts && localAccounts.length > 0) {
       this.IgAccounts = localAccounts;
@@ -46,7 +46,7 @@ export class IGService {
     urls: string[],
     caption: string,
     account: IIgAccount,
-    access_token: string
+    access_token: string,
   ) => {
     if (!this.initialized) {
       throw new Error("IgService has not been initialized");
@@ -72,7 +72,7 @@ export class IGService {
             children: res.map((e) => e.data.id).join(","),
             caption,
           },
-        }
+        },
       );
       const carouselRes = await this.axiosInstance.post(
         `/${account.user_id}/media_publish`,
@@ -82,10 +82,10 @@ export class IGService {
             access_token,
             creation_id: carouselContainerRes.data.id,
           },
-        }
+        },
       );
       console.log(
-        "✅✅✅✅✅✅✅✅✅✅✅✅✅✅\nSuccessfully created carousel\n✅✅✅✅✅✅✅✅✅✅✅✅✅✅"
+        "✅✅✅✅✅✅✅✅✅✅✅✅✅✅\nSuccessfully created carousel\n✅✅✅✅✅✅✅✅✅✅✅✅✅✅",
       );
     } catch (error) {
       throw new Error("Error in publishing carousel ", error);
@@ -111,12 +111,12 @@ export class IGService {
   };
   private static getUserInfo = async (
     page_id: string,
-    access_token: string
+    access_token: string,
   ): Promise<IIgAccount> => {
     try {
       const res = await this.axiosInstance.get(
         `/${page_id}?fields=user_id,name,username,followers_count,follows_count,media_count,profile_picture_url,biography`,
-        { params: { access_token } }
+        { params: { access_token } },
       );
       return res.data;
     } catch (error) {

@@ -44,7 +44,18 @@ const LeadAdd = () => {
         newLead["coworkerId"] = currentUser.id;
       }
 
-      await addDoc(collection(db, "leads"), newLead);
+      const res = await addDoc(collection(db, "leads"), newLead);
+      if (res?.id) {
+        await addDoc(collection(db, "statistics"), {
+          agentId:
+            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
+          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+          stage: 4,
+          leadId: res.id,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+      }
 
       toast.success("Lead successfully created!");
       reset();

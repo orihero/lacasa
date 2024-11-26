@@ -21,7 +21,13 @@ import {
   Typography,
 } from "@mui/material";
 import axios from "axios";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -140,6 +146,21 @@ const AdsEdit = () => {
               : photos,
           updatedAt: serverTimestamp(),
         });
+
+        if (id) {
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: data.stage == "2" ? 2 : 3,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            type: 1,
+          });
+        }
         navigate("/profile/" + currentUser.id + "/ads");
       } catch (error) {
         console.error(error);
@@ -252,6 +273,20 @@ const AdsEdit = () => {
             }/sendMediaGroup`,
             formData,
           );
+
+          await addDoc(collection(db, "statistics"), {
+            agentId:
+              currentUser.role == "agent"
+                ? currentUser.id
+                : currentUser.agentId,
+            postId: id,
+            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
+            stage: 2,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            type: 2,
+          });
+
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -341,7 +376,7 @@ const AdsEdit = () => {
   return (
     <div className="new-post-container">
       <div className="new-post-header">
-        <h2>Add New Post</h2>
+        <h2>{t("updateNewPost")}</h2>
       </div>
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="content">
@@ -425,7 +460,7 @@ const AdsEdit = () => {
               {errors.address && <span>{errors.address.message}</span>}
             </div>
             <div className="field">
-              <label>Ориентир</label>
+              <label>{t("orientation")}</label>
               <input
                 {...register("reference", {
                   required: "Reference is required",
@@ -445,9 +480,9 @@ const AdsEdit = () => {
                   name="type"
                 >
                   <option value="residential" defaultChecked>
-                    Жилое
+                    {t("residential")}
                   </option>
-                  <option value="nonresidential">Не Жилое</option>
+                  <option value="nonresidential">{t("nonresidential")}</option>
                 </select>
                 {errors.type && <span>{errors.type.message}</span>}
               </div>
@@ -459,8 +494,8 @@ const AdsEdit = () => {
                   })}
                   name="category"
                 >
-                  <option value="rent">{t("rental")}</option>
-                  <option value="sale">Продажа</option>
+                  <option value="rent">{t("rent")}</option>
+                  <option value="sale">{t("sale")}</option>
                 </select>
                 {errors.category && <span>{errors.category.message}</span>}
               </div>
@@ -477,16 +512,16 @@ const AdsEdit = () => {
                   <option value="notRepaired" defaultChecked>
                     {t("requiresRepair")}
                   </option>
-                  <option value="normal">Нормальный</option>
-                  <option value="good">Хороший</option>
-                  <option value="excellent">Отличный</option>
+                  <option value="normal">{t("normal")}</option>
+                  <option value="good">{t("good")}</option>
+                  <option value="excellent">{t("excellent")}</option>
                 </select>
                 {errors.repairment && <span>{errors.repairment.message}</span>}
               </div>
             </div>
             <div className="field city">
               <div>
-                <label>Кол.комнат</label>
+                <label>{t("room_count")}</label>
                 <input
                   {...register("rooms", {
                     required: "Rooms is required",
@@ -547,7 +582,9 @@ const AdsEdit = () => {
                   name="furniture"
                 >
                   <option value="withFurniture">{t("withFurniture")}</option>
-                  <option value="withoutFurniture">Без мебели</option>
+                  <option value="withoutFurniture">
+                    {t("withoutFurniture")}
+                  </option>
                 </select>
                 {errors.furniture && <span>{errors.furniture.message}</span>}
               </div>
@@ -580,6 +617,22 @@ const AdsEdit = () => {
                   </option>
                   <option value="usd">y.e</option>
                 </select>
+              </div>
+            </div>
+            <div className="field status">
+              <div>
+                <label htmlFor="stage">{t("status")}</label>
+                <select
+                  {...register("stage", {
+                    required: "Status is required",
+                  })}
+                  name="stage"
+                >
+                  <option value="1">{t("active")}</option>
+                  <option value="2">{t("sold")}</option>
+                  <option value="3">{t("draft")}</option>
+                </select>
+                {errors.stage && <span>{errors.stage.message}</span>}
               </div>
             </div>
           </div>
@@ -841,149 +894,145 @@ const AdsEdit = () => {
               </div>
               <div className="tg-btn-publish">
                 <Button variant="contained" onClick={() => setOpenModal("ig")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
           </Accordion>
         )}
-        {!!currentUser.tgChatIds &&
-          !!currentUser.tgAccounts &&
-          currentUser.tgChatIds?.length >= 1 && (
-            <Accordion
-              expanded={accordionExpanded === "tg"}
-              onChange={handleAccordionChange("tg")}
-              sx={{ margin: "6px" }}
+        {!!currentUser.tgAccounts && currentUser.tgAccounts?.length >= 1 && (
+          <Accordion
+            expanded={accordionExpanded === "tg"}
+            onChange={handleAccordionChange("tg")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
             >
-              <AccordionSummary
-                expandIcon={<ExpandIcon />}
-                aria-controls="igbh-content"
-                id="igbh-header"
-              >
-                <Avatar
-                  sx={{ width: 30, height: 30 }}
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
-                />
-                <Typography variant="h5" sx={{ ml: 1 }}>
-                  Telegram
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <div className="tg-content-preview">
-                  <div className="tg-channel-logo">
-                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Telegram_logo.svg/2048px-Telegram_logo.svg.png"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Telegram
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <div className="tg-channel-logo">
+                  <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                </div>
+                <div className="tg-post-content">
+                  <div className="tg-post-header">
+                    <h5>{currentUser?.tgAccounts[0].title}</h5>
                   </div>
-                  <div className="tg-post-content">
-                    <div className="tg-post-header">
-                      <h5>{currentUser?.tgAccounts[0].title}</h5>
+                  <div className="tg-post-img-div">
+                    <ImageGrid images={extFiles} />
+                  </div>
+                  <div className="tg-text-content">
+                    <div className="tg-text-comment">
+                      {!!categoryValue.length && <span>#{categoryValue}</span>}
+                      <h4>{titleValue}</h4>
+                      <p>{descriptionValue}</p>
+                      {!!priceValue.length && (
+                        <p>
+                          {t("price")}
+                          {":"}
+                          {priceValue}$
+                        </p>
+                      )}
+                      {!!cityValue.length && (
+                        <p>
+                          {t("city")}
+                          {": "} {cityValue}, {districtValue}
+                        </p>
+                      )}
+                      {!!roomValue && (
+                        <p>
+                          {t("rooms")}
+                          {": "} {roomValue}
+                        </p>
+                      )}
+                      {!!storeyValue && (
+                        <p>
+                          {t("storey")}
+                          {": "} {storeyValue}
+                        </p>
+                      )}
+                      {!!floorsValue && (
+                        <p>
+                          {t("floors")}
+                          {": "} {floorsValue}
+                        </p>
+                      )}
+                      {!!areaValue && (
+                        <p>
+                          {t("area")}
+                          {": "} {areaValue} m <sup>2</sup>
+                        </p>
+                      )}
+                      {!!repairmentValue && (
+                        <p>
+                          {t("repairment")}
+                          {": "} {repairmentValue}
+                        </p>
+                      )}
+                      {!!furnitureValue && (
+                        <p>
+                          {t("furniture")}
+                          {": "} {furnitureValue}
+                        </p>
+                      )}
+                      {!!addressValue && (
+                        <p>
+                          {t("address")}
+                          {": "} {addressValue}
+                        </p>
+                      )}
+                      {!!typeValue && (
+                        <p>
+                          {t("type")}
+                          {": "} {typeValue}
+                        </p>
+                      )}
                     </div>
-                    <div className="tg-post-img-div">
-                      <ImageGrid images={extFiles} />
-                    </div>
-                    <div className="tg-text-content">
-                      <div className="tg-text-comment">
-                        {!!categoryValue.length && (
-                          <span>#{categoryValue}</span>
-                        )}
-                        <h4>{titleValue}</h4>
-                        <p>{descriptionValue}</p>
-                        {!!priceValue.length && (
-                          <p>
-                            {t("price")}
-                            {":"}
-                            {priceValue}$
-                          </p>
-                        )}
-                        {!!cityValue.length && (
-                          <p>
-                            {t("city")}
-                            {": "} {cityValue}, {districtValue}
-                          </p>
-                        )}
-                        {!!roomValue && (
-                          <p>
-                            {t("rooms")}
-                            {": "} {roomValue}
-                          </p>
-                        )}
-                        {!!storeyValue && (
-                          <p>
-                            {t("storey")}
-                            {": "} {storeyValue}
-                          </p>
-                        )}
-                        {!!floorsValue && (
-                          <p>
-                            {t("floors")}
-                            {": "} {floorsValue}
-                          </p>
-                        )}
-                        {!!areaValue && (
-                          <p>
-                            {t("area")}
-                            {": "} {areaValue} m <sup>2</sup>
-                          </p>
-                        )}
-                        {!!repairmentValue && (
-                          <p>
-                            {t("repairment")}
-                            {": "} {repairmentValue}
-                          </p>
-                        )}
-                        {!!furnitureValue && (
-                          <p>
-                            {t("furniture")}
-                            {": "} {furnitureValue}
-                          </p>
-                        )}
-                        {!!addressValue && (
-                          <p>
-                            {t("address")}
-                            {": "} {addressValue}
-                          </p>
-                        )}
-                        {!!typeValue && (
-                          <p>
-                            {t("type")}
-                            {": "} {typeValue}
-                          </p>
-                        )}
-                      </div>
-                      <div className="tg-footer-text">
-                        <a
-                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                        >
-                          t.me/{currentUser?.tgAccounts[0].username}
-                        </a>
-                        <div className="tg-createAt">
-                          <span>12.7 K</span>
-                          <span>
-                            <VisibilityIcon fontSize="18px" />
-                          </span>
-                          <span>
-                            {new Date().toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </span>
-                        </div>
+                    <div className="tg-footer-text">
+                      <a
+                        href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
+                      >
+                        t.me/{currentUser?.tgAccounts[0].username}
+                      </a>
+                      <div className="tg-createAt">
+                        <span>12.7 K</span>
+                        <span>
+                          <VisibilityIcon fontSize="18px" />
+                        </span>
+                        <span>
+                          {new Date().toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </span>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="tg-btn-publish">
-                    <Button
-                      variant="contained"
-                      onClick={() => setOpenModal("tg")}
-                    >
-                      Опубликовать
-                    </Button>
                   </div>
                 </div>
-              </AccordionDetails>
-            </Accordion>
-          )}
+
+                <div className="tg-btn-publish">
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenModal("tg")}
+                  >
+                    {t("publish")}
+                  </Button>
+                </div>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         {true && (
           <Accordion
             expanded={accordionExpanded === "yt"}
@@ -1008,11 +1057,15 @@ const AdsEdit = () => {
                 <YtVideoCard
                   hashtags={"#yangi"}
                   title={titleValue}
-                  bannerImg={URL.createObjectURL(extFiles[0].file)}
+                  bannerImg={
+                    extFiles.length
+                      ? URL.createObjectURL(extFiles[0]?.file)
+                      : ""
+                  }
                   isShort={true}
                 />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1070,9 +1123,14 @@ const AdsEdit = () => {
             </AccordionSummary>
             <AccordionDetails>
               <div className="tg-content-preview">
-                <YtVideoCard bannerImg={""} />
+                <YtVideoCard
+                  hashtags={"#yangi"}
+                  title={titleValue}
+                  bannerImg={""}
+                  isShort={true}
+                />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1096,7 +1154,7 @@ const AdsEdit = () => {
       >
         <Box sx={style}>
           <div className="tg-channel-list">
-            <h3>Nashir qilmoqchi bo'lgan kannallaringizni tanlang!</h3>
+            <h3>{t("select_channels")}</h3>
             {openModal == "ig" ? (
               <>
                 <div className="tg-flex">

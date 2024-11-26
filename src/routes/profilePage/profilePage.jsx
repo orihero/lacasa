@@ -1,21 +1,16 @@
-import {
-  Link,
-  Outlet,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Triangle } from "react-loader-spinner";
+import { Link, Outlet, useNavigate } from "react-router-dom";
+import Filter from "../../components/filter/Filter";
 import List from "../../components/list/List";
+import Sidebar from "../../components/sidebar/Sidebar";
+import { useListStore } from "../../lib/adsListStore";
+import { auth } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
 import "./profilePage.scss";
-import { signOut } from "firebase/auth";
-import { auth } from "../../lib/firebase";
-import { useEffect, useState } from "react";
-import { useListStore } from "../../lib/adsListStore";
-import { Triangle } from "react-loader-spinner";
-import Filter from "../../components/filter/Filter";
-import { useTranslation } from "react-i18next";
-import Sidebar from "../../components/sidebar/Sidebar";
 
 function ProfilePage() {
   const { currentUser, logout, isLoading } = useUserStore();
@@ -29,12 +24,20 @@ function ProfilePage() {
     if (currentUser?.id && currentUser?.role === "agent") {
       fetchAdsByAgentId(currentUser.id);
     }
+    if (currentUser?.role === "coworker") {
+      fetchAdsByAgentId(currentUser.agentId);
+      handleNavigateProfileS();
+    }
   }, [currentUser?.id]);
 
   const handleLogout = async () => {
     await signOut(auth);
     logout();
     navigate("/");
+  };
+
+  const handleNavigateProfileS = () => {
+    navigate("/profile/" + currentUser?.id + "/setting");
   };
 
   if (isLoading) {
@@ -92,6 +95,14 @@ function ProfilePage() {
                     <img src={currentUser?.avatar || "/avatar.jpg"} alt="" />
                   </span>
                 </div>
+              </div>
+              <div className="profile-user-agent">
+                <button className="profile-user-agent-btn">
+                  <a target="_blank" href="https://forms.gle/1Kr71PzWjqqCQcVTA">
+                    Agent sifatida ro'yxatdan o'tish
+                  </a>{" "}
+                  <ExternalLink />
+                </button>
               </div>
               {currentUser?.role === "agent" ? (
                 <>
