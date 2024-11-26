@@ -12,9 +12,10 @@ function Login() {
     const { email, password } = Object.fromEntries(formData);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const res = await signInWithEmailAndPassword(auth, email, password);
+      console.log(res);
       toast.success("User successfully logged in");
-      navigate("/profile");
+      navigate("/");
     } catch (error) {
       console.error(Object.entries(error));
       toast.error(

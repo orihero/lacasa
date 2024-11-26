@@ -1,5 +1,13 @@
 import React, { useRef, useState } from "react";
-import { AboutImg, RightArrow } from "../../../assets";
+import {
+  aboutItemImg1,
+  aboutItemImg2,
+  aboutItemImg3,
+  aboutItemImg4,
+  aboutItemImg5,
+  aboutItemImg6,
+  RightArrow,
+} from "../../../assets";
 import { style } from "../../../util/styles";
 import { aboutInfo } from "../../../util/constants";
 import { useTranslation } from "react-i18next";
@@ -8,10 +16,25 @@ const About = () => {
   const cardRef = useRef(null);
   const [width, setWidth] = useState(0);
   const { t } = useTranslation();
+  const [indexImg, setIndexImg] = useState(0);
+  let imgs = [
+    aboutItemImg1,
+    aboutItemImg2,
+    aboutItemImg3,
+    aboutItemImg4,
+    aboutItemImg5,
+    aboutItemImg6,
+  ];
 
   const rightBtn = () => {
     if (cardRef.current) {
       setWidth((i) => (i += cardRef.current.offsetWidth));
+    }
+
+    setIndexImg((i) => (i += 1));
+
+    if (indexImg == imgs.length) {
+      setIndexImg(0);
     }
   };
 
@@ -21,6 +44,7 @@ const About = () => {
 
   if (width >= 3702) {
     setWidth(0);
+    setIndexImg(0);
   }
 
   return (
@@ -32,9 +56,13 @@ const About = () => {
         className={`xl:w-[48%] w-full ${style.fCol} items-center justify-center`}
       >
         <div
-          className={`max-w-[450px]  sm:rounded-[50px] rounded-[40px] p-2 w-full border-img`}
+          className={`max-w-[450px] h-[450px] sm:rounded-[50px] rounded-[40px] p-2 w-full border-img`}
         >
-          <img className="w-full h-full" src={AboutImg} alt="" />
+          <img
+            className="w-full h-full object-cover rounded-[40px]"
+            src={imgs[indexImg]}
+            alt=""
+          />
         </div>
       </div>
       <div className={`xl:w-[48%] w-full ${style.fCol} gap-5`}>

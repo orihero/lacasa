@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useUserStore } from "../../lib/userStore";
 import "./navbar.scss";
@@ -16,7 +16,7 @@ function Navbar() {
     i18n.changeLanguage(lang);
   };
 
-  const renderRight = () => {
+  const renderRight = useCallback(() => {
     if (isLoading) {
       return (
         <Triangle
@@ -30,6 +30,7 @@ function Navbar() {
         />
       );
     }
+
     if (!!currentUser) {
       return (
         <div className="user">
@@ -54,7 +55,7 @@ function Navbar() {
         </a>
       </>
     );
-  };
+  }, [currentUser, isLoading]);
 
   return (
     <nav>

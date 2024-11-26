@@ -164,5 +164,80 @@
     "title": "Performance Analytics",
     "subtitle": "Track your results with easy-to-read charts and data analysis. Monitor your sales, engagement, and other key metrics to optimize your strategies and boost success."
   },
-  "learnMore": "Learn more"
+  "learnMore": "Learn more",
+  "pricingTitle": "Our Pricing Plans",
+  "pricingSubtitle": "Our affordable pricing plan is lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime",
+  "pricingBtn": "Get Started",
+  "pricingItem1": {
+    "title": "Standard",
+    "price": "129,000 UZS",
+    "info": "Start your journey with essential features.",
+    "completeds": [
+      {
+        "title": "Publish up to 5 ads"
+      },
+      {
+        "title": "Access 1 free 3D tour"
+      },
+      {
+        "title": "Task management and reminders"
+      },
+      {
+        "title": "Integration with social media"
+      },
+      {
+        "title": "Basic analytics dashboard"
+      },
+      {
+        "title": "Secure storage for your advertisements"
+      }
+    ]
+  },
+  "pricingItem2": {
+    "title": "Pro",
+    "price": "349,000 UZS",
+    "info": "Unlock advanced tools for growth.",
+    "completeds": [
+      {
+        "title": "Publish up to 50 ads"
+      },
+      {
+        "title": "Access 5 free 3D tours"
+      },
+      {
+        "title": "Personal onboarding and one-to-one consultation"
+      },
+      {
+        "title": "Extended analytics with detailed reports"
+      },
+      {
+        "title": "Priority customer support"
+      },
+      {
+        "title": "All Standard plan features"
+      }
+    ]
+  },
+  "pricingItem3": {
+    "title": "Custom",
+    "price": "Tailored Pricing",
+    "info": "Get everything and more, fully customized to your needs.",
+    "completeds": [
+      {
+        "title": "Unlimited ads and 3D tours"
+      },
+      {
+        "title": "White-labeling of the software"
+      },
+      {
+        "title": "API access for integration with your tools"
+      },
+      {
+        "title": "Dedicated account manager"
+      },
+      {
+        "title": "All Pro plan features"
+      }
+    ]
+  }
 }

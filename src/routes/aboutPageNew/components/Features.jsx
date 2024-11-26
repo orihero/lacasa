@@ -23,7 +23,7 @@ const Features = () => {
               onMouseOver={() => setHover(i.id)}
               onMouseOut={() => setHover(null)}
               key={idx}
-              style={{ height: "500px" }}
+              // style={{ height: "620px" }}
               className={`${style.fCol} ${
                 hover === i.id ? "bg-blue" : "bg-white"
               } items-start border-img lg:p-10 p-5 cursor-pointer rounded-[40px] max-w-[380px] md:w-[45%] lg:w-full transition duration-150`}

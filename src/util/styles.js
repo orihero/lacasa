@@ -2,7 +2,7 @@ export const style = {
   fCol: "flex flex-col",
   f: "flex items-center flex-wrap",
   fB: "flex justify-between items-center flex-wrap",
-  fA: "flex justify-around items-center flex-wrap",
+  fA: "flex justify-around items-stretch flex-wrap",
   fCen: "flex justify-center items-center flex-wrap",
   link: "linkColor font-[500] lg:text-[18px] text-[13px] lg:leading-[22px] leading-[17px]",
   containerComponent: "w-full sm:py-4 lg:py-6 py-3 px-5",
