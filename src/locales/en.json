@@ -267,5 +267,53 @@
   "sort": "Sort",
   "highestPrice": "Highest price",
   "lowestPrice": "Lowest price",
-  "newest": "Newest"
+  "newest": "Newest",
+  "whyChoose": "Why Choose CRM Systems?",
+  "whyItem1": {
+    "title": "Centralized Data Management",
+    "subtitle": "CRM systems centralize all your customer data in one place, ensuring easy access and efficient organization. This helps businesses track interactions, understand client needs, and provide personalized experiences. Centralized data enables teams to work smarter, not harder."
+  },
+  "whyItem2": {
+    "title": "Enhanced Team Collaboration",
+    "subtitle": "A CRM system allows team members to share insights and collaborate efficiently. Whether your sales team is working on a lead or your customer service team is resolving an issue, the system ensures everyone stays on the same page, improving communication and productivity."
+  },
+  "whyItem3": {
+    "title": "Improved Customer Retention",
+    "subtitle": "By analyzing customer data, CRM systems help identify opportunities for engagement and loyalty-building. T ools like automated reminders and personalized communication ensure you stay connected with your clients, leading to long-term relationships."
+  },
+  "whyItem4": {
+    "title": "Informed Decision-Making",
+    "subtitle": "With data-driven insights, businesses can make better decisions. CRM systems provide real-time reports and analytics, helping identify trends, forecast sales, and measure success effectively."
+  },
+  "weAnswered": "We answered",
+  "frequentlyAskedQuestions": "Frequently asked Questions",
+  "question1": {
+    "title": "What is the main purpose of your CRM system?",
+    "subtitle": "Our CRM system is designed to streamline your real estate operations by organizing client data, automating tasks, and providing advanced analytics to help you close deals faster."
+  },
+  "question2": {
+    "title": "Can I integrate this CRM with my existing tools?",
+    "subtitle": "Yes, our CRM supports integration with various tools such as Google Calendar, social media platforms, and custom APIs to ensure seamless compatibility with your existing workflow."
+  },
+  "question3": {
+    "title": "How secure is my data on this platform?",
+    "subtitle": "Your data is highly secure with our platform. We use end-to-end encryption and regular backups to ensure that your information remains safe and accessible only to you."
+  },
+  "question4": {
+    "title": "Do you offer support for setting up the CRM system?",
+    "subtitle": "Absolutely! We provide onboarding support and one-on-one consultations to help you set up and get the most out of our CRM system."
+  },
+  "question5": {
+    "title": "What features are included in the standard plan?",
+    "subtitle": "The Standard Plan includes essential features like ad management, 1 free 3D tour, task reminders, Google Calendar integration, and basic analytics."
+  },
+  "question6": {
+    "title": "Can I customize the CRM system to match my brand?",
+    "subtitle": "Yes, with our Custom Plan, you can white-label the software and customize it fully to match your brand’s identity."
+  },
+  "contactUsText": "We welcome all your concerns, issues, and suggestions. Feel free to get in touch with us at your most convenient time.",
+  "requiredFields": "Required fields are not filled",
+  "invalidPhone": "Invalid phone number format",
+  "sendMassage": "Send message",
+  "messageSent": "Message sent successfully"
 }

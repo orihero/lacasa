@@ -268,5 +268,53 @@
   "sort": "Tartiblash",
   "highestPrice": "Eng yuqori narx",
   "lowestPrice": "Eng past narx",
-  "newest": "Eng yangi"
+  "newest": "Eng yangi",
+  "whyChoose": "Nega CRM tizimlarini tanlash kerak?",
+  "whyItem1": {
+    "title": "Ma'lumotlarni markazlashgan holda boshqarish",
+    "subtitle": "CRM tizimlari barcha mijoz ma'lumotlarini bir joyda to'playdi, bu esa ma'lumotlarni boshqarishni osonlashtiradi va samarali tashkil qiladi. Bu bizneslarga mijozlarning ehtiyojlarini tushunish va individual yondashuvni ta'minlash imkonini beradi."
+  },
+  "whyItem2": {
+    "title": "Jamoaviy hamkorlikni yaxshilash",
+    "subtitle": "CRM tizimi jamoa a'zolariga ma'lumot almashish va samarali hamkorlik qilish imkonini beradi. Bu muloqotni yaxshilaydi va unumdorlikni oshiradi."
+  },
+  "whyItem3": {
+    "title": "Mijozlarni saqlab qolishni yaxshilash",
+    "subtitle": "CRM tizimlaridagi mijoz ma'lumotlarini tahlil qilish sodiqlikni oshirish imkoniyatlarini aniqlashga yordam beradi. Bu uzoq muddatli aloqalarni mustahkamlaydi."
+  },
+  "whyItem4": {
+    "title": "Ma'lumotlarga asoslangan qaror qabul qilish",
+    "subtitle": "CRM tizimlari real vaqt rejimida analitik ma'lumotlar taqdim etadi va savdo hajmini bashorat qilishga yordam beradi."
+  },
+  "weAnswered": "Biz javob berdik",
+  "frequentlyAskedQuestions": "Tez-tez beriladigan savollar",
+  "question1": {
+    "title": "Sizning CRM tizimingizning asosiy maqsadi nima?",
+    "subtitle": "Bizning CRM tizimimiz mijoz ma'lumotlarini tartibga solish, vazifalarni avtomatlashtirish va bitimlarni tezroq tuzishga yordam beradigan ilg‘or tahlillarni taqdim etish orqali ko‘chmas mulk operatsiyalarini osonlashtirish uchun yaratilgan."
+  },
+  "question2": {
+    "title": "Ushbu CRM tizimini mavjud vositalarim bilan integratsiya qila olamanmi?",
+    "subtitle": "Ha, bizning CRM tizimimiz Google Calendar, ijtimoiy tarmoqlar va maxsus API’lar kabi turli vositalar bilan integratsiyani qo‘llab-quvvatlaydi."
+  },
+  "question3": {
+    "title": "Ushbu platformada mening ma'lumotlarim qanchalik xavfsiz?",
+    "subtitle": "Ma'lumotlaringiz bizning platformamizda yuqori darajada himoyalangan. Biz ma'lumotlaringiz xavfsiz va faqat siz uchun mavjud bo‘lishini ta'minlash uchun oxirigacha shifrlash va muntazam zaxira nusxalashdan foydalanamiz."
+  },
+  "question4": {
+    "title": "CRM tizimini sozlash uchun qo‘llab-quvvatlash xizmatini taqdim etasizmi?",
+    "subtitle": "Albatta! Biz CRM tizimimizni sozlash va undan maksimal darajada foydalanishga yordam berish uchun boshlang‘ich qo‘llab-quvvatlash va individual maslahatlar taqdim etamiz."
+  },
+  "question5": {
+    "title": "Standart rejaga qaysi funksiyalar kiradi?",
+    "subtitle": "Standart reja e'lonlarni boshqarish, 1 bepul 3D tur, vazifa eslatmalari, Google Calendar integratsiyasi va asosiy tahlillarni o'z ichiga oladi."
+  },
+  "question6": {
+    "title": "CRM tizimini o‘z brendimga moslashtira olamanmi?",
+    "subtitle": "Ha, bizning Custom rejamiz bilan siz dasturiy ta'minotni brendingiz talablariga moslashtirib o‘zgartirishingiz mumkin."
+  },
+  "contactUsText": "Barcha savolingiz, muammolaringiz va takliflaringizga biz xush kelamiz. Ixtiyoriy vaqtda biz bilan bog‘laning.",
+  "requiredFields": "Majburiy maydonlar to'ldirilmagan",
+  "invalidPhone": "Telefon raqami noto'g'ri formatda",
+  "sendMassage": "Xabar yuborish",
+  "messageSent": "Xabar yuborildi"
 }

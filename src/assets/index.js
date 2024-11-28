@@ -34,3 +34,7 @@ export { default as aboutItemImg3 } from "./about-3-min.webp";
 export { default as aboutItemImg4 } from "./about-4-min.webp";
 export { default as aboutItemImg5 } from "./about-5-min.webp";
 export { default as aboutItemImg6 } from "./about-6-min.webp";
+export { default as barChart2 } from "./bar-chart-2.svg";
+export { default as heart } from "./heart.svg";
+export { default as users1 } from "./users1.svg";
+export { default as database } from "./database.svg";

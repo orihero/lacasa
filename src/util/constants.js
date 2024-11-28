@@ -1,15 +1,19 @@
 import {
   archiveIcon,
+  barChart2,
   barChartIcon,
   cameraIcon,
   certificate,
+  database,
   facebook,
   filterIcon,
+  heart,
   instagram,
   linkedin,
   shareIcon,
   twitter,
   userImg,
+  users1,
   usersIcon,
 } from "../assets";
 
@@ -151,15 +155,60 @@ export const pricing = [
 export const services = [
   {
     id: 1,
-    img: certificate,
-    title: "Easy to Setup and use",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem",
+    img: database,
+    title: "whyItem1.title",
+    info: "whyItem1.subtitle",
   },
   {
     id: 2,
-    img: certificate,
-    title: "Easy to Setup and use",
-    info: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia, molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium optio, eaque rerum! Provident similique accusantium nemo autem",
+    img: users1,
+    title: "whyItem2.title",
+    info: "whyItem2.subtitle",
+  },
+  {
+    id: 3,
+    img: heart,
+    title: "whyItem3.title",
+    info: "whyItem3.subtitle",
+  },
+  {
+    id: 4,
+    img: barChart2,
+    title: "whyItem4.title",
+    info: "whyItem4.subtitle",
+  },
+];
+
+export const questions = [
+  {
+    id: 1,
+    title: "question1.title",
+    subtitle: "question1.subtitle",
+  },
+  {
+    id: 2,
+    title: "question2.title",
+    subtitle: "question2.subtitle",
+  },
+  {
+    id: 3,
+    title: "question3.title",
+    subtitle: "question3.subtitle",
+  },
+  {
+    id: 4,
+    title: "question4.title",
+    subtitle: "question4.subtitle",
+  },
+  {
+    id: 5,
+    title: "question5.title",
+    subtitle: "question5.subtitle",
+  },
+  {
+    id: 6,
+    title: "question6.title",
+    subtitle: "question6.subtitle",
   },
 ];
 
