@@ -256,5 +256,16 @@
   "publish": "Publish",
   "select_channels": "Select the channels you want to publish to!",
   "updateNewPost": "Update New Post",
-  "registerAsAgent": "Register as Agent"
+  "registerAsAgent": "Register as Agent",
+  "myAds": "My Ads",
+  "close": "Close",
+  "noAds": "Ads not found",
+  "areaMax": "Max.Total area",
+  "priceMin": "Min.Price",
+  "priceMax": "Max.Price",
+  "notRepaired": "Not repaired",
+  "sort": "Sort",
+  "highestPrice": "Highest price",
+  "lowestPrice": "Lowest price",
+  "newest": "Newest"
 }

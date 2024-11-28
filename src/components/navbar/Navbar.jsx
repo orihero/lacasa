@@ -65,8 +65,12 @@ function Navbar() {
           <span>LamaEstate</span>
         </a>
         <Link to="/">{t("home")}</Link>
-        <Link to="/about">{t("about")}</Link>
+        {/* <Link   to="#about" id="about">
+          {t("about")}
+        </Link> */}
+        <a href="#about">{t("about")}</a>
         <Link to="/agents">{t("agents")}</Link>
+        <Link to="/ads">{t("ads")}</Link>
       </div>
       <div className="right">
         {renderRight()}

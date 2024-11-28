@@ -257,5 +257,16 @@
   "publish": "Nashr qilish",
   "select_channels": "Nashir qilmoqchi bo'lgan kannallaringizni tanlang!",
   "updateNewPost": "E'lonni yangilash",
-  "registerAsAgent": "Agent sifatida ro'yxatdan o'tish"
+  "registerAsAgent": "Agent sifatida ro'yxatdan o'tish",
+  "myAds": "Meni e'lonlarim",
+  "close": "Yopish",
+  "noAds": "E'lonlar topilmadi",
+  "areaMax": "Max.Umumiy maydon",
+  "priceMin": "Min.Narx",
+  "priceMax": "Max.Narx",
+  "notRepaired": "Ta'mirlanmagan",
+  "sort": "Tartiblash",
+  "highestPrice": "Eng yuqori narx",
+  "lowestPrice": "Eng past narx",
+  "newest": "Eng yangi"
 }

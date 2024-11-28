@@ -34,16 +34,20 @@ function App() {
       children: [
         {
           path: "/",
+          element: <AboutPageNew />,
+        },
+        {
+          path: "/ads",
           element: <HomePage />,
         },
         {
           path: "/list",
           element: <ListPage />,
         },
-        {
-          path: "/about",
-          element: <AboutPageNew />,
-        },
+        // {
+        //   path: "/about",
+        //   element: <AboutPageNew />,
+        // },
         {
           path: "/agent/:id",
           element: <AgentProfilePage />,

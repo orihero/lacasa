@@ -12,9 +12,9 @@ const Features = () => {
       className={`${style.containerComponent} ${style.fCol} items-center`}
     >
       <span className={`${style.span} font-bold`}>{t("featuresSubtitle")}</span>
-      <h2 className={`${style.h2} sm:mb-14 md:mb-18 mb-10`}>
+      <h2 className={`${style.h2} sm:mb-14 md:mb-18 mb-10 text-[#051d42]`}>
         {t("featuresTitle")}{" "}
-        <span className="!text-blue">{t("featuresServices")}</span>
+        <span className="!text-[#fece51]">{t("featuresServices")}</span>
       </h2>
       <ul className={`${style.fA} gap-7 w-full`}>
         {features.map((i, idx) => {
@@ -40,7 +40,7 @@ const Features = () => {
               {/* border-b-2 mb-3  */}
               <p
                 className={`${style.p} ${
-                  hover === i.id ? "!text-white" : "!text-blue"
+                  hover === i.id ? "!text-white" : "!text-[#fece51]"
                 } md:mb-7 transition duration-150 mb-2 uppercase font-bold`}
               >
                 {t(i.title)}

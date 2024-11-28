@@ -78,16 +78,16 @@ function SinglePage() {
             </div>
             <div className="ads-info-list">
               <span className="ads-info-item">
-                {t("type")}: {adsData.type}
+                {t("type")}: {t(adsData.type)}
               </span>
               <span className="ads-info-item">
-                {t("category")}: {adsData.category}
+                {t("category")}: {t(adsData.category)}
               </span>
               <span className="ads-info-item">
-                {t("repairment")}: {adsData.repairment}
+                {t("repair")}: {t(adsData.repairment)}
               </span>
               <span className="ads-info-item">
-                {t("furniture")}: {adsData.furniture}
+                {t("furniture")}: {t(adsData.furniture)}
               </span>
             </div>
             <div className="bottom">

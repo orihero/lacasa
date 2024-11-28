@@ -66,10 +66,10 @@ export const useListStore = create((set) => ({
       if (filters.areaMax) {
         queries.push(where("area", "<=", filters.areaMax));
       }
-      if (filters.priceMin !== undefined) {
+      if (filters.priceMin !== "" && filters.priceMin !== undefined) {
         queries.push(where("price", ">=", filters.priceMin));
       }
-      if (filters.priceMax !== undefined) {
+      if (filters.priceMax !== "" && filters.priceMax !== undefined) {
         queries.push(where("price", "<=", filters.priceMax));
       }
 

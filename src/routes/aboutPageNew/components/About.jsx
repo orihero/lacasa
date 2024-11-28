@@ -67,13 +67,13 @@ const About = () => {
       </div>
       <div className={`xl:w-[48%] w-full ${style.fCol} gap-5`}>
         <div>
-          <p className={`${style.p} uppercase !font-bold !text-blue`}>
+          <p className={`${style.p} uppercase !font-bold !text-[#fece51]`}>
             {t("about")}
           </p>
           <div className={`w-full z-10 bg-backgroundAboutImg h-[2px] relative`}>
             <span
               style={{ transform: `translateX(${width / aboutInfo.length}px)` }}
-              className={`z-20 h-[2px] rounded-full w-[100px] transition duration-500 bg-blue  absolute`}
+              className={`z-20 h-[2px] rounded-full w-[100px] transition duration-500 bg-[#051d42]  absolute`}
             ></span>
           </div>
         </div>
@@ -103,7 +103,7 @@ const About = () => {
         </ul>
         <button
           onClick={rightBtn}
-          className={`text-blue cursor-pointer transition hover:scale-105 active:scale-100 font-[700] ${style.f} gap-2 sm:text-[1rem] text-[14px]`}
+          className={`text-[#fece51] cursor-pointer transition hover:scale-105 active:scale-100 font-[700] ${style.f} gap-2 sm:text-[1rem] text-[14px]`}
         >
           <span>{t("aboutBtn")}</span>
           <img src={RightArrow} alt="" />

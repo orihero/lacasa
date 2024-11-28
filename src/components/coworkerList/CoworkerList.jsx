@@ -84,7 +84,7 @@ const AdsList = () => {
         <button onClick={handleNavigateNew}>{t("addNewCoworker")}</button>
       </div>
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
-        <TableContainer sx={{ maxHeight: 580 }}>
+        <TableContainer sx={{ maxHeight: 540 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
