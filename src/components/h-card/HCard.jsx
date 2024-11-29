@@ -67,7 +67,7 @@ function HorizontalCard({ data }) {
         </div>
       </div>
       <div className="footer-btn-actions">
-        <button className="apply-btn-ads-card">Apply button</button>
+        <button className="apply-btn-ads-card">{t("apply")}</button>
       </div>
     </div>
   );
