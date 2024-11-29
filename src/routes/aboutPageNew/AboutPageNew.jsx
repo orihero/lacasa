@@ -21,7 +21,7 @@ const AboutPageNew = () => {
       <Services />
       <Questions />
       {/* <Clients /> */}
-      <ContactUs />
+      {/* <ContactUs /> */}
     </div>
   );
 };

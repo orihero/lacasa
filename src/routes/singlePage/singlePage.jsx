@@ -69,7 +69,7 @@ function SinglePage() {
                     {adsData.city}, {adsData.district}
                   </span>
                 </div>
-                <div className="price">$ {adsData.price}</div>
+                <div className="price"> {adsData.price} y.e </div>
               </div>
               <div onClick={handleNavigateAgent} className="user">
                 <img src={agent.avatar ?? "/avatar.jpg"} alt="" />
@@ -170,10 +170,9 @@ function SinglePage() {
             <Map items={[singlePostData]} />
           </div>
           <div className="buttons">
-            <button>
-              <img src="/chat.png" alt="" />
-              Send a Message
-            </button>
+            <div className="footer-btn-actions">
+              <button className="apply-btn-ads-card">Apply button</button>
+            </div>
             {currentUser?.role != "agent" && (
               <button>
                 <img src="/save.png" alt="" />

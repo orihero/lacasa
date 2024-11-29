@@ -316,5 +316,15 @@
   "requiredFields": "Majburiy maydonlar to'ldirilmagan",
   "invalidPhone": "Telefon raqami noto'g'ri formatda",
   "sendMassage": "Xabar yuborish",
-  "messageSent": "Xabar yuborildi"
+  "messageSent": "Xabar yuborildi",
+  "month": "oy",
+  "features": "Xususiyatlar",
+  "pricing": "Narxlar",
+  "services": "Xizmatlar",
+  "questions": "Savollar",
+  "topAds": "Eng yaxshi e'lonlar",
+  "newAds": "Yangi e'lonlar",
+  "expensiveAds": "Qimmat e'lonlar",
+  "cheapAds": "Arzon e'lonlar",
+  "topAgents": "Eng yaxshi agentlar"
 }

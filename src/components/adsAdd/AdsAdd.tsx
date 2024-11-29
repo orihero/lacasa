@@ -113,6 +113,7 @@ const AdsAdd = () => {
           nearPlacesList: nearPlacesList,
           optionList: optionList,
           photos,
+          priceType,
           createdAt: serverTimestamp(),
           agentId:
             currentUser.role == "agent" ? currentUser.id : currentUser.agentId,

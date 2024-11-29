@@ -315,5 +315,15 @@
   "requiredFields": "Required fields are not filled",
   "invalidPhone": "Invalid phone number format",
   "sendMassage": "Send message",
-  "messageSent": "Message sent successfully"
+  "messageSent": "Message sent successfully",
+  "month": "month",
+  "services": "Services",
+  "questions": "Questions",
+  "topAds": "Top Ads",
+  "newAds": "New Ads",
+  "expensiveAds": "Expensive Ads",
+  "cheapAds": "Cheap Ads",
+  "topAgents": "Top Agents",
+  "features": "Features",
+  "pricing": "Pricing"
 }
