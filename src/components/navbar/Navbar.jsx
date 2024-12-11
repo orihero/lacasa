@@ -77,7 +77,6 @@ function Navbar() {
         <Link to="/ads">{t("ads")}</Link>
       </div>
       <div className="right">
-        {renderRight()}
         <div className="lang">
           <select onChange={(e) => handleChangeLang(e.target.value)}>
             <option value="en" defaultChecked>
@@ -87,6 +86,7 @@ function Navbar() {
             <option value="ru">Ru</option>
           </select>
         </div>
+        {renderRight()}
         <div className="menuIcon">
           <img
             src="/menu.png"
