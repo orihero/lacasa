@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import { debounce } from "lodash";
+import { useTranslation } from "react-i18next";
 
 const priceList = [
   100000, 500000, 1000000, 5000000, 10000000, 30000000, 50000000, 100000000,
@@ -11,9 +12,12 @@ const priceList = [
 ];
 
 function Filter() {
+  const { t } = useTranslation();
   const { fetchAdsByAgentId } = useListStore();
   const { currentUser } = useUserStore();
   const [regionId, setRegionId] = useState(0);
+  const agentId =
+    currentUser.role === "agent" ? currentUser.id : currentUser.agentId;
   const [filters, setFilters] = useState({
     city: "",
     district: "",
@@ -32,7 +36,7 @@ function Filter() {
   console.log(filters);
 
   const debouncedFetchAds = debounce((updatedFilters) => {
-    fetchAdsByAgentId(currentUser.id, updatedFilters);
+    fetchAdsByAgentId(agentId ?? currentUser.id, updatedFilters);
   }, 300);
 
   const handleFilterChange = (field, value) => {
@@ -48,7 +52,7 @@ function Filter() {
       </h1> */}
       <div className="top">
         <div className="item">
-          <label htmlFor="city">Город</label>
+          <label htmlFor="city">{t("city")}</label>
           <select
             name="city"
             id="city"
@@ -69,7 +73,7 @@ function Filter() {
           </select>
         </div>
         <div className="item">
-          <label htmlFor="district">Район</label>
+          <label htmlFor="district">{t("district")}</label>
           <select
             name="district"
             id="district"
@@ -87,19 +91,21 @@ function Filter() {
           </select>
         </div>
         <div className="item type">
-          <label htmlFor="category">Категория</label>
+          <label htmlFor="category">{t("category")}</label>
           <select
             name="category"
             id="category"
             onChange={(e) => handleFilterChange("category", e.target.value)}
           >
             <option value=""></option>
-            <option value="buy">Аренда</option>
-            <option value="rent">Продажа</option>
+            <option value="rent">{t("rent")}</option>
+            <option value="sale">{t("sale")}</option>
           </select>
         </div>
+      </div>
+      <div className="bottom">
         <div className="item rooms">
-          <label htmlFor="rooms">Кол.комнат</label>
+          <label htmlFor="rooms">{t("room_count")}</label>
           <select
             name="rooms"
             id="rooms"
@@ -113,8 +119,6 @@ function Filter() {
             ))}
           </select>
         </div>
-      </div>
-      <div className="bottom">
         <div className="item">
           <label htmlFor="areaMin">Min.Общая площадь</label>
           <input
@@ -131,7 +135,7 @@ function Filter() {
           </span>
         </div>
         <div className="item">
-          <label htmlFor="areaMax">Max.Общая площадь</label>
+          <label htmlFor="areaMax">{t("areaMax")}</label>
           <input
             type="number"
             id="areaMax"
@@ -145,8 +149,8 @@ function Filter() {
             m <sup>2</sup>
           </span>
         </div>
-        <div className="item">
-          <label htmlFor="priceMin">Min.Цена</label>
+        <div className="item price">
+          <label htmlFor="priceMin">{t("priceMin")}</label>
           <select
             name="priceMin"
             id="priceMin"
@@ -163,8 +167,8 @@ function Filter() {
               ))}
           </select>
         </div>
-        <div className="item">
-          <label htmlFor="priceMax">Max.Цена</label>
+        <div className="item price">
+          <label htmlFor="priceMax">{t("priceMax")}</label>
           <select
             name="priceMax"
             id="priceMax"
@@ -182,42 +186,42 @@ function Filter() {
           </select>
         </div>
         <div className="item type">
-          <label htmlFor="type">Тип</label>
+          <label htmlFor="type">{t("type")}</label>
           <select
             onChange={(e) => handleFilterChange("type", e.target.value)}
             name="type"
           >
             <option value="" defaultChecked></option>
-            <option value="residential">Жилое</option>
-            <option value="nonresidential">Не Жилое</option>
+            <option value="residential">{t("residential")}</option>
+            <option value="nonresidential">{t("nonresidential")}</option>
           </select>
         </div>
         <div className="item furniture">
-          <label htmlFor="furniture">Мебель</label>
+          <label htmlFor="furniture">{t("furniture")}</label>
           <select
             name="furniture"
             onChange={(e) => handleFilterChange("furniture", e.target.value)}
           >
-            <option value="withFurniture">С мебелью</option>
-            <option value="withoutFurniture">Без мебели</option>
+            <option value="withFurniture">{t("withFurniture")}</option>
+            <option value="withoutFurniture">{t("withoutFurniture")}</option>
           </select>
         </div>
         <div className="item repairment">
-          <label htmlFor="repairment">Ремонт</label>
+          <label htmlFor="repairment">{t("repair")}</label>
           <select
             name="repairment"
             onChange={(e) => handleFilterChange("repairment", e.target.value)}
           >
             <option value="notRepaired" defaultChecked>
-              Требуется ремонт
+              {t("notRepaired")}
             </option>
-            <option value="normal">Нормальный</option>
-            <option value="good">Хороший</option>
-            <option value="excellent">Отличный</option>
+            <option value="normal">{t("normal")}</option>
+            <option value="good">{t("good")}</option>
+            <option value="excellent">{t("excellent")}</option>
           </select>
         </div>
         <div className="item">
-          <label htmlFor="storey">Этаж</label>
+          <label htmlFor="storey">{t("storey")}</label>
           <input
             id="storey"
             name="storey"
@@ -229,7 +233,7 @@ function Filter() {
           />
         </div>
         <div className="item sort">
-          <label htmlFor="sort">Сортировка</label>
+          <label htmlFor="sort">{t("sort")}</label>
           <select
             name="sort"
             id="sort"
@@ -237,11 +241,9 @@ function Filter() {
               fetchAdsByAgentId(currentUser.id, {}, e.target.value)
             }
           >
-            <option value="highestPrice">
-              Цена самая низкая самая высокая
-            </option>
-            <option value="lowestPrice">Цена самая высокая самая низкая</option>
-            <option value="newest">Новейшая</option>
+            <option value="highestPrice">{t("highestPrice")}</option>
+            <option value="lowestPrice">{t("lowestPrice")}</option>
+            <option value="newest">{t("newest")}</option>
           </select>
         </div>
       </div>

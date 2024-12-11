@@ -16,13 +16,13 @@ const Head = () => {
       <div className={`${style.fCol} xl:w-[50%] w-full gap-5`}>
         <h1 className={`${style.h1}`}>
           {t("headline.title")}
-          <span className="text-blue">{t("headline.titleSpan")}</span>
+          <span className="text-yellow-400">{t("headline.titleSpan")}</span>
         </h1>
         <p className={`${style.p}`}>{t("headline.subtitle")}</p>
         <div className={`${style.f} sm:gap-5 gap-2`}>
           <Button title={t("headline.btn")} btnClass={``} />
           <button
-            className={`${style.f} sm:text-[1rem] text-[14px] sm:gap-3 gap-1 transition hover:scale-110 text-blue font-[500]`}
+            className={`${style.f} sm:text-[1rem] text-[14px] sm:gap-3 gap-1 transition hover:scale-110 text-yellow-400 font-[500]`}
           >
             <img className="sm:w-[46px] w-[35px] " src={BtnPlay} alt="" />
             <span>{t("headline.watchDemo")}</span>

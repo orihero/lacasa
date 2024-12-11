@@ -61,12 +61,20 @@ function Navbar() {
     <nav>
       <div className="left">
         <a href="/" className="logo">
-          <img src="/logo.png" alt="" />
-          <span>LamaEstate</span>
+          <img
+            style={{ width: "50px", height: "50px" }}
+            src="/logo.svg"
+            alt=""
+          />
+          <span>Lacasa</span>
         </a>
         <Link to="/">{t("home")}</Link>
-        <Link to="/about">{t("about")}</Link>
+        {/* <Link   to="#about" id="about">
+          {t("about")}
+        </Link> */}
+        {/* <a href="#about">{t("about")}</a> */}
         <Link to="/agents">{t("agents")}</Link>
+        <Link to="/ads">{t("ads")}</Link>
       </div>
       <div className="right">
         {renderRight()}
@@ -87,12 +95,11 @@ function Navbar() {
           />
         </div>
         <div className={open ? "menu active" : "menu"}>
-          <a href="/">Home</a>
-          <a href="/">About</a>
-          <a href="/">Contact</a>
-          <a href="/">Agents</a>
-          <a href="/">Sign in</a>
-          <a href="/">Sign up</a>
+          <a href="/">{t("home")}</a>
+          <a href="/home#about">{t("about")}</a>
+          <a href="/agents">{t("agents")}</a>
+          <a href="/login">{t("signIn")}</a>
+          <a href="/register">{t("signUp")}</a>
         </div>
       </div>
     </nav>

@@ -69,7 +69,7 @@ function SinglePage() {
                     {adsData.city}, {adsData.district}
                   </span>
                 </div>
-                <div className="price">$ {adsData.price}</div>
+                <div className="price"> {adsData.price} y.e </div>
               </div>
               <div onClick={handleNavigateAgent} className="user">
                 <img src={agent.avatar ?? "/avatar.jpg"} alt="" />
@@ -78,16 +78,16 @@ function SinglePage() {
             </div>
             <div className="ads-info-list">
               <span className="ads-info-item">
-                {t("type")}: {adsData.type}
+                {t("type")}: {t(adsData.type)}
               </span>
               <span className="ads-info-item">
-                {t("category")}: {adsData.category}
+                {t("category")}: {t(adsData.category)}
               </span>
               <span className="ads-info-item">
-                {t("repairment")}: {adsData.repairment}
+                {t("repair")}: {t(adsData.repairment)}
               </span>
               <span className="ads-info-item">
-                {t("furniture")}: {adsData.furniture}
+                {t("furniture")}: {t(adsData.furniture)}
               </span>
             </div>
             <div className="bottom">
@@ -170,10 +170,9 @@ function SinglePage() {
             <Map items={[singlePostData]} />
           </div>
           <div className="buttons">
-            <button>
-              <img src="/chat.png" alt="" />
-              Send a Message
-            </button>
+            <div className="footer-btn-actions">
+              <button className="apply-btn-ads-card">Apply button</button>
+            </div>
             {currentUser?.role != "agent" && (
               <button>
                 <img src="/save.png" alt="" />

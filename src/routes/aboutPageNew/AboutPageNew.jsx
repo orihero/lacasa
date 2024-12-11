@@ -20,8 +20,8 @@ const AboutPageNew = () => {
       <Pricing />
       <Services />
       <Questions />
-      <Clients />
-      <ContactUs />
+      {/* <Clients /> */}
+      {/* <ContactUs /> */}
     </div>
   );
 };

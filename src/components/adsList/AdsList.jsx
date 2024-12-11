@@ -22,6 +22,7 @@ const AdsList = () => {
   const { currentUser } = useUserStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [filterOpen, setFilterOpen] = React.useState(false);
 
   const columns = [
     { id: "id", label: t("id"), minWidth: 50 },
@@ -56,21 +57,21 @@ const AdsList = () => {
       label: t("author"),
       minWidth: 120,
       align: "left",
-      format: (value) => value.toFixed(2),
+      format: (value) => value,
     },
     {
       id: "rooms",
       label: t("room"),
-      minWidth: 60,
+      minWidth: 80,
       align: "center",
-      format: (value) => value.toFixed(2),
+      format: (value) => value + " " + t("room"),
     },
     {
       id: "area",
       label: t("totalArea"),
       minWidth: 70,
       align: "center",
-      format: (value) => value.toFixed(2),
+      format: (value) => value + " м²",
     },
     {
       id: "edit",
@@ -110,16 +111,31 @@ const AdsList = () => {
     navigate("/profile/" + currentUser.id + "/create/ads");
   };
 
+  const handleFilter = () => {
+    setFilterOpen((prev) => !prev);
+  };
+
   return (
     <div className="ads-list-content">
-      {/* <div className="filter-tools">
-        <Filter />
-      </div> */}
-      <div className="ads-new">
-        <button onClick={handleNewPost}>{t("createNewPost")}</button>
+      <div>
+        <div
+          // style={{ marginTop: filterOpen ? "155px" : "0" }}
+          className="ads-new"
+        >
+          <button onClick={handleFilter}>
+            {filterOpen ? t("close") : t("filter")}
+          </button>
+          <button onClick={handleNewPost}>{t("createNewPost")}</button>
+        </div>
       </div>
+
+      {filterOpen && (
+        <div className="filter-tools">
+          <Filter />
+        </div>
+      )}
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
-        <TableContainer sx={{ maxHeight: 580 }}>
+        <TableContainer sx={{ maxHeight: 540 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
@@ -135,6 +151,13 @@ const AdsList = () => {
               </TableRow>
             </TableHead>
             <TableBody>
+              {myList?.length == 0 && (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center">
+                    {t("noAds")}
+                  </TableCell>
+                </TableRow>
+              )}
               {[...myList]
                 ?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
@@ -173,7 +196,11 @@ const AdsList = () => {
                               align={column.align}
                             >
                               <img
-                                style={{ width: "70px" }}
+                                style={{
+                                  width: "70px",
+                                  height: "70px",
+                                  objectFit: "cover",
+                                }}
                                 src={column.format(value)}
                                 alt=""
                               />
@@ -191,6 +218,8 @@ const AdsList = () => {
                               : column.format && column.id == "createdAt"
                               ? column.format(value)
                               : column.format && column.id == "stage"
+                              ? column.format(value)
+                              : column.format
                               ? column.format(value)
                               : value}
                           </TableCell>

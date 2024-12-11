@@ -16,7 +16,7 @@ module.exports = {
         footerLinkColor: "#474747",
       },
       fontFamily: {
-        PlayFair: ["Rubik"],
+        PlayFair: ["Plus Jakarta Sans"],
       },
     },
   },

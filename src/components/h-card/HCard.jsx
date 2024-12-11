@@ -19,16 +19,19 @@ function HorizontalCard({ data }) {
     <div className="hCard" onClick={() => handleNavigate(data.id)}>
       {/* <ImageCarusel items={data.photos} /> */}
       <img src={data.photos[0]} />
-      <div className="badge">
-        <img src="/badge.png" />
-        <img src="/icons/stars.svg" alt="" className="icon" />
-        <p>Popular</p>
-      </div>
       <div className="textContainer">
+        <div className="badge">
+          {/* <img src="/badge.png" /> */}
+          <img src="/icons/stars.svg" alt="" className="icon" />
+          <p>{data.category === "sale" ? t("sale") : t("rent")}</p>
+        </div>
         <div className="price">
           <h2>
-            ${data.price?.length > 0 ? data.price : "-"}
-            <span>/month</span>
+            {data.price?.length > 0 ? data.price : "-"}{" "}
+            {data.priceType ?? "y.e"}
+            {data.category === "sale" && (
+              <span className="price-month">/{t("month")}</span>
+            )}
           </h2>
           <h1>
             {data.title?.length > 15
@@ -62,6 +65,9 @@ function HorizontalCard({ data }) {
             </p>
           </div>
         </div>
+      </div>
+      <div className="footer-btn-actions">
+        <button className="apply-btn-ads-card">{t("apply")}</button>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ function HomePage() {
 
   return (
     <div className="container">
-      <div className={""}>
+      <div className="tour3d-container">
         <iframe
           width="100%"
           height="640"

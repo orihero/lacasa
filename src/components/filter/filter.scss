@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  // position: absolute;
 
   h1 {
     font-weight: 300;
@@ -65,7 +66,7 @@
       }
     }
     .type {
-      width: 110px;
+      width: 130px;
       select {
         width: 100%;
       }
@@ -76,8 +77,14 @@
         width: 100%;
       }
     }
+    .price {
+      width: 140px;
+      select {
+        width: 100%;
+      }
+    }
     .repairment {
-      width: 28% !important;
+      width: 20% !important;
       select {
         width: 100%;
       }
@@ -89,7 +96,7 @@
       }
     }
     .sort {
-      width: 400px !important;
+      width: 300px !important;
       select {
         width: 100%;
       }
