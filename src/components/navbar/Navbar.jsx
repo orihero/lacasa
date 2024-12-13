@@ -10,7 +10,6 @@ function Navbar() {
   const { t, i18n } = useTranslation();
 
   const { currentUser, isLoading } = useUserStore();
-  console.log(currentUser);
 
   const handleChangeLang = (lang) => {
     i18n.changeLanguage(lang);

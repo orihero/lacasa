@@ -10,7 +10,7 @@ import { useUserStore } from "../../lib/userStore";
 import "./layout.scss";
 
 function Layout() {
-  const { fetchUserInfo, currentUser } = useUserStore();
+  const { fetchUserInfo } = useUserStore();
   const { fetchAdsList } = useListStore();
   useEffect(() => {
     fetchAdsList();
@@ -22,23 +22,6 @@ function Layout() {
       unSub();
     };
   }, []);
-
-  // if (currentUser?.role !== "user") {
-  //   return (
-  //     <div className="layout-agent">
-  //       <div className="navbar">
-  //         <Navbar />
-  //       </div>
-  //       <div className="content">
-  //         <Outlet />
-  //       </div>
-  //       <Notification />
-  //       <div className="footer">
-  //         <Footer />
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="layout">

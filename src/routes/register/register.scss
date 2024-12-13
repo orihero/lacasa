@@ -13,11 +13,13 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+      width: 50%;
 
       input {
         padding: 20px;
         border: 1px solid gray;
         border-radius: 5px;
+        width: 100%;
       }
 
       button {
