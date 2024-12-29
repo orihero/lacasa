@@ -76,9 +76,11 @@
 .kanban-content {
   max-width: 1000px;
   max-height: 580px;
-  height: 580px;
-  overflow: hidden;
-  overflow-y: scroll;
+  height: 480px;
+  // overflow: hidden;
+  // overflow-y: scroll;
+  // overflow-x: scroll;
+  border: 1px solid #dddd;
   flex: 1;
   font-family: "Plus Jakarta Sans", sans-serif;
 }

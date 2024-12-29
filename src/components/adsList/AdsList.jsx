@@ -88,7 +88,7 @@ const AdsList = () => {
     if (currentUser?.agentId) {
       fetchAdsByAgentId(currentUser.agentId);
     }
-  });
+  }, []);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

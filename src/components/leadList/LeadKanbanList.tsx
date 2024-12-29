@@ -240,7 +240,13 @@ export default function LeadKanbanList() {
       )}
       <div className="kanban-content">
         {kanbanBoard.columns.length > 0 && (
-          <NotionStyles>
+          <NotionStyles
+            style={{
+              border: "1px solid red",
+              height: "580px",
+              overflow: "scroll",
+            }}
+          >
             <Typography variant="h4">Kanban</Typography>
             <Filters />
             {/* <UncontrolledBoard

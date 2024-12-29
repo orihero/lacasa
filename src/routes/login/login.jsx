@@ -1,11 +1,14 @@
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import "./login.scss";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { toast } from "react-toastify";
+import { useUserStore } from "../../lib/userStore";
 
 function Login() {
   const navigate = useNavigate();
+  const { fetchUserInfo } = useUserStore();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -14,6 +17,11 @@ function Login() {
     try {
       const res = await signInWithEmailAndPassword(auth, email, password);
       console.log(res);
+
+      onAuthStateChanged(auth, (user) => {
+        fetchUserInfo(user?.uid);
+      });
+
       toast.success("User successfully logged in");
       navigate("/");
     } catch (error) {

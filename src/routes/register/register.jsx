@@ -1,13 +1,25 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { auth, db } from "../../lib/firebase";
 import "./register.scss";
+import { useEffect, useState } from "react";
+import { Triangle } from "react-loader-spinner";
+import { useUserStore } from "../../lib/userStore";
+import { useListStore } from "../../lib/adsListStore";
 
 function Register() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const { fetchUserInfo } = useUserStore();
+  const { fetchAdsList } = useListStore();
   const handleRegister = async (e) => {
+    setIsLoading(true);
     e.preventDefault();
 
     const formData = new FormData(e.target);
@@ -17,16 +29,21 @@ function Register() {
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password);
 
-      const docRef = await setDoc(doc(db, "users", res.user.uid), {
+      await setDoc(doc(db, "users", res.user.uid), {
         fullName,
         email,
         role: "user",
         phoneNumber,
         id: res.user.uid,
+        password,
       });
 
+      await signInWithEmailAndPassword(auth, email, password);
+      fetchUserInfo(res.user.uid);
+      fetchAdsList();
+
       toast.success("User successfully created");
-      navigate("/profile");
+      navigate("/");
       //TODO create user related data
     } catch (error) {
       console.error(Object.entries(error));
@@ -36,7 +53,25 @@ function Register() {
         ${error?.code}`,
       );
     }
+
+    setIsLoading(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="loading">
+        <Triangle
+          visible={true}
+          height="80"
+          width="80"
+          color="#4fa94d"
+          ariaLabel="triangle-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="register">

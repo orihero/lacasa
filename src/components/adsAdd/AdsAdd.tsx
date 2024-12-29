@@ -40,7 +40,8 @@ import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import YtVideoCard from "../ytVideoCard/YtVideoCard";
 import { IGService } from "../../services/ig";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { Triangle } from "react-loader-spinner";
 
 const AdsAdd = () => {
   const {
@@ -52,9 +53,10 @@ const AdsAdd = () => {
   } = useForm();
   const { t } = useTranslation();
   const { currentUser } = useUserStore();
+  const { id } = useParams();
   const [regionId, setRegionId] = useState(0);
   const navigate = useNavigate();
-  const [price, setPrice] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
   const [extFiles, setExtFiles] = useState([]);
   const [extFilesVideo, setExtFilesVideo] = useState([]);
   const [publishSelectSocial, setPublishSelectSocial] = useState([]);
@@ -101,6 +103,7 @@ const AdsAdd = () => {
   const onSubmit = () => {
     // const form = new FormData(e.target);
     // const data = Object.fromEntries(form);
+    setIsLoading(true);
     const allValues = getValues();
     let photos = [];
 
@@ -133,6 +136,9 @@ const AdsAdd = () => {
             createdAt: serverTimestamp(),
           });
         }
+        setIsLoading(false);
+
+        navigate("/profile/" + id + "/ads");
       } catch (error) {
         console.error(error);
       }
@@ -142,7 +148,6 @@ const AdsAdd = () => {
       pending: "Creating",
       success: "Successfully created",
     });
-    // navigate("/profile");
   };
 
   const updateFiles = (incommingFiles) => {
@@ -242,6 +247,8 @@ const AdsAdd = () => {
   };
 
   const onSubmitTG = async () => {
+    setIsLoading(true);
+
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
@@ -296,6 +303,8 @@ const AdsAdd = () => {
               type: 2,
             });
           }
+          setIsLoading(false);
+
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -310,6 +319,7 @@ const AdsAdd = () => {
     setResTg([...resTG, ...successfulResponses]);
   };
   const onSubmitIG = async () => {
+    setIsLoading(true);
     const allValues = getValues();
     let photos = [];
 
@@ -332,6 +342,7 @@ const AdsAdd = () => {
         }),
       );
       console.log("All posts published successfully!");
+      setIsLoading(false);
     } catch (error) {
       console.error("Error publishing posts:", error);
     }
@@ -378,6 +389,22 @@ const AdsAdd = () => {
     boxShadow: 24,
     p: 4,
   };
+
+  if (isLoading) {
+    return (
+      <div className="loading">
+        <Triangle
+          visible={true}
+          height="80"
+          width="80"
+          color="#4fa94d"
+          ariaLabel="triangle-loading"
+          wrapperStyle={{}}
+          wrapperClass=""
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="new-post-container">
