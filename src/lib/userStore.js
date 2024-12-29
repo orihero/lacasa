@@ -20,7 +20,10 @@ export const useUserStore = create((set) => ({
         let tgAccounts = [];
         let agentInfo = null;
 
-        if (userData.role === "coworker" && userData.agentId) {
+        if (
+          (userData.role === "coworker" || userData.role === "agent") &&
+          userData?.agentId
+        ) {
           // Agent ma'lumotlarini olish
           const agentRef = doc(db, "users", userData.agentId);
           const agentSnap = await getDoc(agentRef);
@@ -33,15 +36,16 @@ export const useUserStore = create((set) => ({
               ...agentData,
             };
           }
-        } else {
-          // Foydalanuvchi o'z tokenlari bilan ish yuritadi
-          igAccounts = await IGService.init(userData.igTokens);
-          tgAccounts = await TGService.init(userData.tgChatIds);
         }
+        // else {
+        //   // Foydalanuvchi o'z tokenlari bilan ish yuritadi
+        //   // igAccounts = await IGService.init(userData?.igTokens);
+        //   // tgAccounts = await TGService.init(userData?.tgChatIds);
+        // }
 
-        console.log("====================================");
-        console.log({ igAccounts, tgAccounts });
-        console.log("====================================");
+        // console.log("====================================");
+        // console.log({ igAccounts, tgAccounts });
+        // console.log("====================================");
 
         set({
           currentUser: {
