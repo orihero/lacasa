@@ -1230,7 +1230,6 @@ const AdsAdd = () => {
             expanded={accordionExpanded === "fb"}
             onChange={handleAccordionChange("fb")}
             sx={{ margin: "6px" }}
-            disabled
           >
             <AccordionSummary
               expandIcon={<ExpandIcon />}
@@ -1242,7 +1241,7 @@ const AdsAdd = () => {
                 src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Logo_2023.png/768px-Facebook_Logo_2023.png"
               />
               <Typography variant="h5" sx={{ ml: 1 }}>
-                Facebook Market place | coming soon...
+                Facebook Market place
               </Typography>
             </AccordionSummary>
             <AccordionDetails>

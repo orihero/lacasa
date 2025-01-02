@@ -1073,6 +1073,40 @@ const AdsEdit = () => {
         )}
         {true && (
           <Accordion
+            expanded={accordionExpanded === "fb"}
+            onChange={handleAccordionChange("fb")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
+            >
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Logo_2023.png/768px-Facebook_Logo_2023.png"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Facebook Market place
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <YtVideoCard
+                  hashtags={"#yangi"}
+                  title={titleValue}
+                  bannerImg={""}
+                  isShort={true}
+                />
+                <Button variant="contained" onClick={() => setOpenModal("yt")}>
+                  {t("publish")}
+                </Button>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
+        {true && (
+          <Accordion
             expanded={accordionExpanded === "olx"}
             onChange={handleAccordionChange("olx")}
             sx={{ margin: "6px" }}
@@ -1096,41 +1130,6 @@ const AdsEdit = () => {
                 <YtVideoCard bannerImg={""} isShort={true} />
                 <Button variant="contained" onClick={() => setOpenModal("yt")}>
                   Опубликовать
-                </Button>
-              </div>
-            </AccordionDetails>
-          </Accordion>
-        )}
-        {true && (
-          <Accordion
-            expanded={accordionExpanded === "fb"}
-            onChange={handleAccordionChange("fb")}
-            sx={{ margin: "6px" }}
-            disabled
-          >
-            <AccordionSummary
-              expandIcon={<ExpandIcon />}
-              aria-controls="igbh-content"
-              id="igbh-header"
-            >
-              <Avatar
-                sx={{ width: 30, height: 30 }}
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Logo_2023.png/768px-Facebook_Logo_2023.png"
-              />
-              <Typography variant="h5" sx={{ ml: 1 }}>
-                Facebook Market place | coming soon...
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <div className="tg-content-preview">
-                <YtVideoCard
-                  hashtags={"#yangi"}
-                  title={titleValue}
-                  bannerImg={""}
-                  isShort={true}
-                />
-                <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
