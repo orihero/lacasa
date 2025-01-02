@@ -20,12 +20,11 @@ export const useUserStore = create((set) => ({
         let tgAccounts = [];
         let agentInfo = null;
 
-        if (
-          (userData.role === "coworker" || userData.role === "agent") &&
-          userData?.agentId
-        ) {
+        if (userData.role === "coworker" || userData.role === "agent") {
           // Agent ma'lumotlarini olish
-          const agentRef = doc(db, "users", userData.agentId);
+          let agentId =
+            userData.role === "agent" ? userData.id : userData.agentId;
+          const agentRef = doc(db, "users", agentId);
           const agentSnap = await getDoc(agentRef);
           if (agentSnap.exists()) {
             const agentData = agentSnap.data();
