@@ -29,7 +29,7 @@ function HorizontalCard({ data }) {
           <h2>
             {data.price?.length > 0 ? data.price : "-"}{" "}
             {data.priceType ?? "y.e"}
-            {data.category === "sale" && (
+            {data.category === "rent" && (
               <span className="price-month">/{t("month")}</span>
             )}
           </h2>

@@ -42,6 +42,7 @@ import YtVideoCard from "../ytVideoCard/YtVideoCard";
 import { IGService } from "../../services/ig";
 import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
+import { YTService } from "../../services/yt";
 
 const AdsAdd = () => {
   const {
@@ -348,6 +349,43 @@ const AdsAdd = () => {
     }
   };
 
+  const onSubmitYT = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    const allValues = getValues();
+    // let photos = [];
+
+    // if (extFilesVideo.length > 0) {
+    //   photos = await Promise.all(extFilesVideo.map((e) => assetUpload(e.file)));
+    // }
+
+    const caption = Object.entries(allValues).reduce(
+      (result, [key, value]) =>
+        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
+      "",
+    );
+    console.log(extFilesVideo);
+    const metadata = {
+      snippet: {
+        title: "My Test Video",
+        description: "This is a test upload using YouTube API.",
+        tags: ["test", "YouTube API", "video"],
+        categoryId: "22", // People & Blogs
+      },
+      status: {
+        privacyStatus: "public", // or "private", "unlisted"
+      },
+    };
+    await YTService.uploadVideo(
+      extFilesVideo[0]?.file,
+      metadata,
+      (remainingTime, progress) => {
+        console.log(`Time left: ${Math.round(remainingTime)}s`);
+        console.log(`Progress: ${Math.round(progress)}%`);
+      },
+    );
+  };
+
   const handleAccordionChange =
     (panel: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
       setAccordionExpanded(isExpanded ? panel : false);
@@ -411,7 +449,7 @@ const AdsAdd = () => {
       <div className="new-post-header">
         <h2>{t("addNewPost")}</h2>
       </div>
-      <form>
+      <div>
         <div className="content">
           <div className="left">
             <div className="field">
@@ -1010,6 +1048,85 @@ const AdsAdd = () => {
             </AccordionDetails>
           </Accordion>
         )}
+        {true && (
+          <Accordion
+            expanded={accordionExpanded === "fb"}
+            onChange={handleAccordionChange("fb")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
+            >
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Logo_2023.png/768px-Facebook_Logo_2023.png"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Facebook Market place
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <Button variant="contained" onClick={() => setOpenModal("yt")}>
+                  Опубликовать
+                </Button>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
+        {true && (
+          <Accordion
+            expanded={accordionExpanded === "yt"}
+            onChange={handleAccordionChange("yt")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
+            >
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://static.vecteezy.com/system/resources/previews/011/998/173/non_2x/youtube-icon-free-vector.jpg"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                YouTube
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <YtVideoCard
+                  hashtags={hashtagsValue}
+                  title={titleValue}
+                  isVideo={!!extFilesVideo[0]?.id}
+                  bannerImg={
+                    extFiles.length > 0 || extFilesVideo.length > 0
+                      ? URL.createObjectURL(extFilesVideo[0]?.file)
+                      : ""
+                  }
+                  isShort={isShort}
+                />
+                <div className="tg-btn-publish">
+                  <FormControlLabel
+                    label="Short"
+                    control={
+                      <Checkbox onChange={() => setIsShort((prev) => !prev)} />
+                    }
+                  />
+                  <Button
+                    variant="contained"
+                    type="button"
+                    onClick={(event) => onSubmitYT(event)}
+                  >
+                    {t("publish")}
+                  </Button>
+                </div>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         {!!currentUser?.tgAccounts && currentUser.tgAccounts?.length >= 0 && (
           <Accordion
             expanded={accordionExpanded === "tg"}
@@ -1149,55 +1266,6 @@ const AdsAdd = () => {
         )}
         {true && (
           <Accordion
-            expanded={accordionExpanded === "yt"}
-            onChange={handleAccordionChange("yt")}
-            sx={{ margin: "6px" }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandIcon />}
-              aria-controls="igbh-content"
-              id="igbh-header"
-            >
-              <Avatar
-                sx={{ width: 30, height: 30 }}
-                src="https://static.vecteezy.com/system/resources/previews/011/998/173/non_2x/youtube-icon-free-vector.jpg"
-              />
-              <Typography variant="h5" sx={{ ml: 1 }}>
-                YouTube
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <div className="tg-content-preview">
-                <YtVideoCard
-                  hashtags={hashtagsValue}
-                  title={titleValue}
-                  bannerImg={
-                    extFiles.length > 0
-                      ? URL.createObjectURL(extFiles[0]?.file)
-                      : ""
-                  }
-                  isShort={isShort}
-                />
-                <div className="tg-btn-publish">
-                  <FormControlLabel
-                    label="Short"
-                    control={
-                      <Checkbox onChange={() => setIsShort((prev) => !prev)} />
-                    }
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={() => setOpenModal("yt")}
-                  >
-                    {t("publish")}
-                  </Button>
-                </div>
-              </div>
-            </AccordionDetails>
-          </Accordion>
-        )}
-        {true && (
-          <Accordion
             expanded={accordionExpanded === "olx"}
             onChange={handleAccordionChange("olx")}
             sx={{ margin: "6px" }}
@@ -1225,40 +1293,13 @@ const AdsAdd = () => {
             </AccordionDetails>
           </Accordion>
         )}
-        {true && (
-          <Accordion
-            expanded={accordionExpanded === "fb"}
-            onChange={handleAccordionChange("fb")}
-            sx={{ margin: "6px" }}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandIcon />}
-              aria-controls="igbh-content"
-              id="igbh-header"
-            >
-              <Avatar
-                sx={{ width: 30, height: 30 }}
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Facebook_Logo_2023.png/768px-Facebook_Logo_2023.png"
-              />
-              <Typography variant="h5" sx={{ ml: 1 }}>
-                Facebook Market place
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <div className="tg-content-preview">
-                <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
-                </Button>
-              </div>
-            </AccordionDetails>
-          </Accordion>
-        )}
+
         <div className="footer-new-post">
           <button type="button" onClick={onSubmit}>
             {t("create")}
           </button>
         </div>
-      </form>
+      </div>
 
       <Modal
         open={

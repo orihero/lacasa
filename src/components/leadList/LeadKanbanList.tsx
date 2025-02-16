@@ -223,6 +223,9 @@ export default function LeadKanbanList() {
   return (
     <div className="ads-list-content">
       <div className="ads-new">
+        <div className="ads-title">
+          <Typography variant="h5">{t("kanban")}</Typography>
+        </div>
         <button onClick={handleNavigateNew}>{t("addNewLead")}</button>
       </div>
       {isUpdated && (
@@ -242,12 +245,11 @@ export default function LeadKanbanList() {
         {kanbanBoard.columns.length > 0 && (
           <NotionStyles
             style={{
-              border: "1px solid red",
               height: "580px",
               overflow: "scroll",
             }}
           >
-            <Typography variant="h4">Kanban</Typography>
+            {/* <Typography variant="h4">Kanban</Typography> */}
             <Filters />
             {/* <UncontrolledBoard
               initialBoard={kanbanBoard}

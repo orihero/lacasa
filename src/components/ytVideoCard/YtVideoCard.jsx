@@ -1,18 +1,22 @@
 import React from "react";
 import "./ytVideoCard.scss";
-const YtVideoCard = ({ hashtags, title, bannerImg, isShort }) => {
+const YtVideoCard = ({ isVideo, hashtags, title, bannerImg, isShort }) => {
   if (isShort) {
     return (
       <div className="social-post">
         <div className="image-container">
-          <img
-            src={
-              bannerImg ??
-              "https://img.freepik.com/free-photo/vertical-shot-river-surrounded-by-mountains-meadows-scotland_181624-27881.jpg"
-            }
-            alt="A person speaking at a podium"
-            className="post-image"
-          />
+          {isVideo ? (
+            <video controls src={bannerImg} className="post-image" />
+          ) : (
+            <img
+              src={
+                bannerImg ??
+                "https://img.freepik.com/free-photo/vertical-shot-river-surrounded-by-mountains-meadows-scotland_181624-27881.jpg"
+              }
+              alt="A person speaking at a podium"
+              className="post-image"
+            />
+          )}
         </div>
         <div className="post-content">
           <div className="post-header">
@@ -48,13 +52,19 @@ const YtVideoCard = ({ hashtags, title, bannerImg, isShort }) => {
   return (
     <div className="video-preview">
       <div className="thumbnail">
-        <img
-          src={
-            bannerImg ??
-            "https://cdn.pixabay.com/photo/2023/05/06/20/15/ai-generated-7975048_640.png"
-          }
-          className="thumbnail-image"
-        />
+        {isVideo ? (
+          <video controls src={bannerImg} className="thumbnail-image" />
+        ) : (
+          <img
+            src={
+              bannerImg ??
+              "https://img.freepik.com/free-photo/vertical-shot-river-surrounded-by-mountains-meadows-scotland_181624-27881.jpg"
+            }
+            alt="A person speaking at a podium"
+            className="thumbnail-image"
+          />
+        )}
+
         <div className="duration">9:17</div>
       </div>
       <div className="content">

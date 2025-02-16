@@ -100,6 +100,9 @@ const AdsList = () => {
   return (
     <div className="ads-list-content">
       <div className="ads-new">
+        <div className="ads-title">
+          <Typography variant="h5">{t("leads")}</Typography>
+        </div>
         <button onClick={handleNavigateNew}>{t("addNewLead")}</button>
       </div>
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
