@@ -12,6 +12,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useListStore } from "../../lib/adsListStore";
 import "./coworkerList.scss";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
+import { Typography } from "@mui/material";
 
 const AdsList = () => {
   const { myList } = useListStore();
@@ -81,6 +82,9 @@ const AdsList = () => {
     <div className="ads-list-content">
       {/* <div className="filter-tools">filter</div> */}
       <div className="ads-new">
+        <div className="ads-title">
+          <Typography variant="h5">{t("coworkers")}</Typography>
+        </div>
         <button onClick={handleNavigateNew}>{t("addNewCoworker")}</button>
       </div>
       <Paper sx={{ width: "100%", overflow: "hidden" }}>

@@ -16,7 +16,8 @@ import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
 import YtProfileCard from "../ytProfileCard/YtProfileCard";
 import YouTubeAccountInfo from "../ytProfileCard/YouTubeAccountInfo";
-import { Button } from "@mui/material";
+import { Button, Typography } from "@mui/material";
+import { YTService } from "../../services/yt";
 const ProfileSetting = () => {
   const { t } = useTranslation();
   const { currentUser, fetchUserInfo } = useUserStore();
@@ -32,7 +33,7 @@ const ProfileSetting = () => {
   } = useForm({
     defaultValues: {
       avatar: currentUser?.avatar,
-      fullName: currentUser.fullName,
+      fullName: currentUser?.fullName,
       phone: currentUser?.phoneNumber,
       email: currentUser?.email,
       password: currentUser?.password,
@@ -43,7 +44,7 @@ const ProfileSetting = () => {
     if (currentUser?.id) {
       setProfimeImage(currentUser?.avatar ?? "/avatar.jpg");
     }
-  }, [currentUser.id]);
+  }, [currentUser?.id]);
 
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
@@ -53,11 +54,11 @@ const ProfileSetting = () => {
     setLoading(true);
 
     try {
-      let updatedAvatar = currentUser.avatar;
+      let updatedAvatar = currentUser?.avatar;
 
       if (
         profimeImage !== "/avatar.jpg" &&
-        profimeImage !== currentUser.avatar
+        profimeImage !== currentUser?.avatar
       ) {
         updatedAvatar = await assetUpload(profimeImage);
       }
@@ -67,10 +68,10 @@ const ProfileSetting = () => {
         avatar: updatedAvatar,
       };
 
-      await updateDoc(doc(db, "users", currentUser.id), updatedData);
+      await updateDoc(doc(db, "users", currentUser?.id), updatedData);
 
       toast.success("Profile successfully updated!");
-      await fetchUserInfo(currentUser.id);
+      await fetchUserInfo(currentUser?.id);
 
       setLoading(false);
       setIsEditing(false);
@@ -89,6 +90,22 @@ const ProfileSetting = () => {
   const handleCancel = () => {
     reset(); // Reset to initial values
     setIsEditing(false);
+  };
+
+  const initializeYouTube = async () => {
+    const accessToken = await YTService.init();
+    console.log("Initializing YouTube API...", accessToken);
+    if (accessToken) {
+      console.log("YouTube API initialized. Access Token:", accessToken);
+      const accountInfo = await YTService.getChannelInfo();
+      console.log(accountInfo);
+    } else {
+      alert("Failed to initialize YouTube API.");
+    }
+  };
+
+  const signOut = async () => {
+    await YTService.signOut();
   };
 
   if (loading) {
@@ -110,7 +127,7 @@ const ProfileSetting = () => {
   return (
     <div className="profile-setting">
       <div className="profile-header">
-        <h1>{t("profileSettings")}</h1>
+        <Typography variant="h5">{t("profileSettings")}</Typography>
       </div>
       <div className="profile-container">
         <div className="left">
@@ -217,24 +234,24 @@ const ProfileSetting = () => {
             </form>
           </div>
         </div>
-        {currentUser.role == "agent" && (
+        {currentUser?.role == "agent" && (
           <div className="right">
             <FormGroup>
               <FormControlLabel
-                control={<IOSSwitch checked={!!currentUser.igTokens} />}
+                control={<IOSSwitch checked={!!currentUser?.igTokens} />}
                 label={t("createInstagramPost")}
               />
-              {!!currentUser.igTokens &&
+              {!!currentUser?.igTokens &&
                 currentUser?.igAccounts?.map((e, index) => (
                   <IgProfileCard key={index} data={e} />
                 ))}
 
               <FormControlLabel
-                control={<IOSSwitch checked={!!currentUser.tgChatIds} />}
+                control={<IOSSwitch checked={!!currentUser?.tgChatIds} />}
                 label={t("createTelegramPost")}
               />
-              {!!currentUser.tgChatIds &&
-                !!currentUser.tgAccounts &&
+              {!!currentUser?.tgChatIds &&
+                !!currentUser?.tgAccounts &&
                 currentUser?.tgAccounts.map((e, index) => (
                   <TgProfileCard key={index} data={e} />
                 ))}
@@ -244,7 +261,12 @@ const ProfileSetting = () => {
               />
               <YtProfileCard />
               <YouTubeAccountInfo />
-              <Button variant="text">Add account</Button>
+              <Button onClick={initializeYouTube} variant="text">
+                Add account
+              </Button>
+              <Button onClick={signOut} variant="text">
+                sign out
+              </Button>
             </FormGroup>
           </div>
         )}

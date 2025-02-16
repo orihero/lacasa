@@ -28,8 +28,11 @@ export const useUserStore = create((set) => ({
           const agentSnap = await getDoc(agentRef);
           if (agentSnap.exists()) {
             const agentData = agentSnap.data();
-            igAccounts = await IGService.init(agentData.igTokens);
-            tgAccounts = await TGService.init(agentData.tgChatIds);
+            if (agentData?.igTokens && agentData?.tgChatIds) {
+              igAccounts = await IGService.init(agentData?.igTokens);
+              tgAccounts = await TGService.init(agentData?.tgChatIds);
+            }
+
             agentInfo = {
               id: userData.agentId,
               ...agentData,

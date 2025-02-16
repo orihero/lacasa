@@ -16,6 +16,7 @@ import { useUserStore } from "../../lib/userStore";
 import "./adsList.scss";
 import StatusAds from "../status/StatusAds";
 import Filter from "../filter/Filter";
+import { Typography } from "@mui/material";
 
 const AdsList = () => {
   const { myList, fetchAdsByAgentId } = useListStore();
@@ -122,10 +123,15 @@ const AdsList = () => {
           // style={{ marginTop: filterOpen ? "155px" : "0" }}
           className="ads-new"
         >
-          <button onClick={handleFilter}>
-            {filterOpen ? t("close") : t("filter")}
-          </button>
-          <button onClick={handleNewPost}>{t("createNewPost")}</button>
+          <div className="ads-title">
+            <Typography variant="h5">{t("myAds")}</Typography>
+          </div>
+          <div className="ads-tools">
+            <button onClick={handleFilter}>
+              {filterOpen ? t("close") : t("filter")}
+            </button>
+            <button onClick={handleNewPost}>{t("createNewPost")}</button>
+          </div>
         </div>
       </div>
 

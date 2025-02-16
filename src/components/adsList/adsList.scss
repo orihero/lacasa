@@ -9,14 +9,23 @@
   .ads-new {
     width: 100%;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between !important;
+    align-items: center;
     gap: 10px;
     z-index: 2;
-    button {
-      padding: 12px 24px;
-      background-color: #fece51;
-      cursor: pointer;
-      border: none;
+    .ads-title {
+      display: flex;
+    }
+
+    .ads-tools {
+      display: flex;
+      gap: 10px;
+      button {
+        padding: 12px 24px;
+        background-color: #fece51;
+        cursor: pointer;
+        border: none;
+      }
     }
   }
   .filter-tools {
