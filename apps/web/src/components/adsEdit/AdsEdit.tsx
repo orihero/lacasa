@@ -104,7 +104,7 @@ const AdsEdit = () => {
       fetchCurrency();
       fetchNearbyPlace();
     }
-  }, [id]);
+  }, [id, fetchAdsById, fetchCurrency, fetchNearbyPlace]);
 
   useEffect(() => {
     if (adsData.id) {
@@ -120,7 +120,7 @@ const AdsEdit = () => {
       setRegionId(regionData.regions.find((r) => r.name == adsData.city).id);
       reset({ ...adsData });
     }
-  }, [adsData]);
+  }, [adsData, reset]);
 
   const onSubmit = (data) => {
     let photos: string[] = [];

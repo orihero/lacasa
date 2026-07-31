@@ -48,3 +48,33 @@ Prisma Studio (DB browser): `cd server && npm run studio`.
 > Note: the frontend still talks to Firebase until the migration phases in
 > docs/05 land; the API currently serves `/api/health`, `/api/utils/*`, and
 > `/api/uploads/presign`.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push and pull request against
+`main` and `chore/monorepo`, on `ubuntu-latest` in a Node 20 / Node 22
+matrix (this repo's `engines.node` floor). Each matrix job:
+
+1. `npm ci` — installs from the single root `package-lock.json` (this is an
+   npm-workspaces monorepo; there is no per-workspace lockfile).
+2. `prisma generate` for `@lacasa/api`, run explicitly rather than relying
+   solely on `@prisma/client`'s postinstall.
+3. `npm run build/lint/typecheck --workspaces --if-present`.
+4. `npm run test --workspaces --if-present -- --coverage` — unit tests with
+   coverage enabled, so the thresholds each workspace configures in
+   `packages/config-vitest` (80% default, 95% for `packages/domain`, 40%
+   for `apps/web`) actually gate the build instead of sitting unenforced.
+5. `npm run test:integration -w @lacasa/api -- --coverage` — `@lacasa/api`'s
+   supertest suite against a real Postgres, provided by a GitHub Actions
+   `services:` container (not `docker-compose.yml`, which is reserved for
+   local Docker use and binds the same ports a native dev setup already
+   uses). `apps/api/vitest.config.js` points this project's `DATABASE_URL`
+   at `TEST_DATABASE_URL`, and its `globalSetup` runs
+   `prisma migrate deploy` against it before any test runs — no separate
+   migration step is needed in the workflow.
+
+All environment variables the workflow sets (`DATABASE_URL`,
+`TEST_DATABASE_URL`, `JWT_SECRET`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`)
+are dummy CI-only values required by `apps/api/src/lib/config.js`'s
+fail-fast validation — never real secrets, so the workflow also runs
+unmodified on pull requests from forks.

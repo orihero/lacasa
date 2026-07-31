@@ -8,7 +8,7 @@ import {
 import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
 import { resolveCardMoveAction } from "@lacasa/domain";
 import type { LeadStatusKey } from "@lacasa/domain";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
@@ -46,25 +46,30 @@ export default function LeadKanbanList() {
   };
 
   useEffect(() => {
-    if (currentUser.role == "agent") {
+    if (currentUser?.role == "agent") {
       fetchLeadList(id);
       fetchCoworkerList(id);
-    } else if (currentUser.role == "coworker") {
+    } else if (currentUser?.role == "coworker") {
       fetchLeadList(currentUser.agentId);
       fetchCoworkerList(currentUser.agentId);
     }
-  }, [currentUser?.agentId, id, isUpdated]);
-
-  useEffect(() => {
-    if ((!isLoading && list.length > 0) || coworkerList?.length)
-      generateBoard();
-  }, [list?.length, coworkerList.length]);
+  }, [
+    currentUser?.agentId,
+    currentUser?.role,
+    id,
+    isUpdated,
+    fetchLeadList,
+    fetchCoworkerList,
+  ]);
 
   const handleNavigateNew = () => {
     navigate("/profile/" + id + "/create/leads");
   };
 
-  const generateBoard = async () => {
+  // Depends on the full `list`/`coworkerList` arrays (not just their
+  // lengths) because it reads coworker name/avatar per card and rebuilds
+  // every column from `list` contents, not just its size.
+  const generateBoard = useCallback(async () => {
     let board: KanbanBoard<CustomCard> = {
       columns: [
         "new",
@@ -107,7 +112,12 @@ export default function LeadKanbanList() {
     };
 
     setKanbanBoard(board);
-  };
+  }, [list, coworkerList, t]);
+
+  useEffect(() => {
+    if ((!isLoading && list.length > 0) || coworkerList?.length)
+      generateBoard();
+  }, [list, coworkerList, isLoading, generateBoard]);
 
   const handleCardMove: OnDragEndNotification<Card> = async (
     _card,

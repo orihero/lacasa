@@ -31,7 +31,7 @@ const CoworkerUpdate = () => {
     if (id) {
       fetchCoworkerById(id, currentUser.id);
     }
-  }, [id]);
+  }, [id, currentUser?.id, fetchCoworkerById]);
 
   useEffect(() => {
     if (coworker) {
@@ -43,7 +43,7 @@ const CoworkerUpdate = () => {
       });
       setProfimeImage(coworker.avatar);
     }
-  }, [coworker]);
+  }, [coworker, reset]);
 
   const onSubmit = async (data) => {
     setLoading(true);

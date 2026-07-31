@@ -29,7 +29,14 @@ const Chart = () => {
       getAdsStatistics(currentUser?.id);
       getCoworkerStatistics(currentUser?.id);
     }
-  }, [currentUser?.id]);
+  }, [
+    currentUser?.id,
+    currentUser?.role,
+    fetchCoworkerList,
+    fetchAdsByStage,
+    getAdsStatistics,
+    getCoworkerStatistics,
+  ]);
 
   const generateCoworkerStatistics = useMemo(() => {
     if (currentUser?.id && listCwrkST.length && list?.length) {

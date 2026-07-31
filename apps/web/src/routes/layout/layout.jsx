@@ -13,7 +13,7 @@ function Layout() {
   useEffect(() => {
     fetchAdsList();
     fetchUserInfo();
-  }, []);
+  }, [fetchAdsList, fetchUserInfo]);
 
   return (
     <div className="layout">

@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main, chore/monorepo]
+  pull_request:
+    branches: [main, chore/monorepo]
+
+# Dummy, non-secret values only — this workflow must run unmodified on a
+# fork PR (forks never get access to repository secrets), and none of these
+# CI env vars need to correspond to anything real:
+#   - DATABASE_URL is only import-time-validated by apps/api/src/lib/config.js
+#     outside the integration project; nothing eagerly connects with it
+#     (PrismaClient is constructed lazily — see apps/api/src/lib/prisma.js).
+#   - TEST_DATABASE_URL is what actually matters: it must match the
+#     `postgres` service container below, because apps/api's vitest
+#     "integration" project (apps/api/vitest.config.js) points DATABASE_URL
+#     at TEST_DATABASE_URL for that project, and its globalSetup
+#     (apps/api/test/integration/globalSetup.js) runs
+#     `prisma migrate deploy` against it before any integration test runs —
+#     no separate migrate step is needed here.
+#   - JWT_SECRET / MINIO_ACCESS_KEY / MINIO_SECRET_KEY are `required: true`
+#     in config.js with no default, so config.js throws at import time (and
+#     therefore any workspace command that imports apps/api code — lint does
+#     not, but the unit/integration test runs do) unless something is set.
+#   - Everything else in config.js's ENV_VARS has a default or is optional
+#     (MinIO connection details, Instagram OAuth, Anthropic/LLM, Telegram)
+#     and is intentionally left unset here.
+env:
+  DATABASE_URL: postgresql://lacasa:lacasa_ci@localhost:5432/lacasa_ci
+  TEST_DATABASE_URL: postgresql://lacasa:lacasa_ci@localhost:5432/lacasa_test
+  JWT_SECRET: ci-dummy-jwt-secret-not-a-real-secret
+  MINIO_ACCESS_KEY: ci-dummy-minio-access-key
+  MINIO_SECRET_KEY: ci-dummy-minio-secret-key
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
+
+    # A GitHub Actions services: container instead of docker-compose.yml:
+    # docker-compose.yml binds the same 5432/9000/9001 ports the maintainer's
+    # native scoop Postgres/MinIO already use, which is exactly why it's
+    # documented as CI-only in the first place — reusing it here would just
+    # reintroduce that collision risk inside the runner for no benefit. A
+    # services: container is simpler (no compose file, no minio-init
+    # one-shot container to wait on), gets a built-in health check via
+    # `options`, and is all apps/api's integration suite actually needs —
+    # it never touches MinIO, only Postgres (see apps/api/test/integration).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lacasa
+          POSTGRES_PASSWORD: lacasa_ci
+          POSTGRES_DB: lacasa_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lacasa -d lacasa_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # The root lockfile (package-lock.json) is the only lockfile in the
+      # repo — this is an npm-workspaces monorepo, so one `npm ci` at the
+      # root installs every workspace.
+      - name: Install dependencies
+        run: npm ci
+
+      # @prisma/client's own postinstall already runs `prisma generate`
+      # during `npm ci` above (this repo does not set `ignore-scripts`, and
+      # the root/apps/api `allowScripts` maps both allow prisma's scripts),
+      # so this is redundant in the common case. It's kept explicit anyway
+      # as the safer choice: it makes the Prisma client's presence a
+      # visible, independently-failing step instead of an implicit
+      # side-effect of install, and it's a cheap no-op if generation
+      # already happened.
+      - name: Generate Prisma client
+        run: npm exec -w @lacasa/api -- prisma generate
+
+      - name: Build
+        run: npm run build --workspaces --if-present
+
+      - name: Lint
+        run: npm run lint --workspaces --if-present
+
+      - name: Typecheck
+        run: npm run typecheck --workspaces --if-present
+
+      # `-- --coverage` is forwarded through `npm run test --workspaces` to
+      # every workspace's underlying `vitest run` invocation, which is what
+      # actually turns on v8 coverage collection (coverage.enabled is not
+      # set true in any preset — see packages/config-vitest/{node,react}.js
+      # — only the CLI --coverage flag or an explicit `enabled: true` does).
+      # Without this flag the thresholds configured there (e.g.
+      # packages/domain's 95%) are dead configuration that never gates
+      # anything.
+      - name: Unit tests (with coverage)
+        run: npm run test --workspaces --if-present -- --coverage
+
+      # Only apps/api defines this script (--if-present would silently skip
+      # it everywhere else if run via `--workspaces`); run it directly
+      # against the Postgres service container above. apps/api/vitest.config.js
+      # binds DATABASE_URL to TEST_DATABASE_URL for this project and its
+      # globalSetup applies committed migrations before tests run.
+      #
+      # Deliberately NOT run with --coverage: this is a partial run of one
+      # vitest project, so it reports coverage for the whole of apps/api/src
+      # while exercising only the HTTP paths. Gating that subset on the
+      # workspace's whole-suite thresholds fails for a reason that says
+      # nothing about the code (measured: 51.52% here vs 52.72% for the unit
+      # project, which is what the thresholds are calibrated against).
+      - name: Integration tests (apps/api)
+        run: npm run test:integration -w @lacasa/api

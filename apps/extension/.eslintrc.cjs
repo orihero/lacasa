@@ -4,5 +4,5 @@ module.exports = {
   root: true,
   extends: [require.resolve('@lacasa/config-eslint/node')],
   env: { browser: true },
-  ignorePatterns: ['dist', 'node_modules'],
+  ignorePatterns: ['dist', 'node_modules', 'coverage'],
 };

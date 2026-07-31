@@ -7,7 +7,7 @@ function HomePage() {
   const { fetchAdsList } = useListStore();
   useEffect(() => {
     fetchAdsList();
-  }, []);
+  }, [fetchAdsList]);
 
   return (
     <div className="container">

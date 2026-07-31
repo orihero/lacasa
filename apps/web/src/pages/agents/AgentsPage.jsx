@@ -8,7 +8,7 @@ const AgentsPage = () => {
   const { fetchAgentList, isLoading, list } = useAgentsStore();
   useEffect(() => {
     fetchAgentList();
-  }, []);
+  }, [fetchAgentList]);
 
   if (isLoading) {
     return (

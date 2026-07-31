@@ -3,5 +3,5 @@
 module.exports = {
   root: true,
   extends: [require.resolve('@lacasa/config-eslint/node')],
-  ignorePatterns: ['dist', 'node_modules'],
+  ignorePatterns: ['dist', 'node_modules', 'coverage'],
 };

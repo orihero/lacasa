@@ -1,5 +1,5 @@
 import { ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
 import { Link, Outlet, useNavigate } from "react-router-dom";
@@ -18,6 +18,10 @@ function ProfilePage() {
   const [isFilter, setFilter] = useState(false);
   const { t } = useTranslation();
 
+  const handleNavigateProfileS = useCallback(() => {
+    navigate("/profile/" + currentUser?.id + "/setting");
+  }, [navigate, currentUser?.id]);
+
   useEffect(() => {
     if (currentUser?.id && currentUser?.role === "agent") {
       fetchAdsByAgentId(currentUser.id, {}, "newest", "mine");
@@ -26,15 +30,17 @@ function ProfilePage() {
       fetchAdsByAgentId(currentUser.agentId, {}, "newest", "mine");
       handleNavigateProfileS();
     }
-  }, [currentUser?.id]);
+  }, [
+    currentUser?.id,
+    currentUser?.role,
+    currentUser?.agentId,
+    fetchAdsByAgentId,
+    handleNavigateProfileS,
+  ]);
 
   const handleLogout = () => {
     logout();
     navigate("/");
-  };
-
-  const handleNavigateProfileS = () => {
-    navigate("/profile/" + currentUser?.id + "/setting");
   };
 
   if (isLoading) {

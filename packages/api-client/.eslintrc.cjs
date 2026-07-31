@@ -6,5 +6,5 @@ module.exports = {
     require.resolve('@lacasa/config-eslint/node'),
     require.resolve('@lacasa/config-eslint/boundaries'),
   ],
-  ignorePatterns: ['dist', 'node_modules'],
+  ignorePatterns: ['dist', 'node_modules', 'coverage'],
 };

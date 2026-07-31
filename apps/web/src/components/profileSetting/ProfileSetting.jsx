@@ -47,7 +47,7 @@ const ProfileSetting = () => {
     if (currentUser?.id) {
       setProfimeImage(currentUser?.avatar ?? "/avatar.jpg");
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.avatar]);
 
   // The Instagram OAuth callback redirects back here with ?ig=connected|error.
   useEffect(() => {
@@ -60,7 +60,7 @@ const ProfileSetting = () => {
       toast.error("Instagram connection failed — please try again.");
     }
     window.history.replaceState({}, "", window.location.pathname);
-  }, []);
+  }, [fetchUserInfo]);
 
   const handleIgConnect = async () => {
     try {

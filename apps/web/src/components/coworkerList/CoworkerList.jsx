@@ -59,7 +59,7 @@ const AdsList = () => {
     if (id) {
       fetchCoworkerList(id);
     }
-  }, [id]);
+  }, [id, fetchCoworkerList]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

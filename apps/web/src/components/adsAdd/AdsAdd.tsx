@@ -108,7 +108,7 @@ const AdsAdd = () => {
   useEffect(() => {
     fetchCurrency();
     fetchNearbyPlace();
-  }, []);
+  }, [fetchCurrency, fetchNearbyPlace]);
 
   const onSubmit = () => {
     // const form = new FormData(e.target);

@@ -54,7 +54,7 @@ function Navbar() {
         </a>
       </>
     );
-  }, [currentUser, isLoading]);
+  }, [currentUser, isLoading, t]);
 
   return (
     <nav>

@@ -22,7 +22,7 @@ function AgentProfilePage() {
       // Public agent profile — visible to anyone, active listings only.
       fetchAdsByAgentId(id, {}, "newest", "public");
     }
-  }, [id]);
+  }, [id, fetchUserById, fetchAdsByAgentId]);
 
   return (
     <div className="agentProfilePage">

@@ -10,6 +10,13 @@ const TEST_DATABASE_URL =
 
 export default nodePreset({
   test: {
+    // Ratchet floors, set just under the suite's *measured* coverage rather
+    // than at the node preset's aspirational 80%. Their job is to fail the
+    // build if coverage regresses; raise them as the routes get backfilled.
+    // Measured on the unit project: 52.72 stmts / 65.82 branch / 56.41 func.
+    coverage: {
+      thresholds: { lines: 50, statements: 50, branches: 62, functions: 54 },
+    },
     // NonProjectOption — must live at the root, applies to every project.
     // The integration project's tests all share one Postgres database and
     // truncate it between *files* (see test/integration/helpers/db.js), so

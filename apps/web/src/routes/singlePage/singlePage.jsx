@@ -23,13 +23,13 @@ function SinglePage() {
     if (id) {
       fetchAdsById(id);
     }
-  }, [id]);
+  }, [id, fetchAdsById]);
 
   useEffect(() => {
     if (adsData?.id) {
       fetchUserById(adsData.agentId);
     }
-  }, [adsData?.id]);
+  }, [adsData?.id, adsData?.agentId, fetchUserById]);
 
   const handleNavigateAgent = () => {
     navigate("/agent/" + adsData.agentId);

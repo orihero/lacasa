@@ -15,11 +15,22 @@ dist
 dist-ssr
 *.local
 
+# Test coverage reports (vitest --coverage)
+coverage
+
 # Secrets — never commit. Each workspace keeps a local .env; templates are .env.example
 .env
 **/.env
 **/.env.local
 google-creds.json
+
+# Expo (apps/mobile)
+.expo/
+apps/mobile/web-build
+expo-env.d.ts
+*.tsbuildinfo
+apps/mobile/ios
+apps/mobile/android
 
 # Editor directories and files
 .vscode/*

@@ -78,7 +78,7 @@ const AdsList = () => {
     } else if (currentUser.role == "agent") {
       fetchLeadList(id);
     }
-  }, [currentUser?.agentId, id]);
+  }, [currentUser?.agentId, currentUser?.role, id, fetchLeadList]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);

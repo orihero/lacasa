@@ -30,13 +30,13 @@ const LeadUpdate = ({ leadId, onClose }) => {
     if (currentUser?.id && currentUser.role == "agent") {
       fetchCoworkerList(currentUser.id);
     }
-  }, [currentUser.id]);
+  }, [currentUser?.id, currentUser?.role, fetchCoworkerList]);
 
   useEffect(() => {
     if (leadId) {
       fetchLeadById(leadId);
     }
-  }, [leadId]);
+  }, [leadId, fetchLeadById]);
 
   useEffect(() => {
     if (lead) {
@@ -52,7 +52,7 @@ const LeadUpdate = ({ leadId, onClose }) => {
         coworkerId: lead.coworkerId || "",
       });
     }
-  }, [lead]);
+  }, [lead, reset]);
 
   const onSubmit = async (data) => {
     setLoading(true);

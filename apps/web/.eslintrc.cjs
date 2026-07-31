@@ -7,5 +7,5 @@
 module.exports = {
   root: true,
   extends: [require.resolve('@lacasa/config-eslint/react')],
-  ignorePatterns: ['dist', '.eslintrc.cjs', 'server'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'server', 'coverage'],
 }

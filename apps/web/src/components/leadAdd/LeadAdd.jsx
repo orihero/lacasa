@@ -27,7 +27,7 @@ const LeadAdd = () => {
     if (id) {
       fetchCoworkerList(id);
     }
-  }, [id]);
+  }, [id, fetchCoworkerList]);
 
   const onSubmit = async (data) => {
     setLoading(true);
