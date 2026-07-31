@@ -21,6 +21,8 @@ import {
   Typography,
 } from "@mui/material";
 import axios from "axios";
+import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
+import type { CurrencyCodeKey } from "@lacasa/domain";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -60,16 +62,15 @@ const AdsEdit = () => {
   const { currentUser, fetchUserInfo } = useUserStore();
   const { fetchAdsById, adsData, isLoading } = useListStore();
   const [regionId, setRegionId] = useState(0);
-  const [price, setPrice] = useState(0);
   const navigate = useNavigate();
   const [extFiles, setExtFiles] = useState([]);
   const [photoUrl, setPhotoUrl] = useState([]);
   const [publishSelectSocial, setPublishSelectSocial] = useState([]);
   const [imageSrc, setImageSrc] = useState(undefined);
-  const [videoSrc, setVideoSrc] = useState(undefined);
+  const [, setVideoSrc] = useState(undefined);
   const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
-  const [priceType, setPriceType] = useState("uzs");
+  const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
   const [nearPlacesList, setNearPlaceList] = useState([]);
   const [optionList, setOptionList] = useState([]);
   const descriptionValue = watch("description", "");
@@ -222,15 +223,18 @@ const AdsEdit = () => {
     }
   };
 
+  const handleChangeOption = (id, type, value) => {
+    let clone = [...optionList];
+    let index = clone.findIndex((item) => item.id == id);
+    clone[index] = { ...clone[index], [type]: value };
+    setOptionList([...clone]);
+  };
+
   const onSubmitTG = async () => {
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-    const caption = Object.entries(allValues).reduce(
-      (result, [key, value]) =>
-        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
-      "",
-    );
+    const caption = buildCaption(allValues, priceType, t);
 
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
@@ -283,11 +287,7 @@ const AdsEdit = () => {
   const onSubmitIG = async () => {
     const allValues = getValues();
 
-    const caption = Object.entries(allValues).reduce(
-      (result, [key, value]) =>
-        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
-      "",
-    );
+    const caption = buildCaption(allValues, priceType, t);
 
     try {
       // Publishing happens server-side with the stored token — no IG access
@@ -425,7 +425,7 @@ const AdsEdit = () => {
                   className={errors.city ? "error" : ""}
                 >
                   <option key={"0"} value={""} defaultChecked></option>
-                  {regionData.regions.map((region, i) => {
+                  {regionData.regions.map((region) => {
                     return (
                       <option
                         key={region.id.toString()}
@@ -453,7 +453,7 @@ const AdsEdit = () => {
                   <option key={"0"} value={""} defaultChecked></option>
                   {regionData.districts
                     .filter((item) => item.region_id == regionId)
-                    .map((district, i) => {
+                    .map((district) => {
                       return (
                         <option
                           key={district.id.toString()}
@@ -617,20 +617,19 @@ const AdsEdit = () => {
                   })}
                 />
                 <i>
-                  {priceType == "uzs"
-                    ? Math.floor(priceValue / (currency[0]?.currency ?? 1)) +
-                      " $"
-                    : (currency[0]?.currency ?? 0) * priceValue + " so'm"}
+                  {convertDisplayPrice(priceValue, priceType, currency[0]?.currency)}
                 </i>
                 {errors.price && <span>{errors.price.message}</span>}
               </div>
               <div className="priceType">
                 <select
                   name="priceType"
-                  onChange={(e) => setPriceType(e.target.value)}
+                  onChange={(e) =>
+                    setPriceType(e.target.value as CurrencyCodeKey)
+                  }
                 >
                   <option value="uzs" defaultChecked>
-                    so'm
+                    so&apos;m
                   </option>
                   <option value="usd">y.e</option>
                 </select>
@@ -809,7 +808,7 @@ const AdsEdit = () => {
                 <div className="ig-stories">
                   {currentUser.igAccounts?.map((e) => {
                     return (
-                      <div className="igAvatar">
+                      <div key={e.username} className="igAvatar">
                         <img
                           src="/social-preview/gradient.svg"
                           className="ig-gradient"
@@ -882,7 +881,7 @@ const AdsEdit = () => {
                   >
                     {extFiles.map((e) => {
                       return (
-                        <div style={{ height: "400px" }}>
+                        <div key={e.id} style={{ height: "400px" }}>
                           <img
                             className="insta-post-img"
                             src={URL.createObjectURL(e.file)}
@@ -1217,8 +1216,8 @@ const AdsEdit = () => {
                 <div className="tg-flex">
                   {!!currentUser.igAccounts &&
                     currentUser?.igAccounts?.map((e, index) => (
-                      <div className="tg-channel-item-flex">
-                        <IgProfileCard key={index} data={e} />
+                      <div key={index} className="tg-channel-item-flex">
+                        <IgProfileCard data={e} />
                         <Checkbox onChange={() => handleCheckboxChange(e)} />
                       </div>
                     ))}
@@ -1230,8 +1229,8 @@ const AdsEdit = () => {
                   {currentUser?.tgAccounts.length > 1 &&
                     currentUser?.tgAccounts.map((item, index) => {
                       return (
-                        <div className="tg-channel-item-flex">
-                          <TgProfileCard key={index} data={item} />
+                        <div key={index} className="tg-channel-item-flex">
+                          <TgProfileCard data={item} />
                           <Checkbox
                             onChange={() => handleCheckboxChange(item)}
                           />
@@ -1240,6 +1239,7 @@ const AdsEdit = () => {
                             if (e.chat.id == item.id) {
                               return (
                                 <div
+                                  key={e.message_id}
                                   onClick={() => {
                                     const url = `https://t.me/${item.username}/${e.message_id}`;
                                     navigator.clipboard

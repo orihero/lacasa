@@ -1,10 +1,9 @@
-import { IIgAccount } from "../../services/ig";
+import type { InstagramAccount } from "@lacasa/api-client";
 import "./IgProfileCard.scss";
 
-import React from "react";
 
 export interface IgProfileCardProps {
-  data: IIgAccount;
+  data: InstagramAccount;
 }
 
 function IgProfileCard({ data }: IgProfileCardProps) {

@@ -1,4 +1,3 @@
-import React from "react";
 import "./ytVideoCard.scss";
 const YtVideoCard = ({ isVideo, hashtags, title, bannerImg, isShort }) => {
   if (isShort) {

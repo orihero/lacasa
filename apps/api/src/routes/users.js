@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { serializeUser } from "../lib/serializeUser.js";
 
@@ -30,7 +29,7 @@ router.patch("/me", requireAuth, async (req, res, next) => {
     if (avatar !== undefined) data.avatarUrl = avatar;
     if (password) data.passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.update({ where: { id: req.auth.sub }, data });
+    const user = await req.ctx.prisma.user.update({ where: { id: req.auth.sub }, data });
     res.json({ user: serializeUser(user) });
   } catch (e) {
     if (e.code === "P2002") {

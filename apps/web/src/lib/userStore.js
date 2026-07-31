@@ -1,6 +1,38 @@
 import { create } from "zustand";
-import { api, getAuthToken, setAuthToken } from "./api";
+import { apiClient } from "./apiClient";
+import { getAuthToken, setAuthToken } from "./api";
 import { TGService } from "../services/tg";
+
+// GET /auth/me — the session read itself, nothing else. Enrichment of the
+// raw user record (Telegram/Instagram account details) is each its own
+// function below, orchestrated by fetchUserInfo.
+async function loadSession() {
+  const { user } = await apiClient.auth.me();
+  return user;
+}
+
+// Telegram chat ids aren't secret, so resolving them into displayable
+// channel info (title, avatar) still happens client-side via TGService.
+// Moving this server-side is tracked separately — left as-is here.
+async function enrichTelegramAccounts(userData) {
+  if (!userData.tgChatIds?.length) return [];
+  return TGService.init(userData.tgChatIds);
+}
+
+// userData.igAccounts already comes from the server as connected-account
+// metadata (no access tokens ever reach the client) — this just backfills
+// richer profile info (avatar, follower counts) via the server-side Graph
+// API proxy. Falls back to the un-enriched accounts on any failure.
+async function enrichInstagramAccounts(userData) {
+  if (!userData.igAccounts?.length) return userData.igAccounts;
+  try {
+    const { accounts } = await apiClient.publish.getInstagramAccounts();
+    return accounts?.length ? accounts : userData.igAccounts;
+  } catch (error) {
+    console.error("Failed to enrich IG accounts:", error);
+    return userData.igAccounts;
+  }
+}
 
 export const useUserStore = create((set) => ({
   currentUser: null,
@@ -12,28 +44,15 @@ export const useUserStore = create((set) => ({
       return set({ currentUser: null, isLoading: false });
     }
     try {
-      const { data } = await api.get("/auth/me");
-      const userData = data.user;
+      const userData = await loadSession();
 
-      // userData.igAccounts already comes from the server as connected-account
-      // metadata (no access tokens ever reach the client); only Telegram
-      // still needs a client-side resolve call, since chat ids aren't secret.
-      let tgAccounts = [];
-      if (userData.tgChatIds?.length) tgAccounts = await TGService.init(userData.tgChatIds);
-
-      // Enrich IG accounts with profile info (avatar, follower counts) — the
-      // server proxies the Graph API call with the stored token.
-      if (userData.igAccounts?.length) {
-        try {
-          const { data: acc } = await api.get("/publish/instagram/accounts");
-          if (acc.accounts?.length) userData.igAccounts = acc.accounts;
-        } catch (e) {
-          console.error("Failed to enrich IG accounts:", e);
-        }
-      }
+      const [tgAccounts, igAccounts] = await Promise.all([
+        enrichTelegramAccounts(userData),
+        enrichInstagramAccounts(userData),
+      ]);
 
       set({
-        currentUser: { ...userData, tgAccounts },
+        currentUser: { ...userData, tgAccounts, igAccounts },
         isLoading: false,
       });
     } catch (error) {
@@ -50,7 +69,7 @@ export const useUserStore = create((set) => ({
 
   fetchUserById: async (id) => {
     try {
-      const { data } = await api.get(`/agents/${id}`);
+      const data = await apiClient.agents.getById(id);
       set({ agent: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching agent:", error);

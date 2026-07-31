@@ -1,4 +1,3 @@
-import React, { useRef, useState } from "react";
 import "./imageCarusel.scss";
 import { Galleria } from "primereact/galleria";
 
@@ -6,7 +5,7 @@ const ImageCarusel = ({ items }) => {
   const itemTemplate = (item) => {
     return <img src={item} style={{ width: "100%" }} />;
   };
-  const indicatorTemplate = (index) => {
+  const indicatorTemplate = () => {
     return (
       <span
         style={{

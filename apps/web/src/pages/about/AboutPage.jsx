@@ -1,4 +1,3 @@
-import React from "react";
 import "./about.scss";
 import TelegramIcon from "../../components/icons/TelegramIcon";
 import { useTranslation } from "react-i18next";

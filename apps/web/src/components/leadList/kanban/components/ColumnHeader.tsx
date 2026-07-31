@@ -1,25 +1,16 @@
-import React from "react";
 import { UncontrolledBoardProps } from "@caldwell619/react-kanban";
-import { Box, IconButton, Typography } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import randomRgba from "random-rgba";
+import { Box, Typography } from "@mui/material";
 
-import { createNewCard, CustomCard } from "../data";
+import { CustomCard } from "../data";
 import { ColoredBgText } from "./Card";
 import StatusCell from "../../../status/StatusCell";
-import { useNavigate, useParams } from "react-router-dom";
 
 export const renderColumnHeader: UncontrolledBoardProps<CustomCard>["renderColumnHeader"] =
   (column) => {
-    const navigate = useNavigate();
-    const { id } = useParams();
-    const onAddCard = () => {
-      // navigate("/profile/" + id + "/create/leads");
-      // const newCard = createNewCard();
-      // Can be async, do mutation here awaiting result, then call `addCard`
-      // addCard(newCard, { on: "top" });
-    };
+    // navigate("/profile/" + id + "/create/leads");
+    // const newCard = createNewCard();
+    // Can be async, do mutation here awaiting result, then call `addCard`
+    // addCard(newCard, { on: "top" });
     return (
       <Box
         sx={{

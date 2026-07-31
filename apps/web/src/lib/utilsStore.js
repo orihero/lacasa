@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { apiClient } from "./apiClient";
 
 export const useUtilsStore = create((set) => ({
   currency: [],
@@ -7,7 +7,7 @@ export const useUtilsStore = create((set) => ({
   isLoading: true,
   fetchCurrency: async () => {
     try {
-      const { data } = await api.get("/utils/currency");
+      const data = await apiClient.utils.getCurrency();
       set({ currency: [{ id: data.code, currency: data.rate }], isLoading: false });
     } catch (error) {
       console.error("fetch currency", error);
@@ -16,7 +16,7 @@ export const useUtilsStore = create((set) => ({
   },
   fetchNearbyPlace: async () => {
     try {
-      const { data } = await api.get("/utils/nearby-places");
+      const data = await apiClient.utils.getNearbyPlaces();
       set({ nearbyPlaceData: [{ id: "nearby", data }], isLoading: false });
     } catch (error) {
       console.error("Error fetchNearbyPlace: ", error);

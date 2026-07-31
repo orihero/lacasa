@@ -1,5 +1,4 @@
 import { verifyToken } from "../lib/jwt.js";
-import { prisma } from "../lib/prisma.js";
 
 export function requireAuth(req, res, next) {
   const header = req.headers.authorization;
@@ -20,7 +19,7 @@ export function requireAuth(req, res, next) {
 // after requireAuth.
 export async function loadCurrentUser(req, res, next) {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.auth.sub } });
+    const user = await req.ctx.prisma.user.findUnique({ where: { id: req.auth.sub } });
     if (!user) {
       return res.status(401).json({ error: { code: "unauthorized", message: "User no longer exists" } });
     }

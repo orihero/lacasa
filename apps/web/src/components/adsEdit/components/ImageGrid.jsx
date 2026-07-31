@@ -1,4 +1,3 @@
-import React from "react";
 import "./ImageGrid.scss";
 
 const ImageGrid = ({ images }) => {

@@ -6,7 +6,6 @@ import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
 import CoworkerList from "./components/coworkerList/CoworkerList";
 import LeadList from "./components/leadList/LeadList";
 import ProfileSetting from "./components/profileSetting/ProfileSetting";
-import AboutPage from "./pages/about/AboutPage";
 import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
 import AgentsPage from "./pages/agents/AgentsPage";
 import HomePage from "./routes/homePage/homePage";

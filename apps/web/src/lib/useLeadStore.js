@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { apiClient } from "./apiClient";
 
 export const useLeadStore = create((set) => ({
   list: [],
@@ -7,10 +7,10 @@ export const useLeadStore = create((set) => ({
   lead: {},
   isUpdated: false,
   // agentId param kept for call-site compatibility; the API scopes to the
-  // caller's own agent context (see server/src/routes/leads.js).
+  // caller's own agent context (see apps/api/src/routes/leads.js).
   fetchLeadList: async () => {
     try {
-      const { data } = await api.get("/leads");
+      const data = await apiClient.leads.list();
       set({ list: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching leads:", error);
@@ -19,7 +19,7 @@ export const useLeadStore = create((set) => ({
   },
   fetchLeadById: async (leadId) => {
     try {
-      const { data } = await api.get(`/leads/${leadId}`);
+      const data = await apiClient.leads.getById(leadId);
       set({ lead: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching lead by id:", error);
@@ -30,7 +30,7 @@ export const useLeadStore = create((set) => ({
   // notes) — kept as a distinct action only because LeadList.jsx references it.
   fetchLeadListByCwrk: async () => {
     try {
-      const { data } = await api.get("/leads");
+      const data = await apiClient.leads.list();
       set({ list: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching leads:", error);
@@ -45,7 +45,7 @@ export const useLeadStore = create((set) => ({
         Object.entries(updateData).filter(([, value]) => value !== undefined),
       );
 
-      await api.patch(`/leads/${leadId}`, filteredData);
+      await apiClient.leads.update(leadId, filteredData);
 
       set({ isUpdated: false });
     } catch (error) {

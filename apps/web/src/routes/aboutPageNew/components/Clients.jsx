@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { style } from "../../../util/styles";
 import { userInfo } from "../../../util/constants";
 import { userInfoTop } from "../../../assets";

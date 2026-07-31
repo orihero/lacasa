@@ -4,17 +4,22 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
     "migrate": "prisma migrate dev",
     "seed": "node prisma/seed.js",
-    "studio": "prisma studio"
+    "studio": "prisma studio",
+    "gen:env-example": "node scripts/gen-env-example.mjs",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "lint": "eslint ."
   },
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "@lacasa/domain": "*",
     "@prisma/client": "^5.19.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -25,7 +30,13 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "prisma": "^5.19.0"
+    "@lacasa/config-eslint": "*",
+    "@lacasa/config-vitest": "*",
+    "@vitest/coverage-v8": "^3.2.7",
+    "eslint": "^8.57.0",
+    "prisma": "^5.19.0",
+    "supertest": "^7.2.2",
+    "vitest": "^3.2.7"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,

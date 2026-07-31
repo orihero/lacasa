@@ -1,23 +1,11 @@
+// NOTE: `extends` uses require.resolve(...) rather than the bare
+// specifier '@lacasa/config-eslint/react'. ESLint 8's shareable-config
+// naming convention mangles any bare "@scope/pkg/subpath" extend into
+// "@scope/eslint-config-pkg/subpath" before resolving it — it doesn't
+// respect package.json "exports" subpaths the way Node's require() does.
+// Passing an already-resolved absolute path sidesteps that entirely.
 module.exports = {
   root: true,
-  env: { browser: true, es2020: true },
-  extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react/jsx-runtime',
-    'plugin:react-hooks/recommended',
-  ],
+  extends: [require.resolve('@lacasa/config-eslint/react')],
   ignorePatterns: ['dist', '.eslintrc.cjs', 'server'],
-  parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
-  settings: { react: { version: '18.2' } },
-  plugins: ['react-refresh'],
-  rules: {
-    "react/prop-types": "off",
-    "no-unused-vars": "warn",
-    'react/jsx-no-target-blank': 'off',
-    'react-refresh/only-export-components': [
-      'warn',
-      { allowConstantExport: true },
-    ],
-  },
 }

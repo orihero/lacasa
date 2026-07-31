@@ -1,4 +1,3 @@
-import React from "react";
 import "./hCard.scss";
 import RoomsIcon from "../icons/RoomsIcon";
 import LocationIcon from "../icons/LocationIcon";

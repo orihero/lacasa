@@ -1,4 +1,3 @@
-import React from "react";
 import { style } from "../../../util/styles";
 import { footerApc, footerData } from "../../../util/constants";
 import { Logo } from "../../../assets";

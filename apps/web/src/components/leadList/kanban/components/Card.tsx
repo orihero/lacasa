@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { UncontrolledBoardProps } from "@caldwell619/react-kanban";
 import {
   Grid2 as Grid,
@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import shouldForwardProp from "@emotion/is-prop-valid";
 
-import { CustomCard, ticketTypeToBgColor } from "../data";
+import { CustomCard } from "../data";
 import {
   formatCallbackDate,
   formatCreatedAt,

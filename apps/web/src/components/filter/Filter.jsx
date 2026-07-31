@@ -36,7 +36,7 @@ function Filter() {
   console.log(filters);
 
   const debouncedFetchAds = debounce((updatedFilters) => {
-    fetchAdsByAgentId(agentId ?? currentUser.id, updatedFilters);
+    fetchAdsByAgentId(agentId ?? currentUser.id, updatedFilters, "newest", "mine");
   }, 300);
 
   const handleFilterChange = (field, value) => {
@@ -238,7 +238,7 @@ function Filter() {
             name="sort"
             id="sort"
             onChange={(e) =>
-              fetchAdsByAgentId(currentUser.id, {}, e.target.value)
+              fetchAdsByAgentId(currentUser.id, {}, e.target.value, "mine")
             }
           >
             <option value="highestPrice">{t("highestPrice")}</option>

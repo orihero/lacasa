@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { apiClient } from "./apiClient";
 
 export const useStatisticsStore = create((set) => ({
   isLoading: true,
@@ -10,7 +10,7 @@ export const useStatisticsStore = create((set) => ({
   // caller's own agent context.
   getAdsStatistics: async (agentId, filterType) => {
     try {
-      const { data } = await api.get("/statistics/ads", { params: { filterType } });
+      const data = await apiClient.statistics.getAdsStatistics(filterType);
       set({
         adsNewCount: data.adsNewCount,
         adsSoldCount: data.adsSoldCount,
@@ -24,7 +24,7 @@ export const useStatisticsStore = create((set) => ({
 
   getCoworkerStatistics: async () => {
     try {
-      const { data } = await api.get("/statistics/coworkers");
+      const data = await apiClient.statistics.getCoworkerStatistics();
       set({ listCwrkST: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching statistics:", error);

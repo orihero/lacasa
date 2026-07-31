@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { phoneValidationRule } from "@lacasa/domain";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { api } from "../../lib/api";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
@@ -24,7 +25,6 @@ const LeadUpdate = ({ leadId, onClose }) => {
   const { currentUser } = useUserStore();
   const [loading, setLoading] = useState(false);
   // const [selectValue, setSelectValue] = useState("");
-  const { id } = useParams();
   const statusValue = watch("status", "new");
   useEffect(() => {
     if (currentUser?.id && currentUser.role == "agent") {
@@ -129,13 +129,13 @@ const LeadUpdate = ({ leadId, onClose }) => {
                 <label>{t("phone")}:</label>
                 <input
                   type="text"
-                  {...register("phone", {
-                    required: "Phone number is required",
-                    pattern: {
-                      value: /^\+998\d{9}$/,
-                      message: "Invalid Uzbekistan phone number",
-                    },
-                  })}
+                  {...register(
+                    "phone",
+                    phoneValidationRule(
+                      "Phone number is required",
+                      "Invalid Uzbekistan phone number",
+                    ),
+                  )}
                   className={errors.phone ? "error" : ""}
                 />
                 {errors.phone && <span>{errors.phone.message}</span>}

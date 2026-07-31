@@ -1,19 +1,6 @@
-import React from "react";
-import { FC, useState } from "react";
-import { MenuItem, Menu, Button } from "@mui/material";
-import UpIcon from "@mui/icons-material/KeyboardArrowUp";
-import DownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { FC } from "react";
 
 export const NewMenu: FC = () => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   return (
     <>
       {/* <Button

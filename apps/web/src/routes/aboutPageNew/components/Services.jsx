@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { style } from "../../../util/styles";
 import { services } from "../../../util/constants";
 import { useTranslation } from "react-i18next";

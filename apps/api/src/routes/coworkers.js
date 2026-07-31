@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
 import { requireAuth, loadCurrentUser } from "../middleware/auth.js";
 import { effectiveAgentId } from "../middleware/roles.js";
 
@@ -29,7 +28,7 @@ router.get("/", async (req, res, next) => {
     if (!agentId) {
       return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
     }
-    const coworkers = await prisma.user.findMany({ where: { agentId, role: "COWORKER" } });
+    const coworkers = await req.ctx.prisma.user.findMany({ where: { agentId, role: "COWORKER" } });
     res.json(coworkers.map(serializeCoworker));
   } catch (e) {
     next(e);
@@ -55,13 +54,13 @@ router.post("/", async (req, res, next) => {
     }
     const { fullName, email, password, phoneNumber, avatar } = parsed.data;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await req.ctx.prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(409).json({ error: { code: "email_taken", message: "Email is already registered" } });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const coworker = await prisma.user.create({
+    const coworker = await req.ctx.prisma.user.create({
       data: {
         fullName,
         email,
@@ -81,7 +80,7 @@ router.post("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const agentId = effectiveAgentId(req.currentUser);
-    const coworker = await prisma.user.findFirst({
+    const coworker = await req.ctx.prisma.user.findFirst({
       where: { id: req.params.id, role: "COWORKER", agentId },
     });
     if (!coworker) {
@@ -110,7 +109,7 @@ router.patch("/:id", async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });
     }
-    const existing = await prisma.user.findFirst({
+    const existing = await req.ctx.prisma.user.findFirst({
       where: { id: req.params.id, role: "COWORKER", agentId: req.currentUser.id },
     });
     if (!existing) {
@@ -125,7 +124,7 @@ router.patch("/:id", async (req, res, next) => {
     if (avatar !== undefined) data.avatarUrl = avatar;
     if (password) data.passwordHash = await bcrypt.hash(password, 10);
 
-    const coworker = await prisma.user.update({ where: { id: req.params.id }, data });
+    const coworker = await req.ctx.prisma.user.update({ where: { id: req.params.id }, data });
     res.json(serializeCoworker(coworker));
   } catch (e) {
     if (e.code === "P2002") {
@@ -140,13 +139,13 @@ router.delete("/:id", async (req, res, next) => {
     if (req.currentUser.role !== "AGENT") {
       return res.status(403).json({ error: { code: "forbidden", message: "Only the owning agent can delete a coworker" } });
     }
-    const existing = await prisma.user.findFirst({
+    const existing = await req.ctx.prisma.user.findFirst({
       where: { id: req.params.id, role: "COWORKER", agentId: req.currentUser.id },
     });
     if (!existing) {
       return res.status(404).json({ error: { code: "not_found", message: "Coworker not found" } });
     }
-    await prisma.user.delete({ where: { id: req.params.id } });
+    await req.ctx.prisma.user.delete({ where: { id: req.params.id } });
     res.status(204).end();
   } catch (e) {
     next(e);

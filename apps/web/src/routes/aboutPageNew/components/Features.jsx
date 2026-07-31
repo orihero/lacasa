@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { features } from "../../../util/constants";
 import { style } from "../../../util/styles";
 import { useTranslation } from "react-i18next";

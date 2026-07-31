@@ -87,7 +87,7 @@ const AdsList = () => {
 
   useEffect(() => {
     if (currentUser?.agentId) {
-      fetchAdsByAgentId(currentUser.agentId);
+      fetchAdsByAgentId(currentUser.agentId, {}, "newest", "mine");
     }
   }, []);
 

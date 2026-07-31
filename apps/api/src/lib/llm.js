@@ -3,12 +3,9 @@
 // never code. The executor in the extension interprets it with a fixed action
 // vocabulary and independently refuses submit/publish controls.
 import Anthropic from "@anthropic-ai/sdk";
+import { config } from "./config.js";
 
-const MODEL = process.env.LLM_MODEL ?? "claude-opus-5";
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-export const llmConfigured = !!process.env.ANTHROPIC_API_KEY;
+const MODEL = config.LLM_MODEL;
 
 const FIELD_MAP_SCHEMA = {
   type: "object",
@@ -79,18 +76,34 @@ and 5-10 relevant hashtags (reuse the listing's hashtags when present).
 Match the language of the listing description.`,
 };
 
+// Factory instead of a module singleton: app.js constructs one instance at
+// boot and threads it through req.ctx.llm, so tests can substitute a fake
+// client without a real Anthropic API key or network call.
+export function createLlmClient() {
+  const configured = config.LLM_CONFIGURED;
+  const client = configured ? new Anthropic({ apiKey: config.ANTHROPIC_API_KEY }) : null;
+
+  return {
+    configured,
+    mapFields: (args) => mapFields(client, configured, args),
+  };
+}
+
 /**
  * Map a DOM snapshot of a posting form to concrete field actions.
- * @param {"olx"|"instagram"} channel
- * @param {object} ad        structured listing fields (title, price, rooms, ...)
- * @param {string} step      which form step the snapshot belongs to
- * @param {Array}  snapshot  FieldNode | CategoryStepNode array from the extension
+ * @param {Anthropic|null} client
+ * @param {boolean} configured
+ * @param {object} args
+ * @param {"olx"|"instagram"} args.channel
+ * @param {object} args.ad        structured listing fields (title, price, rooms, ...)
+ * @param {string} args.step      which form step the snapshot belongs to
+ * @param {Array}  args.snapshot  FieldNode | CategoryStepNode array from the extension
  */
-export async function mapFields({ channel, ad, step, snapshot }) {
+async function mapFields(client, configured, { channel, ad, step, snapshot }) {
   // Without a key the SDK throws "Could not resolve authentication method",
   // which the generic error handler flattens into "Internal server error" —
   // the extension then just says autofill stopped, with no clue why.
-  if (!llmConfigured) {
+  if (!configured) {
     const err = new Error("ANTHROPIC_API_KEY is not set on the server — AI field-mapping and caption writing are disabled");
     err.code = "llm_unconfigured";
     throw err;

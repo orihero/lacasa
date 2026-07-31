@@ -123,7 +123,6 @@ var MediaUploader = function (options) {
  * Initiate the upload.
  */
 MediaUploader.prototype.upload = function () {
-  var self = this;
   var xhr = new XMLHttpRequest();
 
   xhr.open(this.httpMethod, this.url, true);

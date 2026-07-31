@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { style } from "../../../util/styles";
 import { pricing } from "../../../util/constants";
 import { galchka, galchkaWhite } from "../../../assets";

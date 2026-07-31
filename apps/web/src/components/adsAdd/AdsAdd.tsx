@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import regionData from "../../regions.json";
 import { useUtilsStore } from "../../lib/utilsStore";
 import ShareIcon from "@mui/icons-material/Share";
+import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
+import type { CurrencyCodeKey } from "@lacasa/domain";
 import {
   Dropzone,
   FileMosaic,
@@ -26,7 +28,6 @@ import {
   Checkbox,
   FormControlLabel,
   Modal,
-  Paper,
   Typography,
 } from "@mui/material";
 import ExpandIcon from "@mui/icons-material/ExpandMore";
@@ -51,7 +52,6 @@ import { YTService } from "../../services/yt";
 const AdsAdd = () => {
   const {
     register,
-    handleSubmit,
     formState: { errors },
     watch,
     getValues,
@@ -75,7 +75,7 @@ const AdsAdd = () => {
   const [videoSrc, setVideoSrc] = useState(undefined);
   const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
-  const [priceType, setPriceType] = useState("uzs");
+  const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
   const [isShort, setIsShort] = useState(false);
   const [photoOrVideo, setPhotoOrVideo] = useState([]);
   const [nearPlacesList, setNearPlaceList] = useState([]);
@@ -86,7 +86,6 @@ const AdsAdd = () => {
   const cityValue = watch("city", "");
   const districtValue = watch("district", "");
   const roomValue = watch("rooms", "");
-  const categoryValue = watch("category", "");
   const hashtagsValue = watch("hashtags", "");
   const storeyValue = watch("storey", "");
   const floorsValue = watch("floors", "");
@@ -260,14 +259,7 @@ const AdsAdd = () => {
     const allValues = getValues();
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
-    const caption = Object.entries(allValues).reduce((result, [key, value]) => {
-      if (key === "hashtags") {
-        return `${value}\n` + result;
-      }
-      return (
-        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""}\n`
-      );
-    }, "");
+    const caption = buildCaption(allValues, priceType, t, { hoistHashtags: true });
 
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
@@ -321,11 +313,7 @@ const AdsAdd = () => {
       photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
     }
 
-    const caption = Object.entries(allValues).reduce(
-      (result, [key, value]) =>
-        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
-      "",
-    );
+    const caption = buildCaption(allValues, priceType, t);
 
     try {
       // Publishing happens server-side with the stored token — no IG access
@@ -395,18 +383,12 @@ const AdsAdd = () => {
   const onSubmitYT = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setIsLoading(true);
-    const allValues = getValues();
     // let photos = [];
 
     // if (extFilesVideo.length > 0) {
     //   photos = await Promise.all(extFilesVideo.map((e) => assetUpload(e.file)));
     // }
 
-    const caption = Object.entries(allValues).reduce(
-      (result, [key, value]) =>
-        result + `${t(key)}: ${value} ${key === "price" ? priceType : ""} \n`,
-      "",
-    );
     console.log(extFilesVideo);
     const metadata = {
       snippet: {
@@ -523,7 +505,7 @@ const AdsAdd = () => {
                   className={errors.city ? "error" : ""}
                 >
                   <option key={"0"} value={""} defaultChecked></option>
-                  {regionData.regions.map((region, i) => {
+                  {regionData.regions.map((region) => {
                     return (
                       <option
                         key={region.id.toString()}
@@ -551,7 +533,7 @@ const AdsAdd = () => {
                   <option key={"0"} value={""} defaultChecked></option>
                   {regionData.districts
                     .filter((item) => item.region_id == regionId)
-                    .map((district, i) => {
+                    .map((district) => {
                       return (
                         <option
                           key={district.id.toString()}
@@ -724,20 +706,19 @@ const AdsAdd = () => {
                   })}
                 />
                 <i>
-                  {priceType == "uzs"
-                    ? Math.floor(priceValue / (currency[0]?.currency ?? 1)) +
-                      " $"
-                    : (currency[0]?.currency ?? 0) * priceValue + " so'm"}
+                  {convertDisplayPrice(priceValue, priceType, currency[0]?.currency)}
                 </i>
                 {errors.price && <span>{errors.price.message}</span>}
               </div>
               <div className="priceType">
                 <select
                   name="priceType"
-                  onChange={(e) => setPriceType(e.target.value)}
+                  onChange={(e) =>
+                    setPriceType(e.target.value as CurrencyCodeKey)
+                  }
                 >
                   <option value="uzs" defaultChecked>
-                    so'm
+                    so&apos;m
                   </option>
                   <option value="usd">y.e</option>
                 </select>
@@ -1406,8 +1387,8 @@ const AdsAdd = () => {
                 <div className="tg-flex">
                   {!!currentUser.igAccounts &&
                     currentUser?.igAccounts?.map((e, index) => (
-                      <div className="tg-channel-item-flex">
-                        <IgProfileCard key={index} data={e} />
+                      <div key={index} className="tg-channel-item-flex">
+                        <IgProfileCard data={e} />
                         <Checkbox onChange={() => handleCheckboxChange(e)} />
                       </div>
                     ))}
@@ -1432,6 +1413,7 @@ const AdsAdd = () => {
                             if (e.chat.id == item.id) {
                               return (
                                 <div
+                                  key={e.message_id}
                                   onClick={() => {
                                     const url = `https://t.me/${item.username}/${e.message_id}`;
                                     navigator.clipboard

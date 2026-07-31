@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { phoneValidationRule } from "@lacasa/domain";
+import { useEffect, useState } from "react";
 import "./leadAdd.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -90,13 +91,13 @@ const LeadAdd = () => {
                 <label>{t("phone")}:</label>
                 <input
                   type="text"
-                  {...register("phone", {
-                    required: t("phoneNumberRequired"),
-                    pattern: {
-                      value: /^\+998\d{9}$/,
-                      message: t("invalidUzbekistanPhoneNumber"),
-                    },
-                  })}
+                  {...register(
+                    "phone",
+                    phoneValidationRule(
+                      t("phoneNumberRequired"),
+                      t("invalidUzbekistanPhoneNumber"),
+                    ),
+                  )}
                   className={errors.phone ? "error" : ""}
                 />
                 {errors.phone && <span>{errors.phone.message}</span>}

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api } from "./api";
+import { apiClient } from "./apiClient";
 
 export const useCoworkerStore = create((set) => ({
   list: [],
@@ -10,7 +10,7 @@ export const useCoworkerStore = create((set) => ({
   // their agentId) rather than trusting a client-supplied id.
   fetchCoworkerList: async () => {
     try {
-      const { data } = await api.get("/coworkers");
+      const data = await apiClient.coworkers.list();
       set({ list: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching coworkers:", error);
@@ -19,7 +19,7 @@ export const useCoworkerStore = create((set) => ({
   },
   fetchCoworkerById: async (userId) => {
     try {
-      const { data } = await api.get(`/coworkers/${userId}`);
+      const data = await apiClient.coworkers.getById(userId);
       set({ coworker: data, isLoading: false });
     } catch (error) {
       console.error("Error fetching coworker:", error);

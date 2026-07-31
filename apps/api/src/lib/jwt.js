@@ -1,12 +1,10 @@
 import jwt from "jsonwebtoken";
+import { config } from "./config.js";
 
-const SECRET = process.env.JWT_SECRET;
-const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
-
-export function signToken(payload) {
-  return jwt.sign(payload, SECRET, { expiresIn: EXPIRES_IN });
+export function signToken(payload, options = {}) {
+  return jwt.sign(payload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN, ...options });
 }
 
 export function verifyToken(token) {
-  return jwt.verify(token, SECRET);
+  return jwt.verify(token, config.JWT_SECRET);
 }

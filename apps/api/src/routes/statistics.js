@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma.js";
 import { requireAuth, loadCurrentUser } from "../middleware/auth.js";
 import { effectiveAgentId } from "../middleware/roles.js";
 import { EVENT_STAGE } from "../lib/enums.js";
@@ -48,8 +47,8 @@ router.get("/ads", async (req, res, next) => {
     const range = start && end ? { gte: start, lte: end } : undefined;
 
     const [adsNewCount, adsSoldCount] = await Promise.all([
-      prisma.activityEvent.count({ where: { agentId, type: "AD_CREATED", ...(range ? { createdAt: range } : {}) } }),
-      prisma.activityEvent.count({ where: { agentId, type: "AD_SOLD", ...(range ? { createdAt: range } : {}) } }),
+      req.ctx.prisma.activityEvent.count({ where: { agentId, type: "AD_CREATED", ...(range ? { createdAt: range } : {}) } }),
+      req.ctx.prisma.activityEvent.count({ where: { agentId, type: "AD_SOLD", ...(range ? { createdAt: range } : {}) } }),
     ]);
 
     res.json({ adsNewCount, adsSoldCount });
@@ -64,7 +63,7 @@ router.get("/coworkers", async (req, res, next) => {
     if (!agentId) {
       return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
     }
-    const events = await prisma.activityEvent.findMany({ where: { agentId } });
+    const events = await req.ctx.prisma.activityEvent.findMany({ where: { agentId } });
     res.json(
       events.map((e) => ({
         id: e.id,

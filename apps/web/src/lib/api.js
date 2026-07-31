@@ -1,27 +1,7 @@
-import axios from "axios";
-
-const TOKEN_KEY = "lacasa_token";
-
-export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? "http://localhost:4200/api",
-});
-
-api.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-export function getAuthToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setAuthToken(token) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-}
+// Deprecated: the axios instance + localStorage token helpers now live in
+// ./httpTransport.js, which also adapts them to @lacasa/api-client's
+// Transport/TokenStorage contracts for ./apiClient.js (see agentsStore.js
+// and useStatisticsStore.js for the first two callers migrated onto it).
+// Re-exported here unchanged so every other call site — still on raw
+// api.get/post/patch/delete — keeps working without touching each one.
+export { api, getAuthToken, setAuthToken } from "./httpTransport";

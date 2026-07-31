@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { gapi } from "gapi-script";
 import MediaUploader from "../../services/cors_upload";
 import "./ytProfileCard.scss";
@@ -91,12 +91,11 @@ const YtProfileCard = () => {
           part: Object.keys(metadata).join(","),
         },
         onComplete: (data) => {
-          var uploadResponse = JSON.parse(data);
           console.log("====================================");
           console.log({ data });
           console.log("====================================");
         },
-        onError: (error) => {
+        onError: () => {
           var message = data;
           // Assuming the error is raised by the YouTube API, data will be
           // a JSON string with error.message set. That may not be the

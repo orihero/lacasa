@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import "./agents.scss";
 import { useAgentsStore } from "../../lib/agentsStore";
 import AgentCard from "../../components/agent/AgentCard";

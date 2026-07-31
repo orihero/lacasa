@@ -1,8 +1,8 @@
 import { Router } from "express";
 import crypto from "crypto";
-import jwt from "jsonwebtoken";
-import { prisma } from "../lib/prisma.js";
+import { signToken, verifyToken } from "../lib/jwt.js";
 import { requireAuth, loadCurrentUser } from "../middleware/auth.js";
+import { config } from "../lib/config.js";
 import {
   buildAuthorizeUrl,
   exchangeCode,
@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-const APP_URL = process.env.APP_URL ?? "http://localhost:5273";
+const APP_URL = config.APP_URL;
 
 // Settings live at /profile/:agentId/setting; fall back to the app root when
 // the agent id is unknown (e.g. state validation failed).
@@ -30,9 +30,8 @@ router.post("/connect-url", requireAuth, loadCurrentUser, async (req, res, next)
     if (req.currentUser.role !== "AGENT") {
       return res.status(403).json({ error: { code: "forbidden", message: "Only agents can connect an Instagram account" } });
     }
-    const state = jwt.sign(
+    const state = signToken(
       { purpose: "ig_oauth", agentId: req.auth.sub, nonce: crypto.randomUUID() },
-      process.env.JWT_SECRET,
       { expiresIn: "15m" },
     );
     res.json({ url: buildAuthorizeUrl(state) });
@@ -53,7 +52,7 @@ router.get("/callback", async (req, res) => {
   }
   let agentId;
   try {
-    const payload = jwt.verify(state, process.env.JWT_SECRET);
+    const payload = verifyToken(state);
     if (payload.purpose !== "ig_oauth") throw new Error("wrong state purpose");
     agentId = payload.agentId;
   } catch (e) {
@@ -68,7 +67,7 @@ router.get("/callback", async (req, res) => {
     const igUserId = String(me.user_id ?? me.id);
     const expiresAt = new Date(Date.now() + (long.expires_in ?? 60 * 24 * 3600) * 1000);
 
-    await prisma.agentIgToken.upsert({
+    await req.ctx.prisma.agentIgToken.upsert({
       where: { agentId_igUserId: { agentId, igUserId } },
       create: {
         agentId,
@@ -97,7 +96,7 @@ router.delete("/:igUserId", requireAuth, loadCurrentUser, async (req, res, next)
     if (req.currentUser.role !== "AGENT") {
       return res.status(403).json({ error: { code: "forbidden", message: "Only agents can disconnect an Instagram account" } });
     }
-    await prisma.agentIgToken.deleteMany({
+    await req.ctx.prisma.agentIgToken.deleteMany({
       where: { agentId: req.currentUser.id, igUserId: req.params.igUserId },
     });
     res.json({ ok: true });

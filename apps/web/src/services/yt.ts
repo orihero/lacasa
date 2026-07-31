@@ -44,11 +44,6 @@ export class YTService {
 
   public static getChannelInfo = async (): Promise<any> => {
     try {
-      const authInstance = gapi.auth2.getAuthInstance();
-      const accessToken = authInstance.currentUser
-        .get()
-        .getAuthResponse().access_token;
-
       const response = await gapi.client.youtube.channels.list({
         part: "snippet,contentDetails,statistics", // Specify the details you need
         mine: true, // Get the channel info of the authenticated user
@@ -102,7 +97,7 @@ export class YTService {
             const errorResponse = JSON.parse(error);
             console.error("YouTube API Error:", errorResponse.error.message);
             alert(`Error: ${errorResponse.error.message}`);
-          } catch (parseError) {
+          } catch {
             console.error("Upload failed:", error);
             alert("An error occurred during the upload.");
           }

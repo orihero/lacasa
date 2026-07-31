@@ -1,7 +1,6 @@
 import { ITGAccount } from "../../services/tg";
 import "./tgProfileCard.scss";
 
-import React from "react";
 
 export interface TgProfileCardProps {
   data: ITGAccount;

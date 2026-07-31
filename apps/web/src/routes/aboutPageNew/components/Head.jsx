@@ -1,4 +1,3 @@
-import React from "react";
 import { style } from "../../../util/styles";
 import Button from "./Button";
 import { BtnPlay, HeadImg, HeadImg2 } from "../../../assets";

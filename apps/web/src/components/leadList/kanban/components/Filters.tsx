@@ -1,9 +1,5 @@
-import React from "react";
 import { FC } from "react";
-import { Box, Button, Divider, IconButton, styled } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import { Box, Divider } from "@mui/material";
 
 import { NewMenu } from "./Header";
 
@@ -46,7 +42,3 @@ export const Filters: FC = () => {
     </>
   );
 };
-
-const NormalCaseButton = styled(Button)`
-  text-transform: none;
-`;

@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./chart.scss";
-import { useTranslation } from "react-i18next";
 import HeaderCard from "./components/HeaderCard";
 import AdsChart from "./components/AdsChart";
 import CoworkerList from "./components/CoworkerList";
@@ -11,7 +10,6 @@ import { useListStore } from "../../lib/adsListStore";
 import { useStatisticsStore } from "../../lib/useStatisticsStore";
 
 const Chart = () => {
-  const { t } = useTranslation();
   const { fetchCoworkerList, list } = useCoworkerStore();
   const { currentUser } = useUserStore();
   const { fetchAdsByStage } = useListStore();

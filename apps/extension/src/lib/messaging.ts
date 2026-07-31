@@ -1,38 +1,42 @@
-import type { Channel, ConfirmEvent, CrosspostJob, MapFieldsResponse, PhotoPayload, SnapshotNode } from "./types";
+// apps/extension's chrome.runtime + window.postMessage wire types — sourced
+// from @lacasa/crosspost-protocol's message/background contracts wherever
+// the shapes agree with what actually crosses the wire today. See
+// ./types.ts's CASING NOTE for why the one field that disagrees (`channel`)
+// is overridden back to lowercase here too, and why CrosspostRequestAction
+// (the only BackgroundRequest variant that embeds a channel, via job) is
+// redefined locally instead of reused from the package as-is.
+import { PAGE_SOURCE, EXT_SOURCE } from "@lacasa/crosspost-protocol";
+import type {
+  CrosspostPingMessage,
+  CrosspostRequestMessage,
+  JobRequestAction,
+  MapFieldsAction,
+  ConfirmAction,
+  FetchPhotosAction,
+  JobDoneAction,
+  BackgroundResponse,
+} from "@lacasa/crosspost-protocol";
+import type { Channel, CrosspostJob, MapFieldsResponse, PhotoPayload } from "./types";
 
 // Page <-> bridge (window.postMessage)
-export const PAGE_SOURCE = "lacasa-app";
-export const EXT_SOURCE = "lacasa-ext";
+export { PAGE_SOURCE, EXT_SOURCE };
 
-export interface PageCrosspostRequest {
-  source: typeof PAGE_SOURCE;
-  type: "CROSSPOST_REQUEST";
+export type PagePing = CrosspostPingMessage;
+
+export interface PageCrosspostRequest extends Omit<CrosspostRequestMessage, "channel"> {
   channel: Channel;
-  adId: string;
-  ad: Record<string, unknown>;
-  photoUrls: string[];
-  token: string;
-  apiBase: string;
-  requestId: string;
-}
-
-export interface PagePing {
-  source: typeof PAGE_SOURCE;
-  type: "CROSSPOST_PING";
-  id: string;
 }
 
 // Bridge/content <-> background (chrome.runtime.sendMessage). Extension
 // messages are JSON-serialized, so photo bytes travel as base64.
-export type BgRequest =
-  | { type: "CROSSPOST_REQUEST"; job: Omit<CrosspostJob, "createdAt"> }
-  | { type: "JOB_REQUEST" }
-  | { type: "MAP_FIELDS"; step: string; snapshot: SnapshotNode[] }
-  | { type: "CONFIRM"; event: ConfirmEvent; externalId?: string; externalUrl?: string; errorMessage?: string }
-  | { type: "FETCH_PHOTOS"; urls: string[] }
-  | { type: "JOB_DONE" };
+export interface CrosspostRequestAction {
+  type: "CROSSPOST_REQUEST";
+  job: Omit<CrosspostJob, "createdAt">;
+}
 
-export type BgResponse<T = unknown> = { ok: true; data: T } | { ok: false; error: string };
+export type BgRequest = CrosspostRequestAction | JobRequestAction | MapFieldsAction | ConfirmAction | FetchPhotosAction | JobDoneAction;
+
+export type BgResponse<T = unknown> = BackgroundResponse<T>;
 
 export function sendToBackground<T = unknown>(msg: BgRequest): Promise<BgResponse<T>> {
   return new Promise((resolve) => {

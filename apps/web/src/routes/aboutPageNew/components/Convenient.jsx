@@ -1,4 +1,3 @@
-import React from "react";
 import { style } from "../../../util/styles";
 import { laptop } from "../../../assets";
 import { useTranslation } from "react-i18next";
@@ -30,9 +29,9 @@ const Convenient = () => {
                 : "https://www.youtube.com/embed/jK8BTbzaFdw?si=9eZblcO4xoT2lmiM"
             }
             title="YouTube video player"
-            frameborder="0"
+            frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
+            referrerPolicy="strict-origin-when-cross-origin"
             allowfullscreen
             style={{
               position: "absolute",

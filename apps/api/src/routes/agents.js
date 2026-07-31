@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { prisma } from "../lib/prisma.js";
 
 const router = Router();
 
-router.get("/", async (_req, res, next) => {
+router.get("/", async (req, res, next) => {
   try {
+    const { prisma } = req.ctx;
     const agents = await prisma.user.findMany({ where: { role: "AGENT" } });
     const counts = await prisma.activityEvent.groupBy({
       by: ["agentId"],
@@ -30,7 +30,7 @@ router.get("/", async (_req, res, next) => {
 
 router.get("/:id", async (req, res, next) => {
   try {
-    const agent = await prisma.user.findFirst({ where: { id: req.params.id, role: "AGENT" } });
+    const agent = await req.ctx.prisma.user.findFirst({ where: { id: req.params.id, role: "AGENT" } });
     if (!agent) {
       return res.status(404).json({ error: { code: "not_found", message: "Agent not found" } });
     }

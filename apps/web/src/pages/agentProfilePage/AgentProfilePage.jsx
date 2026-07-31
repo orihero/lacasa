@@ -19,7 +19,8 @@ function AgentProfilePage() {
   useEffect(() => {
     if (id) {
       fetchUserById(id);
-      fetchAdsByAgentId(id);
+      // Public agent profile — visible to anyone, active listings only.
+      fetchAdsByAgentId(id, {}, "newest", "public");
     }
   }, [id]);
 

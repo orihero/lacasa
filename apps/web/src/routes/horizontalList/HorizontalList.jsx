@@ -1,4 +1,3 @@
-import React from "react";
 import { Triangle } from "react-loader-spinner";
 import HorizontalCard from "../../components/h-card/HCard";
 import { useListStore } from "../../lib/adsListStore";

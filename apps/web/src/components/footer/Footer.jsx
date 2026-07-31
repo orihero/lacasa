@@ -1,5 +1,5 @@
 import axios from "axios";
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Button from "../../routes/aboutPageNew/components/Button";
 import { style } from "../../util/styles";

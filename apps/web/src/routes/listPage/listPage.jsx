@@ -1,5 +1,4 @@
 import { Triangle } from "react-loader-spinner";
-import Card from "../../components/card/Card";
 import { useListStore } from "../../lib/adsListStore";
 import "./listPage.scss";
 import HorizontalCard from "../../components/h-card/HCard";

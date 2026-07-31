@@ -1,5 +1,6 @@
 import { Avatar } from "@files-ui/react";
-import React, { useState } from "react";
+import { phoneValidationRule } from "@lacasa/domain";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
@@ -114,13 +115,13 @@ const CoworkerAdd = () => {
                 <label>{t("phone")}:</label>
                 <input
                   type="text"
-                  {...register("phone", {
-                    required: "Phone number is required",
-                    pattern: {
-                      value: /^\+998\d{9}$/,
-                      message: "Invalid Uzbekistan phone number",
-                    },
-                  })}
+                  {...register(
+                    "phone",
+                    phoneValidationRule(
+                      "Phone number is required",
+                      "Invalid Uzbekistan phone number",
+                    ),
+                  )}
                   className={errors.phone ? "error" : ""}
                 />
                 {errors.phone && <span>{errors.phone.message}</span>}

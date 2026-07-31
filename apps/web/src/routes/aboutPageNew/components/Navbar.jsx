@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Bar, Logo } from "../../../assets";
 import { style } from "../../../util/styles";
 import { navbarLink } from "../../../util/constants";

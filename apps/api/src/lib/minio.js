@@ -1,15 +1,21 @@
 import { Client } from "minio";
+import { config } from "./config.js";
 
-export const BUCKET = process.env.MINIO_BUCKET ?? "lacasa";
-export const PUBLIC_URL = process.env.MINIO_PUBLIC_URL ?? `http://localhost:9000/${BUCKET}`;
+export const BUCKET = config.MINIO_BUCKET;
+export const PUBLIC_URL = config.MINIO_PUBLIC_URL;
 
-export const minio = new Client({
-  endPoint: process.env.MINIO_ENDPOINT ?? "localhost",
-  port: Number(process.env.MINIO_PORT ?? 9000),
-  useSSL: process.env.MINIO_USE_SSL === "true",
-  accessKey: process.env.MINIO_ACCESS_KEY,
-  secretKey: process.env.MINIO_SECRET_KEY,
-});
+// Factory instead of a module singleton: app.js constructs one instance at
+// boot and threads it through req.ctx.minio, so tests can substitute a fake
+// client without a real MinIO connection.
+export function createMinioClient() {
+  return new Client({
+    endPoint: config.MINIO_ENDPOINT,
+    port: config.MINIO_PORT,
+    useSSL: config.MINIO_USE_SSL,
+    accessKey: config.MINIO_ACCESS_KEY,
+    secretKey: config.MINIO_SECRET_KEY,
+  });
+}
 
 // Best-effort reverse of `${PUBLIC_URL}/${objectKey}` — used to know what to
 // delete from the bucket when an ad is removed. Falls back to the full URL

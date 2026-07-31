@@ -1,13 +1,15 @@
 // Daily refresh of long-lived Instagram tokens (60-day expiry, docs/09 §1.2
 // step 5). Refreshes anything expiring within 7 days; tokens must be >=24h
 // old and not yet expired, which a daily cadence comfortably satisfies.
-import { prisma } from "./prisma.js";
+//
+// Runs outside any request, on a timer started from src/server.js, so it
+// takes its prisma client as a parameter rather than reading req.ctx.
 import { refreshLongLived } from "./instagram.js";
 
 const WINDOW_DAYS = 7;
 const DAY_MS = 24 * 3600 * 1000;
 
-export async function refreshExpiringIgTokens() {
+export async function refreshExpiringIgTokens(prisma) {
   const cutoff = new Date(Date.now() + WINDOW_DAYS * DAY_MS);
   const expiring = await prisma.agentIgToken.findMany({
     where: { expiresAt: { not: null, lte: cutoff, gt: new Date() } },
@@ -31,8 +33,8 @@ export async function refreshExpiringIgTokens() {
   return expiring.length;
 }
 
-export function scheduleIgTokenRefresh() {
+export function scheduleIgTokenRefresh(prisma) {
   // Run shortly after boot, then daily.
-  setTimeout(() => refreshExpiringIgTokens().catch(console.error), 30_000);
-  setInterval(() => refreshExpiringIgTokens().catch(console.error), DAY_MS).unref?.();
+  setTimeout(() => refreshExpiringIgTokens(prisma).catch(console.error), 30_000);
+  setInterval(() => refreshExpiringIgTokens(prisma).catch(console.error), DAY_MS).unref?.();
 }

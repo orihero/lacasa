@@ -14,7 +14,7 @@ import "./leadList.scss";
 import { useLeadStore } from "../../lib/useLeadStore";
 import StatusCell from "../status/StatusCell";
 import { useUserStore } from "../../lib/userStore";
-import { Drawer, styled, Typography } from "@mui/material";
+import { Drawer, Typography } from "@mui/material";
 import LeadUpdate from "../leadUpdate/LeadUpdate";
 
 const AdsList = () => {
@@ -87,10 +87,6 @@ const AdsList = () => {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
-  };
-
-  const handleNavigate = (id) => {
-    navigate("/profile/" + id + "/update/leads");
   };
 
   const handleNavigateNew = () => {

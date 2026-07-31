@@ -2,6 +2,8 @@
 // All calls run server-side with tokens stored in agent_ig_tokens — raw
 // tokens are never shipped to the client (docs/09 §1, migration plan E.2).
 
+import { config } from "./config.js";
+
 const IG_OAUTH_AUTHORIZE = "https://www.instagram.com/oauth/authorize";
 const IG_OAUTH_TOKEN = "https://api.instagram.com/oauth/access_token";
 const GRAPH = "https://graph.instagram.com";
@@ -9,9 +11,9 @@ const GRAPH = "https://graph.instagram.com";
 export const IG_SCOPES = "instagram_business_basic,instagram_business_content_publish";
 
 function appConfig() {
-  const appId = process.env.IG_APP_ID;
-  const appSecret = process.env.IG_APP_SECRET;
-  const redirectUri = process.env.IG_REDIRECT_URI;
+  const appId = config.IG_APP_ID;
+  const appSecret = config.IG_APP_SECRET;
+  const redirectUri = config.IG_REDIRECT_URI;
   if (!appId || !appSecret || !redirectUri) {
     const err = new Error("Instagram OAuth is not configured (IG_APP_ID / IG_APP_SECRET / IG_REDIRECT_URI)");
     err.code = "ig_not_configured";

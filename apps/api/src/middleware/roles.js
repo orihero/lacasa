@@ -14,3 +14,14 @@ export function effectiveAgentId(user) {
   if (user.role === "COWORKER") return user.agentId;
   return null;
 }
+
+// Resolves who a publish/cross-post action is recorded as: an AGENT
+// publishes under their own id; a COWORKER publishes under their agent's,
+// and is additionally recorded as the acting coworker. Returns null when
+// the caller's role can't publish at all (same "not allowed for this role"
+// case effectiveAgentId signals with null).
+export function actorFields(user) {
+  const agentId = effectiveAgentId(user);
+  if (!agentId) return null;
+  return { user, agentId, coworkerId: user.role === "COWORKER" ? user.id : null };
+}

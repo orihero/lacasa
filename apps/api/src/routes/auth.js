@@ -1,7 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
 import { signToken } from "../lib/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
 import { serializeUser } from "../lib/serializeUser.js";
@@ -23,13 +22,13 @@ router.post("/register", async (req, res, next) => {
     }
     const { fullName, email, password, phoneNumber } = parsed.data;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await req.ctx.prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(409).json({ error: { code: "email_taken", message: "Email is already registered" } });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
+    const user = await req.ctx.prisma.user.create({
       data: { fullName, email, passwordHash, phoneNumber, role: "USER" },
     });
 
@@ -53,12 +52,12 @@ router.post("/login", async (req, res, next) => {
     }
     const { email, password } = parsed.data;
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await req.ctx.prisma.user.findUnique({ where: { email } });
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ error: { code: "invalid_credentials", message: "Invalid email or password" } });
     }
 
-    const context = await resolveAgentContext(user);
+    const context = await resolveAgentContext(req.ctx.prisma, user);
     const token = signToken({ sub: user.id, role: user.role });
     res.json({ token, user: serializeUser(user, context) });
   } catch (e) {
@@ -68,11 +67,11 @@ router.post("/login", async (req, res, next) => {
 
 router.get("/me", requireAuth, async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.auth.sub } });
+    const user = await req.ctx.prisma.user.findUnique({ where: { id: req.auth.sub } });
     if (!user) {
       return res.status(401).json({ error: { code: "unauthorized", message: "User no longer exists" } });
     }
-    const context = await resolveAgentContext(user);
+    const context = await resolveAgentContext(req.ctx.prisma, user);
     res.json({ user: serializeUser(user, context) });
   } catch (e) {
     next(e);
@@ -82,7 +81,7 @@ router.get("/me", requireAuth, async (req, res, next) => {
 // A coworker's connected IG/TG accounts belong to their agent; an agent's
 // belong to themself. Mirrors the lookup src/lib/userStore.js used to do
 // against the Firestore "users" collection.
-async function resolveAgentContext(user) {
+async function resolveAgentContext(prisma, user) {
   if (user.role !== "AGENT" && user.role !== "COWORKER") return {};
   const agentId = user.role === "AGENT" ? user.id : user.agentId;
   if (!agentId) return {};

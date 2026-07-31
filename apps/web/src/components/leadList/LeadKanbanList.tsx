@@ -6,6 +6,8 @@ import {
   OnDragEndNotification,
 } from "@caldwell619/react-kanban";
 import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
+import { resolveCardMoveAction } from "@lacasa/domain";
+import type { LeadStatusKey } from "@lacasa/domain";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -112,31 +114,39 @@ export default function LeadKanbanList() {
     source,
     destination,
   ) => {
-    if (destination?.toColumnId == "need_to_call_back") {
-      setOpen(true);
-      setSelectCard(_card);
-      // @ts-ignore
-      setMoveObject({ source, destination });
-    } else if (
-      destination?.toColumnId == "rejected" ||
-      destination?.toColumnId == "accepted"
-    ) {
-      setOpenModalType("rejected_accepted");
-      setSelectCard(_card);
-      setOpen(true);
-      // @ts-ignore
-      setMoveObject({ source, destination });
-    } else {
-      // Server logs the LEAD_STATUS_CHANGED activity event itself.
-      await updateLeadById(_card?.id, {
-        ..._card,
-        status: destination?.toColumnId,
-      });
+    // @ts-ignore — fromColumnId/toColumnId are untyped (`any`) on this
+    // library's Coordinates type.
+    const sourceColumn = source?.fromColumnId as LeadStatusKey;
+    // @ts-ignore
+    const destColumn = destination?.toColumnId as LeadStatusKey;
+    const action = resolveCardMoveAction(sourceColumn, destColumn, _card);
 
-      setKanbanBoard((currentBoard) => {
-        return moveCard(currentBoard, source, destination);
-      });
+    if (action.type === "confirm-callback") {
+      setOpen(true);
+      setSelectCard(action.card);
+      // @ts-ignore
+      setMoveObject({ source, destination });
+      return;
     }
+
+    if (action.type === "confirm-comment") {
+      setOpenModalType("rejected_accepted");
+      setSelectCard(action.card);
+      setOpen(true);
+      // @ts-ignore
+      setMoveObject({ source, destination });
+      return;
+    }
+
+    // Server logs the LEAD_STATUS_CHANGED activity event itself.
+    await updateLeadById(_card?.id, {
+      ..._card,
+      status: destination?.toColumnId,
+    });
+
+    setKanbanBoard((currentBoard) => {
+      return moveCard(currentBoard, source, destination);
+    });
   };
 
   const handleSave = async () => {
@@ -264,7 +274,7 @@ export default function LeadKanbanList() {
           ) : (
             <div className="kanban-modal">
               <Typography id="modal-modal-title" variant="h6" component="h2">
-                Keyingi qo'ng'iroq qilish vaqtini kiriting
+                Keyingi qo&apos;ng&apos;iroq qilish vaqtini kiriting
               </Typography>
               <div className="field">
                 <label>{t("callTime")}:</label>

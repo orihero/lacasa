@@ -20,10 +20,10 @@ function ProfilePage() {
 
   useEffect(() => {
     if (currentUser?.id && currentUser?.role === "agent") {
-      fetchAdsByAgentId(currentUser.id);
+      fetchAdsByAgentId(currentUser.id, {}, "newest", "mine");
     }
     if (currentUser?.role === "coworker") {
-      fetchAdsByAgentId(currentUser.agentId);
+      fetchAdsByAgentId(currentUser.agentId, {}, "newest", "mine");
       handleNavigateProfileS();
     }
   }, [currentUser?.id]);

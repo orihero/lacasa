@@ -3,7 +3,6 @@ import {
   barChart2,
   barChartIcon,
   cameraIcon,
-  certificate,
   database,
   facebook,
   filterIcon,

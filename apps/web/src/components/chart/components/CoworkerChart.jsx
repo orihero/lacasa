@@ -1,8 +1,6 @@
-import React from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Legend,
   ResponsiveContainer,
   Tooltip,

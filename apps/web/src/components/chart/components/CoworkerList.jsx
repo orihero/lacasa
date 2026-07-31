@@ -1,4 +1,3 @@
-import React from "react";
 
 const CoworkerList = ({ data }) => {
   return (
@@ -14,7 +13,7 @@ const CoworkerList = ({ data }) => {
           </div>
         </div>
         <div className="overflow-y-scroll chart-coworker-list">
-          {data.map((coworker, index) => (
+          {data.map((coworker) => (
             <div
               key={coworker.id}
               className="grid grid-cols-2 items-center gap-2 py-1 border-b border-gray-100 last:border-0"
