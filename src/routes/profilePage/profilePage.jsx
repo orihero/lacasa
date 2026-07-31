@@ -1,4 +1,3 @@
-import { signOut } from "firebase/auth";
 import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -8,7 +7,6 @@ import Filter from "../../components/filter/Filter";
 import List from "../../components/list/List";
 import Sidebar from "../../components/sidebar/Sidebar";
 import { useListStore } from "../../lib/adsListStore";
-import { auth } from "../../lib/firebase";
 import { useUserStore } from "../../lib/userStore";
 import "./profilePage.scss";
 
@@ -30,8 +28,7 @@ function ProfilePage() {
     }
   }, [currentUser?.id]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  const handleLogout = () => {
     logout();
     navigate("/");
   };
@@ -112,7 +109,7 @@ function ProfilePage() {
                       <button onClick={() => setFilter((prev) => !prev)}>
                         {t("filter")}
                       </button>
-                      <Link to={"/post"}>
+                      <Link to={"/profile/" + currentUser?.id + "/create/ads"}>
                         <button> {t("createNewPost")}</button>
                       </Link>
                     </div>

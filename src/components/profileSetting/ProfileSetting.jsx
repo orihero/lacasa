@@ -10,14 +10,16 @@ import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import "./profileSetting.scss";
 import { Triangle } from "react-loader-spinner";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
 import YtProfileCard from "../ytProfileCard/YtProfileCard";
-import YouTubeAccountInfo from "../ytProfileCard/YouTubeAccountInfo";
 import { Button, Typography } from "@mui/material";
 import { YTService } from "../../services/yt";
+import {
+  getInstagramConnectUrl,
+  disconnectInstagram,
+} from "../../services/crosspost";
 const ProfileSetting = () => {
   const { t } = useTranslation();
   const { currentUser, fetchUserInfo } = useUserStore();
@@ -46,6 +48,41 @@ const ProfileSetting = () => {
     }
   }, [currentUser?.id]);
 
+  // The Instagram OAuth callback redirects back here with ?ig=connected|error.
+  useEffect(() => {
+    const ig = new URLSearchParams(window.location.search).get("ig");
+    if (!ig) return;
+    if (ig === "connected") {
+      toast.success("Instagram account connected!");
+      fetchUserInfo();
+    } else {
+      toast.error("Instagram connection failed — please try again.");
+    }
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
+  const handleIgConnect = async () => {
+    try {
+      const url = await getInstagramConnectUrl();
+      window.open(url, "_blank", "noopener");
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.error?.message ??
+          "Instagram connect is not configured yet",
+      );
+    }
+  };
+
+  const handleIgDisconnect = async (igUserId) => {
+    try {
+      await disconnectInstagram(igUserId);
+      toast.success("Instagram account disconnected");
+      await fetchUserInfo();
+    } catch (error) {
+      toast.error("Failed to disconnect the Instagram account");
+    }
+  };
+
   const togglePasswordVisibility = () => {
     setShowPassword((prevShowPassword) => !prevShowPassword);
   };
@@ -60,18 +97,19 @@ const ProfileSetting = () => {
         profimeImage !== "/avatar.jpg" &&
         profimeImage !== currentUser?.avatar
       ) {
-        updatedAvatar = await assetUpload(profimeImage);
+        updatedAvatar = await assetUpload(profimeImage, "avatars");
       }
 
-      const updatedData = {
-        ...data,
+      await api.patch("/users/me", {
+        fullName: data.fullName,
+        phoneNumber: data.phone,
+        email: data.email,
+        password: data.password,
         avatar: updatedAvatar,
-      };
-
-      await updateDoc(doc(db, "users", currentUser?.id), updatedData);
+      });
 
       toast.success("Profile successfully updated!");
-      await fetchUserInfo(currentUser?.id);
+      await fetchUserInfo();
 
       setLoading(false);
       setIsEditing(false);
@@ -238,13 +276,29 @@ const ProfileSetting = () => {
           <div className="right">
             <FormGroup>
               <FormControlLabel
-                control={<IOSSwitch checked={!!currentUser?.igTokens} />}
+                control={
+                  <IOSSwitch checked={!!currentUser?.igAccounts?.length} />
+                }
                 label={t("createInstagramPost")}
               />
-              {!!currentUser?.igTokens &&
-                currentUser?.igAccounts?.map((e, index) => (
-                  <IgProfileCard key={index} data={e} />
-                ))}
+              {currentUser?.igAccounts?.map((e, index) => (
+                <div
+                  key={e.igUserId ?? index}
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  <IgProfileCard data={e} />
+                  <Button
+                    color="error"
+                    size="small"
+                    onClick={() => handleIgDisconnect(e.igUserId)}
+                  >
+                    {t("disconnect", { defaultValue: "Disconnect" })}
+                  </Button>
+                </div>
+              ))}
+              <Button onClick={handleIgConnect} variant="text">
+                {t("connectInstagram", { defaultValue: "Connect Instagram" })}
+              </Button>
 
               <FormControlLabel
                 control={<IOSSwitch checked={!!currentUser?.tgChatIds} />}
@@ -260,7 +314,6 @@ const ProfileSetting = () => {
                 label={t("createYoutubePost")}
               />
               <YtProfileCard />
-              <YouTubeAccountInfo />
               <Button onClick={initializeYouTube} variant="text">
                 Add account
               </Button>

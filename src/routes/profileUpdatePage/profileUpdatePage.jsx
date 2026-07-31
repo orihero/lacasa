@@ -1,10 +1,9 @@
 import { Avatar } from "@files-ui/react";
-import { doc, updateDoc } from "firebase/firestore";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useUserStore } from "../../lib/userStore";
 import "./profileUpdatePage.scss";
 import { useTranslation } from "react-i18next";
@@ -12,7 +11,7 @@ import { useTranslation } from "react-i18next";
 function ProfileUpdatePage() {
   const [profimeImage, setProfimeImage] = useState("/avatar.jpg");
   const { t } = useTranslation();
-  const { currentUser, fetchUserInfo } = useUserStore();
+  const { fetchUserInfo } = useUserStore();
 
   const navigate = useNavigate();
 
@@ -21,7 +20,7 @@ function ProfileUpdatePage() {
     const updater = async () => {
       let r = null;
       if (profimeImage !== "/avatar.jpg") {
-        r = await assetUpload(profimeImage);
+        r = await assetUpload(profimeImage, "avatars");
       }
 
       const formData = new FormData(e.target);
@@ -29,14 +28,14 @@ function ProfileUpdatePage() {
       if (r) {
         data = { ...data, avatar: r };
       }
-      await updateDoc(doc(db, "users", currentUser.id), data);
+      await api.patch("/users/me", data);
+      await fetchUserInfo();
     };
     toast.promise(updater, {
       error: "Something went wrong!",
       pending: "Uploading",
       success: "Successfully updated",
     });
-    // await fetchUserInfo();
     navigate("/profile");
   };
 

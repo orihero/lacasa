@@ -1,0 +1,16 @@
+{
+  "name": "lacasa-crossposter-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "La Casa cross-poster — autofills OLX.uz and Instagram from a La Casa listing; you review and publish.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0"
+  }
+}

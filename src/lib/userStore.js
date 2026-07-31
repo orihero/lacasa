@@ -1,91 +1,59 @@
-import { doc, getDoc } from "firebase/firestore";
 import { create } from "zustand";
-import { db } from "./firebase";
-import { IGService } from "../services/ig";
+import { api, getAuthToken, setAuthToken } from "./api";
 import { TGService } from "../services/tg";
 
 export const useUserStore = create((set) => ({
   currentUser: null,
   isLoading: true,
   agent: {},
-  fetchUserInfo: async (uid) => {
+
+  fetchUserInfo: async () => {
+    if (!getAuthToken()) {
+      return set({ currentUser: null, isLoading: false });
+    }
     try {
-      if (!uid) return set({ currentUser: null, isLoading: false });
-      const docRef = doc(db, "users", uid);
-      const docSnap = await getDoc(docRef);
+      const { data } = await api.get("/auth/me");
+      const userData = data.user;
 
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
-        let igAccounts = [];
-        let tgAccounts = [];
-        let agentInfo = null;
+      // userData.igAccounts already comes from the server as connected-account
+      // metadata (no access tokens ever reach the client); only Telegram
+      // still needs a client-side resolve call, since chat ids aren't secret.
+      let tgAccounts = [];
+      if (userData.tgChatIds?.length) tgAccounts = await TGService.init(userData.tgChatIds);
 
-        if (userData.role === "coworker" || userData.role === "agent") {
-          // Agent ma'lumotlarini olish
-          let agentId =
-            userData.role === "agent" ? userData.id : userData.agentId;
-          const agentRef = doc(db, "users", agentId);
-          const agentSnap = await getDoc(agentRef);
-          if (agentSnap.exists()) {
-            const agentData = agentSnap.data();
-            if (agentData?.igTokens && agentData?.tgChatIds) {
-              igAccounts = await IGService.init(agentData?.igTokens);
-              tgAccounts = await TGService.init(agentData?.tgChatIds);
-            }
-
-            agentInfo = {
-              id: userData.agentId,
-              ...agentData,
-            };
-          }
+      // Enrich IG accounts with profile info (avatar, follower counts) — the
+      // server proxies the Graph API call with the stored token.
+      if (userData.igAccounts?.length) {
+        try {
+          const { data: acc } = await api.get("/publish/instagram/accounts");
+          if (acc.accounts?.length) userData.igAccounts = acc.accounts;
+        } catch (e) {
+          console.error("Failed to enrich IG accounts:", e);
         }
-        // else {
-        //   // Foydalanuvchi o'z tokenlari bilan ish yuritadi
-        //   // igAccounts = await IGService.init(userData?.igTokens);
-        //   // tgAccounts = await TGService.init(userData?.tgChatIds);
-        // }
-
-        // console.log("====================================");
-        // console.log({ igAccounts, tgAccounts });
-        // console.log("====================================");
-
-        set({
-          currentUser: {
-            ...userData,
-            igAccounts,
-            tgAccounts,
-            tgChatIds: agentInfo?.tgChatIds,
-            igTokens: agentInfo?.igTokens,
-          },
-          isLoading: false,
-        });
-      } else {
-        set({ currentUser: null, isLoading: false });
       }
+
+      set({
+        currentUser: { ...userData, tgAccounts },
+        isLoading: false,
+      });
     } catch (error) {
       console.error(error);
+      setAuthToken(null);
       set({ currentUser: null, isLoading: false });
     }
   },
 
-  logout: async () => {
+  logout: () => {
+    setAuthToken(null);
     set({ currentUser: null, isLoading: false });
   },
+
   fetchUserById: async (id) => {
     try {
-      const docRef = doc(db, "users", id);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const agentData = { id: docSnap.id, ...docSnap.data() };
-        set({ agent: agentData, isLoading: false });
-        console.log("Agent data:", agentData);
-      } else {
-        console.log("No such document!");
-        set({ agent: null, isLoading: false });
-      }
+      const { data } = await api.get(`/agents/${id}`);
+      set({ agent: data, isLoading: false });
     } catch (error) {
-      console.error("Error fetching document:", error);
+      console.error("Error fetching agent:", error);
       set({ agent: null, isLoading: false });
     }
   },

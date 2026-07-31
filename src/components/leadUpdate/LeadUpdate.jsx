@@ -1,18 +1,10 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useLeadStore } from "../../lib/useLeadStore";
 import { useUserStore } from "../../lib/userStore";
@@ -65,28 +57,11 @@ const LeadUpdate = ({ leadId, onClose }) => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const updatedLead = {
-        ...data,
-        updatedAt: serverTimestamp(),
-      };
-
-      const leadRef = doc(db, "leads", leadId);
-      await updateDoc(leadRef, updatedLead);
-      if (leadId) {
-        await addDoc(collection(db, "statistics"), {
-          agentId:
-            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-          stage: 5,
-          leadId: leadId,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        });
-      }
+      // Server logs the LEAD_STATUS_CHANGED activity event itself.
+      await api.patch(`/leads/${leadId}`, data);
 
       toast.success("Lead successfully updated!");
       reset();
-      // navigate("/profile/" + currentUser.id + "/leads");
       onClose();
     } catch (error) {
       console.error("Error updating lead:", error);
@@ -98,8 +73,7 @@ const LeadUpdate = ({ leadId, onClose }) => {
   const handleDelete = async () => {
     setLoading(true);
     try {
-      const leadRef = doc(db, "leads", leadId);
-      await deleteDoc(leadRef);
+      await api.delete(`/leads/${leadId}`);
 
       toast.success("Lead successfully deleted!");
       navigate("/profile/" + currentUser.id + "/leads");

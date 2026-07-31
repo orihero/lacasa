@@ -1,7 +1,4 @@
 import { Avatar } from "@files-ui/react";
-import { initializeApp } from "firebase/app";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -9,7 +6,7 @@ import { Triangle } from "react-loader-spinner";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
-import { db, firebaseConfig } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useUserStore } from "../../lib/userStore";
 import "./coworkerAdd.scss";
 const CoworkerAdd = () => {
@@ -27,71 +24,29 @@ const CoworkerAdd = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    const coworkersFirebase = initializeApp(firebaseConfig, "coworkers");
-    const auth = getAuth(coworkersFirebase);
-
     const { phone, email, password, fullName } = data;
-    const res = await createUserWithEmailAndPassword(auth, email, password);
-    console.log(res);
 
     try {
-      let r = null;
       const updater = async () => {
+        let avatar;
         if (!!profimeImage && profimeImage !== "/avatar.jpg") {
-          r = await assetUpload(profimeImage);
+          avatar = await assetUpload(profimeImage, "avatars");
         }
 
-        console.log(r);
-
-        const docRef = await setDoc(doc(db, "users", res.user.uid), {
+        // Privileged, server-side coworker creation — replaces the old
+        // client-side second-Firebase-app workaround.
+        await api.post("/coworkers", {
           fullName,
           email,
           password,
-          role: "coworker",
           phoneNumber: phone,
-          agentId: currentUser.id,
-          avatar: r ?? "/avatar.jpg",
-          adsCount: 0,
-          id: res.user.uid,
+          avatar,
         });
-
-        // await addDoc(collection(db, "users"), {
-        //   fullName,
-        //   email,
-        //   password,
-        //   role: "coworker",
-        //   phoneNumber: phone,
-        //   agentId: currentUser.id,
-        //   avatar: r ?? "/avatar.jpg",
-        //   adsCount: 0,
-        // });
 
         toast.success("Coworker successfully created!");
         navigate("/profile/" + currentUser.id + "/coworkers");
         reset(); // Reset to initial values
       };
-
-      // const userCredential = await createUserWithEmailAndPassword(
-      //   auth,
-      //   email,
-      //   password,
-      // );
-
-      // await addDoc(collection(db, "users"), {
-      //   fullName,
-      //   email,
-      //   password,
-      //   role: "coworker",
-      //   phoneNumber: phone,
-      //   agentId: currentUser.id,
-      //   avatar: r ?? "/avatar.jpg",
-      //   adsCount: 0,
-      //   uid: userCredential.user.uid, // Save the Firebase user ID as well
-      // });
-
-      // toast.success("Coworker successfully created!");
-      // navigate("/profile/" + currentUser.id + "/coworkers");
-      // reset(); // Reset to initial values
 
       toast.promise(updater, {
         error: "Something went wrong!",

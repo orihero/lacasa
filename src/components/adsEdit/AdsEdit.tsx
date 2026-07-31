@@ -21,13 +21,6 @@ import {
   Typography,
 } from "@mui/material";
 import axios from "axios";
-import {
-  addDoc,
-  collection,
-  doc,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -37,11 +30,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useListStore } from "../../lib/adsListStore";
 import { assetUpload } from "../../lib/assetUpload";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useUserStore } from "../../lib/userStore";
 import { useUtilsStore } from "../../lib/utilsStore";
 import regionData from "../../regions.json";
-import { IGService } from "../../services/ig";
+import {
+  pingExtension,
+  requestCrosspost,
+  publishInstagramServerSide,
+  grantIgAssistConsent,
+} from "../../services/crosspost";
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import YtVideoCard from "../ytVideoCard/YtVideoCard";
@@ -59,7 +57,7 @@ const AdsEdit = () => {
   } = useForm();
   const { t } = useTranslation();
   const { id } = useParams();
-  const { currentUser } = useUserStore();
+  const { currentUser, fetchUserInfo } = useUserStore();
   const { fetchAdsById, adsData, isLoading } = useListStore();
   const [regionId, setRegionId] = useState(0);
   const [price, setPrice] = useState(0);
@@ -133,10 +131,9 @@ const AdsEdit = () => {
           photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
         }
 
-        // Update the specified document in Firestore
-        await updateDoc(doc(db, "ads", id), {
+        // Server logs the AD_SOLD/AD_DRAFT_UPDATED activity event itself.
+        await api.patch(`/ads/${id}`, {
           ...data,
-          agentId: currentUser.id,
           nearPlacesList: nearPlacesList,
           active: true,
           optionList: optionList,
@@ -144,23 +141,8 @@ const AdsEdit = () => {
             photoUrl?.length > 0
               ? [...photoUrl.map((e) => e.url), ...photos]
               : photos,
-          updatedAt: serverTimestamp(),
         });
 
-        if (id) {
-          await addDoc(collection(db, "statistics"), {
-            agentId:
-              currentUser.role == "agent"
-                ? currentUser.id
-                : currentUser.agentId,
-            postId: id,
-            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-            stage: data.stage == "2" ? 2 : 3,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            type: 1,
-          });
-        }
         navigate("/profile/" + currentUser.id + "/ads");
       } catch (error) {
         console.error(error);
@@ -274,19 +256,6 @@ const AdsEdit = () => {
             formData,
           );
 
-          await addDoc(collection(db, "statistics"), {
-            agentId:
-              currentUser.role == "agent"
-                ? currentUser.id
-                : currentUser.agentId,
-            postId: id,
-            coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-            stage: 2,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-            type: 2,
-          });
-
           return res.data?.result[0];
         } catch (error) {
           console.error(error);
@@ -301,13 +270,18 @@ const AdsEdit = () => {
     setResTg([...resTG, ...successfulResponses]);
   };
 
+  // Existing photos already have public URLs; newly dropped files get
+  // uploaded first so every publish path works from URLs.
+  const collectPhotoUrls = async () => {
+    const existing = photoUrl.map((e) => e.url).filter(Boolean);
+    const uploaded = extFiles.length
+      ? await Promise.all(extFiles.map((e) => assetUpload(e.file)))
+      : [];
+    return [...existing, ...uploaded];
+  };
+
   const onSubmitIG = async () => {
     const allValues = getValues();
-    let photos = [];
-
-    if (extFiles.length > 0) {
-      photos = extFiles.map((e) => e.file);
-    }
 
     const caption = Object.entries(allValues).reduce(
       (result, [key, value]) =>
@@ -316,19 +290,61 @@ const AdsEdit = () => {
     );
 
     try {
-      await Promise.all(
-        publishSelectSocial.map((socialItem) =>
-          IGService.publishMedia(
-            photos,
-            caption,
-            socialItem,
-            socialItem.access_token,
-          ),
-        ),
-      );
-      console.log("All posts published successfully!");
+      // Publishing happens server-side with the stored token — no IG access
+      // token ever reaches the browser.
+      const photos = await collectPhotoUrls();
+      const igUserIds = publishSelectSocial
+        .map((socialItem) => socialItem.igUserId ?? socialItem.id)
+        .filter(Boolean);
+      const { results } = await publishInstagramServerSide({
+        adId: id,
+        caption,
+        imageUrls: photos,
+        igUserIds,
+      });
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length) {
+        toast.error(`Instagram publish failed for ${failed.map((f) => f.igUsername ?? f.igUserId).join(", ")}`);
+      } else {
+        toast.success("Instagram post published!");
+      }
     } catch (error) {
       console.error("Error publishing posts:", error);
+      toast.error(error?.response?.data?.error?.message ?? "Error publishing to Instagram");
+    }
+  };
+
+  // Extension-assisted path: opens OLX / Instagram in a new tab where the
+  // La Casa extension autofills the post; the human reviews and clicks
+  // Publish/Share there themselves.
+  const onCrosspost = async (channel: "olx" | "instagram") => {
+    if (!(await pingExtension())) {
+      toast.error(
+        "La Casa Cross-poster extension not detected. Install it, then reload this page — content scripts only load into tabs opened after the extension is installed.",
+      );
+      return;
+    }
+    if (channel === "instagram" && !currentUser?.igAssistConsentAt) {
+      const agreed = window.confirm(
+        "This fills your Instagram post (photos and an AI-written caption) inside your own browser. " +
+          "You still review everything and click Share yourself — we never post on your behalf. " +
+          "Using browser tools on Instagram carries some risk of a temporary review from Meta. Continue?",
+      );
+      if (!agreed) return;
+      await grantIgAssistConsent();
+      await fetchUserInfo();
+    }
+    try {
+      const photoUrls = await collectPhotoUrls();
+      const ad = { ...getValues(), priceType, nearPlacesList, optionList };
+      const res = await requestCrosspost({ channel, adId: id, ad, photoUrls });
+      if (res.ok) {
+        toast.info("Opened a new tab — review the autofilled draft there and publish it yourself.");
+      } else {
+        toast.error(res.error ?? "The extension could not start the cross-post");
+      }
+    } catch (error) {
+      toast.error(String(error?.message ?? error));
     }
   };
 
@@ -338,9 +354,10 @@ const AdsEdit = () => {
     };
 
   const handleCheckboxChange = (item) => {
+    const socialKey = (x) => x.igUserId ?? x.id;
     setPublishSelectSocial((prev) => {
-      if (prev.some((social) => social.id === item.id)) {
-        return prev.filter((social) => social.id !== item.id);
+      if (prev.some((social) => socialKey(social) === socialKey(item))) {
+        return prev.filter((social) => socialKey(social) !== socialKey(item));
       }
       return [...prev, item];
     });
@@ -1071,6 +1088,43 @@ const AdsEdit = () => {
             </AccordionDetails>
           </Accordion>
         )}
+        {(!currentUser.igAccounts || currentUser.igAccounts.length === 0) && (
+          <Accordion
+            expanded={accordionExpanded === "ig-assist"}
+            onChange={handleAccordionChange("ig-assist")}
+            sx={{ margin: "6px" }}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandIcon />}
+              aria-controls="igbh-content"
+              id="igbh-header"
+            >
+              <Avatar
+                sx={{ width: 30, height: 30 }}
+                src="https://static.cdnlogo.com/logos/i/93/instagram.svg"
+              />
+              <Typography variant="h5" sx={{ ml: 1 }}>
+                Instagram
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <div className="tg-content-preview">
+                <Typography sx={{ mb: 1 }}>
+                  {t("igAssistHint", {
+                    defaultValue:
+                      "No Instagram account is connected. You can connect one in profile settings, or draft the post in your own browser with the La Casa extension — you review and click Share yourself.",
+                  })}
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={() => onCrosspost("instagram")}
+                >
+                  {t("publish")}
+                </Button>
+              </div>
+            </AccordionDetails>
+          </Accordion>
+        )}
         {true && (
           <Accordion
             expanded={accordionExpanded === "fb"}
@@ -1110,7 +1164,6 @@ const AdsEdit = () => {
             expanded={accordionExpanded === "olx"}
             onChange={handleAccordionChange("olx")}
             sx={{ margin: "6px" }}
-            disabled
           >
             <AccordionSummary
               expandIcon={<ExpandIcon />}
@@ -1122,14 +1175,19 @@ const AdsEdit = () => {
                 src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/2a/87/49/2a8749ed-07ce-0858-d259-840097d5caa8/AppIcon_OLX_EU-0-0-1x_U007emarketing-0-7-0-85-220.png/1200x630wa.png"
               />
               <Typography variant="h5" sx={{ ml: 1 }}>
-                Olx | coming soon...
+                Olx
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <div className="tg-content-preview">
-                <YtVideoCard bannerImg={""} isShort={true} />
-                <Button variant="contained" onClick={() => setOpenModal("yt")}>
-                  Опубликовать
+                <Typography sx={{ mb: 1 }}>
+                  {t("olxAssistHint", {
+                    defaultValue:
+                      "Opens OLX.uz in a new tab and autofills the ad form from this listing (La Casa extension required). You review the draft and click Publish yourself.",
+                  })}
+                </Typography>
+                <Button variant="contained" onClick={() => onCrosspost("olx")}>
+                  {t("publish")}
                 </Button>
               </div>
             </AccordionDetails>
@@ -1157,7 +1215,7 @@ const AdsEdit = () => {
             {openModal == "ig" ? (
               <>
                 <div className="tg-flex">
-                  {!!currentUser.igTokens &&
+                  {!!currentUser.igAccounts &&
                     currentUser?.igAccounts?.map((e, index) => (
                       <div className="tg-channel-item-flex">
                         <IgProfileCard key={index} data={e} />

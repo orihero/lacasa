@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lacasa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lacasa
+      POSTGRES_PASSWORD: lacasa_dev
+      POSTGRES_DB: lacasa
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lacasa -d lacasa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: lacasa-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: lacasa
+      MINIO_ROOT_PASSWORD: lacasa_dev_secret
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # one-shot: create the bucket and allow anonymous downloads (photos are public)
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 lacasa lacasa_dev_secret &&
+      mc mb --ignore-existing local/lacasa &&
+      mc anonymous set download local/lacasa &&
+      echo 'bucket lacasa ready'
+      "
+
+volumes:
+  pg_data:
+  minio_data:

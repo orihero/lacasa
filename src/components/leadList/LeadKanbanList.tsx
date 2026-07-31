@@ -6,11 +6,9 @@ import {
   OnDragEndNotification,
 } from "@caldwell619/react-kanban";
 import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { db } from "../../lib/firebase";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useLeadStore } from "../../lib/useLeadStore";
 import { useUserStore } from "../../lib/userStore";
@@ -129,22 +127,11 @@ export default function LeadKanbanList() {
       // @ts-ignore
       setMoveObject({ source, destination });
     } else {
+      // Server logs the LEAD_STATUS_CHANGED activity event itself.
       await updateLeadById(_card?.id, {
         ..._card,
         status: destination?.toColumnId,
       });
-
-      if (_card?.id) {
-        await addDoc(collection(db, "statistics"), {
-          agentId:
-            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-          stage: 5,
-          leadId: _card?.id,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        });
-      }
 
       setKanbanBoard((currentBoard) => {
         return moveCard(currentBoard, source, destination);
@@ -159,18 +146,6 @@ export default function LeadKanbanList() {
         conversationComment: commentConver,
         status: moveObject?.destination?.toColumnId,
       });
-
-      if (selectCard?.id) {
-        await addDoc(collection(db, "statistics"), {
-          agentId:
-            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-          stage: 5,
-          leadId: selectCard?.id,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        });
-      }
 
       setKanbanBoard((currentBoard) => {
         return moveCard(
@@ -187,17 +162,6 @@ export default function LeadKanbanList() {
         status: moveObject?.destination?.toColumnId,
       });
 
-      if (selectCard?.id) {
-        await addDoc(collection(db, "statistics"), {
-          agentId:
-            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-          stage: 5,
-          leadId: selectCard?.id,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        });
-      }
       setKanbanBoard((currentBoard) => {
         return moveCard(
           currentBoard,

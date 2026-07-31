@@ -1,6 +1,5 @@
-import { collection, getDocs } from "firebase/firestore";
 import { create } from "zustand";
-import { db } from "./firebase";
+import { api } from "./api";
 
 export const useUtilsStore = create((set) => ({
   currency: [],
@@ -8,13 +7,8 @@ export const useUtilsStore = create((set) => ({
   isLoading: true,
   fetchCurrency: async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "currency"));
-      const currency = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      set({ currency: currency, isLoading: false });
+      const { data } = await api.get("/utils/currency");
+      set({ currency: [{ id: data.code, currency: data.rate }], isLoading: false });
     } catch (error) {
       console.error("fetch currency", error);
       set({ currency: [], isLoading: false });
@@ -22,13 +16,8 @@ export const useUtilsStore = create((set) => ({
   },
   fetchNearbyPlace: async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "nearbyList"));
-      const nearbyPlaceData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      set({ nearbyPlaceData: nearbyPlaceData, isLoading: false });
+      const { data } = await api.get("/utils/nearby-places");
+      set({ nearbyPlaceData: [{ id: "nearby", data }], isLoading: false });
     } catch (error) {
       console.error("Error fetchNearbyPlace: ", error);
       set({ nearbyPlaceData: [], isLoading: false });

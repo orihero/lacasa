@@ -4,8 +4,7 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { useUserStore } from "../../lib/userStore";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
@@ -32,30 +31,9 @@ const LeadAdd = () => {
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const newLead = {
-        ...data,
-        agentId:
-          currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-        active: true,
-        createdAt: serverTimestamp(),
-      };
-
-      if (currentUser.role == "coworker") {
-        newLead["coworkerId"] = currentUser.id;
-      }
-
-      const res = await addDoc(collection(db, "leads"), newLead);
-      if (res?.id) {
-        await addDoc(collection(db, "statistics"), {
-          agentId:
-            currentUser.role == "agent" ? currentUser.id : currentUser.agentId,
-          coworkerId: currentUser.role == "coworker" ? currentUser.id : "",
-          stage: 4,
-          leadId: res.id,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        });
-      }
+      // Server derives agentId/coworkerId from the auth token and logs the
+      // LEAD_CREATED activity event itself.
+      await api.post("/leads", { ...data, active: true });
 
       toast.success("Lead successfully created!");
       reset();

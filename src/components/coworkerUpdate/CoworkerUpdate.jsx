@@ -1,16 +1,9 @@
 import { Avatar } from "@files-ui/react";
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  updateDoc,
-} from "firebase/firestore";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
-import { db } from "../../lib/firebase";
+import { api } from "../../lib/api";
 import { useUserStore } from "../../lib/userStore";
 import "./coworkerUpdate.scss";
 import { Triangle } from "react-loader-spinner";
@@ -45,7 +38,7 @@ const CoworkerUpdate = () => {
         fullName: coworker.fullName || "",
         email: coworker.email || "",
         phone: coworker.phoneNumber || "",
-        password: coworker.password || "",
+        password: "",
       });
       setProfimeImage(coworker.avatar);
     }
@@ -57,21 +50,18 @@ const CoworkerUpdate = () => {
     const { phone, email, password, fullName } = data;
 
     try {
-      let r = null;
       const updater = async () => {
+        let avatar;
         if (profimeImage !== coworker.avatar) {
-          r = await assetUpload(profimeImage);
+          avatar = await assetUpload(profimeImage, "avatars");
         }
 
-        const docRef = doc(db, "users", coworker.id);
-
-        await updateDoc(docRef, {
+        await api.patch(`/coworkers/${coworker.id}`, {
           fullName,
           email,
           password,
           phoneNumber: phone,
-          avatar: r ?? profimeImage,
-          adsCount: 0,
+          avatar,
         });
 
         toast.success("Coworker successfully updated!");
@@ -96,9 +86,7 @@ const CoworkerUpdate = () => {
     setLoading(true);
 
     try {
-      const coworkerRef = doc(db, "users", coworker.id);
-
-      await deleteDoc(coworkerRef);
+      await api.delete(`/coworkers/${coworker.id}`);
 
       toast.success("Coworker successfully deleted!");
       navigate("/profile/" + currentUser.id + "/coworkers");

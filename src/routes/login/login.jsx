@@ -1,8 +1,7 @@
-import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import "./login.scss";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "../../lib/firebase";
 import { toast } from "react-toastify";
+import { api, setAuthToken } from "../../lib/api";
 import { useUserStore } from "../../lib/userStore";
 
 function Login() {
@@ -15,20 +14,17 @@ function Login() {
     const { email, password } = Object.fromEntries(formData);
 
     try {
-      const res = await signInWithEmailAndPassword(auth, email, password);
-      console.log(res);
-
-      onAuthStateChanged(auth, (user) => {
-        fetchUserInfo(user?.uid);
-      });
+      const { data } = await api.post("/auth/login", { email, password });
+      setAuthToken(data.token);
+      await fetchUserInfo();
 
       toast.success("User successfully logged in");
       navigate("/");
     } catch (error) {
-      console.error(Object.entries(error));
+      console.error(error);
       toast.error(
         `Error
-        ${error?.code}`,
+        ${error?.response?.data?.error?.message ?? error.message}`,
       );
     }
   };

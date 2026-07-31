@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "La Casa Cross-poster",
+  "version": "0.1.0",
+  "description": "Autofills OLX.uz and Instagram from a La Casa listing; you review and click Publish/Share yourself.",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://www.olx.uz/*",
+    "https://olx.uz/*",
+    "https://www.instagram.com/*",
+    "https://api.lacasa.uz/*",
+    "https://minio.lacasa.uz/*",
+    "http://localhost:4200/*",
+    "http://localhost:9000/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://lacasa.uz/*", "https://*.lacasa.uz/*", "http://localhost:5273/*"],
+      "js": ["content/lacasa-bridge.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.olx.uz/*", "https://olx.uz/*"],
+      "js": ["content/olx-autofill.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["content/instagram-autofill.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": { "default_title": "La Casa Cross-poster" },
+  "web_accessible_resources": [
+    {
+      "resources": ["review-banner.css"],
+      "matches": ["https://www.olx.uz/*", "https://olx.uz/*", "https://www.instagram.com/*"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

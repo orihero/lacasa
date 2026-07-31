@@ -1,14 +1,8 @@
-import {
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { auth, db } from "../../lib/firebase";
+import { api, setAuthToken } from "../../lib/api";
 import "./register.scss";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Triangle } from "react-loader-spinner";
 import { useUserStore } from "../../lib/userStore";
 import { useListStore } from "../../lib/adsListStore";
@@ -27,30 +21,23 @@ function Register() {
       Object.fromEntries(formData);
 
     try {
-      const res = await createUserWithEmailAndPassword(auth, email, password);
-
-      await setDoc(doc(db, "users", res.user.uid), {
+      const { data } = await api.post("/auth/register", {
         fullName,
         email,
-        role: "user",
-        phoneNumber,
-        id: res.user.uid,
         password,
+        phoneNumber,
       });
-
-      await signInWithEmailAndPassword(auth, email, password);
-      fetchUserInfo(res.user.uid);
+      setAuthToken(data.token);
+      await fetchUserInfo();
       fetchAdsList();
 
       toast.success("User successfully created");
       navigate("/");
-      //TODO create user related data
     } catch (error) {
-      console.error(Object.entries(error));
       console.error(error);
       toast.error(
         `Error
-        ${error?.code}`,
+        ${error?.response?.data?.error?.message ?? error.message}`,
       );
     }
 
