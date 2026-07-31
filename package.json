@@ -1,58 +1,30 @@
 {
-  "name": "estateui",
+  "name": "lacasa",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "description": "La Casa — real-estate CRM monorepo (web console, REST API, crosspost extension, mobile app)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true,
+    "esbuild@0.24.2": true,
+    "esbuild@0.21.5": true,
+    "@parcel/watcher@2.6.0": false,
+    "@dynamicss/dynamicss@2.2.8": false
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@caldwell619/react-kanban": "^0.0.11",
-    "@emotion/react": "^11.13.3",
-    "@emotion/styled": "^11.13.0",
-    "@files-ui/react": "^1.2.4",
-    "@hello-pangea/dnd": "^17.0.0",
-    "@mui/icons-material": "^6.1.6",
-    "@mui/material": "^6.2.0",
-    "@mui/utils": "^6.2.0",
-    "autoprefixer": "^10.4.20",
-    "axios": "^1.7.7",
-    "gapi-script": "^1.2.0",
-    "googleapis": "^144.0.0",
-    "i18next": "^23.16.4",
-    "i18next-browser-languagedetector": "^8.0.0",
-    "instagram-graph-api": "^7.0.0",
-    "leaflet": "^1.9.4",
-    "lodash": "^4.17.21",
-    "lucide-react": "^0.460.0",
-    "postcss": "^8.4.49",
-    "primereact": "^10.8.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-hook-form": "^7.53.1",
-    "react-i18next": "^15.1.0",
-    "react-image-layout": "^1.0.0",
-    "react-leaflet": "^4.2.1",
-    "react-loader-spinner": "^6.1.6",
-    "react-material-ui-carousel": "^3.4.2",
-    "react-router-dom": "^6.22.2",
-    "react-toastify": "^10.0.5",
-    "recharts": "^2.13.3",
-    "sass": "^1.71.1",
-    "tailwindcss": "^3.4.15",
-    "zustand": "^4.5.5"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.56",
-    "@types/react-dom": "^18.2.19",
-    "@vitejs/plugin-react": "^4.2.1",
-    "eslint": "^8.56.0",
-    "eslint-plugin-react": "^7.33.2",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
-    "vite": "^5.1.4"
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev:web": "npm run dev -w @lacasa/web",
+    "dev:api": "npm run dev -w @lacasa/api"
   }
 }

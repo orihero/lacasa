@@ -1,5 +1,5 @@
 {
-  "name": "lacasa-server",
+  "name": "@lacasa/api",
   "private": true,
   "version": "0.1.0",
   "type": "module",
