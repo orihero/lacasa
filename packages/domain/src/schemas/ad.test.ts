@@ -75,4 +75,32 @@ describe('adInputSchema', () => {
     expect(adInputSchema.parse({ lat: 90, lng: 180 })).toEqual({ lat: 90, lng: 180 });
     expect(adInputSchema.parse({ lat: -90, lng: -180 })).toEqual({ lat: -90, lng: -180 });
   });
+
+  it('accepts an absolute http(s) tour3dLink and clears it on empty string', () => {
+    expect(adInputSchema.parse({ tour3dLink: 'https://tour.example/embed/1' }).tour3dLink).toBe(
+      'https://tour.example/embed/1',
+    );
+    expect(adInputSchema.parse({ tour3dLink: 'http://tour.example/1' }).tour3dLink).toBe('http://tour.example/1');
+    expect(adInputSchema.parse({ tour3dLink: '' }).tour3dLink).toBeNull();
+    expect(adInputSchema.parse({}).tour3dLink).toBeUndefined();
+  });
+
+  // This value lands in an <iframe src> with no sandbox attribute, so a
+  // non-http scheme is executable, not merely a broken link.
+  it('rejects a tour3dLink whose scheme could execute in the visitor origin', () => {
+    expect(() => adInputSchema.parse({ tour3dLink: 'javascript:alert(1)' })).toThrow();
+    expect(() => adInputSchema.parse({ tour3dLink: 'data:text/html,<script>alert(1)</script>' })).toThrow();
+    expect(() => adInputSchema.parse({ tour3dLink: 'vbscript:msgbox(1)' })).toThrow();
+    expect(() => adInputSchema.parse({ tour3dLink: 'file:///etc/passwd' })).toThrow();
+  });
+
+  it('rejects a tour3dLink that would resolve against the page origin', () => {
+    expect(() => adInputSchema.parse({ tour3dLink: '//evil.example/embed' })).toThrow();
+    expect(() => adInputSchema.parse({ tour3dLink: 'evil.example/embed' })).toThrow();
+    expect(() => adInputSchema.parse({ tour3dLink: '/embed/1' })).toThrow();
+  });
+
+  it('rejects a tour3dLink over the length cap', () => {
+    expect(() => adInputSchema.parse({ tour3dLink: `https://tour.example/${'a'.repeat(2048)}` })).toThrow();
+  });
 });

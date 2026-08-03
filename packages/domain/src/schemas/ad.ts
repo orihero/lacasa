@@ -19,6 +19,35 @@ const nullableCoercedNumberInRange = (min: number, max: number) =>
 const nullableTrimmedString = (max: number) =>
   z.preprocess(emptyStringToNull, z.string().max(max).nullable());
 
+// Absolute http(s) only. This is not URL hygiene for its own sake: the value
+// ends up as an <iframe src> on the public listing-detail page
+// (apps/web/src/components/slider/Slider.jsx, which sets no `sandbox`
+// attribute), so a `javascript:` or `data:text/html` scheme would be code
+// running in a visitor's origin rather than an inert bad link. Agents are
+// authenticated but not trusted with that.
+//
+// `new URL()` with no base also rejects protocol-relative ("//evil.com") and
+// bare-host ("evil.com") values, which would otherwise resolve against
+// whatever origin the page happens to be on.
+const isHttpUrl = (value: string): boolean => {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const nullableHttpUrl = (max: number) =>
+  z.preprocess(
+    emptyStringToNull,
+    z
+      .string()
+      .max(max)
+      .refine(isHttpUrl, { message: 'must be an absolute http(s) URL' })
+      .nullable(),
+  );
+
 export const adOptionEntrySchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
   key: z.string().optional(),
@@ -66,6 +95,11 @@ export const adInputSchema = z.object({
   // column default to PHOTO. mediaType is read-only for now, surfaced via
   // the separate `media` array serializeAd adds alongside `photos`.
   photos: z.array(z.string()).optional(),
+  // Embedded 3D tour on listing detail (docs/10 §3, SCREENS.md §7). Unlike
+  // lat/lng, this one IS enforced on the request path — see the route's
+  // safeParse in apps/api/src/routes/ads.js — because the value reaches an
+  // iframe src. See nullableHttpUrl above for why that matters.
+  tour3dLink: nullableHttpUrl(2048).optional(),
 });
 
 export type AdInput = z.infer<typeof adInputSchema>;

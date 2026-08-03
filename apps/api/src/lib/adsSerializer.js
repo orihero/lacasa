@@ -73,6 +73,10 @@ export function serializeAd(ad) {
     // an explicit null here does.
     lat: ad.lat !== null ? Number(ad.lat) : null,
     lng: ad.lng !== null ? Number(ad.lng) : null,
+    // Straight passthrough. Validated on write (routes/ads.js), never on
+    // read — an ad stored before that check existed must not be able to
+    // break a listing page by throwing here.
+    tour3dLink: ad.tour3dLink,
     agentId: ad.agentId,
     coworkerId: ad.coworkerId ?? "",
     photos: orderedPhotos.filter((p) => p.mediaType === "PHOTO").map((p) => p.url),
@@ -117,6 +121,10 @@ export function parseAdInput(body) {
   // is the one place that also has the pre-existing row for a partial PATCH.
   if (body.lat !== undefined) data.lat = body.lat === "" ? null : Number(body.lat);
   if (body.lng !== undefined) data.lng = body.lng === "" ? null : Number(body.lng);
+  // Same "" -> null as `address`. The http(s)-scheme rule is not applied
+  // here: parseAdInput is pure coercion, and that check runs earlier, on the
+  // raw body, in routes/ads.js.
+  if (body.tour3dLink !== undefined) data.tour3dLink = body.tour3dLink || null;
 
   return data;
 }

@@ -226,3 +226,71 @@ describe("Ad.lat/Ad.lng (docs/10 §3)", () => {
     expect(patched.body.lng).toBe(69.2);
   });
 });
+
+// docs/10 §3: Ad.tour3dLink. The scheme check matters more than it looks —
+// apps/web's Slider.jsx renders this straight into an <iframe src> with no
+// sandbox attribute, so a javascript:/data: value would be code running in a
+// visitor's origin rather than a broken embed.
+describe("Ad.tour3dLink (docs/10 §3)", () => {
+  it("defaults to null and round-trips an https URL", async () => {
+    const bare = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "No Tour" }));
+    expect(bare.status).toBe(201);
+    expect(bare.body.tour3dLink).toBeNull();
+
+    const withTour = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "With Tour", tour3dLink: "https://tour.example/embed/1" }));
+    expect(withTour.status).toBe(201);
+    expect(withTour.body.tour3dLink).toBe("https://tour.example/embed/1");
+
+    const fetched = await supertest(app).get(`/api/ads/${withTour.body.id}`);
+    expect(fetched.body.tour3dLink).toBe("https://tour.example/embed/1");
+  });
+
+  it("refuses a scheme that would execute in the visitor's origin", async () => {
+    for (const tour3dLink of ["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "//evil.example"]) {
+      const res = await supertest(app)
+        .post("/api/ads")
+        .set("Authorization", authHeader(agent))
+        .send(adPayload({ title: "Bad Tour", tour3dLink }));
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("validation");
+    }
+  });
+
+  it("refuses a bad tour link on PATCH too, leaving the stored one intact", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Tour To Keep", tour3dLink: "https://tour.example/keep" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ tour3dLink: "javascript:alert(1)" });
+    expect(patched.status).toBe(400);
+
+    const fetched = await supertest(app).get(`/api/ads/${created.body.id}`);
+    expect(fetched.body.tour3dLink).toBe("https://tour.example/keep");
+  });
+
+  it("clears the tour link with an empty string", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Tour To Clear", tour3dLink: "https://tour.example/clear" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ tour3dLink: "" });
+
+    expect(patched.status).toBe(200);
+    expect(patched.body.tour3dLink).toBeNull();
+  });
+});

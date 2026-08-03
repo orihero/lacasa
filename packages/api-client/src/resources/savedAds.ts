@@ -45,6 +45,11 @@ export interface SavedAd {
   coworkerId: string;
   photos: string[];
   media: AdMedia[];
+  /** Map pin, or null for both. See ./ads' `Ad.lat` for the "has a pin" rule. */
+  lat: number | null;
+  lng: number | null;
+  /** Absolute http(s) tour URL, or null. Enforced server-side on write. */
+  tour3dLink: string | null;
   createdAt: { seconds: number };
   updatedAt: { seconds: number };
   /** Always true — every entry in this list is, by definition, saved. */

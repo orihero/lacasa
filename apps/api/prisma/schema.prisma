@@ -252,6 +252,14 @@ model Ad {
   lat Decimal? @db.Decimal(9, 6)
   lng Decimal? @db.Decimal(9, 6)
 
+  // Embedded 3D tour on listing detail (docs/10 §3, SCREENS.md §7). Plain
+  // TEXT like address/reference/description -- the 2048-char cap is
+  // app-level only. Constrained to absolute http(s) at the write boundary
+  // (packages/domain's adInputSchema, enforced by routes/ads.js) because it
+  // is rendered as an <iframe src> with no sandbox attribute, where a
+  // javascript:/data: scheme would execute in the visitor's origin.
+  tour3dLink String? @map("tour_3d_link")
+
   agentId    String  @map("agent_id") @db.Uuid
   agent      User    @relation("AdAgent", fields: [agentId], references: [id], onDelete: Cascade)
   coworkerId String? @map("coworker_id") @db.Uuid

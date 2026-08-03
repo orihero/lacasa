@@ -1,3 +1,4 @@
+import { adInputSchema } from "@lacasa/domain";
 import { AD_TYPE, AD_CATEGORY, REPAIRMENT, FURNITURE } from "../lib/enums.js";
 import { serializeAd, parseAdInput } from "../lib/adsSerializer.js";
 import { BUCKET, objectKeyFromUrl } from "../lib/minio.js";
@@ -88,6 +89,24 @@ function validateCoordinates(data, existing) {
   }
 }
 
+// Ad.tour3dLink must be an absolute http(s) URL. The rule itself is defined
+// once, in @lacasa/domain's adInputSchema, and only invoked here so ad-write
+// validation stays in one layer alongside validateCoordinates rather than
+// splitting across a second mechanism in the route.
+//
+// Checks the raw body, not parseAdInput's output: the schema does its own
+// "" -> null coercion, and by the time parseAdInput has run the original
+// string is gone.
+const tour3dLinkSchema = adInputSchema.pick({ tour3dLink: true });
+
+function validateTour3dLink(body) {
+  if (body.tour3dLink === undefined) return;
+  const parsed = tour3dLinkSchema.safeParse({ tour3dLink: body.tour3dLink });
+  if (!parsed.success) {
+    throw httpError(400, "validation", parsed.error.issues[0].message);
+  }
+}
+
 // Public listing (GET /api/ads, no `agentId` option) is always scoped to
 // ACTIVE ads; the caller (myAds.js) supplies `agentId` (+ optional custom
 // `orderBy`) to instead list everything a given agent owns, active or not.
@@ -110,6 +129,7 @@ export async function getAd(ctx, id) {
 export async function createAd(ctx, body, actor) {
   const data = parseAdInput(body);
   validateCoordinates(data, null);
+  validateTour3dLink(body);
   const photos = Array.isArray(body.photos) ? body.photos : [];
 
   const ad = await createWithActivityEvent(
@@ -143,6 +163,7 @@ export async function updateAd(ctx, id, agentId, body, actor) {
 
   const data = parseAdInput(body);
   validateCoordinates(data, existing);
+  validateTour3dLink(body);
   const photosProvided = Array.isArray(body.photos);
 
   const ad = await adRepository.updateAd(ctx.prisma, id, {

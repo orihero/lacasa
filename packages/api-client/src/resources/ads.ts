@@ -65,6 +65,11 @@ export interface Ad {
    */
   lat: number | null;
   lng: number | null;
+  /**
+   * Embedded 3D tour URL, or null. Guaranteed absolute http(s) — the API
+   * rejects any other scheme on write, because this lands in an iframe src.
+   */
+  tour3dLink: string | null;
   [key: string]: unknown;
 }
 
