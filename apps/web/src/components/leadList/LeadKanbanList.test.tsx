@@ -17,6 +17,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Lead } from "@lacasa/api-client";
 import "../../i18n";
 import { useCoworkerStore } from "../../lib/useCoworkerStore";
 import { useLeadStore } from "../../lib/useLeadStore";
@@ -48,7 +49,7 @@ vi.mock("@caldwell619/react-kanban", async (importOriginal) => {
   };
 });
 
-const LEAD = {
+const LEAD: Lead = {
   id: "lead-1",
   fullName: "Bob Builder",
   phone: "+998901234567",
@@ -92,7 +93,7 @@ describe("LeadKanbanList — real onCardDragEnd wiring (resolveCardMoveAction)",
         HttpResponse.json([{ id: "cw-1", fullName: "Coworker One", email: "cw@x.com", phoneNumber: null, avatar: null, agentId: "agent-1" }]),
       ),
       http.patch(`${API_BASE}/leads/:id`, async ({ request, params }) => {
-        const body = await request.json();
+        const body = (await request.json()) as Record<string, unknown>;
         patchCalls.push({ id: String(params.id), body });
         return HttpResponse.json({ ...LEAD, ...body });
       }),

@@ -7,6 +7,7 @@ import { useUtilsStore } from "../../lib/utilsStore";
 import ShareIcon from "@mui/icons-material/Share";
 import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
 import type { CurrencyCodeKey } from "@lacasa/domain";
+import type { InstagramAccount } from "@lacasa/api-client";
 import {
   Dropzone,
   FileMosaic,
@@ -14,10 +15,12 @@ import {
   ImagePreview,
   VideoPreview,
 } from "@files-ui/react";
+import type { ExtFile } from "@files-ui/react";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
 import axios from "axios";
 import { api } from "../../lib/api";
+import { fieldErrorMessage } from "../../lib/formErrors";
 import {
   Accordion,
   AccordionDetails,
@@ -48,6 +51,22 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
 import { YTService } from "../../services/yt";
+import type { ITGAccount } from "../../services/tg";
+
+// Deliberately loose: publishSelectSocial mixes checked Instagram and
+// Telegram accounts (see handleCheckboxChange, used by both networks'
+// checkboxes), so this only pins down the two fields socialKey actually
+// reads from either shape.
+interface SelectableSocialAccount {
+  id?: string | number;
+  igUserId?: string;
+}
+
+interface AdOptionItem {
+  id: number;
+  key: string;
+  value: string;
+}
 
 const AdsAdd = () => {
   const {
@@ -68,18 +87,24 @@ const AdsAdd = () => {
   const [regionId, setRegionId] = useState(0);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [extFiles, setExtFiles] = useState([]);
-  const [extFilesVideo, setExtFilesVideo] = useState([]);
-  const [publishSelectSocial, setPublishSelectSocial] = useState([]);
-  const [imageSrc, setImageSrc] = useState(undefined);
-  const [videoSrc, setVideoSrc] = useState(undefined);
+  const [extFiles, setExtFiles] = useState<ExtFile[]>([]);
+  const [extFilesVideo, setExtFilesVideo] = useState<ExtFile[]>([]);
+  const [publishSelectSocial, setPublishSelectSocial] = useState<
+    SelectableSocialAccount[]
+  >([]);
+  const [imageSrc, setImageSrc] = useState<File | string | undefined>(
+    undefined,
+  );
+  const [videoSrc, setVideoSrc] = useState<File | string | undefined>(
+    undefined,
+  );
   const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
   const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
   const [isShort, setIsShort] = useState(false);
-  const [photoOrVideo, setPhotoOrVideo] = useState([]);
-  const [nearPlacesList, setNearPlaceList] = useState([]);
-  const [optionList, setOptionList] = useState([]);
+  const [photoOrVideo, setPhotoOrVideo] = useState<string[]>([]);
+  const [nearPlacesList, setNearPlaceList] = useState<string[]>([]);
+  const [optionList, setOptionList] = useState<AdOptionItem[]>([]);
   const descriptionValue = watch("description", "");
   const priceValue = watch("price", "");
   const titleValue = watch("title", "");
@@ -157,39 +182,39 @@ const AdsAdd = () => {
     });
   };
 
-  const updateFiles = (incommingFiles) => {
+  const updateFiles = (incommingFiles: ExtFile[]) => {
     console.log("incomming files", incommingFiles);
     setExtFiles(incommingFiles);
   };
 
-  const updateFilesVideo = (incommingFiles) => {
+  const updateFilesVideo = (incommingFiles: ExtFile[]) => {
     console.log("incomming files", incommingFiles);
     setExtFilesVideo(incommingFiles);
   };
 
-  const onDelete = (id) => {
+  const onDelete = (id: ExtFile["id"]) => {
     setExtFiles(extFiles.filter((x) => x.id !== id));
   };
-  const onDeleteVideo = (id) => {
+  const onDeleteVideo = (id: ExtFile["id"]) => {
     setExtFilesVideo(extFilesVideo.filter((x) => x.id !== id));
   };
 
-  const handleSee = (imageSource) => {
+  const handleSee = (imageSource: string | undefined) => {
     console.log("====================================");
     console.log({ imageSource });
     console.log("====================================");
     setImageSrc(imageSource);
   };
 
-  const handleSeeVideo = (videoSource) => {
+  const handleSeeVideo = (videoSource: string | undefined) => {
     setVideoSrc(videoSource);
   };
 
-  const handleWatch = (videoSource) => {
+  const handleWatch = (videoSource: File | string | undefined) => {
     setVideoSrc(videoSource);
   };
 
-  const handleAbort = (id) => {
+  const handleAbort = (id: ExtFile["id"]) => {
     setExtFiles(
       extFiles.map((ef) => {
         if (ef.id === id) {
@@ -198,7 +223,7 @@ const AdsAdd = () => {
       }),
     );
   };
-  const handleAbortVideo = (id) => {
+  const handleAbortVideo = (id: ExtFile["id"]) => {
     setExtFilesVideo(
       extFilesVideo.map((ef) => {
         if (ef.id === id) {
@@ -207,7 +232,7 @@ const AdsAdd = () => {
       }),
     );
   };
-  const handleCancel = (id) => {
+  const handleCancel = (id: ExtFile["id"]) => {
     setExtFiles(
       extFiles.map((ef) => {
         if (ef.id === id) {
@@ -216,7 +241,7 @@ const AdsAdd = () => {
       }),
     );
   };
-  const handleCancelVideo = (id) => {
+  const handleCancelVideo = (id: ExtFile["id"]) => {
     setExtFilesVideo(
       extFilesVideo.map((ef) => {
         if (ef.id === id) {
@@ -226,7 +251,7 @@ const AdsAdd = () => {
     );
   };
 
-  const handleSelectPlace = (text) => {
+  const handleSelectPlace = (text: string) => {
     let clone = [...nearPlacesList];
     if (clone.some((item) => item == text)) {
       clone.push(text);
@@ -238,7 +263,7 @@ const AdsAdd = () => {
     }
   };
 
-  const handleNewOption = (type, id) => {
+  const handleNewOption = (type: "add" | "remove", id?: number) => {
     let clone = [...optionList];
     if (type == "add") {
       clone.push({
@@ -264,7 +289,7 @@ const AdsAdd = () => {
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
         const formData = new FormData();
-        formData.append("chat_id", socialItem.id);
+        formData.append("chat_id", String(socialItem.id));
         formData.append("protect_content", "true");
         formData.append(
           "media",
@@ -307,7 +332,7 @@ const AdsAdd = () => {
   const onSubmitIG = async () => {
     setIsLoading(true);
     const allValues = getValues();
-    let photos = [];
+    let photos: string[] = [];
 
     if (extFiles.length > 0) {
       photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
@@ -319,7 +344,7 @@ const AdsAdd = () => {
       // Publishing happens server-side with the stored token — no IG access
       // token ever reaches the browser.
       const igUserIds = publishSelectSocial
-        .map((socialItem) => socialItem.igUserId ?? socialItem.id)
+        .map((socialItem) => String(socialItem.igUserId ?? socialItem.id))
         .filter(Boolean);
       const { results } = await publishInstagramServerSide({
         adId: draftAdId,
@@ -416,8 +441,8 @@ const AdsAdd = () => {
       setAccordionExpanded(isExpanded ? panel : false);
     };
 
-  const handleCheckboxChange = (item) => {
-    const socialKey = (x) => x.igUserId ?? x.id;
+  const handleCheckboxChange = (item: SelectableSocialAccount) => {
+    const socialKey = (x: SelectableSocialAccount) => x.igUserId ?? x.id;
     setPublishSelectSocial((prev) => {
       if (prev.some((social) => socialKey(social) === socialKey(item))) {
         return prev.filter((social) => socialKey(social) !== socialKey(item));
@@ -426,7 +451,7 @@ const AdsAdd = () => {
     });
   };
 
-  const handleCheckboxPhotoOrVideo = (checkedValue) => {
+  const handleCheckboxPhotoOrVideo = (checkedValue: string) => {
     setPhotoOrVideo((prevPhotos) => {
       if (prevPhotos.includes(checkedValue)) {
         return prevPhotos.filter((item) => item !== checkedValue);
@@ -436,7 +461,11 @@ const AdsAdd = () => {
     });
   };
 
-  const handleChangeOption = (id, type, value) => {
+  const handleChangeOption = (
+    id: number,
+    type: "key" | "value",
+    value: string,
+  ) => {
     let clone = [...optionList];
     let index = clone.findIndex((item) => item.id == id);
     clone[index] = { ...clone[index], [type]: value };
@@ -485,7 +514,7 @@ const AdsAdd = () => {
                 placeholder="Enter post title"
                 className={errors.title ? "error" : ""}
               />
-              {errors.title && <span>{errors.title.message}</span>}
+              {errors.title && <span>{fieldErrorMessage(errors.title)}</span>}
             </div>
             <div className="field city">
               <div>
@@ -510,14 +539,14 @@ const AdsAdd = () => {
                       <option
                         key={region.id.toString()}
                         value={region.name}
-                        id={region.id}
+                        id={region.id.toString()}
                       >
                         {region.name}
                       </option>
                     );
                   })}
                 </select>
-                {errors.city && <span>{errors.city.message}</span>}
+                {errors.city && <span>{fieldErrorMessage(errors.city)}</span>}
               </div>
               <div>
                 <label htmlFor="district">{t("district")}</label>
@@ -544,7 +573,7 @@ const AdsAdd = () => {
                       );
                     })}
                 </select>
-                {errors.district && <span>{errors.district.message}</span>}
+                {errors.district && <span>{fieldErrorMessage(errors.district)}</span>}
               </div>
             </div>
             <div className="field">
@@ -554,7 +583,7 @@ const AdsAdd = () => {
                 placeholder="Enter address"
                 className={errors.title ? "error" : ""}
               />
-              {errors.address && <span>{errors.address.message}</span>}
+              {errors.address && <span>{fieldErrorMessage(errors.address)}</span>}
             </div>
             <div className="field">
               <label>{t("orientation")}</label>
@@ -565,7 +594,7 @@ const AdsAdd = () => {
                 placeholder="Enter reference"
                 className={errors.reference ? "error" : ""}
               />
-              {errors.reference && <span>{errors.reference.message}</span>}
+              {errors.reference && <span>{fieldErrorMessage(errors.reference)}</span>}
             </div>
             <div className="field city">
               <div>
@@ -581,7 +610,7 @@ const AdsAdd = () => {
                   </option>
                   <option value="nonresidential">{t("nonresidential")}</option>
                 </select>
-                {errors.type && <span>{errors.type.message}</span>}
+                {errors.type && <span>{fieldErrorMessage(errors.type)}</span>}
               </div>
               <div>
                 <label>{t("category")}</label>
@@ -594,7 +623,7 @@ const AdsAdd = () => {
                   <option value="rent">{t("rent")}</option>
                   <option value="sale">{t("sale")}</option>
                 </select>
-                {errors.category && <span>{errors.category.message}</span>}
+                {errors.category && <span>{fieldErrorMessage(errors.category)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -613,7 +642,7 @@ const AdsAdd = () => {
                   <option value="good">{t("good")}</option>
                   <option value="excellent">{t("excellent")}</option>
                 </select>
-                {errors.repairment && <span>{errors.repairment.message}</span>}
+                {errors.repairment && <span>{fieldErrorMessage(errors.repairment)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -627,7 +656,7 @@ const AdsAdd = () => {
                   className={errors.rooms ? "error" : ""}
                   type="number"
                 />
-                {errors.rooms && <span>{errors.rooms.message}</span>}
+                {errors.rooms && <span>{fieldErrorMessage(errors.rooms)}</span>}
               </div>
               <div>
                 <label htmlFor="area">{t("totalArea")}</label>
@@ -640,7 +669,7 @@ const AdsAdd = () => {
                   type="number"
                   placeholder="Enter total area"
                 />
-                {errors.area && <span>{errors.area.message}</span>}
+                {errors.area && <span>{fieldErrorMessage(errors.area)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -654,7 +683,7 @@ const AdsAdd = () => {
                   name="storey"
                   type="number"
                 />
-                {errors.storey && <span>{errors.storey.message}</span>}
+                {errors.storey && <span>{fieldErrorMessage(errors.storey)}</span>}
               </div>
               <div>
                 <label htmlFor="floors">{t("floors")}</label>
@@ -666,7 +695,7 @@ const AdsAdd = () => {
                   name="floors"
                   type="number"
                 />
-                {errors.floors && <span>{errors.floors.message}</span>}
+                {errors.floors && <span>{fieldErrorMessage(errors.floors)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -683,7 +712,7 @@ const AdsAdd = () => {
                     {t("withoutFurniture")}
                   </option>
                 </select>
-                {errors.furniture && <span>{errors.furniture.message}</span>}
+                {errors.furniture && <span>{fieldErrorMessage(errors.furniture)}</span>}
               </div>
             </div>
             <div className="field">
@@ -693,7 +722,7 @@ const AdsAdd = () => {
                 placeholder={`${t("hashtags")}: #new #2024`}
                 className={errors.hashtags ? "error" : ""}
               />
-              {errors.hashtags && <span>{errors.hashtags.message}</span>}
+              {errors.hashtags && <span>{fieldErrorMessage(errors.hashtags)}</span>}
             </div>
             <div className="field price">
               <div>
@@ -708,7 +737,7 @@ const AdsAdd = () => {
                 <i>
                   {convertDisplayPrice(priceValue, priceType, currency[0]?.currency)}
                 </i>
-                {errors.price && <span>{errors.price.message}</span>}
+                {errors.price && <span>{fieldErrorMessage(errors.price)}</span>}
               </div>
               <div className="priceType">
                 <select
@@ -737,7 +766,7 @@ const AdsAdd = () => {
                   <option value="2">{t("sold")}</option>
                   <option value="3">{t("draft")}</option>
                 </select>
-                {errors.stage && <span>{errors.stage.message}</span>}
+                {errors.stage && <span>{fieldErrorMessage(errors.stage)}</span>}
               </div>
             </div>
           </div>
@@ -747,7 +776,8 @@ const AdsAdd = () => {
                 <label htmlFor="description">{t("nearby")}</label>
                 <div className="place-list">
                   {!!nearbyPlaceData.length &&
-                    nearbyPlaceData[0]?.data?.map((item, index) => {
+                    nearbyPlaceData[0]?.data?.map(
+                      (item: string, index: number) => {
                       return (
                         <span
                           key={index.toString()}
@@ -813,7 +843,7 @@ const AdsAdd = () => {
                   required: "Description is required",
                 })}
               ></textarea>
-              {errors.description && <span>{errors.description.message}</span>}
+              {errors.description && <span>{fieldErrorMessage(errors.description)}</span>}
             </div>
             <div className="field photo">
               <label htmlFor="Images">{t("photo")}</label>
@@ -909,7 +939,8 @@ const AdsAdd = () => {
                 <img src="/social-preview/iphone-bar.png" alt="" />
                 <img src="/social-preview/ig-header.png" alt="" />
                 <div className="ig-stories">
-                  {currentUser.igAccounts?.map((e, index) => {
+                  {currentUser.igAccounts?.map(
+                    (e: InstagramAccount, index: number) => {
                     return (
                       <div key={index.toString()} className="igAvatar">
                         <img
@@ -971,7 +1002,7 @@ const AdsAdd = () => {
                             fontWeight: "500",
                           }}
                         >
-                          {document.getElementById("city")?.value}
+                          {cityValue}
                         </Typography>
                       </div>
                     </div>
@@ -1299,7 +1330,7 @@ const AdsAdd = () => {
                         <div className="tg-createAt">
                           <span>12.7 K</span>
                           <span>
-                            <VisibilityIcon fontSize="18px" />
+                            <VisibilityIcon sx={{ fontSize: "18px" }} />
                           </span>
                           <span>
                             {new Date().toLocaleDateString("en-US", {
@@ -1386,7 +1417,7 @@ const AdsAdd = () => {
               <>
                 <div className="tg-flex">
                   {!!currentUser.igAccounts &&
-                    currentUser?.igAccounts?.map((e, index) => (
+                    currentUser?.igAccounts?.map((e: InstagramAccount, index: number) => (
                       <div key={index} className="tg-channel-item-flex">
                         <IgProfileCard data={e} />
                         <Checkbox onChange={() => handleCheckboxChange(e)} />
@@ -1398,7 +1429,7 @@ const AdsAdd = () => {
               <>
                 <div className="tg-flex">
                   {currentUser?.tgAccounts?.length > 1 &&
-                    currentUser?.tgAccounts?.map((item, index) => {
+                    currentUser?.tgAccounts?.map((item: ITGAccount, index: number) => {
                       return (
                         <div
                           key={index.toString()}

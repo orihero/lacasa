@@ -25,7 +25,7 @@ export class TGService {
       }
 
       const chatInfoPromises = chats.map((chatId) =>
-        this.getChatInfo(chatId).catch((error) => {
+        this.getChatInfo(chatId).catch((error: unknown): null => {
           console.error(
             `Failed to fetch chat info for chat ID ${chatId}:`,
             error,

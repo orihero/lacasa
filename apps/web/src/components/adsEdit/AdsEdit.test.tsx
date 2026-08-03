@@ -48,7 +48,7 @@ const AD = {
   priceType: "uzs",
   stage: "1",
   description: "A nice flat",
-  nearPlacesList: [],
+  nearPlacesList: [] as string[],
   optionList: [{ id: 1, key: "Elevator", value: "yes" }],
   active: true,
   photos: ["https://cdn.example.com/ad1.jpg"],
@@ -59,7 +59,7 @@ const AD = {
 const IG_ACCOUNT = {
   igUserId: "ig-1",
   username: "lacasa_realty",
-  expiresAt: null,
+  expiresAt: null as string | null,
   profile_picture_url: "https://cdn.example.com/ig1.jpg",
   followers_count: 10,
   follows_count: 5,

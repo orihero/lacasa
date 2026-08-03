@@ -21,7 +21,7 @@ const YtProfileCard = () => {
             "https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest",
           ],
         })
-        .then((res) => {
+        .then((res: unknown) => {
           console.log(res);
           // Check if user is already authenticated
           if (gapi.auth2.getAuthInstance().isSignedIn.get()) {
@@ -32,7 +32,7 @@ const YtProfileCard = () => {
   }, []);
 
   // Function to handle file selection
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files[0]);
   };
 
@@ -81,6 +81,7 @@ const YtProfileCard = () => {
     //  formData.append('file', file);  // Add the video file
 
     try {
+      const uploadStartTime = Date.now();
       const uploader = new MediaUploader({
         file,
         token: gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse()
@@ -90,12 +91,14 @@ const YtProfileCard = () => {
         params: {
           part: Object.keys(metadata).join(","),
         },
-        onComplete: (data) => {
+        // cors_upload.js hands these the raw `xhr.target.response`, so the
+        // shape is whatever the YouTube API last wrote — unknown until parsed.
+        onComplete: (data: unknown) => {
           console.log("====================================");
           console.log({ data });
           console.log("====================================");
         },
-        onError: () => {
+        onError: (data: string) => {
           var message = data;
           // Assuming the error is raised by the YouTube API, data will be
           // a JSON string with error.message set. That may not be the
@@ -107,13 +110,15 @@ const YtProfileCard = () => {
             alert(message);
           }
         },
-        onProgress: (data) => {
+        // Registered straight onto `xhr.upload`'s "progress" event, so despite
+        // the name this is a ProgressEvent, not an API payload like the two above.
+        onProgress: (data: ProgressEvent) => {
           var currentTime = Date.now();
           var bytesUploaded = data.loaded;
           var totalBytes = data.total;
           // The times are in millis, so we need to divide by 1000 to get seconds.
           var bytesPerSecond =
-            bytesUploaded / ((currentTime - this.uploadStartTime) / 1000);
+            bytesUploaded / ((currentTime - uploadStartTime) / 1000);
           var estimatedSecondsRemaining =
             (totalBytes - bytesUploaded) / bytesPerSecond;
           var percentageComplete = (bytesUploaded * 100) / totalBytes;

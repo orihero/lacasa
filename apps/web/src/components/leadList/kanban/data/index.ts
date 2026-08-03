@@ -1,189 +1,34 @@
-import { Card, KanbanBoard } from "@caldwell619/react-kanban";
-import { v4 as uuid } from "uuid";
-import randomRgba from "random-rgba";
-import { faker } from "@faker-js/faker";
+import type { Card } from "@caldwell619/react-kanban";
+import type { DateLike, LeadStatusKey } from "@lacasa/domain";
 
-enum TicketType {
-  Bug = "bug",
-  Feature = "feature",
-  Enhancement = "enhancement",
-}
-export const ticketTypeToColor: Record<TicketType, string> = {
-  [TicketType.Enhancement]: "blue",
-  [TicketType.Bug]: "red",
-  [TicketType.Feature]: "green",
-};
-export const ticketTypeToBgColor: Record<TicketType, string> = {
-  [TicketType.Enhancement]: randomRgba(30),
-  [TicketType.Bug]: randomRgba(30),
-  [TicketType.Feature]: randomRgba(30),
-};
+// This module used to scaffold a demo Kanban board (a `board` constant and
+// `createNewCard()` built from `random-rgba` + `@faker-js/faker`, plus a
+// `ticketType`/`assigneeId`/`prLink`-shaped CustomCard) — leftovers from the
+// @caldwell619/react-kanban starter template. Neither package is (or ever
+// was) a dependency of this workspace, and nothing in LeadKanbanList ever
+// imported `board`/`createNewCard`: LeadKanbanList.tsx builds its own board
+// straight from the `list`/`coworkerList` stores. Since every consumer only
+// ever imported the `CustomCard` *type* (a type-only usage that Vite/esbuild
+// elides from the bundle), that demo data never actually ran — but it did
+// block `tsc`. It's removed here and CustomCard now describes what
+// generateBoard() in LeadKanbanList.tsx actually builds from a Lead.
 export interface CustomCard extends Card {
   id: string;
-  coworkerId: number;
-  storyPoints: number;
-  prLink?: string;
-  ticketType: TicketType;
-  createdAt: any;
-  callbackDate: any;
-  comment?: string;
+  coworkerId: string;
   coworkerFullName: string;
   coworkerImg: string;
+  createdAt: DateLike;
+  /** Reuses the kanban template's "story points" slot to show the lead's phone number. */
+  storyPoints: string;
+  comment: string | null;
+  callbackDate: DateLike;
+  status: LeadStatusKey;
+  conversationComment: string;
+  /**
+   * Leftover from the demo template's TicketType field. generateBoard()
+   * never sets it, so it has always rendered as nothing in Card.tsx; kept
+   * (optional, unpopulated) rather than removed to avoid touching that
+   * render output as part of a type-only pass — see report.
+   */
+  ticketType?: string;
 }
-const storyPointGenerator = () => Math.round(Math.random() * 10 + 1);
-const assigneeIdGenerator = () => Math.round(Math.random() * 3 + 1);
-export const board: KanbanBoard<CustomCard> = {
-  columns: [
-    {
-      id: uuid(),
-      title: "Backlog",
-      cards: [
-        {
-          id: uuid(),
-          title: "Implement feedback collector",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Feature,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Bump version for new API for billing",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Bug,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Add NPS feedback to wallboard",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Enhancement,
-          createdAt: faker.date.past(),
-        },
-      ],
-    },
-    {
-      id: uuid(),
-      title: "In Progress",
-      cards: [
-        {
-          id: uuid(),
-          title:
-            "Update T&C copy with v1.9 from the writers guild in all products that have cross country compliance",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Bug,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Tech spike on new Stripe integration with PayPal",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Enhancement,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title:
-            "Refactor Stripe verification key validator to a single call to avoid timing out on slow connections",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Feature,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: 'Change phone number field to type "phone"',
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          ticketType: TicketType.Enhancement,
-          createdAt: faker.date.past(),
-        },
-      ],
-    },
-    {
-      id: uuid(),
-      title: "In Review",
-      cards: [
-        {
-          id: uuid(),
-          title: "Multi-dest search UI web",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          prLink: "https://google.com",
-          ticketType: TicketType.Feature,
-          createdAt: faker.date.past(),
-        },
-      ],
-    },
-    {
-      id: uuid(),
-      title: "Done",
-      cards: [
-        {
-          id: uuid(),
-          title: "Quick booking for accommodations - web",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          prLink: "https://google.com",
-          ticketType: TicketType.Feature,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Adapt web app no new payments provider",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          prLink: "https://google.com",
-          ticketType: TicketType.Bug,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Fluid booking on tables",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          prLink: "https://google.com",
-          ticketType: TicketType.Feature,
-          createdAt: faker.date.past(),
-        },
-        {
-          id: uuid(),
-          title: "Shopping card purchasing error - quick fix required",
-          description: "Card content",
-          assigneeId: assigneeIdGenerator(),
-          storyPoints: storyPointGenerator(),
-          prLink: "https://google.com",
-          ticketType: TicketType.Bug,
-          createdAt: faker.date.past(),
-        },
-      ],
-    },
-  ],
-};
-
-export const createNewCard = () => {
-  return {
-    id: uuid(),
-    title: "Super New Card",
-    description: "Card content",
-    assigneeId: assigneeIdGenerator(),
-    storyPoints: storyPointGenerator(),
-    ticketType: TicketType.Feature,
-    createdAt: faker.date.past(),
-  };
-};

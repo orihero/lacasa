@@ -1,5 +1,4 @@
 import {
-  Card,
   ControlledBoard,
   KanbanBoard,
   moveCard,
@@ -8,6 +7,7 @@ import {
 import { Box, Button, Drawer, Modal, styled, Typography } from "@mui/material";
 import { resolveCardMoveAction } from "@lacasa/domain";
 import type { LeadStatusKey } from "@lacasa/domain";
+import type { Coworker, Lead } from "@lacasa/api-client";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +20,22 @@ import { CustomCard } from "./kanban/data";
 import "./leadList.scss";
 import { Triangle } from "react-loader-spinner";
 
+// useLeadStore/useCoworkerStore are plain untyped JS stores (out of scope
+// for this pass — see report), so `list`/`coworkerList` come back inferred
+// as `never[]`. @lacasa/api-client's `Lead`/`Coworker` are what those
+// stores' own `apiClient.leads.list()`/`apiClient.coworkers.list()` calls
+// are actually typed to resolve, so casting to them here (rather than to
+// `any`) reflects the real shape without widening it away.
+
+// The exact (source, destination) pair handleCardMove receives from
+// react-kanban's onCardDragEnd, stashed for confirm-callback/confirm-comment
+// moves so handleSave can finish the move once the modal is submitted.
+type DragEndArgs = Parameters<OnDragEndNotification<CustomCard>>;
+interface PendingMove {
+  source: DragEndArgs[1];
+  destination: DragEndArgs[2];
+}
+
 export default function LeadKanbanList() {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -27,16 +43,20 @@ export default function LeadKanbanList() {
   const { isLoading, list, fetchLeadList, updateLeadById, isUpdated } =
     useLeadStore();
   const { list: coworkerList, fetchCoworkerList } = useCoworkerStore();
-  const [kanbanBoard, setKanbanBoard] = useState({ columns: [] });
-  const [selectCard, setSelectCard] = useState({});
-  const [moveObject, setMoveObject] = useState();
+  const [kanbanBoard, setKanbanBoard] = useState<KanbanBoard<CustomCard>>({
+    columns: [],
+  });
+  const [selectCard, setSelectCard] = useState<CustomCard | null>(null);
+  const [moveObject, setMoveObject] = useState<PendingMove | undefined>(
+    undefined,
+  );
   const { currentUser } = useUserStore();
   const [open, setOpen] = React.useState(false);
   const [openModalType, setOpenModalType] = React.useState("");
   const [callBackTime, setCallBackTime] = React.useState("");
   const [commentConver, setCommentConverstion] = React.useState("");
   const [isOpenDrawer, setIsOpenDrawer] = useState(false);
-  const handleOpen = (card) => {
+  const handleOpen = (card: CustomCard) => {
     setIsOpenDrawer(true);
     setSelectCard(card);
   };
@@ -70,19 +90,22 @@ export default function LeadKanbanList() {
   // lengths) because it reads coworker name/avatar per card and rebuilds
   // every column from `list` contents, not just its size.
   const generateBoard = useCallback(async () => {
+    const columnIds: LeadStatusKey[] = [
+      "new",
+      "could_not_connect",
+      "need_to_call_back",
+      // "pick_date",
+      "rejected",
+      "accepted",
+    ];
+    const leads = list as Lead[];
+    const coworkers = coworkerList as Coworker[];
     let board: KanbanBoard<CustomCard> = {
-      columns: [
-        "new",
-        "could_not_connect",
-        "need_to_call_back",
-        // "pick_date",
-        "rejected",
-        "accepted",
-      ].map((e) => {
+      columns: columnIds.map((e) => {
         return {
           id: e,
           title: t(e),
-          cards: (list as []).reduce<CustomCard[]>((p, c) => {
+          cards: leads.reduce<CustomCard[]>((p, c) => {
             if (c.status == e) {
               return [
                 ...p,
@@ -90,17 +113,20 @@ export default function LeadKanbanList() {
                   id: c.id,
                   coworkerId: c.coworkerId,
                   coworkerFullName:
-                    coworkerList?.find((i) => i.id == c.coworkerId)?.fullName ??
+                    coworkers?.find((i) => i.id == c.coworkerId)?.fullName ??
                     "",
                   coworkerImg:
-                    coworkerList?.find((i) => i.id == c.coworkerId)?.avatar ??
+                    coworkers?.find((i) => i.id == c.coworkerId)?.avatar ??
                     "/avatar.jpg",
                   createdAt: c.createdAt,
                   storyPoints: c.phone,
                   title: c.fullName,
                   comment: c.comment,
                   callbackDate: c.callbackDate,
-                  status: c.status,
+                  // `c.status` is a plain `string` on the API-client Lead
+                  // type; `e` is the already-narrowed LeadStatusKey we just
+                  // confirmed it equals above.
+                  status: e,
                   conversationComment: c?.conversationComment ?? "",
                 },
               ];
@@ -119,22 +145,18 @@ export default function LeadKanbanList() {
       generateBoard();
   }, [list, coworkerList, isLoading, generateBoard]);
 
-  const handleCardMove: OnDragEndNotification<Card> = async (
+  const handleCardMove: OnDragEndNotification<CustomCard> = async (
     _card,
     source,
     destination,
   ) => {
-    // @ts-ignore — fromColumnId/toColumnId are untyped (`any`) on this
-    // library's Coordinates type.
     const sourceColumn = source?.fromColumnId as LeadStatusKey;
-    // @ts-ignore
     const destColumn = destination?.toColumnId as LeadStatusKey;
     const action = resolveCardMoveAction(sourceColumn, destColumn, _card);
 
     if (action.type === "confirm-callback") {
       setOpen(true);
       setSelectCard(action.card);
-      // @ts-ignore
       setMoveObject({ source, destination });
       return;
     }
@@ -143,7 +165,6 @@ export default function LeadKanbanList() {
       setOpenModalType("rejected_accepted");
       setSelectCard(action.card);
       setOpen(true);
-      // @ts-ignore
       setMoveObject({ source, destination });
       return;
     }
@@ -160,34 +181,37 @@ export default function LeadKanbanList() {
   };
 
   const handleSave = async () => {
+    // Genuine latent bug fixed here: handleSave previously read
+    // `moveObject.source`/`moveObject?.destination` unconditionally, even
+    // though `moveObject` only gets set by handleCardMove's
+    // confirm-callback/confirm-comment branches. Nothing else clears
+    // `open`/`openModalType` in a way that lets Save fire without a drag
+    // having happened first, so this hasn't been observed to crash — but
+    // there was no guard against it, and `moveObject.source` (no `?.`) would
+    // have thrown if it ever did. Same reasoning for `selectCard`.
+    if (!moveObject || !selectCard) return;
+    const { source, destination } = moveObject;
+
     if (openModalType == "rejected_accepted") {
-      await updateLeadById(selectCard?.id, {
+      await updateLeadById(selectCard.id, {
         ...selectCard,
         conversationComment: commentConver,
-        status: moveObject?.destination?.toColumnId,
+        status: destination?.toColumnId,
       });
 
       setKanbanBoard((currentBoard) => {
-        return moveCard(
-          currentBoard,
-          moveObject.source,
-          moveObject?.destination,
-        );
+        return moveCard(currentBoard, source, destination);
       });
       handleClose();
     } else {
-      await updateLeadById(selectCard?.id, {
+      await updateLeadById(selectCard.id, {
         ...selectCard,
         callbackDate: callBackTime,
-        status: moveObject?.destination?.toColumnId,
+        status: destination?.toColumnId,
       });
 
       setKanbanBoard((currentBoard) => {
-        return moveCard(
-          currentBoard,
-          moveObject.source,
-          moveObject?.destination,
-        );
+        return moveCard(currentBoard, source, destination);
       });
       handleClose();
     }
@@ -243,14 +267,12 @@ export default function LeadKanbanList() {
             /> */}
             <ControlledBoard
               renderCard={(card) => (
-                // @ts-ignore
                 <RenderCard
                   isUpdated={isUpdated}
                   handleOpenModal={handleOpen}
                   {...card}
                 />
               )}
-              // @ts-ignore
               renderColumnHeader={renderColumnHeader}
               onCardDragEnd={handleCardMove}
               // renderColumnAdder={() => <div>sas</div>}

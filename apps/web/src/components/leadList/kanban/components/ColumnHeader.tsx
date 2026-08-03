@@ -1,11 +1,15 @@
-import { UncontrolledBoardProps } from "@caldwell619/react-kanban";
+import { ControlledBoardProps } from "@caldwell619/react-kanban";
 import { Box, Typography } from "@mui/material";
 
 import { CustomCard } from "../data";
 import { ColoredBgText } from "./Card";
 import StatusCell from "../../../status/StatusCell";
 
-export const renderColumnHeader: UncontrolledBoardProps<CustomCard>["renderColumnHeader"] =
+// Wired into LeadKanbanList.tsx's <ControlledBoard>, so this must match
+// ControlledBoardProps's single-argument `renderColumnHeader` signature —
+// not UncontrolledBoardProps's two-argument one (which also passes a
+// `ColumnHeaderBag` this component never used).
+export const renderColumnHeader: ControlledBoardProps<CustomCard>["renderColumnHeader"] =
   (column) => {
     // navigate("/profile/" + id + "/create/leads");
     // const newCard = createNewCard();

@@ -4,6 +4,7 @@ import {
   FullScreen,
   ImagePreview,
 } from "@files-ui/react";
+import type { ExtFile } from "@files-ui/react";
 import CloseIcon from "@mui/icons-material/Close";
 import ExpandIcon from "@mui/icons-material/ExpandMore";
 import MoreHoriz from "@mui/icons-material/MoreHoriz";
@@ -23,8 +24,10 @@ import {
 import axios from "axios";
 import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
 import type { CurrencyCodeKey } from "@lacasa/domain";
+import type { InstagramAccount } from "@lacasa/api-client";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { FieldValues } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Triangle } from "react-loader-spinner";
 import Carousel from "react-material-ui-carousel";
@@ -33,6 +36,7 @@ import { toast } from "react-toastify";
 import { useListStore } from "../../lib/adsListStore";
 import { assetUpload } from "../../lib/assetUpload";
 import { api } from "../../lib/api";
+import { fieldErrorMessage } from "../../lib/formErrors";
 import { useUserStore } from "../../lib/userStore";
 import { useUtilsStore } from "../../lib/utilsStore";
 import regionData from "../../regions.json";
@@ -45,8 +49,30 @@ import {
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import YtVideoCard from "../ytVideoCard/YtVideoCard";
+import type { ITGAccount } from "../../services/tg";
 import "./adsEdit.scss";
 import ImageGrid from "./components/ImageGrid";
+
+// Deliberately loose: publishSelectSocial mixes checked Instagram and
+// Telegram accounts (see handleCheckboxChange, used by both networks'
+// checkboxes), so this only pins down the two fields socialKey actually
+// reads from either shape.
+interface SelectableSocialAccount {
+  id?: string | number;
+  igUserId?: string;
+}
+
+interface AdOptionItem {
+  id: number;
+  key: string;
+  value: string;
+}
+
+interface PhotoUrlItem {
+  id: number;
+  url: string;
+  uploadStatus: string;
+}
 
 const AdsEdit = () => {
   const {
@@ -63,16 +89,20 @@ const AdsEdit = () => {
   const { fetchAdsById, adsData, isLoading } = useListStore();
   const [regionId, setRegionId] = useState(0);
   const navigate = useNavigate();
-  const [extFiles, setExtFiles] = useState([]);
-  const [photoUrl, setPhotoUrl] = useState([]);
-  const [publishSelectSocial, setPublishSelectSocial] = useState([]);
-  const [imageSrc, setImageSrc] = useState(undefined);
-  const [, setVideoSrc] = useState(undefined);
+  const [extFiles, setExtFiles] = useState<ExtFile[]>([]);
+  const [photoUrl, setPhotoUrl] = useState<PhotoUrlItem[]>([]);
+  const [publishSelectSocial, setPublishSelectSocial] = useState<
+    SelectableSocialAccount[]
+  >([]);
+  const [imageSrc, setImageSrc] = useState<File | string | undefined>(
+    undefined,
+  );
+  const [, setVideoSrc] = useState<File | string | undefined>(undefined);
   const [openModal, setOpenModal] = useState("");
   const [resTG, setResTg] = useState([]);
   const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
-  const [nearPlacesList, setNearPlaceList] = useState([]);
-  const [optionList, setOptionList] = useState([]);
+  const [nearPlacesList, setNearPlaceList] = useState<string[]>([]);
+  const [optionList, setOptionList] = useState<AdOptionItem[]>([]);
   const descriptionValue = watch("description", "");
   const priceValue = watch("price", "");
   const titleValue = watch("title", "");
@@ -109,7 +139,7 @@ const AdsEdit = () => {
   useEffect(() => {
     if (adsData.id) {
       setPhotoUrl(
-        adsData.photos.map((e, index) => ({
+        adsData.photos.map((e: string, index: number) => ({
           id: index,
           url: e,
           uploadStatus: "done",
@@ -122,7 +152,7 @@ const AdsEdit = () => {
     }
   }, [adsData, reset]);
 
-  const onSubmit = (data) => {
+  const onSubmit = (data: FieldValues) => {
     let photos: string[] = [];
 
     const upload = async () => {
@@ -159,25 +189,25 @@ const AdsEdit = () => {
     // Navigate to the profile page after update
   };
 
-  const updateFiles = (incommingFiles) => {
+  const updateFiles = (incommingFiles: ExtFile[]) => {
     console.log("incomming files", incommingFiles);
     setExtFiles(incommingFiles);
   };
 
-  const onDelete = (id) => {
+  const onDelete = (id: ExtFile["id"]) => {
     setExtFiles(extFiles.filter((x) => x.id !== id));
   };
-  const handleSee = (imageSource) => {
+  const handleSee = (imageSource: string | undefined) => {
     console.log("====================================");
     console.log({ imageSource });
     console.log("====================================");
     setImageSrc(imageSource);
   };
-  const handleWatch = (videoSource) => {
+  const handleWatch = (videoSource: File | string | undefined) => {
     setVideoSrc(videoSource);
   };
 
-  const handleAbort = (id) => {
+  const handleAbort = (id: ExtFile["id"]) => {
     setExtFiles(
       extFiles.map((ef) => {
         if (ef.id === id) {
@@ -186,7 +216,7 @@ const AdsEdit = () => {
       }),
     );
   };
-  const handleCancel = (id) => {
+  const handleCancel = (id: ExtFile["id"]) => {
     setExtFiles(
       extFiles.map((ef) => {
         if (ef.id === id) {
@@ -196,7 +226,7 @@ const AdsEdit = () => {
     );
   };
 
-  const handleSelectPlace = (text) => {
+  const handleSelectPlace = (text: string) => {
     let clone = [...nearPlacesList];
     if (clone.some((item) => item == text)) {
       clone.push(text);
@@ -208,7 +238,7 @@ const AdsEdit = () => {
     }
   };
 
-  const handleNewOption = (type, id) => {
+  const handleNewOption = (type: "add" | "remove", id?: number) => {
     let clone = [...optionList];
     if (type == "add") {
       clone.push({
@@ -223,7 +253,11 @@ const AdsEdit = () => {
     }
   };
 
-  const handleChangeOption = (id, type, value) => {
+  const handleChangeOption = (
+    id: number,
+    type: "key" | "value",
+    value: string,
+  ) => {
     let clone = [...optionList];
     let index = clone.findIndex((item) => item.id == id);
     clone[index] = { ...clone[index], [type]: value };
@@ -239,7 +273,7 @@ const AdsEdit = () => {
     const responses = await Promise.all(
       publishSelectSocial.map(async (socialItem) => {
         const formData = new FormData();
-        formData.append("chat_id", socialItem.id);
+        formData.append("chat_id", String(socialItem.id));
         formData.append("protect_content", "true");
         formData.append(
           "media",
@@ -294,7 +328,7 @@ const AdsEdit = () => {
       // token ever reaches the browser.
       const photos = await collectPhotoUrls();
       const igUserIds = publishSelectSocial
-        .map((socialItem) => socialItem.igUserId ?? socialItem.id)
+        .map((socialItem) => String(socialItem.igUserId ?? socialItem.id))
         .filter(Boolean);
       const { results } = await publishInstagramServerSide({
         adId: id,
@@ -353,8 +387,8 @@ const AdsEdit = () => {
       setAccordionExpanded(isExpanded ? panel : false);
     };
 
-  const handleCheckboxChange = (item) => {
-    const socialKey = (x) => x.igUserId ?? x.id;
+  const handleCheckboxChange = (item: SelectableSocialAccount) => {
+    const socialKey = (x: SelectableSocialAccount) => x.igUserId ?? x.id;
     setPublishSelectSocial((prev) => {
       if (prev.some((social) => socialKey(social) === socialKey(item))) {
         return prev.filter((social) => socialKey(social) !== socialKey(item));
@@ -405,7 +439,7 @@ const AdsEdit = () => {
                 placeholder="Enter post title"
                 className={errors.title ? "error" : ""}
               />
-              {errors.title && <span>{errors.title.message}</span>}
+              {errors.title && <span>{fieldErrorMessage(errors.title)}</span>}
             </div>
             <div className="field city">
               <div>
@@ -430,14 +464,14 @@ const AdsEdit = () => {
                       <option
                         key={region.id.toString()}
                         value={region.name}
-                        id={region.id}
+                        id={region.id.toString()}
                       >
                         {region.name}
                       </option>
                     );
                   })}
                 </select>
-                {errors.city && <span>{errors.city.message}</span>}
+                {errors.city && <span>{fieldErrorMessage(errors.city)}</span>}
               </div>
               <div>
                 <label htmlFor="district">{t("district")}</label>
@@ -464,7 +498,7 @@ const AdsEdit = () => {
                       );
                     })}
                 </select>
-                {errors.district && <span>{errors.district.message}</span>}
+                {errors.district && <span>{fieldErrorMessage(errors.district)}</span>}
               </div>
             </div>
             <div className="field">
@@ -474,7 +508,7 @@ const AdsEdit = () => {
                 placeholder="Enter address"
                 className={errors.title ? "error" : ""}
               />
-              {errors.address && <span>{errors.address.message}</span>}
+              {errors.address && <span>{fieldErrorMessage(errors.address)}</span>}
             </div>
             <div className="field">
               <label>{t("orientation")}</label>
@@ -485,7 +519,7 @@ const AdsEdit = () => {
                 placeholder="Enter reference"
                 className={errors.reference ? "error" : ""}
               />
-              {errors.reference && <span>{errors.reference.message}</span>}
+              {errors.reference && <span>{fieldErrorMessage(errors.reference)}</span>}
             </div>
             <div className="field city">
               <div>
@@ -501,7 +535,7 @@ const AdsEdit = () => {
                   </option>
                   <option value="nonresidential">{t("nonresidential")}</option>
                 </select>
-                {errors.type && <span>{errors.type.message}</span>}
+                {errors.type && <span>{fieldErrorMessage(errors.type)}</span>}
               </div>
               <div>
                 <label>{t("category")}</label>
@@ -514,7 +548,7 @@ const AdsEdit = () => {
                   <option value="rent">{t("rent")}</option>
                   <option value="sale">{t("sale")}</option>
                 </select>
-                {errors.category && <span>{errors.category.message}</span>}
+                {errors.category && <span>{fieldErrorMessage(errors.category)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -533,7 +567,7 @@ const AdsEdit = () => {
                   <option value="good">{t("good")}</option>
                   <option value="excellent">{t("excellent")}</option>
                 </select>
-                {errors.repairment && <span>{errors.repairment.message}</span>}
+                {errors.repairment && <span>{fieldErrorMessage(errors.repairment)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -547,7 +581,7 @@ const AdsEdit = () => {
                   className={errors.rooms ? "error" : ""}
                   type="number"
                 />
-                {errors.rooms && <span>{errors.rooms.message}</span>}
+                {errors.rooms && <span>{fieldErrorMessage(errors.rooms)}</span>}
               </div>
               <div>
                 <label htmlFor="area">{t("totalArea")}</label>
@@ -560,7 +594,7 @@ const AdsEdit = () => {
                   type="number"
                   placeholder="Enter total area"
                 />
-                {errors.area && <span>{errors.area.message}</span>}
+                {errors.area && <span>{fieldErrorMessage(errors.area)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -574,7 +608,7 @@ const AdsEdit = () => {
                   name="storey"
                   type="number"
                 />
-                {errors.storey && <span>{errors.storey.message}</span>}
+                {errors.storey && <span>{fieldErrorMessage(errors.storey)}</span>}
               </div>
               <div>
                 <label htmlFor="floors">{t("floors")}</label>
@@ -586,7 +620,7 @@ const AdsEdit = () => {
                   name="floors"
                   type="number"
                 />
-                {errors.floors && <span>{errors.floors.message}</span>}
+                {errors.floors && <span>{fieldErrorMessage(errors.floors)}</span>}
               </div>
             </div>
             <div className="field city">
@@ -603,7 +637,7 @@ const AdsEdit = () => {
                     {t("withoutFurniture")}
                   </option>
                 </select>
-                {errors.furniture && <span>{errors.furniture.message}</span>}
+                {errors.furniture && <span>{fieldErrorMessage(errors.furniture)}</span>}
               </div>
             </div>
             <div className="field price">
@@ -619,7 +653,7 @@ const AdsEdit = () => {
                 <i>
                   {convertDisplayPrice(priceValue, priceType, currency[0]?.currency)}
                 </i>
-                {errors.price && <span>{errors.price.message}</span>}
+                {errors.price && <span>{fieldErrorMessage(errors.price)}</span>}
               </div>
               <div className="priceType">
                 <select
@@ -648,7 +682,7 @@ const AdsEdit = () => {
                   <option value="2">{t("sold")}</option>
                   <option value="3">{t("draft")}</option>
                 </select>
-                {errors.stage && <span>{errors.stage.message}</span>}
+                {errors.stage && <span>{fieldErrorMessage(errors.stage)}</span>}
               </div>
             </div>
           </div>
@@ -658,7 +692,8 @@ const AdsEdit = () => {
                 <label htmlFor="description">{t("nearby")}</label>
                 <div className="place-list">
                   {!!nearbyPlaceData.length &&
-                    nearbyPlaceData[0]?.data?.map((item, index) => {
+                    nearbyPlaceData[0]?.data?.map(
+                      (item: string, index: number) => {
                       return (
                         <span
                           key={index.toString()}
@@ -724,7 +759,7 @@ const AdsEdit = () => {
                   required: "Description is required",
                 })}
               ></textarea>
-              {errors.description && <span>{errors.description.message}</span>}
+              {errors.description && <span>{fieldErrorMessage(errors.description)}</span>}
             </div>
             <div className="field photo">
               <label htmlFor="Images">{t("photo")}</label>
@@ -806,7 +841,7 @@ const AdsEdit = () => {
                 <img src="/social-preview/iphone-bar.png" alt="" />
                 <img src="/social-preview/ig-header.png" alt="" />
                 <div className="ig-stories">
-                  {currentUser.igAccounts?.map((e) => {
+                  {currentUser.igAccounts?.map((e: InstagramAccount) => {
                     return (
                       <div key={e.username} className="igAvatar">
                         <img
@@ -868,7 +903,7 @@ const AdsEdit = () => {
                             fontWeight: "500",
                           }}
                         >
-                          {document.getElementById("city")?.value}
+                          {cityValue}
                         </Typography>
                       </div>
                     </div>
@@ -1023,7 +1058,7 @@ const AdsEdit = () => {
                       <div className="tg-createAt">
                         <span>12.7 K</span>
                         <span>
-                          <VisibilityIcon fontSize="18px" />
+                          <VisibilityIcon sx={{ fontSize: "18px" }} />
                         </span>
                         <span>
                           {new Date().toLocaleDateString("en-US", {
@@ -1071,6 +1106,7 @@ const AdsEdit = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <YtVideoCard
+                  isVideo={false}
                   hashtags={"#yangi"}
                   title={titleValue}
                   bannerImg={
@@ -1146,6 +1182,7 @@ const AdsEdit = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <YtVideoCard
+                  isVideo={false}
                   hashtags={"#yangi"}
                   title={titleValue}
                   bannerImg={""}
@@ -1215,7 +1252,7 @@ const AdsEdit = () => {
               <>
                 <div className="tg-flex">
                   {!!currentUser.igAccounts &&
-                    currentUser?.igAccounts?.map((e, index) => (
+                    currentUser?.igAccounts?.map((e: InstagramAccount, index: number) => (
                       <div key={index} className="tg-channel-item-flex">
                         <IgProfileCard data={e} />
                         <Checkbox onChange={() => handleCheckboxChange(e)} />
@@ -1227,7 +1264,7 @@ const AdsEdit = () => {
               <>
                 <div className="tg-flex">
                   {currentUser?.tgAccounts.length > 1 &&
-                    currentUser?.tgAccounts.map((item, index) => {
+                    currentUser?.tgAccounts.map((item: ITGAccount, index: number) => {
                       return (
                         <div key={index} className="tg-channel-item-flex">
                           <TgProfileCard data={item} />

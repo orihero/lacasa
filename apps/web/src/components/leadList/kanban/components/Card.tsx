@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { UncontrolledBoardProps } from "@caldwell619/react-kanban";
 import {
   Grid2 as Grid,
   Card,
@@ -16,12 +15,21 @@ import {
   formatCreatedAt,
 } from "../../../../hooks/formatDate";
 
-export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
-  card,
-) => {
+// Rendered as a plain JSX component (`<RenderCard isUpdated={...}
+// handleOpenModal={...} {...card} />` in LeadKanbanList.tsx), not invoked
+// through react-kanban's `renderCard(card, options)` callback signature —
+// so its props are the board card's own fields plus the two extras merged
+// in via spread, not `UncontrolledBoardProps<CustomCard>["renderCard"]`'s
+// `(card, options)` shape.
+export interface RenderCardProps extends CustomCard {
+  isUpdated: boolean;
+  handleOpenModal: (card: CustomCard) => void;
+}
+
+export const RenderCard = (card: RenderCardProps) => {
   useEffect(() => {
     //
-  }, [card.isUpdate]);
+  }, [card.isUpdated]);
 
   console.log(card);
   return (
@@ -104,7 +112,10 @@ export const RenderCard: UncontrolledBoardProps<CustomCard>["renderCard"] = (
 };
 
 export const ColoredBgText = styled("span", { shouldForwardProp })<{
-  bgColor: string;
+  // Optional: ColumnHeader.tsx's only caller renders it with no bgColor
+  // today (a pre-existing gap — see report), which already produced an
+  // invalid `background-color: undefined` declaration the browser ignores.
+  bgColor?: string;
 }>`
   background-color: ${({ bgColor }) => bgColor};
   border-radius: 4px;
