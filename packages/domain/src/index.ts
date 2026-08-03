@@ -22,6 +22,7 @@ export * from './enums';
 
 export * from './ads/caption';
 export * from './ads/currency';
+export * from './ads/pricePerSqm';
 
 export * from './validators/phone';
 

@@ -14,6 +14,7 @@ export default defineConfig({
     'enums/publish': 'src/enums/publish.ts',
     'ads/caption': 'src/ads/caption.ts',
     'ads/currency': 'src/ads/currency.ts',
+    'ads/pricePerSqm': 'src/ads/pricePerSqm.ts',
     'validators/phone': 'src/validators/phone.ts',
     'leads/transitions': 'src/leads/transitions.ts',
     'formatting/date': 'src/formatting/date.ts',
