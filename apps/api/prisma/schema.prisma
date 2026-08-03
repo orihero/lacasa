@@ -144,6 +144,7 @@ model User {
   coworkerLeads  Lead[]          @relation("LeadCoworker")
   events         ActivityEvent[] @relation("EventAgent")
   coworkerEvents ActivityEvent[] @relation("EventCoworker")
+  savedAds       SavedAd[]
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
@@ -234,8 +235,9 @@ model Ad {
   coworkerId String? @map("coworker_id") @db.Uuid
   coworker   User?   @relation("AdCoworker", fields: [coworkerId], references: [id], onDelete: SetNull)
 
-  photos AdPhoto[]
-  events ActivityEvent[]
+  photos  AdPhoto[]
+  events  ActivityEvent[]
+  savedBy SavedAd[]
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
@@ -255,6 +257,26 @@ model AdPhoto {
 
   @@index([adId])
   @@map("ad_photos")
+}
+
+// A buyer's favourited listing (the heart control, mockups/SCREENS.md §17).
+// Its own table rather than a flag on Ad because it is per-(user, ad): the
+// same listing is saved by one buyer and not another. Only USER accounts get
+// rows here — the heart is hidden for agents and coworkers, and the API
+// enforces that rather than trusting the client (docs/10 §5 Decision 5).
+model SavedAd {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adId      String   @map("ad_id") @db.Uuid
+  ad        Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Saving twice is the same fact, not two — this is what makes POST idempotent.
+  @@unique([userId, adId])
+  @@index([userId])
+  @@index([adId])
+  @@map("saved_ads")
 }
 
 model Lead {
