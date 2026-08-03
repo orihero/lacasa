@@ -17,7 +17,19 @@ describe('@lacasa/api-client root entry point', () => {
     });
 
     expect(Object.keys(api).sort()).toEqual(
-      ['ads', 'agents', 'auth', 'coworkers', 'leads', 'publish', 'statistics', 'uploads', 'users', 'utils'].sort(),
+      [
+        'ads',
+        'agents',
+        'auth',
+        'coworkers',
+        'leads',
+        'publish',
+        'savedAds',
+        'statistics',
+        'uploads',
+        'users',
+        'utils',
+      ].sort(),
     );
 
     await api.leads.list();
