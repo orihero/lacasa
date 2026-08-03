@@ -33,11 +33,18 @@ team is what an agency has.
 | Method & path | Access | Notes |
 |---|---|---|
 | `GET /agents` | public | agents directory (role=AGENT) + `adsCount` |
-| `GET /agents/:id` | public | public agent profile |
+| `GET /agents/:id` | public | public agent profile + `adsCount` + `dealsClosedCount` |
 | `PATCH /users/me` | any | own profile: fullName, phoneNumber, avatarUrl, password (re-hash), tgChatIds (agent) |
 | `GET /auth/instagram/connect` | agent | 302 → Meta OAuth authorize URL; replaces the manual-token-paste flow — see `09-instagram-onboarding.md` §1 |
 | `GET /auth/instagram/callback` | public (Meta calls this) | code/token exchange, upserts `agent_ig_tokens`, 302 back to `/settings` |
 | `DELETE /auth/instagram/:igUserId` | agent (own) | disconnect a connected IG account |
+
+`GET /agents/:id` backs the "Agent · N listings · M closed" row under a listing
+(mockups/SCREENS.md §4.3). `adsCount` counts AD_CREATED activity events, the
+same measure the directory uses; `dealsClosedCount` counts the agent's ads at
+stage SOLD. The list endpoint deliberately does not carry `dealsClosedCount` —
+nothing in the directory renders it. Both 404 for an id that is a real user but
+not an AGENT.
 
 ## Coworkers (agent only; replaces the client-side second-Firebase-app hack)
 
