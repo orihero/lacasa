@@ -19,6 +19,10 @@ export interface AgentDetail {
   email: string;
   phoneNumber: string | null;
   avatar: string | null;
+  /** AD_CREATED events for this agent — the same measure AgentSummary uses. */
+  adsCount: number;
+  /** The agent's ads at stage SOLD. Detail only; the directory omits it. */
+  dealsClosedCount: number;
 }
 
 export function createAgentsResource(client: ApiClient) {
