@@ -68,6 +68,23 @@ not an AGENT.
 | `PATCH /ads/:id` | agent/coworker (own) | stage transitions log AD_SOLD / AD_DRAFT_UPDATED |
 | `DELETE /ads/:id` | agent (own) | also deletes MinIO objects |
 
+Every serialized ad carries three fields added for the Liquid Glass listing
+detail (docs/10 §3):
+
+- `lat`/`lng` — `number | null`, the map pin. Always present, never mixed: both
+  set or both null, rejected with `400 validation` otherwise. Branch on
+  `lat !== null && lng !== null`, **not** on falsiness — a pin at latitude 0 is
+  valid. Existing ads are unpinned until someone sets coordinates.
+- `tour3dLink` — `string | null`. Writes are restricted to absolute `http(s)`
+  URLs (`400 validation` otherwise) because the value is rendered into an
+  `<iframe src>`; relative and protocol-relative values are refused too.
+- `media` — `[{url, mediaType, position}]`, the full ordered photo/video set.
+  `photos` is unchanged and still a flat `string[]` of **photo** URLs only, so
+  existing consumers and the crosspost payloads keep working.
+
+Price per m² is not returned — clients compute it from `price`/`area` with
+`@lacasa/domain`'s `computePricePerSqm`.
+
 ## Saved ads (favourites)
 
 | Method & path | Access | Notes |

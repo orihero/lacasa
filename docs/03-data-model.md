@@ -80,9 +80,27 @@ never sent to clients:
 | near_places | text[] | nearPlacesList | |
 | options | jsonb | optionList | `[{id,key,value}]`, free-form form extras |
 | active | boolean | active | |
+| lat / lng | numeric(9,6)? | — | listing-detail map pin; both set or both null |
+| tour_3d_link | text? | — | embedded 3D tour; absolute http(s) only |
 | agent_id | uuid FK→users | agentId | |
 | coworker_id | uuid? FK→users | coworkerId | |
 | created_at / updated_at | timestamptz | serverTimestamp | |
+
+**Map pin** (`20260803150000_ad_lat_lng`, docs/10 §3). Nullable and independent
+as columns, but "both set or both null" is enforced in
+`adService.js#validateCoordinates` rather than by a CHECK constraint: a partial
+`PATCH {lng: ""}` is invalid only if `lat` is *currently* set, which needs the
+existing row. Existing ads stay NULL — populating them (batch geocode vs the
+agent pinning manually) is a separate follow-up. Serialized as `Number` or
+`null`, never `Number(null)`, since 0 is a real coordinate rather than "no pin".
+
+**3D tour** (`20260803160000_ad_tour_3d_link`). Restricted to absolute http(s)
+at the write boundary, because the value is rendered into an `<iframe src>` with
+no `sandbox` attribute — a `javascript:`/`data:` scheme would execute in the
+visitor's origin. The rule lives in `@lacasa/domain`'s `adInputSchema`.
+
+Price per m² is deliberately **not** a column — it is computed from `price` and
+`area` via `@lacasa/domain`'s `computePricePerSqm` (docs/10 §5).
 
 ### `ad_photos`  ← `ads.photos[]` (Storage URLs)
 
@@ -93,6 +111,16 @@ never sent to clients:
 | object_key | text | MinIO key `ads/{uuid}-{name}` |
 | url | text | public URL (what the UI renders) |
 | position | int | carousel order |
+| media_type | enum `ad_media_type` (PHOTO, VIDEO) | defaults to PHOTO; backfilled every existing row |
+
+**Media type** (`20260803140000_ad_photo_media_type`, docs/10 §3). Adding it did
+**not** change the shape of `photos` on the wire: that flat `string[]` of URLs is
+read by AdsAdd, AdsEdit, Slider, HCard, Card and AdsList, and separately feeds
+the OLX and Instagram crosspost payloads, all of which treat an entry as an
+image URL. So `photos` narrows to PHOTO rows and a new additive `media` array
+(`{url, mediaType, position}`) carries the full ordered set. Nothing writes
+VIDEO yet, so the narrowing is a no-op today and a safety net once something
+does.
 
 ### `saved_ads`  ← new (no Firestore ancestor)
 
