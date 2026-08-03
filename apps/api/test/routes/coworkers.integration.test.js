@@ -36,6 +36,34 @@ describe("POST /api/coworkers", () => {
 
     expect(res.status).toBe(403);
   });
+
+  // SCREENS.md §13: a team is what an agency has and a solo agent doesn't.
+  it("forbids a solo agent from creating a coworker, and allows an agency one", async () => {
+    const solo = await createUser(prisma, {
+      role: "AGENT",
+      realtorKind: "SOLO",
+      email: "solo-agent@example.test",
+    });
+    const agency = await createUser(prisma, {
+      role: "AGENT",
+      realtorKind: "AGENCY",
+      email: "agency-agent@example.test",
+    });
+
+    const refused = await supertest(app)
+      .post("/api/coworkers")
+      .set("Authorization", authHeader(solo))
+      .send({ fullName: "No Team", email: "solo-coworker@example.test", password: "password123" });
+    expect(refused.status).toBe(403);
+    expect(refused.body.error.code).toBe("solo_realtor");
+
+    const allowed = await supertest(app)
+      .post("/api/coworkers")
+      .set("Authorization", authHeader(agency))
+      .send({ fullName: "Team Member", email: "agency-coworker@example.test", password: "password123" });
+    expect(allowed.status).toBe(201);
+    expect(allowed.body.agentId).toBe(agency.id);
+  });
 });
 
 describe("coworker CRUD scoping — a coworker must not read another agent's data", () => {

@@ -11,8 +11,30 @@
  * shaping, and stays in the caller (apps/web's userStore, and whatever
  * apps/mobile's equivalent turns out to be).
  */
-import type { LoginInput, RegisterInput } from '@lacasa/domain';
+import type {
+  LoginInput,
+  RegisterInput,
+  RealtorKindKey,
+  RealtorStatusKey,
+  TeamSizeKey,
+} from '@lacasa/domain';
 import type { ApiClient } from '../core/client';
+
+/**
+ * The realtor application on an account, as serializeUser.js shapes it —
+ * null for buyers and for coworkers (whose team facts live on their agent).
+ * `status` is an application state, not a permission: `role` is still what
+ * decides what the account can do.
+ */
+export interface RealtorProfile {
+  kind: RealtorKindKey;
+  status: RealtorStatusKey;
+  agencyName: string | null;
+  officePhone: string | null;
+  teamSize: TeamSizeKey | null;
+  appliedAt: string | null;
+  decidedAt: string | null;
+}
 
 export interface AuthUser {
   id: string;
@@ -22,6 +44,7 @@ export interface AuthUser {
   role: string;
   avatar?: string | null;
   agentId?: string | null;
+  realtor?: RealtorProfile | null;
   tgChatIds?: string[];
   igAccounts?: Array<{ igUserId: string; username: string | null; expiresAt: string | null }>;
   [key: string]: unknown;

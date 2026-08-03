@@ -15,6 +15,29 @@ enum UserRole {
   COWORKER
 }
 
+// Realtor sign-up (mockups/SCREENS.md §13). Mirrored in
+// packages/domain/src/enums/users.ts, which owns the wire-format keys.
+
+enum RealtorKind {
+  SOLO
+  AGENCY
+}
+
+// An application, not a permission: only APPROVED promotes role to AGENT.
+enum RealtorStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TeamSize {
+  JUST_ME
+  TWO_TO_FIVE
+  SIX_TO_FIFTEEN
+  SIXTEEN_PLUS
+}
+
 enum AdType {
   RESIDENTIAL
   NONRESIDENTIAL
@@ -95,6 +118,16 @@ model User {
   avatarUrl    String?  @map("avatar_url")
   tgChatIds    BigInt[] @map("tg_chat_ids")
 
+  // Realtor application, filled in at sign-up and null for buyers. Set on the
+  // account that applied — a coworker's team facts live on their agent.
+  realtorKind      RealtorKind?  @map("realtor_kind")
+  realtorStatus    RealtorStatus @default(NONE) @map("realtor_status")
+  agencyName       String?       @map("agency_name")
+  officePhone      String?       @map("office_phone")
+  teamSize         TeamSize?     @map("team_size")
+  realtorAppliedAt DateTime?     @map("realtor_applied_at") @db.Timestamptz()
+  realtorDecidedAt DateTime?     @map("realtor_decided_at") @db.Timestamptz()
+
   // coworker → owning agent
   agentId   String? @map("agent_id") @db.Uuid
   agent     User?   @relation("AgentCoworkers", fields: [agentId], references: [id], onDelete: SetNull)
@@ -117,6 +150,8 @@ model User {
 
   @@index([agentId])
   @@index([role])
+  // Whoever reviews applications reads this one status at a time.
+  @@index([realtorStatus])
   @@map("users")
 }
 

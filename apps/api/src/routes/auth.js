@@ -1,18 +1,27 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { registerSchema, loginSchema, REALTOR_KIND, TEAM_SIZE } from "@lacasa/domain";
 import { signToken } from "../lib/jwt.js";
 import { requireAuth } from "../middleware/auth.js";
 import { serializeUser } from "../lib/serializeUser.js";
 
 const router = Router();
 
-const registerSchema = z.object({
-  fullName: z.string().min(1).max(200),
-  email: z.string().email(),
-  password: z.string().min(6).max(200),
-  phoneNumber: z.string().max(30).optional(),
-});
+// The realtor half of the sign-up payload → User columns. Applying is not
+// being granted: the row is created with role USER and a PENDING
+// application, and only an approval promotes it to AGENT. Until then the
+// account behaves exactly like a buyer's, which is what gates the Work tab.
+function realtorApplicationColumns(realtor, now) {
+  if (!realtor) return {};
+  return {
+    realtorKind: REALTOR_KIND[realtor.kind],
+    realtorStatus: "PENDING",
+    realtorAppliedAt: now,
+    agencyName: realtor.kind === "agency" ? realtor.agencyName : null,
+    officePhone: realtor.kind === "agency" ? (realtor.officePhone ?? null) : null,
+    teamSize: realtor.kind === "agency" ? TEAM_SIZE[realtor.teamSize] : null,
+  };
+}
 
 router.post("/register", async (req, res, next) => {
   try {
@@ -20,7 +29,7 @@ router.post("/register", async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });
     }
-    const { fullName, email, password, phoneNumber } = parsed.data;
+    const { fullName, email, password, phoneNumber, realtor } = parsed.data;
 
     const existing = await req.ctx.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -29,7 +38,14 @@ router.post("/register", async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await req.ctx.prisma.user.create({
-      data: { fullName, email, passwordHash, phoneNumber, role: "USER" },
+      data: {
+        fullName,
+        email,
+        passwordHash,
+        phoneNumber,
+        role: "USER",
+        ...realtorApplicationColumns(realtor, new Date()),
+      },
     });
 
     const token = signToken({ sub: user.id, role: user.role });
@@ -37,11 +53,6 @@ router.post("/register", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
-});
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
 });
 
 router.post("/login", async (req, res, next) => {

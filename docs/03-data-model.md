@@ -26,7 +26,21 @@ the mapping decisions.
 | avatar_url | text? | avatar | MinIO public URL |
 | agent_id | uuid? FK→users | agentId | self-reference; set only for coworkers |
 | tg_chat_ids | bigint[] | tgChatIds | agent's connected TG channels |
+| realtor_kind | enum `realtor_kind` (SOLO, AGENCY)? | — | null for buyers; set from the sign-up choice |
+| realtor_status | enum `realtor_status` (NONE, PENDING, APPROVED, REJECTED) | — | an application, not a permission — `role` still decides what the account can do |
+| agency_name | text? | — | agency only; shown in place of the agent's own name on the team's listings |
+| office_phone | text? | — | agency only; same `+998` rule as `phone_number` |
+| team_size | enum `team_size` (JUST_ME, TWO_TO_FIVE, SIX_TO_FIFTEEN, SIXTEEN_PLUS)? | — | agency only; self-reported at sign-up |
+| realtor_applied_at / realtor_decided_at | timestamptz? | — | when the application was made, and when it was approved/rejected |
 | created_at / updated_at | timestamptz | — | |
+
+**Realtor sign-up** (`20260803120000_realtor_kind`, mockups/SCREENS.md §13). Choosing
+*Realtor* at registration writes `realtor_kind` + `realtor_status = PENDING` and leaves
+`role = USER`, so the workspace stays shut until the application is approved — approving
+is what sets `role = AGENT` and `realtor_decided_at`. There is no self-serve approval
+route yet; it replaces the Google Form with a row someone reviews. Agents that predate
+the split were backfilled to `AGENCY` / `APPROVED`, since they have always been able to
+add coworkers — the API refuses coworker creation only for an explicit `SOLO`.
 
 `igTokens[]` moves out of the user document into its own table so tokens are
 never sent to clients:

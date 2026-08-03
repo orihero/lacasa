@@ -10,11 +10,23 @@ HTTP status (400 validation, 401 unauthenticated, 403 forbidden, 404 not found).
 
 | Method & path | Access | Body / params | Returns |
 |---|---|---|---|
-| `POST /auth/register` | public | `{ fullName, email, password }` | `{ token, user }` — role is always USER |
+| `POST /auth/register` | public | `{ fullName, email, password, phoneNumber?, realtor? }` | `{ token, user }` — role is always USER |
 | `POST /auth/login` | public | `{ email, password }` | `{ token, user }` |
 | `GET /auth/me` | any | — | `{ user }` (with resolved agent info for coworkers) |
 
 `user` objects never include `password_hash` or IG tokens.
+
+`realtor` is the sign-up choice from mockups/SCREENS.md §13, validated by
+`@lacasa/domain`'s `realtorApplicationSchema` — either `{ kind: "solo" }` or
+`{ kind: "agency", agencyName, officePhone?, teamSize }`, where `teamSize` is one of
+`just_me | two_to_five | six_to_fifteen | sixteen_plus`. Omitting it registers a buyer.
+Sending it records a **pending application** and still returns `role: "user"`: it is not
+a way to self-promote to agent. The application comes back on every `user` object as
+`realtor: { kind, status, agencyName, officePhone, teamSize, appliedAt, decidedAt }`,
+or `null` for buyers and coworkers.
+
+`POST /coworkers` 403s with `solo_realtor` when the calling agent's kind is `solo` — a
+team is what an agency has.
 
 ## Users / agents
 

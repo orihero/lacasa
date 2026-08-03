@@ -9,7 +9,15 @@ import { signToken } from "../../../src/lib/jwt.js";
 // `users.email` unique constraint within a file (tables are only truncated
 // *between* files — see test/integration/helpers/db.js).
 export async function createUser(prisma, overrides = {}) {
-  const { role = "USER", password = "password123", agentId = null, ...rest } = overrides;
+  const {
+    role = "USER",
+    password = "password123",
+    agentId = null,
+    // Null unless a test cares: the coworker gate only refuses "SOLO", and
+    // agents created before the solo/agency split carry no kind at all.
+    realtorKind = null,
+    ...rest
+  } = overrides;
   const passwordHash = await bcrypt.hash(password, 10);
   return prisma.user.create({
     data: {
@@ -18,6 +26,7 @@ export async function createUser(prisma, overrides = {}) {
       passwordHash,
       role,
       agentId,
+      realtorKind,
       phoneNumber: rest.phoneNumber,
     },
   });

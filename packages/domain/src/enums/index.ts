@@ -12,3 +12,4 @@ export * from './ads';
 export * from './leads';
 export * from './events';
 export * from './publish';
+export * from './users';

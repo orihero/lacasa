@@ -48,6 +48,15 @@ router.post("/", async (req, res, next) => {
     if (req.currentUser.role !== "AGENT") {
       return res.status(403).json({ error: { code: "forbidden", message: "Only agents can create coworkers" } });
     }
+    // A team is the thing an agency has and a solo agent doesn't — the same
+    // rule that hides the Coworkers screen for them (SCREENS.md §13, §35).
+    // Agents from before the solo/agency split were backfilled to AGENCY, so
+    // this can only ever refuse an account that chose "Solo agent".
+    if (req.currentUser.realtorKind === "SOLO") {
+      return res.status(403).json({
+        error: { code: "solo_realtor", message: "Solo agents don't have a team. Switch to an agency account to add coworkers." },
+      });
+    }
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });

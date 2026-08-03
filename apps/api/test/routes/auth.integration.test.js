@@ -48,6 +48,121 @@ describe("POST /api/auth/register", () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("validation");
   });
+
+  it("leaves a buyer with no realtor application", async () => {
+    const res = await supertest(app)
+      .post("/api/auth/register")
+      .send({ fullName: "Buyer", email: uniqueEmail("buyer"), password: "s3cret-pass" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.realtor).toBeNull();
+  });
+});
+
+// SCREENS.md §13. Applying is not being granted: both branches create a
+// role: "user" row with a pending application, so the Work tab stays shut
+// until someone approves it.
+describe("POST /api/auth/register — realtor applications", () => {
+  it("records a solo application without promoting the account", async () => {
+    const email = uniqueEmail("solo");
+    const res = await supertest(app)
+      .post("/api/auth/register")
+      .send({ fullName: "Solo Agent", email, password: "s3cret-pass", realtor: { kind: "solo" } });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.role).toBe("user");
+    expect(res.body.user.realtor).toMatchObject({
+      kind: "solo",
+      status: "pending",
+      agencyName: null,
+      teamSize: null,
+    });
+
+    const row = await prisma.user.findUnique({ where: { email } });
+    expect(row.realtorKind).toBe("SOLO");
+    expect(row.realtorStatus).toBe("PENDING");
+    expect(row.realtorAppliedAt).toBeInstanceOf(Date);
+    expect(row.realtorDecidedAt).toBeNull();
+  });
+
+  it("records an agency application with its name, office phone and team size", async () => {
+    const email = uniqueEmail("agency");
+    const res = await supertest(app).post("/api/auth/register").send({
+      fullName: "Agency Owner",
+      email,
+      password: "s3cret-pass",
+      realtor: {
+        kind: "agency",
+        agencyName: "La Casa Realty",
+        officePhone: "+998712001020",
+        teamSize: "six_to_fifteen",
+      },
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.realtor).toMatchObject({
+      kind: "agency",
+      status: "pending",
+      agencyName: "La Casa Realty",
+      officePhone: "+998712001020",
+      teamSize: "six_to_fifteen",
+    });
+
+    const row = await prisma.user.findUnique({ where: { email } });
+    expect(row.role).toBe("USER");
+    expect(row.teamSize).toBe("SIX_TO_FIFTEEN");
+  });
+
+  it("ignores agency fields smuggled into a solo application", async () => {
+    const email = uniqueEmail("smuggle");
+    const res = await supertest(app).post("/api/auth/register").send({
+      fullName: "Sneaky",
+      email,
+      password: "s3cret-pass",
+      realtor: { kind: "solo", agencyName: "Ghost Realty", teamSize: "sixteen_plus" },
+    });
+
+    expect(res.status).toBe(201);
+    const row = await prisma.user.findUnique({ where: { email } });
+    expect(row.agencyName).toBeNull();
+    expect(row.teamSize).toBeNull();
+  });
+
+  it("rejects an agency with no name, and an unknown team size, with 400", async () => {
+    const noName = await supertest(app).post("/api/auth/register").send({
+      fullName: "No Name",
+      email: uniqueEmail("noname"),
+      password: "s3cret-pass",
+      realtor: { kind: "agency", teamSize: "just_me" },
+    });
+    expect(noName.status).toBe(400);
+    expect(noName.body.error.code).toBe("validation");
+
+    const badSize = await supertest(app).post("/api/auth/register").send({
+      fullName: "Bad Size",
+      email: uniqueEmail("badsize"),
+      password: "s3cret-pass",
+      realtor: { kind: "agency", agencyName: "La Casa Realty", teamSize: "2-5" },
+    });
+    expect(badSize.status).toBe(400);
+  });
+
+  it("rejects an office phone that isn't a +998 number", async () => {
+    const res = await supertest(app).post("/api/auth/register").send({
+      fullName: "Bad Phone",
+      email: uniqueEmail("badphone"),
+      password: "s3cret-pass",
+      realtor: {
+        kind: "agency",
+        agencyName: "La Casa Realty",
+        officePhone: "712001020",
+        teamSize: "just_me",
+      },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/phone/i);
+  });
 });
 
 describe("POST /api/auth/login", () => {
