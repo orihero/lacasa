@@ -32,6 +32,62 @@ function photosCreateData(photos) {
   return (photos ?? []).map((url, position) => ({ url, objectKey: objectKeyFromUrl(url), position }));
 }
 
+// Mirrors publishService.js's local httpError helper (no shared lib exists
+// for this yet) -- routes catch it via a matching `handleServiceError`
+// (see routes/ads.js) that reads `.status`/`.code` and maps straight to the
+// `{ error: { code, message } }` envelope, falling through to the generic
+// 500 handler for anything else.
+function httpError(status, code, message) {
+  const err = new Error(message);
+  err.status = status;
+  err.code = code;
+  return err;
+}
+
+const LAT_RANGE = [-90, 90];
+const LNG_RANGE = [-180, 180];
+
+// Ad.lat/Ad.lng (docs/10 §3, listing-detail map pin). Two rules, both
+// enforced here rather than in parseAdInput or the packages/domain zod
+// mirror:
+//
+// 1. Range: -90..90 for lat, -180..180 for lng. Only checked against
+//    fields actually present on *this* request (`data`, already coerced to
+//    number|null by parseAdInput) -- a field the caller didn't touch keeps
+//    whatever is already in the DB, which was already valid (or NULL) when
+//    it was written, so it's not re-checked.
+// 2. "Both set or both null": a pin with only one coordinate is
+//    meaningless. This can only be decided from the *effective* post-write
+//    value of each field -- this request's value if provided, else the
+//    existing row's -- because PATCH bodies are partial (`PATCH {lng: null}`
+//    on an ad that already has both set must fail, but nothing in that
+//    body alone reveals lat is currently set). That's why this rule isn't
+//    expressible as a per-field zod check or a DB CHECK constraint, and why
+//    it lives in the service layer, which is the only place with both the
+//    request and (on update) the pre-existing row.
+//
+// `existing` is `null` for createAd (nothing on the row yet).
+function validateCoordinates(data, existing) {
+  const fields = [
+    ["lat", LAT_RANGE],
+    ["lng", LNG_RANGE],
+  ];
+
+  for (const [key, [min, max]] of fields) {
+    if (!(key in data)) continue;
+    const value = data[key];
+    if (value !== null && (typeof value !== "number" || Number.isNaN(value) || value < min || value > max)) {
+      throw httpError(400, "validation", `${key} must be a number between ${min} and ${max}, or null`);
+    }
+  }
+
+  const effectiveLat = "lat" in data ? data.lat : (existing ? existing.lat : null);
+  const effectiveLng = "lng" in data ? data.lng : (existing ? existing.lng : null);
+  if ((effectiveLat === null) !== (effectiveLng === null)) {
+    throw httpError(400, "validation", "lat and lng must be set together, or both left null");
+  }
+}
+
 // Public listing (GET /api/ads, no `agentId` option) is always scoped to
 // ACTIVE ads; the caller (myAds.js) supplies `agentId` (+ optional custom
 // `orderBy`) to instead list everything a given agent owns, active or not.
@@ -53,6 +109,7 @@ export async function getAd(ctx, id) {
 
 export async function createAd(ctx, body, actor) {
   const data = parseAdInput(body);
+  validateCoordinates(data, null);
   const photos = Array.isArray(body.photos) ? body.photos : [];
 
   const ad = await createWithActivityEvent(
@@ -85,6 +142,7 @@ export async function updateAd(ctx, id, agentId, body, actor) {
   if (!existing) return null;
 
   const data = parseAdInput(body);
+  validateCoordinates(data, existing);
   const photosProvided = Array.isArray(body.photos);
 
   const ad = await adRepository.updateAd(ctx.prisma, id, {

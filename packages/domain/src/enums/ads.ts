@@ -43,12 +43,22 @@ export const CURRENCY_CODE = {
   usd: 'USD',
 } as const;
 
+// AdPhoto.mediaType — distinguishes a photo from the video the CRM upload
+// form already accepts (docs/10 §3). No producer sets this on write today;
+// it exists so serializeAd's `media` array can tell clients which renderer
+// (<img> vs <video>) a given AdPhoto row needs.
+export const AD_MEDIA_TYPE = {
+  photo: 'PHOTO',
+  video: 'VIDEO',
+} as const;
+
 export type AdTypeKey = keyof typeof AD_TYPE;
 export type AdCategoryKey = keyof typeof AD_CATEGORY;
 export type RepairmentKey = keyof typeof REPAIRMENT;
 export type FurnitureKey = keyof typeof FURNITURE;
 export type AdStageKey = keyof typeof AD_STAGE;
 export type CurrencyCodeKey = keyof typeof CURRENCY_CODE;
+export type AdMediaTypeKey = keyof typeof AD_MEDIA_TYPE;
 
 export const AD_TYPE_REV = invert(AD_TYPE);
 export const AD_CATEGORY_REV = invert(AD_CATEGORY);
@@ -56,3 +66,4 @@ export const REPAIRMENT_REV = invert(REPAIRMENT);
 export const FURNITURE_REV = invert(FURNITURE);
 export const AD_STAGE_REV = invert(AD_STAGE); // e.g. ACTIVE -> "1"
 export const CURRENCY_CODE_REV = invert(CURRENCY_CODE);
+export const AD_MEDIA_TYPE_REV = invert(AD_MEDIA_TYPE);

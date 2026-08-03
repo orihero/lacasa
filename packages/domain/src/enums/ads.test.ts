@@ -12,6 +12,8 @@ import {
   AD_STAGE_REV,
   CURRENCY_CODE,
   CURRENCY_CODE_REV,
+  AD_MEDIA_TYPE,
+  AD_MEDIA_TYPE_REV,
 } from './ads';
 
 // Each forward map must be invertible: every value maps back to the key it
@@ -59,5 +61,11 @@ describe('ad enums', () => {
   it('CURRENCY_CODE <-> CURRENCY_CODE_REV is invertible', () => {
     expectInvertible(CURRENCY_CODE, CURRENCY_CODE_REV);
     expect(CURRENCY_CODE_REV.UZS).toBe('uzs');
+  });
+
+  it('AD_MEDIA_TYPE <-> AD_MEDIA_TYPE_REV is invertible', () => {
+    expectInvertible(AD_MEDIA_TYPE, AD_MEDIA_TYPE_REV);
+    expect(AD_MEDIA_TYPE_REV.PHOTO).toBe('photo');
+    expect(AD_MEDIA_TYPE_REV.VIDEO).toBe('video');
   });
 });

@@ -34,18 +34,37 @@ export interface AdFilters {
 
 export type AdSort = 'newest' | 'highestPrice' | 'lowestPrice';
 
-export interface AdPhoto {
-  id?: string;
+/**
+ * One entry of `Ad.media` — the full ordered photo/video set, each row
+ * tagged with its AdMediaType (docs/10 §3). `Ad.photos` stays a flat
+ * string[] of image URLs (unchanged wire contract every existing consumer —
+ * AdsAdd/AdsEdit/Slider/HCard/Card/AdsList, plus the OLX/Instagram crosspost
+ * payloads — already reads); `media` is additive, for a future carousel
+ * that needs to tell photos and video apart.
+ */
+export interface AdMedia {
   url: string;
-  objectKey?: string;
-  position?: number;
+  mediaType: 'photo' | 'video';
+  position: number;
 }
 
 export interface Ad {
   id: string;
   agentId: string;
   coworkerId?: string | null;
-  photos: AdPhoto[];
+  /** Flat array of photo URLs only — see AdMedia doc comment above. */
+  photos: string[];
+  media: AdMedia[];
+  /**
+   * Listing-detail map pin (docs/10 §3). Always present on the wire (never
+   * omitted), `number | null` — never both `null` and both non-null never
+   * mixed (enforced server-side, see adService.js#validateCoordinates), so
+   * `lat !== null && lng !== null` is the reliable "has a pin" check. Do
+   * not treat a falsy check (`!ad.lat`) as "no pin" — a real pin at
+   * latitude 0 is falsy but valid.
+   */
+  lat: number | null;
+  lng: number | null;
   [key: string]: unknown;
 }
 

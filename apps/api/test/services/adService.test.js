@@ -26,6 +26,8 @@ function makeAd(overrides = {}) {
     nearPlaces: [],
     options: [],
     active: true,
+    lat: null,
+    lng: null,
     agentId: "agent-1",
     coworkerId: null,
     photos: [],
@@ -130,6 +132,52 @@ describe("createAd", () => {
 
     expect(ad.id).toBe(created.id);
   });
+
+  it("accepts a full lat/lng pair", async () => {
+    const created = makeAd({ lat: "41.311081", lng: "69.240562" });
+    const create = vi.fn().mockResolvedValue(created);
+    const prisma = createFakePrisma({ ad: { create }, activityEvent: { create: vi.fn().mockResolvedValue({}) } });
+    const actor = { agentId: "agent-1", coworkerId: null };
+
+    const ad = await adService.createAd(
+      { prisma },
+      { title: "Pinned", lat: "41.311081", lng: "69.240562" },
+      actor,
+    );
+
+    expect(create.mock.calls[0][0].data.lat).toBe(41.311081);
+    expect(create.mock.calls[0][0].data.lng).toBe(69.240562);
+    expect(ad.lat).toBe(41.311081);
+    expect(ad.lng).toBe(69.240562);
+  });
+
+  it("rejects lat set without lng", async () => {
+    const prisma = createFakePrisma({});
+    const actor = { agentId: "agent-1", coworkerId: null };
+
+    await expect(adService.createAd({ prisma }, { title: "Half pin", lat: "41.3" }, actor)).rejects.toMatchObject({
+      status: 400,
+      code: "validation",
+    });
+  });
+
+  it("rejects a latitude out of range", async () => {
+    const prisma = createFakePrisma({});
+    const actor = { agentId: "agent-1", coworkerId: null };
+
+    await expect(
+      adService.createAd({ prisma }, { title: "Bad lat", lat: "91", lng: "10" }, actor),
+    ).rejects.toMatchObject({ status: 400, code: "validation" });
+  });
+
+  it("allows omitting lat/lng entirely (both stay null)", async () => {
+    const created = makeAd();
+    const create = vi.fn().mockResolvedValue(created);
+    const prisma = createFakePrisma({ ad: { create }, activityEvent: { create: vi.fn().mockResolvedValue({}) } });
+    const actor = { agentId: "agent-1", coworkerId: null };
+
+    await expect(adService.createAd({ prisma }, { title: "No pin" }, actor)).resolves.toBeDefined();
+  });
 });
 
 describe("updateAd", () => {
@@ -167,6 +215,77 @@ describe("updateAd", () => {
     expect(prisma.activityEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ type: "AD_DRAFT_UPDATED" }) }),
     );
+  });
+
+  it("allows setting lat/lng together on an ad that had neither", async () => {
+    const existing = makeAd();
+    const updated = makeAd({ lat: "41.3", lng: "69.2" });
+    const update = vi.fn().mockResolvedValue(updated);
+    const prisma = createFakePrisma({
+      ad: { findFirst: vi.fn().mockResolvedValue(existing), update },
+      activityEvent: { create: vi.fn().mockResolvedValue({}) },
+    });
+
+    const ad = await adService.updateAd(
+      { prisma },
+      "ad-1",
+      "agent-1",
+      { lat: "41.3", lng: "69.2" },
+      { agentId: "agent-1", coworkerId: null },
+    );
+
+    expect(update.mock.calls[0][0].data.lat).toBe(41.3);
+    expect(update.mock.calls[0][0].data.lng).toBe(69.2);
+    expect(ad.lat).toBe(41.3);
+  });
+
+  it("rejects clearing only lng on an ad that already has both lat and lng set", async () => {
+    const existing = makeAd({ lat: "41.3", lng: "69.2" });
+    const prisma = createFakePrisma({ ad: { findFirst: vi.fn().mockResolvedValue(existing) } });
+
+    await expect(
+      adService.updateAd({ prisma }, "ad-1", "agent-1", { lng: "" }, { agentId: "agent-1", coworkerId: null }),
+    ).rejects.toMatchObject({ status: 400, code: "validation" });
+  });
+
+  it("allows clearing both lat and lng together", async () => {
+    const existing = makeAd({ lat: "41.3", lng: "69.2" });
+    const updated = makeAd();
+    const update = vi.fn().mockResolvedValue(updated);
+    const prisma = createFakePrisma({
+      ad: { findFirst: vi.fn().mockResolvedValue(existing), update },
+      activityEvent: { create: vi.fn().mockResolvedValue({}) },
+    });
+
+    await expect(
+      adService.updateAd(
+        { prisma },
+        "ad-1",
+        "agent-1",
+        { lat: "", lng: "" },
+        { agentId: "agent-1", coworkerId: null },
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("leaves an existing valid pin alone when the PATCH doesn't touch lat/lng", async () => {
+    const existing = makeAd({ lat: "41.3", lng: "69.2" });
+    const updated = makeAd({ lat: "41.3", lng: "69.2", title: "renamed" });
+    const update = vi.fn().mockResolvedValue(updated);
+    const prisma = createFakePrisma({
+      ad: { findFirst: vi.fn().mockResolvedValue(existing), update },
+      activityEvent: { create: vi.fn().mockResolvedValue({}) },
+    });
+
+    await expect(
+      adService.updateAd(
+        { prisma },
+        "ad-1",
+        "agent-1",
+        { title: "renamed" },
+        { agentId: "agent-1", coworkerId: null },
+      ),
+    ).resolves.toBeDefined();
   });
 
   it("replaces photos wholesale only when photos is provided in the body", async () => {

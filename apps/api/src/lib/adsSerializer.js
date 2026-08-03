@@ -11,13 +11,35 @@ import {
   AD_STAGE_REV,
   CURRENCY_CODE,
   CURRENCY_CODE_REV,
+  AD_MEDIA_TYPE_REV,
 } from "./enums.js";
+
+// AdPhoto.mediaType (docs/10 §3) reaches clients via a new `media` array
+// rather than by changing the shape of `photos`. `photos: string[]` is read
+// by apps/web's AdsAdd/AdsEdit/Slider/HCard/Card/AdsList, and separately
+// feeds the OLX/Instagram crosspost payloads (packages/crosspost-protocol's
+// `photoUrls: string[]`, publishInstagramDirect's `imageUrls`) — every one
+// of those treats an entry as an image URL to hand to an <img> tag or an
+// image-only publish API. Turning `photos` into an array of objects (or
+// splitting video into a same-array sibling) would break all of them in
+// the same PR that only asked for a schema column. So: `photos` keeps its
+// existing contract *and* narrows to PHOTO rows only (today that's every
+// row — no producer sets mediaType — so this is a no-op today and a safety
+// net once a producer starts sending video); `media` is new, additive, and
+// carries the full ordered set with type tags for a future carousel that
+// wants to render video and for crosspost call sites to filter on
+// deliberately instead of accidentally.
+function serializePhoto(p) {
+  return { url: p.url, mediaType: AD_MEDIA_TYPE_REV[p.mediaType], position: p.position };
+}
 
 // DB row (Prisma enums, photos as AdPhoto[]) -> wire shape the React forms
 // already speak (lowercase-string enums, photos as string[] of URLs,
 // createdAt/updatedAt as {seconds} to match the old Firestore Timestamp shape
 // formatCreatedAt() expects).
 export function serializeAd(ad) {
+  const orderedPhotos = (ad.photos ?? []).slice().sort((a, b) => a.position - b.position);
+
   return {
     id: ad.id,
     title: ad.title,
@@ -41,9 +63,20 @@ export function serializeAd(ad) {
     nearPlacesList: ad.nearPlaces,
     optionList: ad.options,
     active: ad.active,
+    // Listing-detail map pin (docs/10 §3). Both null-guarded the same way as
+    // `area` above (nullable Decimal -> Number(...) or null; Number(null)
+    // would silently become 0, which is a real coordinate, not "no pin") --
+    // never Number(null). Always present (never `undefined`) so a client
+    // can reliably branch on `lat !== null && lng !== null` to mean "has a
+    // pin" without confusing an unset pin with one at (0, 0) off Africa's
+    // coast, which Number(undefined) vs Number(null) can't distinguish but
+    // an explicit null here does.
+    lat: ad.lat !== null ? Number(ad.lat) : null,
+    lng: ad.lng !== null ? Number(ad.lng) : null,
     agentId: ad.agentId,
     coworkerId: ad.coworkerId ?? "",
-    photos: (ad.photos ?? []).sort((a, b) => a.position - b.position).map((p) => p.url),
+    photos: orderedPhotos.filter((p) => p.mediaType === "PHOTO").map((p) => p.url),
+    media: orderedPhotos.map(serializePhoto),
     createdAt: { seconds: Math.floor(new Date(ad.createdAt).getTime() / 1000) },
     updatedAt: { seconds: Math.floor(new Date(ad.updatedAt).getTime() / 1000) },
   };
@@ -76,6 +109,14 @@ export function parseAdInput(body) {
   if (body.nearPlacesList !== undefined) data.nearPlaces = body.nearPlacesList ?? [];
   if (body.optionList !== undefined) data.options = body.optionList ?? [];
   if (body.active !== undefined) data.active = Boolean(body.active);
+  // Same "" -> null, else Number(...) coercion as `area`/`storey`/`floors`
+  // above (nullable Decimal columns). Range (-90..90 / -180..180) and the
+  // "both or neither" pairing rule are NOT checked here -- parseAdInput is
+  // pure coercion, no validation, matching every other field in this
+  // function -- they're enforced in adService.js#validateCoordinates, which
+  // is the one place that also has the pre-existing row for a partial PATCH.
+  if (body.lat !== undefined) data.lat = body.lat === "" ? null : Number(body.lat);
+  if (body.lng !== undefined) data.lng = body.lng === "" ? null : Number(body.lng);
 
   return data;
 }

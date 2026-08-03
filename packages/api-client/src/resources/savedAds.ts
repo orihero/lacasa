@@ -8,11 +8,13 @@
  * resources to declare real fields instead of inheriting that escape hatch.
  *
  * Shapes below mirror apps/api/src/lib/adsSerializer.js#serializeAd exactly —
- * note `photos` is a flat `string[]` of URLs (./ads' `Ad.photos: AdPhoto[]`
- * is wrong about the real wire shape) and the timestamps keep the legacy
- * Firestore `{ seconds }` form the web formatters still expect.
+ * `photos` is a flat `string[]` of image URLs and `media` is the fuller
+ * ordered photo/video set (see ./ads' `AdMedia` doc comment), and the
+ * timestamps keep the legacy Firestore `{ seconds }` form the web
+ * formatters still expect.
  */
 import type { ApiClient } from '../core/client';
+import type { AdMedia } from './ads';
 
 export interface SavedAd {
   id: string;
@@ -42,6 +44,7 @@ export interface SavedAd {
   /** Empty string, not null, when the ad has no coworker. */
   coworkerId: string;
   photos: string[];
+  media: AdMedia[];
   createdAt: { seconds: number };
   updatedAt: { seconds: number };
   /** Always true — every entry in this list is, by definition, saved. */

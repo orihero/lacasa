@@ -71,6 +71,15 @@ enum CurrencyCode {
   USD
 }
 
+// Distinguishes a photo from the video the CRM upload form already accepts
+// (up to 70MB; POST /api/uploads/presign already allows video/* content
+// types) once a per-AdPhoto row can represent either. Mirrored in
+// packages/domain/src/enums/ads.ts, which owns the wire-format keys.
+enum AdMediaType {
+  PHOTO
+  VIDEO
+}
+
 enum LeadStatus {
   NEW
   COULD_NOT_CONNECT
@@ -230,6 +239,19 @@ model Ad {
   options     Json         @default("[]")
   active      Boolean      @default(true)
 
+  // Listing-detail map pin (docs/10-backend-for-liquid-glass.md §3).
+  // Nullable and independent at the column level -- the "must be set
+  // together" rule isn't a DB constraint, it's enforced in
+  // apps/api/src/services/adService.js#validateCoordinates, which has the
+  // full picture a CHECK constraint wouldn't on a PATCH that only touches
+  // one of the two (see that function's comment). Decimal(9,6): 3 integer
+  // digits + 6 fractional covers signed longitude's -180..180 range (lat's
+  // -90..90 needs fewer integer digits but shares the column type/scale).
+  // No backfill/geocoding here -- existing ads simply stay NULL until an
+  // agent sets a pin; a batch geocode pass is an explicit follow-up.
+  lat Decimal? @db.Decimal(9, 6)
+  lng Decimal? @db.Decimal(9, 6)
+
   agentId    String  @map("agent_id") @db.Uuid
   agent      User    @relation("AdAgent", fields: [agentId], references: [id], onDelete: Cascade)
   coworkerId String? @map("coworker_id") @db.Uuid
@@ -248,12 +270,17 @@ model Ad {
 }
 
 model AdPhoto {
-  id        String @id @default(uuid()) @db.Uuid
-  adId      String @map("ad_id") @db.Uuid
-  ad        Ad     @relation(fields: [adId], references: [id], onDelete: Cascade)
-  objectKey String @map("object_key")
+  id        String      @id @default(uuid()) @db.Uuid
+  adId      String      @map("ad_id") @db.Uuid
+  ad        Ad          @relation(fields: [adId], references: [id], onDelete: Cascade)
+  objectKey String      @map("object_key")
   url       String
-  position  Int    @default(0)
+  position  Int         @default(0)
+  // Defaulted rather than required: no producer sets this on write today
+  // (photosCreateData in adService.js only ever sends url/objectKey/position),
+  // so every row — existing and newly created — becomes PHOTO until a future
+  // video-upload producer starts passing it explicitly.
+  mediaType AdMediaType @default(PHOTO) @map("media_type")
 
   @@index([adId])
   @@map("ad_photos")

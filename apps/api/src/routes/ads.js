@@ -5,6 +5,18 @@ import * as adService from "../services/adService.js";
 
 const router = Router();
 
+// Mirrors routes/publish.js's helper of the same name: adService throws
+// httpError(status, code, message) (currently only from
+// validateCoordinates, for lat/lng) and this maps it straight to the
+// matching response; anything else falls through to next(e) / the app's
+// generic 500 handler.
+function handleServiceError(e, res, next) {
+  if (e.status) {
+    return res.status(e.status).json({ error: { code: e.code, message: e.message } });
+  }
+  next(e);
+}
+
 router.get("/", async (req, res, next) => {
   try {
     res.json(await adService.listAds(req.ctx, req.query));
@@ -35,7 +47,7 @@ router.post("/", requireAuth, loadCurrentUser, async (req, res, next) => {
     const ad = await adService.createAd(req.ctx, req.body, actor);
     res.status(201).json(ad);
   } catch (e) {
-    next(e);
+    handleServiceError(e, res, next);
   }
 });
 
@@ -49,7 +61,7 @@ router.patch("/:id", requireAuth, loadCurrentUser, async (req, res, next) => {
     }
     res.json(ad);
   } catch (e) {
-    next(e);
+    handleServiceError(e, res, next);
   }
 });
 

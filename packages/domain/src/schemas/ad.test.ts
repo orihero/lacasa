@@ -54,4 +54,25 @@ describe('adInputSchema', () => {
   it('rejects an empty title', () => {
     expect(() => adInputSchema.parse({ title: '' })).toThrow();
   });
+
+  it('coerces lat/lng strings to numbers, empty string to null', () => {
+    const parsed = adInputSchema.parse({ lat: '41.311081', lng: '' });
+    expect(parsed.lat).toBe(41.311081);
+    expect(parsed.lng).toBeNull();
+  });
+
+  it('rejects a latitude outside -90..90', () => {
+    expect(() => adInputSchema.parse({ lat: 91 })).toThrow();
+    expect(() => adInputSchema.parse({ lat: -91 })).toThrow();
+  });
+
+  it('rejects a longitude outside -180..180', () => {
+    expect(() => adInputSchema.parse({ lng: 181 })).toThrow();
+    expect(() => adInputSchema.parse({ lng: -181 })).toThrow();
+  });
+
+  it('accepts boundary lat/lng values', () => {
+    expect(adInputSchema.parse({ lat: 90, lng: 180 })).toEqual({ lat: 90, lng: 180 });
+    expect(adInputSchema.parse({ lat: -90, lng: -180 })).toEqual({ lat: -90, lng: -180 });
+  });
 });

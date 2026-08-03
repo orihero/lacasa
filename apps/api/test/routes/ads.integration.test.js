@@ -83,3 +83,146 @@ describe("GET /api/ads and GET /api/ads/:id", () => {
     expect(missing.status).toBe(404);
   });
 });
+
+// docs/10 §3: AdPhoto.mediaType defaults to PHOTO at the DB column level —
+// no write path sends it yet, so a real create+read round trip through
+// Postgres (not a mocked prisma) is what proves the column default, the
+// migration, and serializeAd's photos/media split actually line up.
+describe("AdPhoto.mediaType default (docs/10 §3)", () => {
+  it("defaults every uploaded photo to PHOTO and mirrors it into both photos and media on read", async () => {
+    const res = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Photo Default Test", photos: ["http://x/1.jpg", "http://x/2.jpg"] }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.photos).toEqual(["http://x/1.jpg", "http://x/2.jpg"]);
+    expect(res.body.media).toEqual([
+      { url: "http://x/1.jpg", mediaType: "photo", position: 0 },
+      { url: "http://x/2.jpg", mediaType: "photo", position: 1 },
+    ]);
+
+    const fetched = await supertest(app).get(`/api/ads/${res.body.id}`);
+    expect(fetched.body.photos).toEqual(["http://x/1.jpg", "http://x/2.jpg"]);
+    expect(fetched.body.media).toEqual(res.body.media);
+  });
+});
+
+// docs/10 §3: Ad.lat/Ad.lng, the listing-detail map pin. Real Postgres round
+// trip so the Decimal(9,6) column, parseAdInput's coercion, and
+// serializeAd's Number(...)-or-null all prove out together, not just
+// against a mocked prisma.
+describe("Ad.lat/Ad.lng (docs/10 §3)", () => {
+  it("defaults to null on an ad created without coordinates", async () => {
+    const res = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "No Pin" }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.lat).toBeNull();
+    expect(res.body.lng).toBeNull();
+  });
+
+  it("creates a pinned ad and round-trips lat/lng at 6 decimal places through Postgres", async () => {
+    const res = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Pinned", lat: "41.311081", lng: "69.240562" }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.lat).toBe(41.311081);
+    expect(res.body.lng).toBe(69.240562);
+
+    const fetched = await supertest(app).get(`/api/ads/${res.body.id}`);
+    expect(fetched.body.lat).toBe(41.311081);
+    expect(fetched.body.lng).toBe(69.240562);
+  });
+
+  it("rejects creating an ad with only one of lat/lng set", async () => {
+    const res = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Half Pin", lat: "41.3" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("validation");
+  });
+
+  it("rejects an out-of-range latitude", async () => {
+    const res = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Bad Lat", lat: "91", lng: "10" }));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("validation");
+  });
+
+  it("PATCHes a pin onto an existing unpinned ad", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Pin Me Later" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ lat: "51.5074", lng: "-0.1278" });
+
+    expect(patched.status).toBe(200);
+    expect(patched.body.lat).toBe(51.5074);
+    expect(patched.body.lng).toBe(-0.1278);
+  });
+
+  it("rejects a PATCH that clears only lng on an ad that already has both set", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Fully Pinned", lat: "41.3", lng: "69.2" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ lng: "" });
+
+    expect(patched.status).toBe(400);
+    expect(patched.body.error.code).toBe("validation");
+
+    const stillPinned = await supertest(app).get(`/api/ads/${created.body.id}`);
+    expect(stillPinned.body.lat).toBe(41.3);
+    expect(stillPinned.body.lng).toBe(69.2);
+  });
+
+  it("clears both lat and lng together via PATCH", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Unpin Me", lat: "41.3", lng: "69.2" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ lat: "", lng: "" });
+
+    expect(patched.status).toBe(200);
+    expect(patched.body.lat).toBeNull();
+    expect(patched.body.lng).toBeNull();
+  });
+
+  it("leaves an existing pin untouched when a PATCH doesn't mention lat/lng", async () => {
+    const created = await supertest(app)
+      .post("/api/ads")
+      .set("Authorization", authHeader(agent))
+      .send(adPayload({ title: "Untouched Pin", lat: "41.3", lng: "69.2" }));
+
+    const patched = await supertest(app)
+      .patch(`/api/ads/${created.body.id}`)
+      .set("Authorization", authHeader(agent))
+      .send({ title: "Untouched Pin, Renamed" });
+
+    expect(patched.status).toBe(200);
+    expect(patched.body.lat).toBe(41.3);
+    expect(patched.body.lng).toBe(69.2);
+  });
+});
