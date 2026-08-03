@@ -94,6 +94,25 @@ never sent to clients:
 | url | text | public URL (what the UI renders) |
 | position | int | carousel order |
 
+### `saved_ads`  ← new (no Firestore ancestor)
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid FK→users ON DELETE CASCADE | who saved it |
+| ad_id | uuid FK→ads ON DELETE CASCADE | what they saved |
+| created_at | timestamptz | list is ordered by this, newest first |
+
+The buyer's favourites (the heart control, mockups/SCREENS.md §17). Its own
+table rather than a flag on `ads` because the fact is per-(user, ad): the same
+listing is saved by one buyer and not another.
+
+`UNIQUE (user_id, ad_id)` is what makes `POST /saved-ads/:adId` idempotent —
+saving twice is the same fact, not two rows, so the write upserts on this key
+(docs/04). Both FKs cascade: a deleted user's favourites are meaningless, and a
+deleted ad cannot be surfaced in anyone's list. Only `role = USER` accounts get
+rows here; the API refuses the write for agents and coworkers.
+
 ### `leads`  ← Firestore `leads`
 
 | Column | Type | From |

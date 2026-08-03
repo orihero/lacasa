@@ -36,21 +36,44 @@ function makeAd(overrides = {}) {
 }
 
 describe("listSavedAds", () => {
-  it("returns the saved ads serialized as listings, newest save first", async () => {
+  // Ordering itself is the database's job via this orderBy, so what a unit
+  // test can pin is that the clause is asked for. That it actually comes back
+  // newest-first is proved against real Postgres in
+  // test/routes/savedAds.integration.test.js.
+  it("scopes the query to the user and asks for newest saves first", async () => {
     const findMany = vi.fn().mockResolvedValue([{ ad: makeAd() }]);
     const prisma = createFakePrisma({ savedAd: { findMany } });
 
-    const ads = await savedAdService.listSavedAds({ prisma }, "user-1");
+    await savedAdService.listSavedAds({ prisma }, "user-1");
 
     expect(findMany).toHaveBeenCalledWith({
       where: { userId: "user-1" },
       include: { ad: { include: { photos: true } } },
       orderBy: { createdAt: "desc" },
     });
-    expect(ads).toHaveLength(1);
-    expect(ads[0].id).toBe("ad-1");
+  });
+
+  it("serializes each row as the listing itself, marked saved", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ ad: makeAd() }, { ad: makeAd({ id: "ad-2" }) }]);
+    const prisma = createFakePrisma({ savedAd: { findMany } });
+
+    const ads = await savedAdService.listSavedAds({ prisma }, "user-1");
+
+    expect(ads.map((a) => a.id)).toEqual(["ad-1", "ad-2"]);
     expect(ads[0].title).toBe("Sunny flat");
-    expect(ads[0].saved).toBe(true);
+    expect(ads.every((a) => a.saved === true)).toBe(true);
+  });
+
+  // A sold ad stays in the list — saving is deliberately not stage-filtered
+  // (docs/04), so nothing here may quietly drop it.
+  it("keeps a sold ad in the list", async () => {
+    const findMany = vi.fn().mockResolvedValue([{ ad: makeAd({ stage: "SOLD", active: false }) }]);
+    const prisma = createFakePrisma({ savedAd: { findMany } });
+
+    const ads = await savedAdService.listSavedAds({ prisma }, "user-1");
+
+    expect(ads).toHaveLength(1);
+    expect(ads[0].stage).toBe("2");
   });
 });
 
