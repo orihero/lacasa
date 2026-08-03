@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import supertest from "supertest";
 import { buildTestApp } from "./helpers/testApp.js";
 
@@ -26,5 +26,37 @@ describe("GET /api/health", () => {
     const res = await supertest(app).get("/api/health");
     expect(res.status).toBe(503);
     expect(res.body).toEqual({ ok: false, db: "down" });
+  });
+});
+
+// Regression guard. Express recognises error-handling middleware by arity
+// (fn.length === 4), so app.js's handler keeps an unused trailing `_next`.
+// Deleting it — which a no-unused-vars warning actively invites — does not
+// fail anything loudly: the handler just stops being an error handler, and
+// Express's default one answers with an HTML page. Asserting the content type
+// alongside the body is what catches that; the status is 500 either way.
+describe("unhandled route errors", () => {
+  it("answers with the JSON error envelope, not Express's default HTML page", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const app = buildTestApp({
+        prisma: {
+          ad: {
+            async findMany() {
+              throw new Error("boom");
+            },
+          },
+        },
+      });
+      const res = await supertest(app).get("/api/ads");
+
+      expect(res.status).toBe(500);
+      expect(res.headers["content-type"]).toMatch(/application\/json/);
+      expect(res.body).toEqual({
+        error: { code: "internal", message: "Internal server error" },
+      });
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 });

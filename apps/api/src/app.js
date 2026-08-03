@@ -70,6 +70,11 @@ export function createApp(ctx = {}) {
 
   // Route modules still to come: /api/contact (docs/05-migration-plan.md Phase E)
 
+  // The `_next` parameter is load-bearing and must stay, unused as it is:
+  // Express recognises error-handling middleware by arity alone (fn.length
+  // === 4). Drop it and this silently stops being an error handler — errors
+  // fall through to Express's default one, which answers text/html instead
+  // of the `{ error: { code, message } }` envelope every client parses.
   app.use((err, _req, res, _next) => {
     console.error(err);
     res.status(500).json({ error: { code: "internal", message: "Internal server error" } });

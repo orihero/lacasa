@@ -23,7 +23,12 @@ module.exports = {
   },
   ignorePatterns: ['dist', 'node_modules', '.eslintrc.cjs'],
   rules: {
-    'no-unused-vars': 'warn',
+    // The `_`-prefix convention this codebase already writes (`_req`, `_next`)
+    // is honoured explicitly, because some of those parameters are required
+    // even though they are unused — Express identifies an error handler by its
+    // arity, so deleting a trailing `_next` to appease this rule breaks the
+    // handler. Warning on it invites exactly that fix.
+    'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
   },
   overrides: [
     {
@@ -44,7 +49,11 @@ module.exports = {
         'no-redeclare': 'off',
         'no-dupe-class-members': 'off',
         'no-use-before-define': 'off',
-        '@typescript-eslint/no-unused-vars': 'warn',
+        // Same `_`-prefix convention as the base rule above.
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        ],
       },
     },
   ],
