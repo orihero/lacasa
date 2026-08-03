@@ -60,7 +60,7 @@ never sent to clients:
 |---|---|---|---|
 | id | uuid PK | doc id | |
 | title | text | title | |
-| city | text | city | values come from `src/regions.json` |
+| city | text | city | values come from `@lacasa/domain/data/regions` |
 | district | text | district | |
 | address | text? | address | |
 | reference | text? | reference | landmark |
@@ -162,9 +162,15 @@ The overloaded `stage` int becomes a named enum:
 
 ## Reference data
 
-`src/regions.json` (cities/districts) stays a bundled JSON for now — it's
-static and only feeds dropdowns. Promote to `regions`/`districts` tables later
-if server-side filter validation is wanted.
+Cities/districts (14 regions, 203 districts) stay bundled JSON rather than
+tables — the data is static and only feeds dropdowns. It lives in
+`packages/domain/src/data/regions.json`, imported as
+`@lacasa/domain/data/regions`, so apps/web and apps/mobile share one copy
+instead of each carrying their own (docs/10 §5 Decision 2/3). No API route:
+nothing about it changes at runtime.
+
+Promote to `regions`/`districts` tables later if server-side filter validation
+is wanted — `Ad.city`/`Ad.district` are still free text on write.
 
 Seed data (`server/prisma/seed.js`): one currency rate row, the default
 nearby-place labels, and a dev agent account.

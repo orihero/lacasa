@@ -1,5 +1,5 @@
 import "./filter.scss";
-import regionData from "../../regions.json";
+import regionData from "@lacasa/domain/data/regions";
 import { useState } from "react";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";

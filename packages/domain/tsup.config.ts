@@ -17,6 +17,7 @@ export default defineConfig({
     'validators/phone': 'src/validators/phone.ts',
     'leads/transitions': 'src/leads/transitions.ts',
     'formatting/date': 'src/formatting/date.ts',
+    'data/regions': 'src/data/regions.ts',
     'schemas/ad': 'src/schemas/ad.ts',
     'schemas/lead': 'src/schemas/lead.ts',
     'schemas/user': 'src/schemas/user.ts',

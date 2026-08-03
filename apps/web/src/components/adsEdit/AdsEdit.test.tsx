@@ -16,7 +16,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import "../../i18n";
 import i18n from "../../i18n";
-import regionData from "../../regions.json";
+import regionData from "@lacasa/domain/data/regions";
 import { useListStore } from "../../lib/adsListStore";
 import { useUserStore } from "../../lib/userStore";
 import { useUtilsStore } from "../../lib/utilsStore";

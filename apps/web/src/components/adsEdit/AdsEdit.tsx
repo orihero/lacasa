@@ -39,7 +39,7 @@ import { api } from "../../lib/api";
 import { fieldErrorMessage } from "../../lib/formErrors";
 import { useUserStore } from "../../lib/userStore";
 import { useUtilsStore } from "../../lib/utilsStore";
-import regionData from "../../regions.json";
+import regionData from "@lacasa/domain/data/regions";
 import {
   pingExtension,
   requestCrosspost,

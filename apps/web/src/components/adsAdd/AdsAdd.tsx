@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./adsAdd.scss";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import regionData from "../../regions.json";
+import regionData from "@lacasa/domain/data/regions";
 import { useUtilsStore } from "../../lib/utilsStore";
 import ShareIcon from "@mui/icons-material/Share";
 import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
