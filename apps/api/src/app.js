@@ -16,6 +16,7 @@ import coworkersRouter from "./routes/coworkers.js";
 import adsRouter from "./routes/ads.js";
 import myAdsRouter from "./routes/myAds.js";
 import leadsRouter from "./routes/leads.js";
+import savedAdsRouter from "./routes/savedAds.js";
 import statisticsRouter from "./routes/statistics.js";
 
 // Builds a fully wired Express app. Takes NO action beyond that: no
@@ -66,6 +67,7 @@ export function createApp(ctx = {}) {
   app.use("/api/my/ads", myAdsRouter);
   app.use("/api/ads", adsRouter);
   app.use("/api/leads", leadsRouter);
+  app.use("/api/saved-ads", savedAdsRouter);
   app.use("/api/statistics", statisticsRouter);
 
   // Route modules still to come: /api/contact (docs/05-migration-plan.md Phase E)

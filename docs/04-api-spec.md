@@ -61,6 +61,29 @@ team is what an agency has.
 | `PATCH /ads/:id` | agent/coworker (own) | stage transitions log AD_SOLD / AD_DRAFT_UPDATED |
 | `DELETE /ads/:id` | agent (own) | also deletes MinIO objects |
 
+## Saved ads (favourites)
+
+| Method & path | Access | Notes |
+|---|---|---|
+| `GET /saved-ads` | any authenticated | the caller's saved listings, newest save first; each entry is a full serialized ad plus `saved: true` |
+| `POST /saved-ads/:adId` | user only | `{ ok: true }`; idempotent |
+| `DELETE /saved-ads/:adId` | user only | `204`; idempotent |
+
+The heart control is a buyer's, so `POST`/`DELETE` 403 `forbidden` for AGENT and
+COWORKER callers rather than relying on the client to hide the button
+(mockups/SCREENS.md §17). `GET` stays open to every role — an agent's list is
+simply always empty, which beats 403ing a page that only wants to render.
+
+Both writes are idempotent: saving an already-saved ad returns the same
+`200 { ok: true }` and leaves one row (the `@@unique([userId, adId])` makes the
+repeat the same fact), and unsaving something never saved still answers `204`.
+`POST` 404s for an id that matches no ad, including a malformed one.
+
+`GET /ads` and `GET /ads/:id` are deliberately untouched — they stay public and
+carry no per-user `saved` flag, so the client merges saved state locally
+(docs/10 §5 Decision 5). Saving is not restricted by ad stage, matching
+`GET /ads/:id`, which does not filter by stage either.
+
 ## Leads
 
 | Method & path | Access | Notes |
