@@ -32,6 +32,7 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "dev:web": "npm run dev -w @lacasa/web",
-    "dev:api": "npm run dev -w @lacasa/api"
+    "dev:api": "npm run dev -w @lacasa/api",
+    "dev:mobile-flutter": "cd apps/mobile_flutter && flutter run"
   }
 }

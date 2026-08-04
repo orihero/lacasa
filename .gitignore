@@ -32,6 +32,28 @@ expo-env.d.ts
 apps/mobile/ios
 apps/mobile/android
 
+# Flutter (apps/mobile_flutter)
+apps/mobile_flutter/.dart_tool/
+apps/mobile_flutter/.flutter-plugins
+apps/mobile_flutter/.flutter-plugins-dependencies
+apps/mobile_flutter/.pub-cache/
+apps/mobile_flutter/.pub/
+apps/mobile_flutter/build/
+apps/mobile_flutter/*.iml
+apps/mobile_flutter/android/.gradle/
+apps/mobile_flutter/android/local.properties
+apps/mobile_flutter/android/key.properties
+apps/mobile_flutter/android/**/GeneratedPluginRegistrant.java
+apps/mobile_flutter/ios/Flutter/ephemeral/
+apps/mobile_flutter/ios/Flutter/Flutter.framework
+apps/mobile_flutter/ios/Flutter/Flutter.podspec
+apps/mobile_flutter/ios/Flutter/App.framework
+apps/mobile_flutter/ios/Flutter/Generated.xcconfig
+apps/mobile_flutter/ios/Flutter/flutter_export_environment.sh
+apps/mobile_flutter/ios/Pods/
+apps/mobile_flutter/ios/.symlinks/
+apps/mobile_flutter/ios/Runner/GeneratedPluginRegistrant.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
