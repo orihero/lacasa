@@ -21,10 +21,10 @@ const nullableTrimmedString = (max: number) =>
 
 // Absolute http(s) only. This is not URL hygiene for its own sake: the value
 // ends up as an <iframe src> on the public listing-detail page
-// (apps/web/src/components/slider/Slider.jsx, which sets no `sandbox`
-// attribute), so a `javascript:` or `data:text/html` scheme would be code
-// running in a visitor's origin rather than an inert bad link. Agents are
-// authenticated but not trusted with that.
+// (apps/web/src/marketplace/pages/ListingDetailPage.jsx, which sets no
+// `sandbox` attribute), so a `javascript:` or `data:text/html` scheme would
+// be code running in a visitor's origin rather than an inert bad link.
+// Agents are authenticated but not trusted with that.
 //
 // `new URL()` with no base also rejects protocol-relative ("//evil.com") and
 // bare-host ("evil.com") values, which would otherwise resolve against

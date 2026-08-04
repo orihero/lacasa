@@ -29,6 +29,10 @@ class AgentPitchBanner extends ConsumerWidget {
       child: GlassSurface(
         variant: GlassVariant.onSurface,
         borderRadius: BorderRadius.circular(AppRadii.cardLg),
+        // A full-width panel, not a chip: widen the refraction band back out
+        // from the small-first `.gl` default so the edge reads as a thick
+        // pane rather than a hairline.
+        distortionWidth: 18,
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Row(
           children: [

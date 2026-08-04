@@ -32,51 +32,62 @@ class HomeFeedScreen extends StatelessWidget {
       extendBody: true,
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.of(context).padding.top + AppSpacing.md,
+          // Android's stretch overscroll isolates a scrollable into its own
+          // layer, which makes the backdrop-sampling lenses inside this feed
+          // (price pills, favourite buttons, chips, the pitch banner) render
+          // black at the scroll edges. Disabling the overscroll indicator is
+          // the fix `liquid_glass_easy` prescribes; it is inherited by the
+          // nested horizontal rails too, which carry lenses of their own.
+          ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              overscroll: false,
+            ),
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: MediaQuery.of(context).padding.top + AppSpacing.md,
+                  ),
                 ),
-              ),
-              const SliverToBoxAdapter(child: HomeHeaderRow()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: CategoryChipRow()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: PromoCarousel()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: AgentPitchBanner()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: FeaturedListingsRail()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: TopDistrictsRail()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: TopAgentsRail()),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppSpacing.section),
-              ),
-              const SliverToBoxAdapter(child: ExploreNearbyGrid()),
-              // Extra bottom padding so the floating glass tab bar
-              // (`extendBody: true`) never permanently covers the last row
-              // of the grid.
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.of(context).padding.bottom + 100,
+                const SliverToBoxAdapter(child: HomeHeaderRow()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
                 ),
-              ),
-            ],
+                const SliverToBoxAdapter(child: CategoryChipRow()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: PromoCarousel()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: AgentPitchBanner()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: FeaturedListingsRail()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: TopDistrictsRail()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: TopAgentsRail()),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: AppSpacing.section),
+                ),
+                const SliverToBoxAdapter(child: ExploreNearbyGrid()),
+                // Extra bottom padding so the floating glass tab bar
+                // (`extendBody: true`) never permanently covers the last row
+                // of the grid.
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: MediaQuery.of(context).padding.bottom + 100,
+                  ),
+                ),
+              ],
+            ),
           ),
           const Positioned(top: 0, left: 0, right: 0, child: TopFadeBar()),
         ],

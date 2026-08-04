@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 
-/// Pumps [GlassSurface] under a given [ThemeData] and returns the widget
-/// tree so assertions can inspect it.
+/// Pumps [GlassSurface] under a given [ThemeData] so assertions can inspect
+/// the [LiquidGlassLens] it builds.
 Future<void> _pump(
   WidgetTester tester, {
   required ThemeData theme,
   required GlassVariant variant,
   required BorderRadius radius,
+  double? distortionWidth,
 }) {
   return tester.pumpWidget(
     MaterialApp(
@@ -19,6 +21,7 @@ Future<void> _pump(
             variant: variant,
             borderRadius: radius,
             padding: const EdgeInsets.all(12),
+            distortionWidth: distortionWidth,
             child: const Text('glass'),
           ),
         ),
@@ -27,8 +30,20 @@ Future<void> _pump(
   );
 }
 
+/// The single lens [GlassSurface] builds.
+LiquidGlassLens _lens(WidgetTester tester) => tester.widget<LiquidGlassLens>(
+  find.descendant(
+    of: find.byType(GlassSurface),
+    matching: find.byType(LiquidGlassLens),
+  ),
+);
+
 void main() {
   group('GlassSurface', () {
+    // Note: under `flutter test` the lens has no Impeller backdrop to
+    // sample, so it falls back to the frosted path. These tests assert on
+    // the *style* it is configured with, which is engine-independent —
+    // how the refraction actually looks has to be checked on a device.
     testWidgets('builds in both light and dark theme without error', (
       tester,
     ) async {
@@ -51,148 +66,147 @@ void main() {
       expect(find.text('glass'), findsOneWidget);
     });
 
-    testWidgets('applies the requested border radius to its ClipRRect', (
+    testWidgets('maps the requested border radius onto the lens shape', (
       tester,
     ) async {
-      final radius = BorderRadius.circular(AppRadii.cardLg);
       await _pump(
         tester,
         theme: AppTheme.light(),
         variant: GlassVariant.onSurface,
-        radius: radius,
+        radius: BorderRadius.circular(AppRadii.cardLg),
+      );
+      expect(_lens(tester).style.shape!.cornerRadius, AppRadii.cardLg);
+    });
+
+    testWidgets('resolves an asymmetric radius to its largest corner', (
+      tester,
+    ) async {
+      // AppRadii.hero is 40/40/26/26 and the lens takes one scalar; the
+      // dominant read is the 40, not the 26.
+      await _pump(
+        tester,
+        theme: AppTheme.light(),
+        variant: GlassVariant.onSurface,
+        radius: AppRadii.hero,
+      );
+      expect(_lens(tester).style.shape!.cornerRadius, 40);
+    });
+
+    testWidgets('uses the onSurface (.gl) material from GlassTheme', (
+      tester,
+    ) async {
+      final theme = AppTheme.light();
+      await _pump(
+        tester,
+        theme: theme,
+        variant: GlassVariant.onSurface,
+        radius: BorderRadius.circular(AppRadii.card),
       );
 
-      final clip = tester.widget<ClipRRect>(
-        find.descendant(
-          of: find.byType(GlassSurface),
-          matching: find.byType(ClipRRect),
-        ),
+      final material = theme.extension<GlassTheme>()!.onSurface;
+      final style = _lens(tester).style;
+
+      expect(style.appearance.color, material.tint);
+      expect(style.appearance.blur.sigmaX, material.blurSigma);
+      expect(style.appearance.blur.sigmaY, material.blurSigma);
+      // The CSS saturate() the old BackdropFilter implementation had to
+      // drop — the lens applies it for real.
+      expect(style.appearance.saturation, material.saturation);
+      expect(style.refraction.distortion, material.distortion);
+      expect(style.refraction.distortionWidth, material.distortionWidth);
+      // .gl derives its rim optically rather than stating a border color.
+      expect(style.shape!.borderType, isA<OpticalBorder>());
+      expect(style.shape!.borderColor, isNull);
+    });
+
+    testWidgets('uses a different material for the onPhoto (.g) variant', (
+      tester,
+    ) async {
+      final theme = AppTheme.light();
+      await _pump(
+        tester,
+        theme: theme,
+        variant: GlassVariant.onPhoto,
+        radius: BorderRadius.circular(AppRadii.sm),
       );
-      expect(clip.borderRadius, radius);
+
+      final glass = theme.extension<GlassTheme>()!;
+      expect(glass.onPhoto.blurSigma, isNot(equals(glass.onSurface.blurSigma)));
+      expect(
+        glass.onPhoto.distortion,
+        isNot(equals(glass.onSurface.distortion)),
+      );
+
+      final style = _lens(tester).style;
+      expect(style.appearance.color, glass.onPhoto.tint);
+      expect(style.appearance.blur.sigmaX, glass.onPhoto.blurSigma);
+      expect(style.refraction.distortion, glass.onPhoto.distortion);
+    });
+
+    testWidgets('.g is non-themed — identical in light and dark', (
+      tester,
+    ) async {
+      expect(GlassTheme.light.onPhoto.tint, GlassTheme.dark.onPhoto.tint);
+      expect(
+        GlassTheme.light.onPhoto.distortion,
+        GlassTheme.dark.onPhoto.distortion,
+      );
     });
 
     testWidgets(
-      'uses the onSurface (.gl) blur sigma and tint from GlassTheme',
+      'flatForm (.glf) takes a stated hairline instead of an optical rim',
       (tester) async {
         final theme = AppTheme.light();
         await _pump(
           tester,
           theme: theme,
-          variant: GlassVariant.onSurface,
-          radius: BorderRadius.circular(AppRadii.card),
+          variant: GlassVariant.flatForm,
+          radius: BorderRadius.circular(AppRadii.control),
         );
 
-        final glass = theme.extension<GlassTheme>()!;
-
-        final backdrop = tester.widget<BackdropFilter>(
-          find.descendant(
-            of: find.byType(GlassSurface),
-            matching: find.byType(BackdropFilter),
-          ),
-        );
-        // ImageFilter has no public sigma getter; its toString() is the
-        // documented, stable way to assert on the blur amount it was built
-        // with (e.g. "ImageFilter.blur(11.0, 11.0, ...)").
+        final style = _lens(tester).style;
+        expect(style.shape!.borderType, isA<ClassicBorder>());
+        // The source's `0 0 0 1px var(--line)` ring.
+        expect(style.shape!.borderColor, theme.extension<LaCasaColors>()!.line);
+        // An input is a place to read text, not a lens.
         expect(
-          backdrop.filter.toString(),
-          contains(glass.glBlurSigma.toString()),
-        );
-
-        final tint = tester.widget<ColoredBox>(
-          find.descendant(
-            of: find.byType(BackdropFilter),
-            matching: find.byType(ColoredBox),
-          ),
-        );
-        expect(tint.color, glass.glBackground);
-
-        // The rim is painted for .gl — exactly one CustomPaint inside this
-        // GlassSurface.
-        expect(
-          find.descendant(
-            of: find.byType(GlassSurface),
-            matching: find.byType(CustomPaint),
-          ),
-          findsOneWidget,
+          style.refraction.distortion,
+          lessThan(GlassTheme.light.onSurface.distortion),
         );
       },
     );
 
-    testWidgets(
-      'uses a different blur sigma and tint for the onPhoto (.g) variant',
-      (tester) async {
-        final theme = AppTheme.light();
-        await _pump(
-          tester,
-          theme: theme,
-          variant: GlassVariant.onPhoto,
-          radius: BorderRadius.circular(AppRadii.sm),
-        );
-
-        final glass = theme.extension<GlassTheme>()!;
-        expect(glass.gBlurSigma, isNot(equals(glass.glBlurSigma)));
-
-        final backdrop = tester.widget<BackdropFilter>(
-          find.descendant(
-            of: find.byType(GlassSurface),
-            matching: find.byType(BackdropFilter),
-          ),
-        );
-        expect(
-          backdrop.filter.toString(),
-          contains(glass.gBlurSigma.toString()),
-        );
-
-        final tint = tester.widget<ColoredBox>(
-          find.descendant(
-            of: find.byType(BackdropFilter),
-            matching: find.byType(ColoredBox),
-          ),
-        );
-        // .g is fixed/non-themed: same tint regardless of light vs dark.
-        expect(tint.color, glass.gBackground);
-      },
-    );
-
-    testWidgets('flatForm (.glf) variant skips the rim/sheen layers', (
+    testWidgets('distortionWidth overrides the variant default', (
       tester,
     ) async {
       await _pump(
         tester,
         theme: AppTheme.light(),
-        variant: GlassVariant.flatForm,
-        radius: BorderRadius.circular(AppRadii.control),
+        variant: GlassVariant.onSurface,
+        radius: AppRadii.pill,
+        distortionWidth: 7,
       );
-
-      // No gradient-stroke rim painter for .glf.
-      expect(
-        find.descendant(
-          of: find.byType(GlassSurface),
-          matching: find.byType(CustomPaint),
-        ),
-        findsNothing,
-      );
+      expect(_lens(tester).style.refraction.distortionWidth, 7);
     });
 
-    testWidgets(
-      'onSurface tint switches between GlassTheme.light and GlassTheme.dark',
-      (tester) async {
-        await _pump(
-          tester,
-          theme: AppTheme.dark(),
-          variant: GlassVariant.onSurface,
-          radius: BorderRadius.circular(AppRadii.card),
-        );
+    testWidgets('onSurface tint switches between light and dark', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        theme: AppTheme.dark(),
+        variant: GlassVariant.onSurface,
+        radius: BorderRadius.circular(AppRadii.card),
+      );
 
-        final tint = tester.widget<ColoredBox>(
-          find.descendant(
-            of: find.byType(BackdropFilter),
-            matching: find.byType(ColoredBox),
-          ),
-        );
-        expect(tint.color, GlassTheme.dark.glBackground);
-        expect(tint.color, isNot(equals(GlassTheme.light.glBackground)));
-      },
-    );
+      expect(
+        _lens(tester).style.appearance.color,
+        GlassTheme.dark.onSurface.tint,
+      );
+      expect(
+        GlassTheme.dark.onSurface.tint,
+        isNot(equals(GlassTheme.light.onSurface.tint)),
+      );
+    });
   });
 }

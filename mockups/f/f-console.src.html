@@ -1,0 +1,868 @@
+<title>La Casa — Console F</title>
+<!--FONTS-->
+<!--CSS-->
+
+<div class="shell">
+
+  <!-- ==================== TOPBAR ==================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="b-ico"><span class="i" data-i="house-fill"></span></span>
+      <span class="b-name">La Casa</span>
+    </div>
+    <nav class="zones">
+      <button class="zone" data-zone="ws" data-go="a-dash"><span class="i" data-i="squares-four-fill"></span> Workspace</button>
+      <button class="zone" data-zone="pl" data-go="a-leads"><span class="i" data-i="kanban-fill"></span> Pipeline</button>
+      <button class="zone" data-zone="tm" data-go="a-coworkers"><span class="i" data-i="users-three-fill"></span> Team</button>
+    </nav>
+    <div class="searchpill">
+      <span class="ph">Search ads, leads…</span>
+      <span class="sbtn"><span class="i" data-i="magnifying-glass"></span></span>
+    </div>
+    <div class="sp"></div>
+    <button class="btn btn--p"><span class="i" data-i="plus"></span> Add new post</button>
+    <button class="icon-btn"><span class="i" data-i="bell"></span><span class="ndot"></span></button>
+    <button class="icon-btn"><span class="i" data-i="gear-fill"></span></button>
+    <span class="user-av" data-ph="ag-javlon"></span>
+  </header>
+
+  <div class="body-row">
+
+    <!-- ==================== LABELED RAIL ==================== -->
+    <aside class="rail">
+      <div class="rail-lab">Workspace</div>
+      <button class="rail-item" data-go="a-dash"><span class="i" data-i="squares-four-fill"></span> Statistics</button>
+      <button class="rail-item" data-go="a-listings"><span class="i" data-i="buildings-fill"></span> My ads <em>8</em></button>
+      <button class="rail-item" data-go="a-editor"><span class="i" data-i="note-pencil"></span> Listing editor</button>
+      <button class="rail-item" data-go="a-publish"><span class="i" data-i="broadcast"></span> Publish status</button>
+      <div class="rail-lab">Pipeline</div>
+      <!-- badge 27 is the live aggregate; the table below shows the 6-lead
+           illustrative seed sample — intentional, not a bug -->
+      <button class="rail-item" data-go="a-leads"><span class="i" data-i="users-three-fill"></span> Leads <em>27</em></button>
+      <button class="rail-item" data-go="a-kanban"><span class="i" data-i="kanban-fill"></span> Kanban</button>
+      <div class="rail-lab">Team</div>
+      <button class="rail-item" data-go="a-coworkers"><span class="i" data-i="user-fill"></span> Coworkers <em>4</em></button>
+      <button class="rail-item" data-go="a-accounts"><span class="i" data-i="link-simple"></span> Connected accounts</button>
+      <div class="rail-foot">
+        <span class="user-av" data-ph="ag-javlon"></span>
+        <div><b>Javlon Rustamov</b><span>Agent · Chilonzor</span></div>
+        <span class="i" data-i="caret-down-fill"></span>
+      </div>
+    </aside>
+
+    <main class="maincol">
+
+      <!-- ==================== 1 · STATISTICS ==================== -->
+      <section class="screen" id="a-dash">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Workspace</div>
+            <h1>Statistics</h1>
+          </div>
+          <div class="sp"></div>
+          <span class="date-pill">August 2026</span>
+          <button class="btn btn--dark">Export as CSV <span class="i" data-i="arrow-up-right"></span></button>
+        </div>
+
+        <div class="rev-row">
+          <div class="rev-card">
+            <div class="rev-top"><span class="rev-title"><span class="i" data-i="buildings-fill"></span> Ads created</span>
+              <span class="rev-arrow"><span class="i" data-i="arrow-up-right"></span></span></div>
+            <div><div class="rev-value num">42</div>
+              <span class="rev-sub up"><span class="i" data-i="arrow-up-right"></span> +12 vs last month</span></div>
+          </div>
+          <div class="rev-card">
+            <div class="rev-top"><span class="rev-title"><span class="i" data-i="tag-fill"></span> Ads sold</span>
+              <span class="rev-arrow"><span class="i" data-i="arrow-up-right"></span></span></div>
+            <div><div class="rev-value num">11</div>
+              <span class="rev-sub up"><span class="i" data-i="arrow-up-right"></span> +3 vs last month</span></div>
+          </div>
+          <div class="rev-card acc">
+            <div class="rev-top"><span class="rev-title"><span class="i" data-i="users-three-fill"></span> Active leads</span>
+              <span class="rev-arrow"><span class="i" data-i="arrow-up-right"></span></span></div>
+            <div><div class="rev-value num">27</div>
+              <span class="rev-sub"><span class="adot"></span> 2 need a callback today</span></div>
+          </div>
+          <div class="rev-card">
+            <div class="rev-top"><span class="rev-title"><span class="i" data-i="user-fill"></span> Coworkers</span>
+              <span class="rev-arrow"><span class="i" data-i="arrow-up-right"></span></span></div>
+            <div><div class="rev-value num">4</div>
+              <span class="rev-sub">2 active this week</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">This month</div><div class="panel-sub">Ads created vs sold, day 1–12</div></div>
+            <div class="panel-ctl seg"><button class="is-on">Month</button><button>Quarter</button><button>Year</button></div>
+          </div>
+          <div class="chart">
+            <svg viewBox="0 0 620 190" preserveAspectRatio="none" style="height:190px">
+              <defs>
+                <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#CDF44A" stop-opacity=".5"/>
+                  <stop offset="100%" stop-color="#CDF44A" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <g stroke="#1B1B1B" stroke-opacity=".07" stroke-width="1">
+                <line x1="0" y1="10" x2="620" y2="10"/><line x1="0" y1="55" x2="620" y2="55"/>
+                <line x1="0" y1="100" x2="620" y2="100"/><line x1="0" y1="145" x2="620" y2="145"/>
+                <line x1="0" y1="180" x2="620" y2="180"/>
+              </g>
+              <!-- created: 2,1,3,0,2,1,4,1,2,1,3,2 · sold: 0,0,1,0,1,0,2,0,1,0,1,1 -->
+              <path d="M10,95 L65,138 L120,53 L175,180 L230,95 L285,138 L340,10 L395,138 L450,95 L505,138 L560,53 L610,95 L610,180 L10,180 Z" fill="url(#gA)"/>
+              <path d="M10,95 L65,138 L120,53 L175,180 L230,95 L285,138 L340,10 L395,138 L450,95 L505,138 L560,53 L610,95"
+                    fill="none" stroke="#1B1B1B" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <path d="M10,180 L65,180 L120,138 L175,180 L230,138 L285,180 L340,95 L395,180 L450,138 L505,180 L560,138 L610,138"
+                    fill="none" stroke="#1B1B1B" stroke-opacity=".35" stroke-width="2" stroke-dasharray="4 4" stroke-linejoin="round"/>
+              <circle cx="340" cy="10" r="4.5" fill="#CDF44A" stroke="#1B1B1B" stroke-width="1.4"/>
+              <g font-size="10" fill="#1B1B1B" fill-opacity=".45" font-family="Poppins">
+                <text x="6" y="189">1</text><text x="171" y="189">4</text><text x="336" y="189">7</text>
+                <text x="501" y="189">10</text><text x="598" y="189">12</text>
+              </g>
+            </svg>
+          </div>
+          <div class="legend">
+            <span><i style="background:#1B1B1B"></i>Created</span>
+            <span><i style="background:#1B1B1B;opacity:.35"></i>Sold</span>
+            <span style="margin-left:auto">Peak: day 7 · 4 created</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Recent activity</div><div class="panel-sub">Last 2 days</div></div>
+          </div>
+          <div class="act"><div class="act__i" style="background:var(--accent-tint);color:var(--accent-text)"><span class="i" data-i="users-three-fill"></span></div>
+            <div><b>New lead: Dilnoza Yusupova is interested in your Chilonzor listing</b></div><span>2 min ago</span></div>
+          <div class="act"><div class="act__i" style="background:var(--info-soft);color:var(--info)"><span class="i" data-i="instagram-logo-fill"></span></div>
+            <div><b>Instagram post published — Bright 3-room apartment in Chilonzor is now live</b></div><span>1 h ago</span></div>
+          <div class="act"><div class="act__i" style="background:var(--warn-soft);color:var(--warn)"><span class="i" data-i="clock"></span></div>
+            <div><b>Callback reminder — Call Aziz Karimov today at 15:00</b></div><span>3 h ago</span></div>
+          <div class="act"><div class="act__i" style="background:var(--ok-soft);color:var(--ok)"><span class="i" data-i="check-circle-fill"></span></div>
+            <div><b>Listing sold — Two-room flat in Mirobod marked as Sold</b></div><span>Yesterday</span></div>
+          <div class="act"><div class="act__i" style="background:var(--mute-soft);color:var(--mute)"><span class="i" data-i="user-fill"></span></div>
+            <div><b>Sardor Abdullayev created Retail space near Chorsu bazaar</b></div><span>2 days ago</span></div>
+        </div>
+      </section>
+
+      <!-- ==================== 2 · MY ADS ==================== -->
+      <section class="screen" id="a-listings">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Workspace</div>
+            <h1>My ads</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button class="is-on">All 8</button><button>Active 5</button><button>Sold 1</button><button>Draft 1</button></div>
+          <span class="filt"><span class="i" data-i="funnel-fill"></span> Chilonzor</span>
+          <span class="filt"><span class="i" data-i="caret-up-down"></span> Newest first</span>
+          <div class="sp"></div>
+          <button class="btn"><span class="i" data-i="upload-simple"></span> Export</button>
+        </div>
+        <div class="panel">
+          <table class="tbl" data-rows>
+            <thead><tr><th style="width:34%">Listing</th><th>Ref</th><th>Deal</th><th class="r">Price</th>
+              <th class="r">Rooms</th><th class="r">Area</th><th>Status</th><th>Channels</th><th>Author</th><th></th></tr></thead>
+            <tbody>
+              <tr data-row class="is-sel"><td><div class="cellmain"><div class="thumb" data-ph="ad1001"></div>
+                <div><b>Bright 3-room apartment in Chilonzor</b><span>Chilonzor · 4/9</span></div></div></td>
+                <td class="mono">#a3f21</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$78,000</td>
+                <td class="r num">3</td><td class="r num">65&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--info">IG</span> <span class="tag tag--info">TG</span></td>
+                <td><span class="avchip" data-ph="ag-javlon"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1002"></div>
+                <div><b>Renovated studio near Yunusobod metro</b><span>Yunusobod · 2/5</span></div></div></td>
+                <td class="mono">#b71c4</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$350/month</td>
+                <td class="r num">1</td><td class="r num">32&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--info">TG</span></td>
+                <td><span class="avchip" data-ph="ag-shahnoza"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1003"></div>
+                <div><b>Family house with garden in Sergeli</b><span>Sergeli · 1/2</span></div></div></td>
+                <td class="mono">#c92e8</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$120,000</td>
+                <td class="r num">5</td><td class="r num">140&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--err">OLX failed</span></td>
+                <td><span class="avchip" data-ph="ag-javlon"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1004"></div>
+                <div><b>Office space on Amir Temur avenue</b><span>Mirzo Ulugbek · 6/12</span></div></div></td>
+                <td class="mono">#d40a7</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$900/month</td>
+                <td class="r num">4</td><td class="r num">110&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--info">IG</span></td>
+                <td><span class="avchip" data-ph="ag-otabek"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="dist-mirobod"></div>
+                <div><b>Two-room flat in Mirobod</b><span>Mirobod · 7/16</span></div></div></td>
+                <td class="mono">#e5b13</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$62,500</td>
+                <td class="r num">2</td><td class="r num">54&nbsp;m²</td><td><span class="tag tag--acc">Sold</span></td>
+                <td><span class="tag tag--mute">—</span></td>
+                <td><span class="avchip" data-ph="ag-shahnoza"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1006"></div>
+                <div><b>Retail space near Chorsu bazaar</b><span>Shayxontohur · 1/1</span></div></div></td>
+                <td class="mono">#f8c30</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$1,200/month</td>
+                <td class="r num">2</td><td class="r num">48&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--info">TG</span></td>
+                <td><span class="avchip" data-ph="ag-sardor"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="promo-yashnobod"></div>
+                <div><b>New-build 4-room in Yashnobod</b><span>Yashnobod · 12/17</span></div></div></td>
+                <td class="mono">#0a4d9</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$95,000</td>
+                <td class="r num">4</td><td class="r num">88&nbsp;m²</td><td><span class="tag tag--warn">Draft</span></td>
+                <td><span class="tag tag--mute">Not published</span></td>
+                <td><span class="avchip" data-ph="ag-otabek"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1008"></div>
+                <div><b>Renovated 1-room near Yakkasaroy park</b><span>Yakkasaroy · 3/5</span></div></div></td>
+                <td class="mono">#1e6f2</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$400/month</td>
+                <td class="r num">1</td><td class="r num">38&nbsp;m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+                <td><span class="tag tag--info">IG</span> <span class="tag tag--info">TG</span></td>
+                <td><span class="avchip" data-ph="ag-kamola"></span></td>
+                <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                  <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 3 · LISTING EDITOR ==================== -->
+      <section class="screen" id="a-editor">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Workspace</div>
+            <h1>Listing editor</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <button class="btn" data-go="a-listings"><span class="i" data-i="arrow-left"></span> My ads</button>
+          <span class="tag tag--ok"><i class="dot"></i> Active</span>
+          <span class="mono" style="color:var(--text-2);font-size:12px">#a3f21 · updated 03.08.2026 | 09:15</span>
+          <div class="sp"></div>
+          <button class="btn btn--d"><span class="i" data-i="trash"></span> Delete</button>
+          <button class="btn">Save draft</button>
+          <button class="btn btn--p"><span class="i" data-i="check-bold"></span> Save</button>
+        </div>
+        <div class="two">
+          <div class="col">
+            <div class="panel">
+              <div class="panel-head">
+                <div><div class="panel-title">Property details</div>
+                  <div class="panel-sub">Fields mirror the Prisma <span class="mono">Ad</span> model</div></div>
+              </div>
+              <div class="fgrid">
+                <div class="f f--full"><label>Title</label><div class="in">Bright 3-room apartment in Chilonzor</div></div>
+                <div class="f"><label>City</label><div class="in">Tashkent <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>District</label><div class="in">Chilonzor <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Type</label><div class="in">Residential <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Category</label><div class="in">Sale <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Price</label><div class="in num">78,000</div></div>
+                <div class="f"><label>Currency</label><div class="in">USD <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Rooms</label><div class="in num">3</div></div>
+                <div class="f"><label>Area, m²</label><div class="in num">65</div></div>
+                <div class="f"><label>Storey</label><div class="in num">4</div></div>
+                <div class="f"><label>Floors</label><div class="in num">9</div></div>
+                <div class="f"><label>Repairment</label><div class="in">Good <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Furniture</label><div class="in">Without furniture <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f f--full"><label>Description</label>
+                  <div class="in ta">A bright corner apartment on the fourth floor of a well-kept nine-storey block, two minutes from Chilonzor metro. Three separate rooms, a renovated kitchen with built-in appliances, and a glazed balcony facing the courtyard.</div></div>
+                <div class="f f--full"><label>Hashtags</label><div class="in" style="color:var(--text-2)">#chilonzor #3xona #tashkent</div></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div><div class="panel-title">Media</div><div class="panel-sub">11 photos · max 70 MB per video</div></div>
+                <button class="btn"><span class="i" data-i="camera-fill"></span> Upload</button>
+              </div>
+              <div class="flag"><span class="i" data-i="eye"></span>
+                360° panorama is a roadmap proposal — <span class="mono">AdMediaType</span> has no
+                <span class="mono">PANORAMA</span> member yet.</div>
+              <div class="phgrid">
+                <div data-ph="ad1001-hero"><span class="cover">Cover</span></div>
+                <div data-ph="ad1001-a"></div>
+                <div data-ph="ad1001-b"></div>
+                <div data-ph="ad1001-c"><span class="cover prop">360° · proposal</span></div>
+                <div class="add"><span class="i" data-i="plus"></span></div>
+              </div>
+              <p class="hint" style="margin-top:10px">Drag to reorder. The first photo is used as the cover everywhere — search results, Telegram and Instagram.</p>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="panel">
+              <div class="panel-head"><div><div class="panel-title">Publish</div><div class="panel-sub">Select channels</div></div></div>
+              <div class="chn"><span class="i" data-i="instagram-logo-fill"></span>
+                <div><b>Instagram</b><span>@javlon.realty · connected</span></div><div class="sp"></div>
+                <button class="cb is-on" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn"><span class="i" data-i="telegram-logo-fill"></span>
+                <div><b>Telegram</b><span>2 channels · connected</span></div><div class="sp"></div>
+                <button class="cb is-on" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn"><span class="i" data-i="youtube-logo-fill"></span>
+                <div><b>YouTube</b><span>Not connected</span></div><div class="sp"></div>
+                <button class="cb" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn" style="opacity:.5"><span class="i" data-i="storefront-fill"></span>
+                <div><b>OLX</b><span>Requires the browser extension</span></div><div class="sp"></div>
+                <span class="cb"><span class="i" data-i="check-bold"></span></span></div>
+              <button class="btn btn--dark" style="width:100%;justify-content:center;margin-top:14px">
+                <span class="i" data-i="paper-plane-tilt-fill"></span> Publish to 2 channels</button>
+              <p class="hint" style="margin-top:9px">OLX cross-posting is only available from the desktop app (requires a browser extension).</p>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head"><div><div class="panel-title">Visibility</div></div></div>
+              <div class="chn"><div><b>Active</b><span>Visible in search results</span></div><div class="sp"></div>
+                <button class="sw is-on" data-sw></button></div>
+              <div class="chn"><div><b>Assign coworker</b><span>Sardor Abdullayev</span></div><div class="sp"></div>
+                <span class="i" data-i="caret-down-fill" style="font-size:12px;color:var(--text-2)"></span></div>
+              <div class="chn"><div><b>Mark as sold</b><span>Moves to the Sold stage</span></div><div class="sp"></div>
+                <button class="sw" data-sw></button></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 4 · PUBLISH STATUS ==================== -->
+      <section class="screen" id="a-publish">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Workspace</div>
+            <h1>Publish status</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <button class="btn" data-go="a-editor"><span class="i" data-i="arrow-left"></span> Editor</button>
+          <div class="sp"></div>
+          <button class="btn btn--p"><span class="i" data-i="arrow-right"></span> Retry failed</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div><div class="panel-title">Bright 3-room apartment in Chilonzor</div>
+              <div class="panel-sub mono">#a3f21 · one row per (ad, channel)</div></div>
+          </div>
+          <table class="tbl">
+            <thead><tr><th>Channel</th><th>Automation</th><th>Status</th><th>External</th><th class="r">Last attempt</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><div class="cellmain"><span class="i" data-i="instagram-logo-fill"></span>
+                <div><b>Instagram</b><span>@javlon.realty</span></div></div></td>
+                <td><span class="tag tag--mute">Full API</span></td>
+                <td><span class="tag tag--ok"><i class="dot"></i> Published</span></td>
+                <td class="mono">instagram.com/p/C8x…</td><td class="r num">03.08.2026 | 11:42</td>
+                <td><div class="acts"><button><span class="i" data-i="arrow-up-right"></span></button></div></td></tr>
+              <tr><td><div class="cellmain"><span class="i" data-i="telegram-logo-fill"></span>
+                <div><b>Telegram</b><span>@lacasa_tashkent</span></div></div></td>
+                <td><span class="tag tag--mute">Bot API</span></td>
+                <td><span class="tag tag--ok"><i class="dot"></i> Published</span></td>
+                <td class="mono">t.me/lacasa_tashkent/412</td><td class="r num">03.08.2026 | 11:42</td>
+                <td><div class="acts"><button><span class="i" data-i="arrow-up-right"></span></button></div></td></tr>
+              <tr><td><div class="cellmain"><span class="i" data-i="storefront-fill"></span>
+                <div><b>OLX</b><span>Extension-assisted</span></div></div></td>
+                <td><span class="tag tag--mute">Form fill</span></td>
+                <td><span class="tag tag--warn"><i class="dot"></i> Awaiting review</span></td>
+                <td class="mono" style="color:var(--text-2)">—</td><td class="r num">03.08.2026 | 11:40</td>
+                <td><div class="acts"><button><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+              <tr><td><div class="cellmain"><span class="i" data-i="youtube-logo-fill"></span>
+                <div><b>YouTube</b><span>Not connected</span></div></div></td>
+                <td><span class="tag tag--mute">Browser OAuth</span></td>
+                <td><span class="tag tag--err"><i class="dot"></i> Failed</span></td>
+                <td class="mono" style="color:var(--err)">Token expired — reconnect</td><td class="r num">03.08.2026 | 11:39</td>
+                <td><div class="acts"><button><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 5 · LEADS ==================== -->
+      <section class="screen" id="a-leads">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Pipeline</div>
+            <h1>Leads</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button class="is-on" data-go="a-leads">Table</button><button data-go="a-kanban">Kanban</button></div>
+          <span class="filt"><span class="i" data-i="funnel-fill"></span> All stages</span>
+          <span class="filt"><span class="i" data-i="user-fill"></span> All agents</span>
+          <div class="sp"></div>
+          <button class="btn btn--p"><span class="i" data-i="plus"></span> Create lead</button>
+        </div>
+        <div class="panel">
+          <table class="tbl" data-rows>
+            <thead><tr><th style="width:23%">Lead</th><th>Phone</th><th class="r">Budget</th><th style="width:25%">Interest</th>
+              <th>Stage</th><th>Agent</th><th></th></tr></thead>
+            <tbody>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--info-soft);color:var(--info)">DY</span>
+                <div><b>Dilnoza Yusupova</b><span>Created 03.08.2026</span></div></div></td>
+                <td class="mono">+998901234501</td><td class="r num">$50,000</td>
+                <td>2–3 room apartment, Chilonzor or Yunusobod</td>
+                <td><span class="tag tag--info"><i class="dot"></i> New</span></td>
+                <td><span class="avchip" data-ph="ag-javlon"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--warn-soft);color:var(--warn)">AK</span>
+                <div><b>Aziz Karimov</b><span>Callback 15:00 today</span></div></div></td>
+                <td class="mono">+998933456712</td><td class="r num">$80,000</td>
+                <td>Family house, Sergeli</td>
+                <td><span class="tag tag--warn"><i class="dot"></i> Need to call back</span></td>
+                <td><span class="avchip" data-ph="ag-javlon"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--mute-soft);color:var(--mute)">MT</span>
+                <div><b>Malika Tosheva</b><span>3 attempts</span></div></div></td>
+                <td class="mono">+998977654321</td><td class="r num">$1,000/month</td>
+                <td>Office rental, city center</td>
+                <td><span class="tag tag--mute"><i class="dot"></i> Could not connect</span></td>
+                <td><span class="avchip" data-ph="ag-shahnoza"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--ok-soft);color:var(--ok)">BN</span>
+                <div><b>Bekzod Nazarov</b><span>Deal completed</span></div></div></td>
+                <td class="mono">+998912345678</td><td class="r num">$60,000</td>
+                <td>2-room flat, Mirobod</td>
+                <td><span class="tag tag--ok"><i class="dot"></i> Success</span></td>
+                <td><span class="avchip" data-ph="ag-shahnoza"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--err-soft);color:var(--err)">RI</span>
+                <div><b>Ravshan Ismoilov</b><span>Budget mismatch</span></div></div></td>
+                <td class="mono">+998995551122</td><td class="r num">$100,000</td>
+                <td>4-room new build, Yashnobod</td>
+                <td><span class="tag tag--err"><i class="dot"></i> Rejected</span></td>
+                <td><span class="avchip" data-ph="ag-javlon"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" style="background:var(--info-soft);color:var(--info)">NE</span>
+                <div><b>Nodira Ergasheva</b><span>Created 03.08.2026</span></div></div></td>
+                <td class="mono">+998911223344</td><td class="r num">$400/month</td>
+                <td>1-room studio near metro</td>
+                <td><span class="tag tag--info"><i class="dot"></i> New</span></td>
+                <td><span class="avchip" data-ph="ag-shahnoza"></span></td>
+                <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== 6 · KANBAN ==================== -->
+      <section class="screen" id="a-kanban">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Pipeline</div>
+            <h1>Kanban</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <div class="seg"><button data-go="a-leads">Table</button><button class="is-on" data-go="a-kanban">Kanban</button></div>
+          <span class="filt"><span class="i" data-i="user-fill"></span> All agents</span>
+          <div class="sp"></div>
+          <button class="btn btn--p"><span class="i" data-i="plus"></span> Create lead</button>
+        </div>
+        <div class="flag"><span class="i" data-i="eye"></span>
+          Success is a proposed stage — <span class="mono">LeadStatus.SUCCESS</span> is not in the Prisma
+          enum yet. Drag cards between stages; some moves require a note or a callback time.</div>
+
+        <!-- 6 fixed columns, order never reorderable -->
+        <div class="kb" id="kb">
+          <div class="kb__c" data-col="new">
+            <div class="kb__h" style="color:var(--info)"><span class="dot"></span>
+              <span style="color:var(--text)">New</span> <em>2</em></div>
+            <div class="kbc" draggable="true" data-lead="dilnoza">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--info-soft);color:var(--info)">DY</span>
+                <b>Dilnoza Yusupova</b></div>
+              <div class="kbc__mid"><span class="mono num">+998901234501 · $50,000</span>
+                <p>2–3 room apartment, Chilonzor or Yunusobod</p></div>
+              <div class="kbc__f"><span class="avchip" data-ph="ag-javlon" style="width:20px;height:20px"></span> Javlon</div>
+            </div>
+            <div class="kbc" draggable="true" data-lead="nodira">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--info-soft);color:var(--info)">NE</span>
+                <b>Nodira Ergasheva</b></div>
+              <div class="kbc__mid"><span class="mono num">+998911223344 · $400/month</span>
+                <p>1-room studio near metro</p></div>
+              <div class="kbc__f"><span class="avchip" data-ph="ag-shahnoza" style="width:20px;height:20px"></span> Shahnoza</div>
+            </div>
+            <div class="ghosttile" hidden>Empty stage</div>
+          </div>
+
+          <div class="kb__c" data-col="noconn">
+            <div class="kb__h" style="color:var(--mute)"><span class="dot"></span>
+              <span style="color:var(--text)">Could not connect</span> <em>1</em></div>
+            <div class="kbc" draggable="true" data-lead="malika">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--mute-soft);color:var(--mute)">MT</span>
+                <b>Malika Tosheva</b></div>
+              <div class="kbc__mid"><span class="mono num">+998977654321 · $1,000/month</span>
+                <p>Office rental, city center</p></div>
+              <div class="kbc__f"><span class="only">3 attempts</span></div>
+            </div>
+            <div class="ghosttile" hidden>Empty stage</div>
+          </div>
+
+          <div class="kb__c" data-col="callback">
+            <div class="kb__h" style="color:var(--warn)"><span class="dot"></span>
+              <span style="color:var(--text)">Need to call back</span> <em>1</em></div>
+            <div class="kbc warnb" draggable="true" data-lead="aziz">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--warn-soft);color:var(--warn)">AK</span>
+                <b>Aziz Karimov</b></div>
+              <div class="kbc__mid"><span class="mono num">+998933456712 · $80,000</span>
+                <p>Family house, Sergeli</p></div>
+              <div class="kbc__f"><span class="avchip" data-ph="ag-javlon" style="width:20px;height:20px"></span>
+                <span class="tag tag--warn"><span class="i" data-i="clock"></span> 15:00</span></div>
+            </div>
+            <div class="ghosttile" hidden>Empty stage</div>
+          </div>
+
+          <div class="kb__c" data-col="rejected">
+            <div class="kb__h" style="color:var(--err)"><span class="dot"></span>
+              <span style="color:var(--text)">Rejected</span> <em>1</em></div>
+            <div class="kbc" draggable="true" data-lead="ravshan">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--err-soft);color:var(--err)">RI</span>
+                <b>Ravshan Ismoilov</b></div>
+              <div class="kbc__mid"><span class="mono num">+998995551122 · $100,000</span>
+                <p>4-room new build, Yashnobod</p></div>
+              <div class="kbc__f"><span class="only">Budget mismatch</span></div>
+            </div>
+            <div class="ghosttile" hidden>Empty stage</div>
+          </div>
+
+          <div class="kb__c" data-col="accepted">
+            <div class="kb__h" style="color:var(--ok)"><span class="dot"></span>
+              <span style="color:var(--text)">Accepted</span> <em>0</em></div>
+            <div class="ghosttile">No accepted leads</div>
+          </div>
+
+          <div class="kb__c" data-col="success">
+            <div class="kb__h" style="color:var(--ok)"><span class="dot"></span>
+              <span style="color:var(--text)">Success</span> <em>1</em></div>
+            <div class="kbc" draggable="true" data-lead="bekzod">
+              <div class="notch"><div class="notch-mask"></div>
+                <button class="notch-btn" title="Advance stage"><span class="i" data-i="arrow-right"></span></button></div>
+              <div class="kbc__h"><span class="avchip" style="background:var(--ok-soft);color:var(--ok)">BN</span>
+                <b>Bekzod Nazarov</b></div>
+              <div class="kbc__mid"><span class="mono num">+998912345678 · $60,000</span>
+                <p>2-room flat, Mirobod</p></div>
+              <div class="kbc__f"><span class="tag tag--ok only">Sold · #e5b13</span></div>
+            </div>
+            <div class="ghosttile" hidden>Empty stage</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 7 · COWORKERS ==================== -->
+      <section class="screen" id="a-coworkers">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Team</div>
+            <h1>Coworkers</h1>
+          </div>
+        </div>
+        <div class="tools">
+          <span class="filt"><span class="i" data-i="user-fill"></span> Under Javlon Rustamov</span>
+        </div>
+        <div class="panel">
+          <table class="tbl" data-rows>
+            <thead><tr><th style="width:28%">Coworker</th><th>Email</th><th>Phone</th><th class="r">Listings</th>
+              <th class="r">Closed</th><th>Last active</th><th></th></tr></thead>
+            <tbody>
+              <tr data-row><td><div class="cellmain"><span class="avchip" data-ph="ag-sardor" style="width:36px;height:36px"></span>
+                <div><b>Sardor Abdullayev</b><span>Coworker</span></div></div></td>
+                <td class="mono">sardor@lacasa.uz</td><td class="mono">+998901112233</td>
+                <td class="r num">11</td><td class="r num">3</td><td>2 days ago</td>
+                <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <tr data-row><td><div class="cellmain"><span class="avchip" data-ph="ag-kamola" style="width:36px;height:36px"></span>
+                <div><b>Kamola Rashidova</b><span>Coworker · under Shahnoza</span></div></div></td>
+                <td class="mono">kamola@lacasa.uz</td><td class="mono">+998904445566</td>
+                <td class="r num">8</td><td class="r num">2</td><td>Today</td>
+                <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+              <!-- sparse-table terminal ghost row — the screen's one magenta thing -->
+              <tr class="ghost"><td colspan="7"><button><span class="i" data-i="plus"></span> Create coworker</button></td></tr>
+            </tbody>
+          </table>
+          <p class="hint" style="margin-top:12px">Closed counts a coworker's leads in the Success stage.</p>
+        </div>
+      </section>
+
+      <!-- ==================== 8 · CONNECTED ACCOUNTS ==================== -->
+      <section class="screen" id="a-accounts">
+        <div class="page-head">
+          <div class="tb">
+            <div class="crumb">Console · Team</div>
+            <h1>Connected accounts</h1>
+          </div>
+        </div>
+        <div class="two" style="grid-template-columns:1.35fr 1fr">
+          <div class="panel">
+            <div class="panel-head">
+              <div><div class="panel-title">Connected accounts</div>
+                <div class="panel-sub">Status switches are read-only indicators</div></div>
+            </div>
+            <div class="chn"><span class="i" data-i="instagram-logo-fill"></span>
+              <div><b>Instagram</b><span>@javlon.realty · token refreshes 02.10.2026</span></div><div class="sp"></div>
+              <span class="sw is-on ro"></span><button class="btn">Disconnect</button></div>
+            <div class="chn"><span class="i" data-i="telegram-logo-fill"></span>
+              <div><b>Telegram</b><span>2 channels connected</span></div><div class="sp"></div>
+              <span class="sw is-on ro"></span><button class="btn">Manage</button></div>
+            <div class="chn"><span class="i" data-i="youtube-logo-fill"></span>
+              <div><b>YouTube</b><span style="color:var(--err)">Token expired — reconnect required</span></div><div class="sp"></div>
+              <span class="sw ro"></span><button class="btn btn--p">Reconnect</button></div>
+            <div class="chn"><span class="i" data-i="storefront-fill"></span>
+              <div><b>OLX</b><span>Browser extension v1.2 detected</span></div><div class="sp"></div>
+              <span class="sw is-on ro"></span><button class="btn">Settings</button></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><div class="panel-title">Extension</div></div></div>
+            <p style="font-size:12.5px;color:var(--text-2);line-height:1.65">The La Casa browser extension fills OLX and
+            Instagram forms for you, then hands control back so you click Publish yourself. It never posts on your behalf.</p>
+            <button class="btn" style="width:100%;justify-content:center;margin-top:14px">
+              <span class="i" data-i="arrow-up-right"></span> Open extension settings</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ==================== STAGE-GATE MODAL ==================== -->
+<div class="modal-ov" id="m-ov">
+  <div class="modal">
+    <h3 id="m-title">Move lead</h3>
+    <p class="msub" id="m-sub"></p>
+    <div id="m-fields"></div>
+    <div class="macts">
+      <button class="btn" id="m-cancel">Cancel</button>
+      <button class="btn btn--dark" id="m-ok" disabled>Move lead</button>
+    </div>
+  </div>
+</div>
+
+<div class="dev">
+  <button data-index-toggle><span class="i" data-i="squares-four-fill"></span> Screens</button>
+</div>
+<div class="ix" data-index>
+  <div class="ix__p">
+    <h3>Console F · 8 screens</h3>
+    <p>Direction F (Orvion grammar) carrying the real agent console — magenta accent, Poppins, labeled rail, live kanban drag.</p>
+    <div class="ix__g">
+      <button data-go="a-dash">Statistics <b>4 stats + 12-day chart</b></button>
+      <button data-go="a-listings">My ads <b>all 8 seed listings</b></button>
+      <button data-go="a-editor">Listing editor <b>form + media + publish</b></button>
+      <button data-go="a-publish">Publish status <b>per-channel rows</b></button>
+      <button data-go="a-leads">Leads <b>6 leads, table view</b></button>
+      <button data-go="a-kanban">Kanban <b>6 stages, live drag</b></button>
+      <button data-go="a-coworkers">Coworkers <b>2 rows + ghost</b></button>
+      <button data-go="a-accounts">Connected accounts <b>IG / TG / YT / OLX</b></button>
+    </div>
+  </div>
+</div>
+
+<!--ICONS-->
+<!--PHOTOS-->
+<!--RUNTIME-->
+
+<script>
+/* ==================== zone sync ====================
+   The topbar's three pills are a zone indicator synced to the active rail
+   group; clicking one jumps to the group's first screen via data-go. */
+(function(){
+  var ZONE={ 'a-dash':'ws','a-listings':'ws','a-editor':'ws','a-publish':'ws',
+             'a-leads':'pl','a-kanban':'pl','a-coworkers':'tm','a-accounts':'tm' };
+  function sync(id){
+    var z=ZONE[id];
+    document.querySelectorAll('.zone').forEach(function(b){
+      b.classList.toggle('is-on', b.getAttribute('data-zone')===z);
+    });
+  }
+  document.addEventListener('screenchange',function(e){ sync(e.detail.id); });
+  sync((location.hash||'').replace(/^#\/?/,'')||'a-dash');
+})();
+
+/* ==================== kanban drag + stage gate ====================
+   Real HTML5 drag between the 6 fixed columns. Moves into gated stages
+   require fields before they commit (Decision 6.5):
+     Need to call back  → callback date & time
+     Rejected/Accepted  → note, at least 10 characters
+     Success            → the sold ad + note (Success is the proposed
+                          LeadStatus.SUCCESS — flagged on-screen) */
+(function(){
+  var kb=document.getElementById('kb'); if(!kb) return;
+  var COLS=['new','noconn','callback','rejected','accepted','success'];
+  var ADS=[
+    ['#a3f21','Bright 3-room apartment in Chilonzor'],
+    ['#b71c4','Renovated studio near Yunusobod metro'],
+    ['#c92e8','Family house with garden in Sergeli'],
+    ['#d40a7','Office space on Amir Temur avenue'],
+    ['#e5b13','Two-room flat in Mirobod'],
+    ['#f8c30','Retail space near Chorsu bazaar'],
+    ['#0a4d9','New-build 4-room in Yashnobod'],
+    ['#1e6f2','Renovated 1-room near Yakkasaroy park']];
+
+  var ov=document.getElementById('m-ov'), mTitle=document.getElementById('m-title'),
+      mSub=document.getElementById('m-sub'), mFields=document.getElementById('m-fields'),
+      mOk=document.getElementById('m-ok'), mCancel=document.getElementById('m-cancel');
+  var dragCard=null, pending=null;
+
+  function paintNew(root){
+    /* the runtime's painter runs at boot; repaint icons inside footers we
+       rebuild after a move */
+    root.querySelectorAll('[data-i]').forEach(function(el){
+      var g=(window.ICONS||{})[el.getAttribute('data-i')]; if(!g||el.firstChild) return;
+      var body=g.b||g.body; if(!body) return;
+      el.innerHTML='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(g.w||256)+' '+(g.h||256)+'" fill="currentColor">'+body+'</svg>';
+    });
+  }
+  function colEl(key){ return kb.querySelector('.kb__c[data-col="'+key+'"]'); }
+  function recount(){
+    COLS.forEach(function(k){
+      var c=colEl(k), n=c.querySelectorAll('.kbc').length;
+      c.querySelector('.kb__h em').textContent=n;
+      var g=c.querySelector('.ghosttile'); if(g) g.hidden=n>0;
+    });
+  }
+  function commit(card,toKey,foot){
+    var col=colEl(toKey);
+    col.insertBefore(card, col.querySelector('.ghosttile'));
+    card.classList.toggle('warnb', toKey==='callback');
+    if(foot){ var f=card.querySelector('.kbc__f'); f.innerHTML=foot; paintNew(f); }
+    recount();
+  }
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function openGate(card,toKey){
+    var name=card.querySelector('.kbc__h b').textContent;
+    pending={card:card,to:toKey};
+    if(toKey==='callback'){
+      mTitle.textContent='Schedule the callback';
+      mSub.textContent='Moving '+name+' to “Need to call back” requires a callback date and time.';
+      mFields.innerHTML='<div class="f"><label>Callback date &amp; time</label>'+
+        '<input class="fin" id="g-dt" type="datetime-local"></div>';
+    } else if(toKey==='success'){
+      mTitle.textContent='Close the deal';
+      mSub.textContent='Moving '+name+' to “Success” records which ad was sold to this lead. '+
+        'Success is the proposed LeadStatus.SUCCESS stage.';
+      mFields.innerHTML='<div class="f"><label>Sold ad</label>'+
+        '<select class="fin" id="g-ad"><option value="">Select the ad…</option>'+
+        ADS.map(function(a){return '<option value="'+a[0]+'">'+a[0]+' · '+esc(a[1])+'</option>';}).join('')+
+        '</select></div>'+
+        '<div class="f"><label>Note (min 10 characters)</label>'+
+        '<textarea class="fin" id="g-note" placeholder="How the deal closed…"></textarea>'+
+        '<div class="ferr" id="g-err">At least 10 characters.</div></div>';
+    } else {
+      mTitle.textContent=toKey==='rejected'?'Reject the lead':'Accept the lead';
+      mSub.textContent='Moving '+name+' to “'+(toKey==='rejected'?'Rejected':'Accepted')+
+        '” requires a note of at least 10 characters.';
+      mFields.innerHTML='<div class="f"><label>Note (min 10 characters)</label>'+
+        '<textarea class="fin" id="g-note" placeholder="'+
+        (toKey==='rejected'?'Why the lead was rejected…':'What was agreed…')+'"></textarea>'+
+        '<div class="ferr" id="g-err">At least 10 characters.</div></div>';
+    }
+    mOk.disabled=true;
+    ov.classList.add('is-open');
+    mFields.addEventListener('input',validate);
+    validate();
+  }
+  function validate(){
+    if(!pending) return;
+    var ok=false;
+    if(pending.to==='callback'){
+      var dt=document.getElementById('g-dt'); ok=!!(dt&&dt.value);
+    } else if(pending.to==='success'){
+      var ad=document.getElementById('g-ad'), note=document.getElementById('g-note');
+      var nOk=note&&note.value.trim().length>=10;
+      ok=!!(ad&&ad.value)&&nOk;
+      var err=document.getElementById('g-err');
+      if(err) err.style.display=(note&&note.value.length&&!nOk)?'block':'none';
+    } else {
+      var n2=document.getElementById('g-note');
+      ok=n2&&n2.value.trim().length>=10;
+      var e2=document.getElementById('g-err');
+      if(e2) e2.style.display=(n2&&n2.value.length&&!ok)?'block':'none';
+    }
+    mOk.disabled=!ok;
+  }
+  function closeGate(){ ov.classList.remove('is-open'); pending=null; }
+  mCancel.addEventListener('click',closeGate);
+  ov.addEventListener('click',function(e){ if(e.target===ov) closeGate(); });
+  mOk.addEventListener('click',function(){
+    if(!pending||mOk.disabled) return;
+    var foot='';
+    if(pending.to==='callback'){
+      var v=document.getElementById('g-dt').value; var t=v.slice(11,16)||v;
+      foot='<span class="tag tag--warn only"><span class="i" data-i="clock"></span> '+esc(t)+'</span>';
+    } else if(pending.to==='success'){
+      foot='<span class="tag tag--ok only">Sold · '+esc(document.getElementById('g-ad').value)+'</span>';
+    } else {
+      var note=document.getElementById('g-note').value.trim();
+      var short=note.length>34?note.slice(0,34)+'…':note;
+      foot=pending.to==='rejected'
+        ? '<span class="only">'+esc(short)+'</span>'
+        : '<span class="tag tag--ok only">'+esc(short)+'</span>';
+    }
+    commit(pending.card,pending.to,foot);
+    closeGate();
+  });
+
+  function requestMove(card,toKey){
+    var from=card.closest('.kb__c').getAttribute('data-col');
+    if(from===toKey) return;
+    if(toKey==='callback'||toKey==='rejected'||toKey==='accepted'||toKey==='success'){
+      openGate(card,toKey);
+    } else {
+      commit(card,toKey, toKey==='noconn'
+        ? '<span class="only">Could not reach</span>'
+        : '<span class="only">Back to New</span>');
+    }
+  }
+
+  kb.addEventListener('dragstart',function(e){
+    var c=e.target.closest('.kbc'); if(!c) return;
+    dragCard=c; c.classList.add('dragging');
+    try{ e.dataTransfer.setData('text/plain',c.getAttribute('data-lead')||''); }catch(err){}
+    e.dataTransfer.effectAllowed='move';
+  });
+  kb.addEventListener('dragend',function(){
+    if(dragCard) dragCard.classList.remove('dragging');
+    kb.querySelectorAll('.kb__c').forEach(function(c){ c.classList.remove('drop-over'); });
+    dragCard=null;
+  });
+  kb.addEventListener('dragover',function(e){
+    var col=e.target.closest('.kb__c'); if(!col||!dragCard) return;
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    kb.querySelectorAll('.kb__c').forEach(function(c){ c.classList.toggle('drop-over',c===col); });
+  });
+  kb.addEventListener('dragleave',function(e){
+    var col=e.target.closest('.kb__c');
+    if(col&&!col.contains(e.relatedTarget)) col.classList.remove('drop-over');
+  });
+  kb.addEventListener('drop',function(e){
+    var col=e.target.closest('.kb__c'); if(!col||!dragCard) return;
+    e.preventDefault();
+    col.classList.remove('drop-over');
+    requestMove(dragCard,col.getAttribute('data-col'));
+  });
+
+  /* the notch orbit button advances one stage, through the same gate */
+  kb.addEventListener('click',function(e){
+    var btn=e.target.closest('.notch-btn'); if(!btn) return;
+    var card=btn.closest('.kbc');
+    var from=card.closest('.kb__c').getAttribute('data-col');
+    var next=COLS[Math.min(COLS.indexOf(from)+1,COLS.length-1)];
+    requestMove(card,next);
+  });
+
+  recount();
+})();
+</script>

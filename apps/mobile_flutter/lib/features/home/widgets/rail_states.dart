@@ -96,6 +96,9 @@ class RailRetryCard extends StatelessWidget {
     return GlassSurface(
       variant: GlassVariant.onSurface,
       borderRadius: BorderRadius.circular(AppRadii.cardLg),
+      // Card-sized, like the pitch banner — see its note on widening the
+      // band back out from the small-first `.gl` default.
+      distortionWidth: 18,
       width: width,
       padding: const EdgeInsets.all(AppSpacing.base),
       child: Column(

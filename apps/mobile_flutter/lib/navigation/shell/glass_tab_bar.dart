@@ -65,6 +65,10 @@ class GlassTabBar extends ConsumerWidget {
         child: GlassSurface(
           variant: GlassVariant.onSurface,
           borderRadius: BorderRadius.circular(AppRadii.pillButton),
+          // The one piece of glass that genuinely floats above scrolling
+          // content, so it can carry a wider band than the small-first
+          // `.gl` default — this is where the refraction is most visible.
+          distortionWidth: 16,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

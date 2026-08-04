@@ -1,6 +1,7 @@
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 
 import 'app_colors.dart';
 import 'glass_theme_extension.dart';
@@ -20,87 +21,70 @@ enum GlassVariant {
   /// share buttons, district-name labels over photos.
   onPhoto,
 
-  /// `.glf` — "flat glass": the same visual material as [onSurface]
-  /// rebuilt without the rim/sheen pseudo-element layers, for use as the
-  /// background of an actual form field (`TextField` etc.) where this
-  /// widget wraps a void-element-like child that can't carry decorative
-  /// overlays the way a card can. No rim, no sheen; the CSS inset top
-  /// highlight is approximated with a 1px highlight line instead (see
-  /// [GlassTheme.glfTopHighlight]).
+  /// `.glf` — "flat glass": the same tint as [onSurface] with the
+  /// refraction pulled almost to nothing and a crisp hairline border
+  /// instead of an optical rim, for use as the background of an actual form
+  /// field (`TextField` etc.). A text input is a place to read text; a lens
+  /// that bends its own label is the wrong material for one.
   flatForm,
 }
 
-/// The glass material primitive for Direction E "Liquid Glass" — reproduces
-/// the prototype's `.g`/`.gl`/`.glf` surfaces (design-token spec §6).
+/// The glass material primitive for Direction E "Liquid Glass" — a real
+/// refracting lens, rendered by `liquid_glass_easy`'s [LiquidGlassLens].
 ///
 /// Reads its parameters from `Theme.of(context).extension&lt;GlassTheme&gt;()`
 /// (see `glass_theme_extension.dart`) and `Theme.of(context)
-/// .extension&lt;LaCasaColors&gt;()` (for the hairline ring color used by
+/// .extension&lt;LaCasaColors&gt;()` (for the hairline color used by
 /// [GlassVariant.flatForm]), so it automatically follows light/dark theme
 /// switches — no separate light/dark API.
 ///
-/// Composed of four layers, from back to front, reproducing the CSS
-/// stacking order (`.g::before`/`.gl::before` paint *above* the element's
-/// own children per their `z-index:3` vs. `z-index:2`):
+/// ## What changed, and why
+/// This used to be a hand-built frosted panel: [BackdropFilter] blur, a
+/// near-opaque tint, a radial "sheen" gradient and a 1px gradient-stroked
+/// rim painted by a [CustomPainter]. That is *glassmorphism* — it looks
+/// like glass because it was drawn to. It does not refract: nothing behind
+/// it bends, the rim does not pick up what it sits on, and it cannot
+/// respond to what moves underneath.
 ///
-/// 1. **Blur + tint** — [ClipRRect] + [BackdropFilter] with
-///    [ImageFilter.blur], with a solid tint [Color] as the backdrop
-///    filter's child (doubling as both the blur target and the fill).
-/// 2. **Sheen** — a soft radial highlight, [GlassVariant.flatForm] only
-///    skips this (see [GlassVariant.flatForm] doc).
-/// 3. **Content** — [child], padded by [padding].
-/// 4. **Rim** — a 1px gradient-stroke border, painted with a
-///    [CustomPainter] (see [_RimPainter]) rather than CSS's mask-composite
-///    trick, which Flutter has no equivalent of. Skipped for
-///    [GlassVariant.flatForm], which instead gets a 1px highlight line at
-///    its top edge plus a solid 1px hairline border in the theme's `line`
-///    color (approximating the CSS `inset` highlight and `0 0 0 1px
-///    var(--line)` ring, neither of which [BoxShadow] can express).
+/// [LiquidGlassLens] is a shader. It samples the live backdrop and actually
+/// bends it through a perimeter band, with magnification, chromatic
+/// aberration and an SDF-derived rim light that takes its color from
+/// whatever is behind the glass. The sheen and rim layers are gone because
+/// the shader derives both; the tint dropped in strength because the
+/// refraction now carries the read (see [GlassMaterial.tint]).
 ///
-/// The outer [Container]'s [BoxShadow] list is applied **outside** the
-/// [ClipRRect] deliberately — shadows must not be blurred along with the
-/// backdrop, and must not be clipped by the rounded corners either.
+/// It also closes a gap the old implementation documented and could not
+/// fix: CSS `saturate()` had no `ImageFilter` equivalent, so
+/// `backdrop-filter: blur(22px) saturate(185%)` degraded to plain blur.
+/// The lens has a saturation term, so `1.85` is now applied for real.
 ///
-/// ## What has no exact Flutter equivalent (be aware before you tune this)
-/// - **`saturate()`/`brightness()`** — `dart:ui`'s [ImageFilter] has no
-///   built-in saturation or brightness filter, so `backdrop-filter:
-///   blur(22px) saturate(185%)` becomes plain blur here. The tint alpha
-///   and sheen highlight are relied on instead to sell the "glass" read —
-///   the cheaper of the two honest approximations the token spec lays out
-///   (the more faithful one composes a [ColorFilter] saturation matrix via
-///   `ImageFiltered`/`ColorFiltered` in the same backdrop chain, at the
-///   cost of an extra compositing pass; not done here to keep this a
-///   primitive that's cheap to use everywhere).
-/// - **CSS blur-radius → Flutter sigma** — no 1:1 formula exists. Each
-///   variant's `*BlurSigma` in [GlassTheme] starts from
-///   `cssBlurPx / 2` and is meant to be eyeballed against a screenshot,
-///   not trusted as exact.
-/// - **The radial sheen's independent x/y radii** (`135% 95%`) — Flutter's
-///   [RadialGradient] has one scalar radius; approximated as a circle.
-/// - **CSS `inset` box-shadow** — [BoxShadow] has no inset flag at all.
-///   [GlassVariant.flatForm]'s top highlight line is a real [Container],
-///   not a shadow.
-/// - **CSS mask-composite rim trick** — reproduced with a [CustomPainter]
-///   stroke instead (see [_RimPainter]), the alternative the token spec
-///   itself names as acceptable over a nested-container inset, which can
-///   show antialiasing seams at small radii.
+/// ## Engine dependence — read before judging a screenshot
+/// - **Impeller** (Flutter's default on modern iOS/Android, and what this
+///   app ships on): the lens refracts the live backdrop anywhere in the
+///   tree. No setup, no background widget.
+/// - **Skia / web**: refraction needs an ancestor `LiquidGlassView` with a
+///   `backgroundWidget`. Without one the lens *degrades to the frosted
+///   look* — blur + tint + border. So a Chrome or `flutter test` render is
+///   not evidence about how this looks; check it on the Android/iOS build.
+///
+/// ## Lenses inside scrollables
+/// Android's stretch overscroll isolates a scrollable into its own layer,
+/// which can make a backdrop lens inside it render **black** at the scroll
+/// edges. Any scroll view containing a [GlassSurface] must disable the
+/// overscroll indicator — see `home_feed_screen.dart`, which wraps its
+/// [CustomScrollView] in a [ScrollConfiguration] for exactly this reason.
 ///
 /// ## Performance
-/// [BackdropFilter] is expensive: it forces Flutter to composite and
-/// re-rasterize everything painted beneath it, every frame it's visible.
-/// Two rules to keep this cheap:
-/// - **Don't nest [GlassSurface]s.** A glass card containing a glass chip
-///   containing a glass icon button means three overlapping backdrop
-///   filters each re-blurring what's already blurred beneath them —
-///   visually wrong (double-blur) *and* the most common way this primitive
-///   gets slow. Compose glass surfaces side-by-side, not inside one
-///   another; put non-glass content (plain [Container]s, [Text], [Icon])
-///   inside a [GlassSurface], never another [GlassSurface].
-/// - **The blur is confined by [ClipRRect]** already — never wrap a
-///   [GlassSurface] in a widget that removes or enlarges that clip, and
-///   avoid placing many large [GlassSurface]s over a single complex,
-///   frequently-repainting background (e.g. a scrolling photo list) if it
-///   shows up in profiling.
+/// The lens is a backdrop-sampling shader and costs what one costs. Two
+/// rules keep it cheap:
+/// - **Don't nest [GlassSurface]s.** Overlapping lenses each re-refract
+///   what the one beneath already bent — visually wrong *and* the most
+///   common way this gets slow. Compose glass side-by-side; put plain
+///   [Container]s, [Text] and [Icon]s inside a [GlassSurface], never
+///   another [GlassSurface].
+/// - Prefer glass that **floats above** content over glass that scrolls
+///   with it, and avoid many large lenses over one complex,
+///   frequently-repainting background if it shows up in profiling.
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
     super.key,
@@ -111,26 +95,40 @@ class GlassSurface extends StatelessWidget {
     this.width,
     this.height,
     this.alignment,
+    this.distortionWidth,
   });
 
-  /// Content painted on top of the glass material (layer 3).
+  /// Content painted on top of the glass, clipped to the lens shape.
   final Widget child;
 
-  /// Which of `.g` / `.gl` / `.glf` to render. Defaults to [GlassVariant.onSurface]
-  /// (`.gl`), the most common case — cards, chips, bars sitting on the app
-  /// background rather than on a photo.
+  /// Which of `.g` / `.gl` / `.glf` to render. Defaults to
+  /// [GlassVariant.onSurface] (`.gl`), the most common case — cards, chips
+  /// and bars sitting on the app background rather than on a photo.
   final GlassVariant variant;
 
-  /// Corner radius, shared by the clip, the tint, the rim stroke, and the
-  /// outer shadow. Pass any [AppRadii] value wrapped in a
-  /// `BorderRadius.circular(...)`, or [AppRadii.hero]/[AppRadii.pill] for
-  /// the pre-built asymmetric/circular shapes.
+  /// Corner radius. The lens takes a **scalar** corner radius, so an
+  /// asymmetric [BorderRadius] (e.g. [AppRadii.hero], 40/40/26/26) is
+  /// resolved to its largest corner — the shape's dominant read — rather
+  /// than silently dropping to the smallest. Pass any [AppRadii] value
+  /// wrapped in `BorderRadius.circular(...)`, or [AppRadii.pill] for a
+  /// capsule (the radius clamps to half the short side, so a full radius
+  /// gives a clean capsule).
   final BorderRadius borderRadius;
 
   final EdgeInsetsGeometry? padding;
   final double? width;
   final double? height;
   final AlignmentGeometry? alignment;
+
+  /// Overrides the variant's [GlassMaterial.distortionWidth] — the
+  /// thickness, in logical pixels, of the band around the perimeter where
+  /// the backdrop bends.
+  ///
+  /// This is the one glass parameter that does not scale with the box it
+  /// is applied to, so a band tuned for a card swallows a short chip whole.
+  /// The variant defaults suit each variant's typical box; set this when
+  /// a call site's box is much smaller or much larger than that.
+  final double? distortionWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -139,138 +137,65 @@ class GlassSurface extends StatelessWidget {
     final lineColor =
         theme.extension<LaCasaColors>()?.line ?? LaCasaColors.light.line;
 
-    final Color background;
-    final Gradient? rim;
-    final Gradient? sheen;
-    final List<BoxShadow> shadow;
-    final double blurSigma;
+    final GlassMaterial material = switch (variant) {
+      GlassVariant.onSurface => glass.onSurface,
+      GlassVariant.onPhoto => glass.onPhoto,
+      GlassVariant.flatForm => glass.flatForm,
+    };
 
-    switch (variant) {
-      case GlassVariant.onSurface:
-        background = glass.glBackground;
-        rim = glass.glRim;
-        sheen = glass.glSheen;
-        shadow = glass.glShadow;
-        blurSigma = glass.glBlurSigma;
-      case GlassVariant.onPhoto:
-        background = glass.gBackground;
-        rim = glass.gRim;
-        sheen = glass.gSheen;
-        shadow = glass.gShadow;
-        blurSigma = glass.gBlurSigma;
-      case GlassVariant.flatForm:
-        background = glass.glfBackground;
-        rim = null;
-        sheen = null;
-        shadow = glass.glfShadow;
-        blurSigma = glass.glfBlurSigma;
-    }
+    // `.glf` is the only variant that wants a stated hairline rather than
+    // a rim the shader derives — the source's `0 0 0 1px var(--line)`.
+    final Color? borderColor = variant == GlassVariant.flatForm
+        ? (material.borderColor ?? lineColor)
+        : material.borderColor;
 
-    final glassBody = ClipRRect(
-      borderRadius: borderRadius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: Stack(
-          fit: StackFit.passthrough,
-          children: [
-            // 1. tint (also the BackdropFilter's required child)
-            Positioned.fill(child: ColoredBox(color: background)),
-
-            // 2. sheen (skipped for .glf)
-            if (sheen != null)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(gradient: sheen),
-                  ),
-                ),
-              ),
-
-            // .glf-only: approximated inset top highlight.
-            if (variant == GlassVariant.flatForm)
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: IgnorePointer(
-                  child: Container(height: 1, color: glass.glfTopHighlight),
-                ),
-              ),
-
-            // .glf-only: approximated `0 0 0 1px var(--line)` ring.
-            if (variant == GlassVariant.flatForm)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: borderRadius,
-                      border: Border.all(color: lineColor, width: 1),
-                    ),
-                  ),
-                ),
-              ),
-
-            // 3. content
-            Padding(padding: padding ?? EdgeInsets.zero, child: child),
-
-            // 4. rim — painted last so it sits above content, matching the
-            // source's `::before{z-index:3}` vs. children's `z-index:2`.
-            if (rim != null)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _RimPainter(gradient: rim, radius: borderRadius),
-                  ),
-                ),
-              ),
-          ],
+    final lens = LiquidGlassLens(
+      style: LiquidGlassStyle(
+        shape: LiquidGlassShape(
+          cornerStyle: material.cornerStyle,
+          cornerRadius: _cornerRadius,
+          borderWidth: material.borderWidth,
+          borderColor: borderColor,
+          lightColor: material.lightColor,
+          lightIntensity: material.lightIntensity,
+          borderType: material.borderType,
+        ),
+        appearance: LiquidGlassAppearance(
+          color: material.tint,
+          blur: LiquidGlassBlur(
+            sigmaX: material.blurSigma,
+            sigmaY: material.blurSigma,
+          ),
+          saturation: material.saturation,
+        ),
+        refraction: LiquidGlassRefraction(
+          distortion: material.distortion,
+          distortionWidth: distortionWidth ?? material.distortionWidth,
+          magnification: material.magnification,
+          chromaticAberration: material.chromaticAberration,
         ),
       ),
+      child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
     );
 
+    // The drop shadow is painted here, outside the lens: it must not be
+    // sampled as part of the backdrop the lens refracts, and must not be
+    // clipped away by the lens's own rounded silhouette.
     return Container(
       width: width,
       height: height,
       alignment: alignment,
-      decoration: BoxDecoration(borderRadius: borderRadius, boxShadow: shadow),
-      child: glassBody,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        boxShadow: material.shadow,
+      ),
+      child: lens,
     );
   }
-}
 
-/// Paints the glass rim: a 1px ring stroked with a [Gradient] shader.
-///
-/// CSS builds this with the "double-background + `mask-composite:exclude`"
-/// trick — a `content-box` mask and a full-box mask XOR'd together so only
-/// the outer 1px ring paints, letting a gradient run around the border
-/// instead of a flat color. Flutter has no mask-composite primitive, so
-/// this fills the even-odd difference between the full rounded rect and a
-/// 1px-deflated copy of itself with a shader from [gradient] — the
-/// alternative the token spec names explicitly over a nested-container
-/// inset (which can show antialiasing seams at small radii).
-class _RimPainter extends CustomPainter {
-  const _RimPainter({required this.gradient, required this.radius});
-
-  final Gradient gradient;
-  final BorderRadius radius;
-
-  static const double _strokeWidth = 1;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final outer = radius.toRRect(rect);
-    final inner = outer.deflate(_strokeWidth);
-    final ringPath = Path()
-      ..fillType = PathFillType.evenOdd
-      ..addRRect(outer)
-      ..addRRect(inner);
-    final paint = Paint()..shader = gradient.createShader(rect);
-    canvas.drawPath(ringPath, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RimPainter oldDelegate) {
-    return oldDelegate.gradient != gradient || oldDelegate.radius != radius;
-  }
+  /// The scalar radius handed to [LiquidGlassShape] — see [borderRadius].
+  double get _cornerRadius => math.max(
+    math.max(borderRadius.topLeft.x, borderRadius.topRight.x),
+    math.max(borderRadius.bottomLeft.x, borderRadius.bottomRight.x),
+  );
 }

@@ -1,21 +1,16 @@
 import { PrimeReactProvider } from "primereact/api";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import AdsAdd from "./components/adsAdd/AdsAdd.tsx";
 import AdsList from "./components/adsList/AdsList";
 import CoworkerAdd from "./components/coworkerAdd/CoworkerAdd";
 import CoworkerList from "./components/coworkerList/CoworkerList";
 import LeadList from "./components/leadList/LeadList";
 import ProfileSetting from "./components/profileSetting/ProfileSetting";
-import AgentProfilePage from "./pages/agentProfilePage/AgentProfilePage";
-import AgentsPage from "./pages/agents/AgentsPage";
-import HomePage from "./routes/homePage/homePage";
 import Layout from "./routes/layout/layout";
-import ListPage from "./routes/listPage/listPage";
 import Login from "./routes/login/login";
 import ProfilePage from "./routes/profilePage/profilePage";
 import ProfileUpdatePage from "./routes/profileUpdatePage/profileUpdatePage";
 import Register from "./routes/register/register";
-import SinglePage from "./routes/singlePage/singlePage";
 import LeadUpdate from "./components/leadUpdate/LeadUpdate";
 import LeadAdd from "./components/leadAdd/LeadAdd";
 import CoworkerUpdate from "./components/coworkerUpdate/CoworkerUpdate";
@@ -24,39 +19,62 @@ import Chart from "./components/chart/Chart.jsx";
 import "./index.css";
 import AdsEdit from "./components/adsEdit/AdsEdit.tsx";
 import AboutPageNew from "./routes/aboutPageNew/AboutPageNew.jsx";
+import MarketLayout from "./marketplace/MarketLayout";
+import MarketHome from "./marketplace/pages/MarketHome";
+import SearchPage from "./marketplace/pages/SearchPage";
+import ListingDetailPage from "./marketplace/pages/ListingDetailPage";
+import AgentsDirectoryPage from "./marketplace/pages/AgentsDirectoryPage";
+import AgentPublicProfilePage from "./marketplace/pages/AgentPublicProfilePage";
+import SavedPage from "./marketplace/pages/SavedPage";
+
 function App() {
   const router = createBrowserRouter([
+    // The buyer-facing marketplace — public, no auth required. Same data as
+    // the mobile app's feed (GET /ads, /agents, /saved-ads), same liquid-
+    // glass design language (mockups/web-user.html).
     {
       path: "/",
+      element: <MarketLayout />,
+      children: [
+        {
+          index: true,
+          element: <MarketHome />,
+        },
+        {
+          path: "list",
+          element: <SearchPage />,
+        },
+        {
+          path: "post/:id",
+          element: <ListingDetailPage />,
+        },
+        {
+          path: "agents",
+          element: <AgentsDirectoryPage />,
+        },
+        {
+          path: "agent/:id",
+          element: <AgentPublicProfilePage />,
+        },
+        {
+          path: "saved",
+          element: <SavedPage />,
+        },
+        {
+          // The legacy public-listings path, kept because the CRM navbar and
+          // old bookmarks still point at it.
+          path: "ads",
+          element: <Navigate to="/list" replace />,
+        },
+      ],
+    },
+    // The CRM console and auth pages keep the legacy Layout chrome.
+    {
       element: <Layout />,
       children: [
         {
-          path: "/",
+          path: "/about",
           element: <AboutPageNew />,
-        },
-        {
-          path: "/ads",
-          element: <HomePage />,
-        },
-        {
-          path: "/list",
-          element: <ListPage />,
-        },
-        // {
-        //   path: "/about",
-        //   element: <AboutPageNew />,
-        // },
-        {
-          path: "/agent/:id",
-          element: <AgentProfilePage />,
-        },
-        {
-          path: "/agents",
-          element: <AgentsPage />,
-        },
-        {
-          path: "/post/:id",
-          element: <SinglePage />,
         },
         {
           path: "/profile",

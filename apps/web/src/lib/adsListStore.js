@@ -16,12 +16,12 @@ export const useListStore = create((set) => ({
       set({ list: [], isLoading: false });
     }
   },
-  // Serves two callers with different auth contexts: the authenticated
-  // agent/coworker dashboard (AdsList/Filter/Chart — needs every stage,
-  // including drafts) and the public agent-profile page (AgentProfilePage —
-  // anonymous visitors, active listings only). The caller says which scope
-  // it means explicitly — this store no longer reaches into useUserStore's
-  // getState() to guess.
+  // Serves the authenticated agent/coworker dashboard (AdsList/Filter/
+  // Chart — needs every stage, including drafts). The public agent-profile
+  // page moved to the marketplace surface, which calls
+  // apiClient.ads.getAds({ scope: "public" }) directly; the scope parameter
+  // stays explicit here rather than reaching into useUserStore's getState()
+  // to guess.
   fetchAdsByAgentId: async (agentId, filters = {}, sortOption = "newest", scope = "public") => {
     try {
       const data = await apiClient.ads.getAds({ scope, agentId, filters, sort: sortOption });
