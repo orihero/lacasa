@@ -1,0 +1,778 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script>document.documentElement.setAttribute("data-theme-base","dark")</script>
+<title>La Casa Web · Admin — Control Room</title>
+<meta name="description" content="Platform operations surface: overview, realtor applications, users, listing moderation, plans, 3D tour queue, audit log.">
+<!--FONTS-->
+<style>
+/* ============================================================================
+   La Casa Web · Surface 3 — CONTROL ROOM  (role: ADMIN — proposed, see WEB.md)
+
+   The third surface is deliberately the least like the other two, and that is
+   a safety decision rather than a stylistic one. An admin holds destructive,
+   irreversible power over other people's accounts and listings; the single
+   worst failure mode is acting on the wrong surface because it looked familiar.
+   So this one announces itself:
+
+     · dark by default, where the console is light
+     · amber signal colour, not La Casa magenta — magenta is reserved here for
+       destructive confirmation only, so the brand colour never means "safe"
+     · a persistent environment strip naming the database being written to
+     · monospace UUIDs, timestamps and counts throughout — this surface reads
+       records, not properties
+     · 38px rows, no photography larger than 26px
+
+   IMPORTANT — none of this is backed by the schema yet. `UserRole` is
+   USER | AGENT | COWORKER with no ADMIN member, and there is no premium, plan,
+   billing or tour model anywhere. Everything here is a proposal.
+   ========================================================================= */
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+
+:root{
+  --ink:#e9ebf2; --ink-2:#aeb2c2; --muted:#7c8195; --faint:#5a5f72;
+  --app:#080a10; --card:#11141c; --sunk:#0c0f16; --rail:#0a0d14;
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.05);
+  --acc:#f0a93b; --acc-soft:rgba(240,169,59,.15); --acc-line:rgba(240,169,59,.42);
+  --danger:#f5439b; --danger-soft:rgba(245,67,155,.16);
+  --ok:#2bb673; --ok-soft:rgba(43,182,115,.15);
+  --err:#e5484d; --err-soft:rgba(229,72,77,.15);
+  --info:#5b8def; --info-soft:rgba(91,141,239,.15);
+  --shadow:0 1px 2px rgba(0,0,0,.6),0 10px 30px -22px rgba(0,0,0,1);
+}
+:root[data-theme=light]{
+  --ink:#14161d; --ink-2:#43485a; --muted:#787e90; --faint:#a0a5b4;
+  --app:#eceef3; --card:#fff; --sunk:#f4f5f9; --rail:#161a24;
+  --line:rgba(20,22,29,.11); --line-2:rgba(20,22,29,.06);
+  --shadow:0 1px 2px rgba(20,22,29,.06),0 10px 30px -22px rgba(20,22,29,.6);
+}
+body{background:var(--app);color:var(--ink);min-height:100vh;
+  font-family:Poppins,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;font-size:12.5px}
+button,input{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer;text-align:left}
+img{display:block;max-width:100%}
+.i{display:inline-flex;flex:none;width:1em;height:1em;line-height:0}
+.i>svg{display:block;width:100%;height:100%}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11px;letter-spacing:-.2px}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---- shell --------------------------------------------------------------- */
+.shell{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+.rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;color:#e9ebf2}
+.rail__env{background:var(--acc);color:#12141a;padding:5px 14px;font-size:9.5px;font-weight:700;
+  text-transform:uppercase;letter-spacing:1.1px;display:flex;align-items:center;gap:6px}
+.rail__env .i{font-size:12px}
+.rail__top{padding:15px 15px 13px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.07)}
+.logo__m{width:27px;height:27px;border-radius:8px;background:linear-gradient(158deg,#ffc86b,#f0a93b 52%,#d98a15);
+  display:grid;place-items:center;color:#12141a;font-size:14px}
+.rail__top b{font-size:14px;font-weight:700;letter-spacing:-.3px;display:block;line-height:1.2}
+.rail__top span{font-size:9px;font-weight:700;color:var(--acc);text-transform:uppercase;letter-spacing:1px}
+.rail__s{padding:15px 15px 6px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5a5f72}
+.rail nav{padding:0 9px;display:flex;flex-direction:column;gap:1px}
+.rail nav button{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;
+  font-size:12px;font-weight:500;color:#aeb2c2;position:relative}
+.rail nav button:hover{background:rgba(255,255,255,.05);color:#e9ebf2}
+.rail nav button.is-active{background:rgba(240,169,59,.13);color:#f0a93b;font-weight:600}
+.rail nav .i{font-size:15px;opacity:.75}
+.rail nav button.is-active .i{opacity:1}
+.rail nav em{margin-left:auto;font-style:normal;font-size:10px;font-weight:700;border-radius:20px;
+  padding:1px 6px;background:rgba(255,255,255,.08);color:#aeb2c2}
+.rail nav em.hot{background:var(--acc);color:#12141a}
+.rail__foot{margin-top:auto;padding:11px;border-top:1px solid rgba(255,255,255,.07)}
+.who{display:flex;align-items:center;gap:9px;padding:7px;border-radius:9px}
+.who__av{width:28px;height:28px;border-radius:7px;background:linear-gradient(158deg,#ffc86b,#f0a93b);
+  display:grid;place-items:center;color:#12141a;font-weight:700;font-size:11px;flex:none}
+.who b{font-size:11.5px;font-weight:600;display:block;line-height:1.3;color:#e9ebf2}
+.who span{font-size:10px;color:#7c8195}
+
+/* ---- topbar -------------------------------------------------------------- */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{height:50px;border-bottom:1px solid var(--line);background:var(--card);display:flex;align-items:center;
+  gap:11px;padding:0 18px;position:sticky;top:0;z-index:40}
+.top h1{font-size:13.5px;font-weight:600}
+.sp{flex:1}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;
+  width:250px;color:var(--muted);font-size:11.5px;background:var(--sunk)}
+.search .i{font-size:13px}
+.ib{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;font-size:14px;color:var(--ink-2);
+  border:1px solid var(--line);background:var(--sunk);position:relative}
+.ib:hover{color:var(--ink)}
+.ib__d{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--acc)}
+
+.body{padding:18px;flex:1}
+.btn{border-radius:8px;padding:6px 13px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;
+  gap:6px;justify-content:center;white-space:nowrap;border:1px solid transparent}
+.btn .i{font-size:13px}
+.btn--a{background:var(--acc);color:#12141a}
+.btn--g{border-color:var(--line);background:var(--sunk)}
+.btn--g:hover{background:var(--card)}
+.btn--x{border-color:var(--danger);color:var(--danger);background:var(--danger-soft)}
+.btn--ok{background:var(--ok);color:#04150c}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+.panel__h{display:flex;align-items:center;gap:11px;padding:12px 15px;border-bottom:1px solid var(--line)}
+.panel__h h2{font-size:12.5px;font-weight:600}
+.panel__h p{font-size:10.5px;color:var(--muted);margin-top:1px}
+.tag{display:inline-flex;align-items:center;gap:4px;border-radius:5px;padding:2px 7px;font-size:10px;
+  font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
+.tag--ok{background:var(--ok-soft);color:var(--ok)}
+.tag--acc{background:var(--acc-soft);color:var(--acc)}
+.tag--err{background:var(--err-soft);color:var(--err)}
+.tag--info{background:var(--info-soft);color:var(--info)}
+.tag--mute{background:var(--sunk);color:var(--muted);border:1px solid var(--line)}
+.tag--dg{background:var(--danger-soft);color:var(--danger)}
+.dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+
+/* ---- kpi ----------------------------------------------------------------- */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px 14px;box-shadow:var(--shadow)}
+.kpi__l{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+.kpi__v{font-size:24px;font-weight:700;letter-spacing:-.9px;margin:6px 0 3px;line-height:1}
+.kpi__d{font-size:10.5px;font-weight:600;display:flex;align-items:center;gap:4px}
+.kpi__d .i{font-size:11px}
+.up{color:var(--ok)} .down{color:var(--err)} .flat{color:var(--muted)}
+.kpi--alert{border-color:var(--acc-line);background:linear-gradient(180deg,var(--acc-soft),transparent 60%)}
+
+/* ---- tables -------------------------------------------------------------- */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);
+  text-align:left;padding:8px 13px;border-bottom:1px solid var(--line);background:var(--sunk);white-space:nowrap}
+.tbl td{padding:7px 13px;border-bottom:1px solid var(--line-2);font-size:12px;vertical-align:middle}
+.tbl tbody tr{height:38px}
+.tbl tbody tr:hover{background:var(--sunk)}
+.tbl tbody tr.is-sel{background:var(--acc-soft)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl .r{text-align:right}
+.cm{display:flex;align-items:center;gap:9px;min-width:0}
+.av{width:26px;height:26px;border-radius:6px;background-size:cover;background-position:center;flex:none;
+  background-color:var(--sunk)}
+.av--r{border-radius:50%}
+.cm b{font-size:12px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}
+.cm span{font-size:10px;color:var(--muted)}
+.acts{display:flex;gap:3px;justify-content:flex-end}
+.acts button{height:25px;padding:0 8px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;color:var(--muted);border:1px solid transparent}
+.acts button:hover{background:var(--sunk);color:var(--ink);border-color:var(--line)}
+.acts .ok:hover{color:var(--ok);border-color:var(--ok)}
+.acts .no:hover{color:var(--err);border-color:var(--err)}
+.acts .i{font-size:13px}
+
+.tools{display:flex;align-items:center;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{padding:4px 11px;border-radius:6px;font-size:11.5px;font-weight:600;color:var(--muted)}
+.seg button.is-on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.seg button.is-on.hot{background:var(--acc);color:#12141a}
+.filt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;
+  padding:5px 10px;font-size:11.5px;background:var(--sunk);font-weight:500}
+.filt .i{font-size:12px;color:var(--muted)}
+
+/* ---- queue cards --------------------------------------------------------- */
+.q{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.qc{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px;box-shadow:var(--shadow)}
+.qc__h{display:flex;align-items:flex-start;gap:10px;margin-bottom:11px}
+.qc__h .av{width:34px;height:34px}
+.qc__h b{font-size:12.5px;font-weight:600;display:block}
+.qc__h span{font-size:10.5px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:11.5px;padding:11px 0;
+  border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);margin-bottom:11px}
+.kv dt{color:var(--muted);font-size:10.5px}
+.kv dd{text-align:right;font-weight:500}
+.qc__f{display:flex;gap:7px}
+.qc__f .btn{flex:1}
+
+/* ---- plans --------------------------------------------------------------- */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.plan{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:17px;box-shadow:var(--shadow)}
+.plan--hot{border-color:var(--acc-line);box-shadow:0 0 0 3px var(--acc-soft),var(--shadow)}
+.plan__n{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--acc)}
+.plan__p{font-size:26px;font-weight:700;letter-spacing:-1px;margin:8px 0 2px}
+.plan__p small{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0}
+.plan__c{font-size:11px;color:var(--muted);padding-bottom:12px;border-bottom:1px solid var(--line-2);margin-bottom:12px}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.plan li{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.45}
+.plan li .i{font-size:13px;color:var(--ok);margin-top:1px;flex:none}
+.plan li.off{color:var(--faint)}
+.plan li.off .i{color:var(--faint)}
+
+/* ---- bars ---------------------------------------------------------------- */
+.bar{height:6px;border-radius:6px;background:var(--sunk);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;border-radius:6px;background:var(--acc)}
+.bar i.ok{background:var(--ok)} .bar i.err{background:var(--err)}
+
+/* ---- audit --------------------------------------------------------------- */
+.log{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11px}
+.log tr td:first-child{color:var(--muted);white-space:nowrap}
+.sev{display:inline-block;width:56px;font-weight:700}
+.sev--w{color:var(--acc)} .sev--e{color:var(--err)} .sev--i{color:var(--info)} .sev--o{color:var(--ok)}
+
+/* ---- tour queue ---------------------------------------------------------- */
+.tq{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.tqc{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;box-shadow:var(--shadow)}
+.tqc__p{aspect-ratio:16/10;background-size:cover;background-position:center;position:relative;background-color:var(--sunk)}
+.tqc__p::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,8,14,.5),rgba(6,8,14,.1) 40%,rgba(6,8,14,.75))}
+.tqc__b{position:absolute;top:11px;left:12px;z-index:2}
+.tqc__m{position:absolute;left:9px;right:9px;bottom:8px;z-index:2;display:flex;justify-content:space-between;
+  align-items:flex-end;color:#fff;gap:8px}
+.tqc__m b{font-size:11.5px;font-weight:600;display:block;line-height:1.35}
+.tqc__m span{font-size:10px;opacity:.8}
+.tqc__x{padding:11px 13px}
+.tqc__x .kv{border-top:0;padding-top:0;margin-bottom:10px}
+
+.warn{display:flex;align-items:flex-start;gap:10px;background:var(--acc-soft);border:1px solid var(--acc-line);
+  border-radius:10px;padding:11px 13px;margin-bottom:14px}
+.warn .i{font-size:16px;color:var(--acc);flex:none;margin-top:1px}
+.warn b{font-size:11.5px;font-weight:700;display:block;margin-bottom:2px}
+.warn p{font-size:11px;color:var(--ink-2);line-height:1.55}
+
+.dev{position:fixed;right:15px;bottom:15px;z-index:200;display:flex;gap:7px}
+.dev button{border-radius:8px;padding:6px 11px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;
+  gap:6px;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
+.ix{position:fixed;inset:0;z-index:210;background:rgba(4,6,10,.72);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px}
+.ix.is-open{display:flex}
+.ix__p{background:var(--card);border-radius:14px;padding:20px;max-width:540px;width:100%;
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.ix__p h3{font-size:13px;margin-bottom:3px}
+.ix__p p{font-size:11px;color:var(--muted);margin-bottom:13px;line-height:1.6}
+.ix__g{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.ix__g button{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;font-weight:600;background:var(--sunk)}
+.ix__g button b{display:block;font-size:9.5px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.screen{display:none}
+.screen.is-on{display:block}
+@media(max-width:1300px){.kpis{grid-template-columns:repeat(3,1fr)}.tq{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:1000px){.q,.plans{grid-template-columns:1fr}}
+@media(max-width:860px){.shell{grid-template-columns:1fr}.rail{display:none}}
+</style>
+
+<div class="shell">
+  <!-- ======================= RAIL ======================== -->
+  <aside class="rail">
+    <div class="rail__env"><span class="i" data-i="warning-circle-fill"></span> Production · lacasa-prod</div>
+    <div class="rail__top">
+      <span class="logo__m"><span class="i" data-i="lock-simple"></span></span>
+      <div><b>La Casa</b><span>Control room</span></div>
+    </div>
+    <div class="rail__s">Platform</div>
+    <nav>
+      <button data-go="x-over"><span class="i" data-i="squares-four-fill"></span> Overview</button>
+      <button data-go="x-apps"><span class="i" data-i="user-circle-fill"></span> Applications <em class="hot">3</em></button>
+      <button data-go="x-users"><span class="i" data-i="users-three-fill"></span> Users <em>1,284</em></button>
+    </nav>
+    <div class="rail__s">Content</div>
+    <nav>
+      <button data-go="x-mod"><span class="i" data-i="buildings-fill"></span> Listings <em>412</em></button>
+      <button data-go="x-tours"><span class="i" data-i="video-camera-fill"></span> 3D tours <em class="hot">4</em></button>
+    </nav>
+    <div class="rail__s">Revenue</div>
+    <nav>
+      <button data-go="x-plans"><span class="i" data-i="tag-fill"></span> Plans &amp; premium</button>
+    </nav>
+    <div class="rail__s">System</div>
+    <nav>
+      <button data-go="x-audit"><span class="i" data-i="list-bullets"></span> Audit log</button>
+    </nav>
+    <div class="rail__foot">
+      <div class="who">
+        <div class="who__av">AO</div>
+        <div><b>Admin · orihero</b><span>Full access · 2FA on</span></div>
+        <span class="i" data-i="sign-out" style="margin-left:auto;font-size:14px;color:#7c8195"></span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <h1 data-title-for="x-over">Platform overview</h1>
+      <h1 data-title-for="x-apps">Realtor applications</h1>
+      <h1 data-title-for="x-users">Users</h1>
+      <h1 data-title-for="x-mod">Listing moderation</h1>
+      <h1 data-title-for="x-tours">3D tour review</h1>
+      <h1 data-title-for="x-plans">Plans &amp; premium</h1>
+      <h1 data-title-for="x-audit">Audit log</h1>
+      <div class="sp"></div>
+      <div class="search"><span class="i" data-i="magnifying-glass"></span> Search users, ads, UUIDs…</div>
+      <button class="ib"><span class="i" data-i="bell"></span><i class="ib__d"></i></button>
+      <button class="ib"><span class="i" data-i="gear-fill"></span></button>
+    </header>
+
+    <!-- ======================= OVERVIEW ==================== -->
+    <section class="screen body" id="x-over">
+      <div class="kpis">
+        <div class="kpi"><div class="kpi__l">Total users</div><div class="kpi__v num">1,284</div>
+          <div class="kpi__d up"><span class="i" data-i="arrow-up-right"></span> +64 this month</div></div>
+        <div class="kpi"><div class="kpi__l">Active agents</div><div class="kpi__v num">96</div>
+          <div class="kpi__d up"><span class="i" data-i="arrow-up-right"></span> +7</div></div>
+        <div class="kpi"><div class="kpi__l">Live listings</div><div class="kpi__v num">412</div>
+          <div class="kpi__d up"><span class="i" data-i="arrow-up-right"></span> +38</div></div>
+        <div class="kpi kpi--alert"><div class="kpi__l">Pending review</div><div class="kpi__v num">7</div>
+          <div class="kpi__d" style="color:var(--acc)"><span class="i" data-i="clock"></span> 3 apps · 4 tours</div></div>
+        <div class="kpi"><div class="kpi__l">Premium agents</div><div class="kpi__v num">14</div>
+          <div class="kpi__d up"><span class="i" data-i="arrow-up-right"></span> +3</div></div>
+        <div class="kpi"><div class="kpi__l">MRR</div><div class="kpi__v num">$740</div>
+          <div class="kpi__d up"><span class="i" data-i="arrow-up-right"></span> +21%</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:13px;align-items:start">
+        <div class="panel">
+          <div class="panel__h"><div><h2>Listings created — last 12 days</h2><p>Platform-wide, all agents</p></div>
+            <div class="sp"></div><div class="seg"><button class="is-on hot">12d</button><button>30d</button><button>90d</button></div></div>
+          <div style="padding:15px">
+            <svg viewBox="0 0 620 190" preserveAspectRatio="none" style="width:100%;height:190px;display:block">
+              <defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#f0a93b" stop-opacity=".3"/><stop offset="100%" stop-color="#f0a93b" stop-opacity="0"/>
+              </linearGradient></defs>
+              <g stroke="currentColor" stroke-opacity=".08"><line x1="0" y1="12" x2="620" y2="12"/>
+                <line x1="0" y1="66" x2="620" y2="66"/><line x1="0" y1="120" x2="620" y2="120"/><line x1="0" y1="165" x2="620" y2="165"/></g>
+              <path d="M10,120 L65,132 L120,90 L175,140 L230,102 L285,118 L340,42 L395,110 L450,78 L505,120 L560,56 L610,88 L610,165 L10,165 Z" fill="url(#ga)"/>
+              <path d="M10,120 L65,132 L120,90 L175,140 L230,102 L285,118 L340,42 L395,110 L450,78 L505,120 L560,56 L610,88"
+                    fill="none" stroke="#f0a93b" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <circle cx="560" cy="56" r="4" fill="#f0a93b"/>
+              <g font-size="9.5" fill="currentColor" fill-opacity=".4" font-family="Poppins">
+                <text x="6" y="174">Jul 23</text><text x="290" y="174">Jul 29</text><text x="566" y="174">Aug 3</text></g>
+              <g font-size="9.5" fill="currentColor" fill-opacity=".4" font-family="Poppins" text-anchor="end" class="num">
+                <text x="612" y="9">17</text><text x="612" y="63">11</text><text x="612" y="117">5</text><text x="612" y="162">0</text></g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__h"><div><h2>Queues</h2><p>Waiting on an admin</p></div></div>
+          <table class="tbl">
+            <tbody>
+              <tr><td><div class="cm"><span class="i" data-i="user-circle-fill" style="font-size:16px;color:var(--acc)"></span>
+                <div><b>Realtor applications</b><span>Oldest: 2 days</span></div></div></td>
+                <td class="r"><span class="tag tag--acc">3</span></td>
+                <td class="r"><div class="acts"><button data-go="x-apps"><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+              <tr><td><div class="cm"><span class="i" data-i="video-camera-fill" style="font-size:16px;color:var(--acc)"></span>
+                <div><b>3D tours awaiting review</b><span>Oldest: 5 h</span></div></div></td>
+                <td class="r"><span class="tag tag--acc">4</span></td>
+                <td class="r"><div class="acts"><button data-go="x-tours"><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+              <tr><td><div class="cm"><span class="i" data-i="warning-circle-fill" style="font-size:16px;color:var(--err)"></span>
+                <div><b>Reported listings</b><span>Oldest: 1 day</span></div></div></td>
+                <td class="r"><span class="tag tag--err">2</span></td>
+                <td class="r"><div class="acts"><button data-go="x-mod"><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+              <tr><td><div class="cm"><span class="i" data-i="link-simple" style="font-size:16px;color:var(--muted)"></span>
+                <div><b>Expired IG tokens</b><span>Refresh job skipped</span></div></div></td>
+                <td class="r"><span class="tag tag--mute">4</span></td>
+                <td class="r"><div class="acts"><button><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+            </tbody>
+          </table>
+          <div style="padding:13px 15px;border-top:1px solid var(--line)">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+              <span style="color:var(--muted)">MinIO storage</span><span class="num">184 GB / 500 GB</span></div>
+            <div class="bar"><i style="width:37%"></i></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin:10px 0 3px">
+              <span style="color:var(--muted)">Publish success rate (7d)</span><span class="num">94.2%</span></div>
+            <div class="bar"><i class="ok" style="width:94%"></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= APPLICATIONS ================ -->
+    <section class="screen body" id="x-apps">
+      <div class="warn"><span class="i" data-i="info"></span>
+        <div><b>Approving promotes the account's role from USER to AGENT.</b>
+        <p>This is the only path to an agent account — <span class="mono">RealtorStatus</span> is an application, not a permission.
+        Approving writes <span class="mono">realtorDecidedAt</span> and cannot be silently undone; demoting later orphans their listings.</p></div></div>
+      <div class="tools">
+        <div class="seg"><button class="is-on hot">Pending 3</button><button>Approved 96</button><button>Rejected 12</button></div>
+        <span class="filt"><span class="i" data-i="funnel-fill"></span> All kinds</span>
+        <div class="sp"></div>
+        <span style="font-size:11px;color:var(--muted)">Sorted by oldest first</span>
+      </div>
+      <div class="q">
+        <div class="qc">
+          <div class="qc__h"><div class="av av--r" data-ph="ag-otabek"></div>
+            <div><b>Otabek Yusupov</b><span>otabek@lacasa.uz</span></div>
+            <span class="tag tag--acc" style="margin-left:auto">Agency</span></div>
+          <dl class="kv">
+            <dt>Applied</dt><dd class="num">01.08.2026 | 14:22</dd>
+            <dt>Agency name</dt><dd>Yusupov Realty</dd>
+            <dt>Office phone</dt><dd class="mono">+998712001122</dd>
+            <dt>Team size</dt><dd>6–10</dd>
+            <dt>User since</dt><dd class="num">14.03.2026</dd>
+          </dl>
+          <div class="qc__f"><button class="btn btn--ok" style="flex:1"><span class="i" data-i="check-bold"></span> Approve</button>
+            <button class="btn btn--g"><span class="i" data-i="x"></span> Reject</button></div>
+        </div>
+        <div class="qc">
+          <div class="qc__h"><div class="av av--r" data-ph="ag-kamola"></div>
+            <div><b>Kamola Rashidova</b><span>kamola@lacasa.uz</span></div>
+            <span class="tag tag--info" style="margin-left:auto">Solo</span></div>
+          <dl class="kv">
+            <dt>Applied</dt><dd class="num">02.08.2026 | 09:05</dd>
+            <dt>Agency name</dt><dd style="color:var(--faint)">—</dd>
+            <dt>Office phone</dt><dd style="color:var(--faint)">—</dd>
+            <dt>Team size</dt><dd style="color:var(--faint)">—</dd>
+            <dt>User since</dt><dd class="num">28.06.2026</dd>
+          </dl>
+          <div class="qc__f"><button class="btn btn--ok" style="flex:1"><span class="i" data-i="check-bold"></span> Approve</button>
+            <button class="btn btn--g"><span class="i" data-i="x"></span> Reject</button></div>
+        </div>
+        <div class="qc">
+          <div class="qc__h"><div class="av av--r" data-ph="ag-sardor"></div>
+            <div><b>Sardor Abdullayev</b><span>sardor@lacasa.uz</span></div>
+            <span class="tag tag--acc" style="margin-left:auto">Agency</span></div>
+          <dl class="kv">
+            <dt>Applied</dt><dd class="num">02.08.2026 | 17:48</dd>
+            <dt>Agency name</dt><dd>Chorsu Estate</dd>
+            <dt>Office phone</dt><dd class="mono">+998712556677</dd>
+            <dt>Team size</dt><dd>1–5</dd>
+            <dt>User since</dt><dd class="num">11.07.2026</dd>
+          </dl>
+          <div class="qc__f"><button class="btn btn--ok" style="flex:1"><span class="i" data-i="check-bold"></span> Approve</button>
+            <button class="btn btn--g"><span class="i" data-i="x"></span> Reject</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= USERS ======================= -->
+    <section class="screen body" id="x-users">
+      <div class="tools">
+        <div class="seg"><button class="is-on hot">All</button><button>Buyers</button><button>Agents</button><button>Coworkers</button></div>
+        <span class="filt"><span class="i" data-i="funnel-fill"></span> Any status</span>
+        <span class="filt"><span class="i" data-i="tag-fill"></span> Any plan</span>
+        <div class="sp"></div>
+        <button class="btn btn--g"><span class="i" data-i="upload-simple"></span> Export CSV</button>
+      </div>
+      <div class="panel">
+        <table class="tbl" data-rows>
+          <thead><tr><th style="width:24%">User</th><th>UUID</th><th>Role</th><th>Realtor status</th><th>Plan</th>
+            <th class="r">Ads</th><th class="r">Leads</th><th>Created</th><th></th></tr></thead>
+          <tbody>
+            <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-javlon"></div>
+              <div><b>Javlon Rustamov</b><span>javlon@lacasa.uz</span></div></div></td>
+              <td class="mono">a3f21e08…</td><td><span class="tag tag--info">AGENT</span></td>
+              <td><span class="tag tag--ok">Approved</span></td><td><span class="tag tag--acc">Premium</span></td>
+              <td class="r num">24</td><td class="r num">12</td><td class="num">14.03.2026</td>
+              <td><div class="acts"><button><span class="i" data-i="eye"></span></button>
+                <button class="no"><span class="i" data-i="lock-simple"></span></button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-shahnoza"></div>
+              <div><b>Shahnoza Yoldosheva</b><span>shahnoza@lacasa.uz</span></div></div></td>
+              <td class="mono">b71c4d92…</td><td><span class="tag tag--info">AGENT</span></td>
+              <td><span class="tag tag--ok">Approved</span></td><td><span class="tag tag--acc">Premium</span></td>
+              <td class="r num">18</td><td class="r num">9</td><td class="num">22.03.2026</td>
+              <td><div class="acts"><button><span class="i" data-i="eye"></span></button>
+                <button class="no"><span class="i" data-i="lock-simple"></span></button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" style="background:var(--sunk);display:grid;
+              place-items:center;color:var(--muted);font-weight:700;font-size:10px">BN</div>
+              <div><b>Bekzod Nazarov</b><span>bekzod@lacasa.uz</span></div></div></td>
+              <td class="mono">9c6e41af…</td><td><span class="tag tag--info">AGENT</span></td>
+              <td><span class="tag tag--ok">Approved</span></td><td><span class="tag tag--acc">Premium</span></td>
+              <td class="r num">15</td><td class="r num">6</td><td class="num">02.02.2026</td>
+              <td><div class="acts"><button><span class="i" data-i="eye"></span></button>
+                <button class="no"><span class="i" data-i="lock-simple"></span></button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" style="background:var(--sunk);display:grid;
+              place-items:center;color:var(--muted);font-weight:700;font-size:10px">AQ</div>
+              <div><b>Aziz Qodirov</b><span>aziz@lacasa.uz</span></div></div></td>
+              <td class="mono">7b2d05c9…</td><td><span class="tag tag--info">AGENT</span></td>
+              <td><span class="tag tag--ok">Approved</span></td><td><span class="tag tag--acc">Premium</span></td>
+              <td class="r num">9</td><td class="r num">4</td><td class="num">19.04.2026</td>
+              <td><div class="acts"><button><span class="i" data-i="eye"></span></button>
+                <button class="no"><span class="i" data-i="lock-simple"></span></button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-otabek"></div>
+              <div><b>Otabek Yusupov</b><span>otabek@lacasa.uz</span></div></div></td>
+              <td class="mono">c92e8a17…</td><td><span class="tag tag--mute">USER</span></td>
+              <td><span class="tag tag--acc">Pending</span></td><td><span class="tag tag--mute">Free</span></td>
+              <td class="r num">0</td><td class="r num">0</td><td class="num">14.03.2026</td>
+              <td><div class="acts"><button class="ok" data-go="x-apps"><span class="i" data-i="check-bold"></span> Review</button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-sardor"></div>
+              <div><b>Sardor Abdullayev</b><span>sardor@lacasa.uz</span></div></div></td>
+              <td class="mono">d40a7f63…</td><td><span class="tag tag--mute">USER</span></td>
+              <td><span class="tag tag--acc">Pending</span></td><td><span class="tag tag--mute">Free</span></td>
+              <td class="r num">0</td><td class="r num">0</td><td class="num">11.07.2026</td>
+              <td><div class="acts"><button class="ok" data-go="x-apps"><span class="i" data-i="check-bold"></span> Review</button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-kamola"></div>
+              <div><b>Kamola Rashidova</b><span>kamola@lacasa.uz</span></div></div></td>
+              <td class="mono">e5b13c04…</td><td><span class="tag tag--mute">USER</span></td>
+              <td><span class="tag tag--acc">Pending</span></td><td><span class="tag tag--mute">Free</span></td>
+              <td class="r num">0</td><td class="r num">0</td><td class="num">28.06.2026</td>
+              <td><div class="acts"><button class="ok" data-go="x-apps"><span class="i" data-i="check-bold"></span> Review</button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av av--r" style="background:var(--sunk);display:grid;
+              place-items:center;color:var(--muted);font-weight:700;font-size:10px">DY</div>
+              <div><b>Dilnoza Yusupova</b><span>dilnoza@gmail.com</span></div></div></td>
+              <td class="mono">f8c30b51…</td><td><span class="tag tag--mute">USER</span></td>
+              <td><span class="tag tag--mute">None</span></td><td><span class="tag tag--mute">Free</span></td>
+              <td class="r num">0</td><td class="r num">0</td><td class="num">03.08.2026</td>
+              <td><div class="acts"><button><span class="i" data-i="eye"></span></button>
+                <button class="no"><span class="i" data-i="lock-simple"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= MODERATION ================== -->
+    <section class="screen body" id="x-mod">
+      <div class="tools">
+        <div class="seg"><button class="is-on hot">Reported 2</button><button>All 412</button><button>Drafts 27</button><button>Sold 89</button></div>
+        <span class="filt"><span class="i" data-i="map-pin-fill"></span> All districts</span>
+        <div class="sp"></div>
+        <button class="btn btn--g"><span class="i" data-i="upload-simple"></span> Export</button>
+      </div>
+      <div class="panel">
+        <table class="tbl" data-rows>
+          <thead><tr><th style="width:30%">Listing</th><th>Ref</th><th>Agent</th><th class="r">Price</th>
+            <th>Stage</th><th>Report reason</th><th>Reported</th><th></th></tr></thead>
+          <tbody>
+            <tr data-row class="is-sel"><td><div class="cm"><div class="av" data-ph="ad1006"></div>
+              <div><b>Retail space near Chorsu bazaar</b><span>Shayxontohur · 48 m²</span></div></div></td>
+              <td class="mono">#c4e91</td><td><div class="cm"><div class="av av--r" style="width:20px;height:20px;background:var(--sunk);display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:8px">AQ</div></div></td>
+              <td class="r num">$1,200/mo</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--err">Duplicate</span></td><td class="num">02.08.2026</td>
+              <td><div class="acts"><button class="ok"><span class="i" data-i="check-bold"></span> Keep</button>
+                <button class="no"><span class="i" data-i="eye-slash"></span> Hide</button></div></td></tr>
+            <tr data-row><td><div class="cm"><div class="av" data-ph="ad1004"></div>
+              <div><b>Office space on Amir Temur avenue</b><span>Mirzo Ulugbek · 110 m²</span></div></div></td>
+              <td class="mono">#b6f42</td><td><div class="cm"><div class="av av--r" style="width:20px;height:20px;background:var(--sunk);display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:8px">BN</div></div></td>
+              <td class="r num">$900/mo</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--err">Wrong price</span></td><td class="num">03.08.2026</td>
+              <td><div class="acts"><button class="ok"><span class="i" data-i="check-bold"></span> Keep</button>
+                <button class="no"><span class="i" data-i="eye-slash"></span> Hide</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= TOUR REVIEW ================== -->
+    <section class="screen body" id="x-tours">
+      <div class="warn"><span class="i" data-i="warning-circle-fill"></span>
+        <div><b>Proposed surface — no schema backing exists.</b>
+        <p>There is no <span class="mono">Tour</span>, <span class="mono">TourScene</span> or <span class="mono">TourHotspot</span> model,
+        and <span class="mono">AdMediaType</span> has no <span class="mono">PANORAMA</span> member. Approving a tour here would gate it
+        behind the agent's plan, which also does not exist yet. Design only.</p></div></div>
+      <div class="tools">
+        <div class="seg"><button class="is-on hot">Awaiting review 4</button><button>Live 41</button><button>Rejected 3</button></div>
+        <span class="filt"><span class="i" data-i="funnel-fill"></span> All agents</span>
+        <div class="sp"></div>
+        <span style="font-size:11px;color:var(--muted)">Processing queue: 2 running</span>
+      </div>
+      <div class="tq">
+        <div class="tqc">
+          <div class="tqc__p" data-ph="ad1001-hero">
+            <span class="tqc__b tag tag--acc">12 scenes</span>
+            <div class="tqc__m"><div><b>Bright 3-room apartment</b><span>Chilonzor · Javlon Rustamov</span></div></div></div>
+          <div class="tqc__x">
+            <dl class="kv"><dt>Uploaded</dt><dd class="num">03.08.2026 | 08:12</dd>
+              <dt>Source</dt><dd>Insta360 X4</dd>
+              <dt>Resolution</dt><dd class="num">8000 × 4000</dd>
+              <dt>Processed</dt><dd><span class="tag tag--ok">Ready</span></dd></dl>
+            <div class="qc__f"><button class="btn btn--ok" style="flex:1"><span class="i" data-i="check-bold"></span> Publish</button>
+              <button class="btn btn--g"><span class="i" data-i="eye"></span></button></div></div>
+        </div>
+        <div class="tqc">
+          <div class="tqc__p" data-ph="ad1003">
+            <span class="tqc__b tag tag--acc">8 scenes</span>
+            <div class="tqc__m"><div><b>Family house with garden</b><span>Sergeli · Javlon Rustamov</span></div></div></div>
+          <div class="tqc__x">
+            <dl class="kv"><dt>Uploaded</dt><dd class="num">03.08.2026 | 07:40</dd>
+              <dt>Source</dt><dd>Ricoh Theta Z1</dd>
+              <dt>Resolution</dt><dd class="num">6720 × 3360</dd>
+              <dt>Processed</dt><dd><span class="tag tag--ok">Ready</span></dd></dl>
+            <div class="qc__f"><button class="btn btn--ok" style="flex:1"><span class="i" data-i="check-bold"></span> Publish</button>
+              <button class="btn btn--g"><span class="i" data-i="eye"></span></button></div></div>
+        </div>
+        <div class="tqc">
+          <div class="tqc__p" data-ph="ad1004">
+            <span class="tqc__b tag tag--info">Processing</span>
+            <div class="tqc__m"><div><b>Office space, Amir Temur</b><span>Mirzo Ulugbek · Bekzod Nazarov</span></div></div></div>
+          <div class="tqc__x">
+            <dl class="kv"><dt>Uploaded</dt><dd class="num">03.08.2026 | 11:58</dd>
+              <dt>Source</dt><dd>Insta360 X3</dd>
+              <dt>Resolution</dt><dd class="num">11008 × 5504</dd>
+              <dt>Processed</dt><dd><span class="tag tag--info">4 / 9 scenes</span></dd></dl>
+            <div class="bar" style="margin-bottom:11px"><i style="width:44%"></i></div>
+            <div class="qc__f"><button class="btn btn--g" style="flex:1" disabled>Waiting…</button></div></div>
+        </div>
+        <div class="tqc">
+          <div class="tqc__p" data-ph="ad1006">
+            <span class="tqc__b tag tag--err">Failed</span>
+            <div class="tqc__m"><div><b>Retail space, Chorsu</b><span>Shayxontohur · Aziz Qodirov</span></div></div></div>
+          <div class="tqc__x">
+            <dl class="kv"><dt>Uploaded</dt><dd class="num">03.08.2026 | 06:22</dd>
+              <dt>Source</dt><dd style="color:var(--faint)">Unknown</dd>
+              <dt>Resolution</dt><dd class="num">4000 × 3000</dd>
+              <dt>Processed</dt><dd><span class="tag tag--err">Not 2:1</span></dd></dl>
+            <p style="font-size:10.5px;color:var(--err);margin-bottom:10px;line-height:1.5">
+              No GPano XMP tag and aspect ratio is 4:3 — this is a flat photo, not an equirectangular panorama.</p>
+            <div class="qc__f"><button class="btn btn--x" style="flex:1"><span class="i" data-i="trash"></span> Discard</button></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= PLANS ======================= -->
+    <section class="screen body" id="x-plans">
+      <div class="warn"><span class="i" data-i="warning-circle-fill"></span>
+        <div><b>Proposed surface — La Casa has no monetization primitive today.</b>
+        <p>No plan, subscription, billing or payment concept exists in the schema or in <span class="mono">docs/</span>.
+        The two axes below are a proposal: a per-agent <span class="mono">User.plan</span> for capability unlocks, and a
+        separate per-ad <span class="mono">Ad.premiumUntil</span> for placement. Payments in UZS need Payme/Click/Uzum — Stripe does not operate in Uzbekistan.</p></div></div>
+
+      <div class="plans">
+        <div class="plan">
+          <div class="plan__n">Free</div>
+          <div class="plan__p">$0<small>/mo</small></div>
+          <div class="plan__c num">82 agents · 85% of base</div>
+          <ul>
+            <li><span class="i" data-i="check-bold"></span> Unlimited listings</li>
+            <li><span class="i" data-i="check-bold"></span> Telegram publishing</li>
+            <li><span class="i" data-i="check-bold"></span> Leads + kanban</li>
+            <li class="off"><span class="i" data-i="x"></span> 3D tours</li>
+            <li class="off"><span class="i" data-i="x"></span> Instagram + OLX crosspost</li>
+            <li class="off"><span class="i" data-i="x"></span> Listing analytics</li>
+          </ul>
+        </div>
+        <div class="plan plan--hot">
+          <div class="plan__n">Premium</div>
+          <div class="plan__p">$40<small>/mo</small></div>
+          <div class="plan__c num">14 agents · $560 MRR</div>
+          <ul>
+            <li><span class="i" data-i="check-bold"></span> Everything in Free</li>
+            <li><span class="i" data-i="check-bold"></span> <b>3D tours</b> — unlimited scenes</li>
+            <li><span class="i" data-i="check-bold"></span> Instagram + OLX crosspost</li>
+            <li><span class="i" data-i="check-bold"></span> Tour + listing analytics</li>
+            <li><span class="i" data-i="check-bold"></span> 10 coworker seats</li>
+            <li class="off"><span class="i" data-i="x"></span> 360° camera included</li>
+          </ul>
+        </div>
+        <div class="plan">
+          <div class="plan__n">Premium + Camera</div>
+          <div class="plan__p">$65<small>/mo</small></div>
+          <div class="plan__c num">0 agents · 12-month commitment</div>
+          <ul>
+            <li><span class="i" data-i="check-bold"></span> Everything in Premium</li>
+            <li><span class="i" data-i="check-bold"></span> Insta360 X4 included</li>
+            <li><span class="i" data-i="check-bold"></span> Replacement warranty</li>
+            <li><span class="i" data-i="check-bold"></span> Onboarding shoot</li>
+            <li><span class="i" data-i="check-bold"></span> Priority tour processing</li>
+            <li class="off"><span class="i" data-i="x"></span> Not launched</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 404px;gap:13px;align-items:start">
+        <div class="panel">
+          <div class="panel__h"><div><h2>Premium agents</h2><p>Per-agent capability plan</p></div><div class="sp"></div>
+            <button class="btn btn--a"><span class="i" data-i="plus"></span> Grant plan</button></div>
+          <table class="tbl" data-rows>
+            <thead><tr><th style="width:28%">Agent</th><th>Plan</th><th>Since</th><th>Renews</th>
+              <th class="r">Tours</th><th class="r">Storage</th><th>Payment</th><th></th></tr></thead>
+            <tbody>
+              <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-javlon"></div>
+                <div><b>Javlon Rustamov</b><span>Chilonzor</span></div></div></td>
+                <td><span class="tag tag--acc">Premium</span></td><td class="num">01.06.2026</td><td class="num">01.09.2026</td>
+                <td class="r num">12</td><td class="r num">1.4 GB</td><td><span class="tag tag--ok">Payme</span></td>
+                <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button>
+                  <button class="no"><span class="i" data-i="x"></span></button></div></td></tr>
+              <tr data-row><td><div class="cm"><div class="av av--r" data-ph="ag-shahnoza"></div>
+                <div><b>Shahnoza Yoldosheva</b><span>Yunusobod</span></div></div></td>
+                <td><span class="tag tag--acc">Premium</span></td><td class="num">15.06.2026</td><td class="num">15.08.2026</td>
+                <td class="r num">7</td><td class="r num">0.9 GB</td><td><span class="tag tag--ok">Click</span></td>
+                <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button>
+                  <button class="no"><span class="i" data-i="x"></span></button></div></td></tr>
+              <tr data-row><td><div class="cm"><div class="av av--r" style="background:var(--sunk);display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:10px">BN</div>
+                <div><b>Bekzod Nazarov</b><span>Mirzo Ulugbek</span></div></div></td>
+                <td><span class="tag tag--acc">Premium</span></td><td class="num">20.05.2026</td><td class="num" style="color:var(--err)">Overdue 3 d</td>
+                <td class="r num">9</td><td class="r num">2.1 GB</td><td><span class="tag tag--err">Failed</span></td>
+                <td><div class="acts"><button class="ok"><span class="i" data-i="arrow-right"></span> Retry</button>
+                  <button class="no"><span class="i" data-i="x"></span></button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <div class="panel__h"><div><h2>Promoted listings</h2><p>Per-ad placement — the second axis</p></div></div>
+          <table class="tbl">
+            <thead><tr><th>Listing</th><th>Slot</th><th>Until</th></tr></thead>
+            <tbody>
+              <tr><td><div class="cm"><div class="av" data-ph="ad1001"></div>
+                <div><b style="max-width:130px">Bright 3-room…</b><span>Chilonzor</span></div></div></td>
+                <td><span class="tag tag--acc">Featured</span></td><td class="num">10.08.2026</td></tr>
+              <tr><td><div class="cm"><div class="av" data-ph="ad1003"></div>
+                <div><b style="max-width:130px">Family house…</b><span>Sergeli</span></div></div></td>
+                <td><span class="tag tag--info">Top of search</span></td><td class="num">07.08.2026</td></tr>
+              <tr><td><div class="cm"><div class="av" data-ph="ad1008"></div>
+                <div><b style="max-width:130px">Renovated 1-room…</b><span>Yakkasaroy</span></div></div></td>
+                <td><span class="tag tag--info">Top of search</span></td><td class="num">05.08.2026</td></tr>
+            </tbody>
+          </table>
+          <div style="padding:13px 15px;border-top:1px solid var(--line)">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+              <span style="color:var(--muted)">Promotion revenue (Aug)</span><span class="num">$180</span></div>
+            <div class="bar"><i style="width:22%"></i></div>
+            <p style="font-size:10.5px;color:var(--muted);margin-top:9px;line-height:1.5">
+              Placement is deliberately a separate axis from the capability plan — an agent with a camera
+              wants tours on every listing, but pays per listing for attention.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= AUDIT ======================= -->
+    <section class="screen body" id="x-audit">
+      <div class="tools">
+        <div class="seg"><button class="is-on hot">All</button><button>Auth</button><button>Moderation</button><button>Billing</button><button>System</button></div>
+        <span class="filt"><span class="i" data-i="calendar-blank"></span> Last 24 h</span>
+        <span class="filt"><span class="i" data-i="user-fill"></span> All actors</span>
+        <div class="sp"></div>
+        <button class="btn btn--g"><span class="i" data-i="upload-simple"></span> Export</button>
+      </div>
+      <div class="panel">
+        <table class="tbl log">
+          <thead><tr><th style="width:120px">Time</th><th style="width:70px">Level</th><th style="width:150px">Actor</th>
+            <th style="width:170px">Action</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>12:41:08</td><td><span class="sev sev--o">OK</span></td><td>admin·orihero</td>
+              <td>plan.grant</td><td>user=a3f21e08 plan=PREMIUM until=2026-09-01 via=payme</td></tr>
+            <tr><td>12:38:52</td><td><span class="sev sev--w">WARN</span></td><td>system</td>
+              <td>billing.failed</td><td>user=9c6e41af provider=click code=INSUFFICIENT_FUNDS attempt=2</td></tr>
+            <tr><td>12:12:04</td><td><span class="sev sev--i">INFO</span></td><td>agent·javlon</td>
+              <td>tour.upload</td><td>ad=9d573 scenes=12 bytes=118.4MB source=insta360-x4</td></tr>
+            <tr><td>11:58:31</td><td><span class="sev sev--i">INFO</span></td><td>agent·bekzod</td>
+              <td>tour.upload</td><td>ad=b6f42 scenes=9 bytes=241.7MB status=processing</td></tr>
+            <tr><td>11:42:17</td><td><span class="sev sev--o">OK</span></td><td>agent·javlon</td>
+              <td>publish.instagram</td><td>ad=9d573 external=instagram.com/p/C8x… latency=2.4s</td></tr>
+            <tr><td>11:39:02</td><td><span class="sev sev--e">ERR</span></td><td>agent·javlon</td>
+              <td>publish.youtube</td><td>ad=9d573 error=TOKEN_EXPIRED refresh_job=skipped(expiresAt=null)</td></tr>
+            <tr><td>10:22:44</td><td><span class="sev sev--w">WARN</span></td><td>system</td>
+              <td>tour.reject</td><td>ad=c4e91 reason=NOT_EQUIRECTANGULAR ratio=4:3 gpano=absent</td></tr>
+            <tr><td>09:05:11</td><td><span class="sev sev--i">INFO</span></td><td>user·kamola</td>
+              <td>realtor.apply</td><td>kind=SOLO status=NONE→PENDING</td></tr>
+            <tr><td>08:12:39</td><td><span class="sev sev--i">INFO</span></td><td>agent·javlon</td>
+              <td>upload.presign</td><td>scope=ads key=ads/7f3a…-pano-01.jpg ttl=600s</td></tr>
+            <tr><td>07:40:55</td><td><span class="sev sev--o">OK</span></td><td>system</td>
+              <td>ig.token.refresh</td><td>refreshed=3 skipped=4(expiresAt=null) next=2026-08-04T07:40Z</td></tr>
+            <tr><td>02:00:00</td><td><span class="sev sev--o">OK</span></td><td>system</td>
+              <td>db.backup</td><td>size=4.2GB duration=94s target=s3://lacasa-backups/2026-08-03</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="dev">
+  <button data-index-toggle><span class="i" data-i="squares-four-fill"></span> Screens</button>
+  <button data-theme-toggle><span class="i" data-i="eye"></span> Theme</button>
+</div>
+<div class="ix" data-index>
+  <div class="ix__p">
+    <h3>Control room · 7 screens</h3>
+    <p>Platform operations. Dark by default and amber-signalled so it can never be mistaken for the agent console.</p>
+    <div class="ix__g">
+      <button data-go="x-over">Overview <b>6 KPIs, queues, health</b></button>
+      <button data-go="x-apps">Applications <b>RealtorStatus queue</b></button>
+      <button data-go="x-users">Users <b>role + plan + status</b></button>
+      <button data-go="x-mod">Listing moderation <b>reported + all</b></button>
+      <button data-go="x-tours">3D tour review <b>proposed</b></button>
+      <button data-go="x-plans">Plans &amp; premium <b>proposed</b></button>
+      <button data-go="x-audit">Audit log <b>structured events</b></button>
+    </div>
+  </div>
+</div>
+
+<!--ICONS-->
+<!--PHOTOS-->
+<!--RUNTIME-->

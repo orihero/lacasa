@@ -8,6 +8,11 @@ the one exception: a narrower, later addition covering **the home feed only**.
 per-screen contents with the real field labels and enum values pulled from the web app and the Prisma
 schema, the seed dataset, and the interaction contract.
 
+> **Desktop lives in [`WEB.md`](WEB.md)** — three separate surfaces (`web-user.html`,
+> `web-agent.html`, `web-admin.html`) for the buyer marketplace, the agent console and the admin
+> control room. They inherit direction E's material language and this file's seed data, and are
+> generated from `build/` so no asset is inlined twice.
+
 ## The directions
 
 | | File | Lineage | Opens on | Character |
