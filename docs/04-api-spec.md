@@ -135,8 +135,9 @@ carry no per-user `saved` flag, so the client merges saved state locally
 
 | Method & path | Access | Notes |
 |---|---|---|
-| `POST /publish/telegram` | agent/coworker | `{ adId, chatIds[] }` → sendMediaGroup from server bot token |
+| `POST /publish/telegram` | agent/coworker | `{ adId, caption, imageUrls[], chatIds[] }` → sendMediaGroup from server bot token; `chatIds` are matched against the caller's own `User.tgChatIds`, `503 tg_unconfigured` if `TG_BOT_TOKEN` is unset |
 | `POST /publish/instagram` | agent/coworker | `{ adId }` → carousel publish using stored agent tokens |
+| `POST /publish/youtube` | agent/coworker | `{ adId, status: "PUBLISHED"\|"FAILED", externalId?, externalUrl?, errorMessage? }` → report-back only, the browser does the OAuth upload itself and reports the outcome here so `AdPublication` has a `YOUTUBE` row |
 | `POST /publish/instagram/caption` | agent/coworker | `{ adId }` → `{ caption }`; LLM-generated caption for the extension-assisted fallback, no publish — see `09-instagram-onboarding.md` §2 |
 | `POST /publish/instagram/caption/confirm` | agent/coworker | `{ adId, event }` → human self-reports the extension-assisted post as published/aborted |
 | `POST /publish/olx/map-fields` | agent/coworker | `{ adId, step, snapshot }` → LLM field-map for the extension to execute — see `07-olx-crosspost-extension.md` |

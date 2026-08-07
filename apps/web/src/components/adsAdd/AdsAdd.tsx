@@ -7,7 +7,7 @@ import { useUtilsStore } from "../../lib/utilsStore";
 import ShareIcon from "@mui/icons-material/Share";
 import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
 import type { CurrencyCodeKey } from "@lacasa/domain";
-import type { InstagramAccount } from "@lacasa/api-client";
+import type { InstagramAccount, TgPublishResult } from "@lacasa/api-client";
 import {
   Dropzone,
   FileMosaic,
@@ -18,7 +18,6 @@ import {
 import type { ExtFile } from "@files-ui/react";
 import { toast } from "react-toastify";
 import { assetUpload } from "../../lib/assetUpload";
-import axios from "axios";
 import { api } from "../../lib/api";
 import { fieldErrorMessage } from "../../lib/formErrors";
 import {
@@ -51,6 +50,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { Triangle } from "react-loader-spinner";
 import { YTService } from "../../services/yt";
+import { TGService } from "../../services/tg";
 import type { ITGAccount } from "../../services/tg";
 
 // Deliberately loose: publishSelectSocial mixes checked Instagram and
@@ -99,7 +99,7 @@ const AdsAdd = () => {
     undefined,
   );
   const [openModal, setOpenModal] = useState("");
-  const [resTG, setResTg] = useState([]);
+  const [resTG, setResTg] = useState<TgPublishResult[]>([]);
   const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
   const [isShort, setIsShort] = useState(false);
   const [photoOrVideo, setPhotoOrVideo] = useState<string[]>([]);
@@ -285,49 +285,32 @@ const AdsAdd = () => {
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
     const caption = buildCaption(allValues, priceType, t, { hoistHashtags: true });
+    const chatIds = publishSelectSocial.map((socialItem) => String(socialItem.id));
 
-    const responses = await Promise.all(
-      publishSelectSocial.map(async (socialItem) => {
-        const formData = new FormData();
-        formData.append("chat_id", String(socialItem.id));
-        formData.append("protect_content", "true");
-        formData.append(
-          "media",
-          JSON.stringify(
-            photos.map((e, i) =>
-              i === photos.length - 1
-                ? {
-                    type: "photo",
-                    media: e,
-                    caption: hashtagsValue + "\n" + caption,
-                  }
-                : { type: "photo", media: e },
-            ),
-          ),
-        );
-
-        try {
-          const res = await axios.post(
-            `https://api.telegram.org/bot${
-              import.meta.env.VITE_TG_BOT_TOKEN
-            }/sendMediaGroup`,
-            formData,
-          );
-
-          setIsLoading(false);
-
-          return res.data?.result[0];
-        } catch (error) {
-          console.error(error);
-          return null;
-        }
-      }),
-    );
-
-    const successfulResponses = responses.filter(
-      (response) => response !== null,
-    );
-    setResTg([...resTG, ...successfulResponses]);
+    try {
+      // Publishing happens server-side with the stored bot token — no
+      // Telegram token ever reaches the browser.
+      const { results } = await TGService.publish({
+        adId: draftAdId,
+        caption: hashtagsValue + "\n" + caption,
+        imageUrls: photos,
+        chatIds,
+      });
+      setHasDraftPublications(true);
+      const successful = results.filter((r) => r.ok);
+      const failed = results.filter((r) => !r.ok);
+      setResTg([...resTG, ...successful]);
+      if (failed.length) {
+        toast.error(`Telegram publish failed for ${failed.map((f) => f.chatId).join(", ")}`);
+      } else if (successful.length) {
+        toast.success("Telegram post published!");
+      }
+    } catch (error) {
+      console.error("Error publishing to Telegram:", error);
+      toast.error(error?.response?.data?.error?.message ?? "Error publishing to Telegram");
+    } finally {
+      setIsLoading(false);
+    }
   };
   const onSubmitIG = async () => {
     setIsLoading(true);
@@ -433,7 +416,9 @@ const AdsAdd = () => {
         console.log(`Time left: ${Math.round(remainingTime)}s`);
         console.log(`Progress: ${Math.round(progress)}%`);
       },
+      draftAdId,
     );
+    setIsLoading(false);
   };
 
   const handleAccordionChange =
@@ -1243,11 +1228,15 @@ const AdsAdd = () => {
               <div className="tg-content-preview">
                 <div className="tg-content-flex">
                   <div className="tg-channel-logo">
-                    <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                    {currentUser?.tgAccounts[0]?.file_path ? (
+                      <img src={currentUser.tgAccounts[0].file_path} alt="" />
+                    ) : (
+                      <div className="tg-avatar-placeholder" aria-hidden="true" />
+                    )}
                   </div>
                   <div className="tg-post-content">
                     <div className="tg-post-header">
-                      <h5>{currentUser?.tgAccounts[0].title}</h5>
+                      <h5>{currentUser?.tgAccounts[0]?.title ?? "Telegram channel"}</h5>
                     </div>
                     <div className="tg-post-img-div">
                       <ImageGrid images={extFiles} />
@@ -1322,11 +1311,13 @@ const AdsAdd = () => {
                         )}
                       </div>
                       <div className="tg-footer-text">
-                        <a
-                          href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                        >
-                          t.me/{currentUser?.tgAccounts[0].username}
-                        </a>
+                        {currentUser?.tgAccounts[0]?.username ? (
+                          <a href={`https://t.me/${currentUser.tgAccounts[0].username}`}>
+                            t.me/{currentUser.tgAccounts[0].username}
+                          </a>
+                        ) : (
+                          <span className="tg-unavailable">Channel link unavailable</span>
+                        )}
                         <div className="tg-createAt">
                           <span>12.7 K</span>
                           <span>
@@ -1441,32 +1432,41 @@ const AdsAdd = () => {
                           />
 
                           {resTG.map((e) => {
-                            if (e.chat.id == item.id) {
-                              return (
-                                <div
-                                  key={e.message_id}
-                                  onClick={() => {
-                                    const url = `https://t.me/${item.username}/${e.message_id}`;
-                                    navigator.clipboard
-                                      .writeText(url)
-                                      .then(() => {
-                                        alert(
-                                          "Link copied to clipboard: " + url,
-                                        );
-                                      })
-                                      .catch((error) => {
-                                        console.error(
-                                          "Failed to copy text: ",
-                                          error,
-                                        );
-                                      });
-                                  }}
-                                  className="tg-message-share-icon"
-                                >
-                                  <ShareIcon />
-                                </div>
-                              );
-                            }
+                            if (e.chatId != String(item.id)) return null;
+                            return (
+                              <div
+                                key={e.messageId ?? e.chatId}
+                                onClick={() => {
+                                  // Channel usernames aren't known client-side
+                                  // any more (see TgProfileCard's honest
+                                  // "unavailable" state) so a real t.me link
+                                  // can't be built without one.
+                                  if (!item.username) {
+                                    alert(
+                                      "This channel's username isn't known, so a shareable link can't be built.",
+                                    );
+                                    return;
+                                  }
+                                  const url = `https://t.me/${item.username}/${e.messageId}`;
+                                  navigator.clipboard
+                                    .writeText(url)
+                                    .then(() => {
+                                      alert(
+                                        "Link copied to clipboard: " + url,
+                                      );
+                                    })
+                                    .catch((error) => {
+                                      console.error(
+                                        "Failed to copy text: ",
+                                        error,
+                                      );
+                                    });
+                                }}
+                                className="tg-message-share-icon"
+                              >
+                                <ShareIcon />
+                              </div>
+                            );
                           })}
                         </div>
                       );

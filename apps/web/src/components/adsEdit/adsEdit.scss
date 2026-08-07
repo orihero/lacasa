@@ -360,6 +360,17 @@
       height: 35px;
       border-radius: 50%;
     }
+    .tg-avatar-placeholder {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: #e4e4e4;
+    }
+  }
+  .tg-unavailable {
+    color: #999;
+    font-style: italic;
+    font-size: 13px;
   }
   .tg-post-content {
     border: 1px solid #e5e5e5;

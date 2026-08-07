@@ -66,6 +66,12 @@ const IG_ACCOUNT = {
   media_count: 20,
 };
 
+// Two entries: the modal's channel list only renders when
+// currentUser.tgAccounts.length > 1 (a pre-existing quirk, not this
+// migration's job to fix). Neither has title/username/avatar/member count
+// — see services/tg.ts's file header for why that enrichment is gone.
+const TG_ACCOUNTS = [{ id: 111 }, { id: 222 }];
+
 function renderAdsEdit() {
   return render(
     <MemoryRouter initialEntries={[`/profile/${AD.id}/update/ads`]}>
@@ -145,6 +151,49 @@ describe("AdsEdit", () => {
     expect(capturedBody.caption).toContain("Title: Nice flat");
     expect(capturedBody.caption).toContain("Price: 1000000 uzs");
     expect(capturedBody.caption).toContain("Hashtags: #new");
+  });
+
+  it("publishes to Telegram through the server's POST /publish/telegram route, driven through the real accordion -> modal -> Publish click path, and never touches api.telegram.org", async () => {
+    let capturedBody: any = null;
+    let hitTelegramDirectly = false;
+    server.use(
+      http.all("https://api.telegram.org/*", () => {
+        hitTelegramDirectly = true;
+        return HttpResponse.json({ ok: false });
+      }),
+      http.post(`${API_BASE}/publish/telegram`, async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({
+          publication: { id: "pub-1", adId: AD.id, channel: "TELEGRAM", status: "PUBLISHED" },
+          results: (capturedBody.chatIds as string[]).map((chatId) => ({ chatId, ok: true, messageId: 1 })),
+        });
+      }),
+    );
+    useUserStore.setState({
+      currentUser: { id: "agent-1", role: "agent", igAccounts: [IG_ACCOUNT], tgAccounts: TG_ACCOUNTS },
+      isLoading: false,
+    });
+
+    const user = userEvent.setup();
+    renderAdsEdit();
+    await screen.findByDisplayValue("Nice flat");
+
+    // Expand the Telegram accordion (sets accordionExpanded to "tg", which
+    // is what the modal's Publish button branches on).
+    await user.click(screen.getByText("Telegram"));
+    await user.click(screen.getByRole("button", { name: "Publish" }));
+
+    const modalHeading = await screen.findByText(i18n.t("select_channels"));
+    const modalContainer = modalHeading.closest(".tg-channel-list") as HTMLElement;
+    for (const checkbox of within(modalContainer).getAllByRole("checkbox")) {
+      await user.click(checkbox);
+    }
+    await user.click(within(modalContainer).getByRole("button", { name: "Publish" }));
+
+    await waitFor(() => expect(capturedBody).not.toBeNull());
+    expect(hitTelegramDirectly).toBe(false);
+    expect(capturedBody.adId).toBe(AD.id);
+    expect([...capturedBody.chatIds].sort()).toEqual(["111", "222"]);
   });
 
   it("editing an additional-info option updates it instead of throwing (handleChangeOption used to be undefined)", async () => {

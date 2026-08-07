@@ -316,6 +316,8 @@
   "invalidPhone": "Invalid phone number format",
   "sendMassage": "Send message",
   "messageSent": "Message sent successfully",
+  "messageSendFailed": "Could not send your message. Please try again in a moment.",
+  "messageRateLimited": "Too many messages sent — please wait a minute and try again.",
   "month": "month",
   "services": "Services",
   "questions": "Questions",

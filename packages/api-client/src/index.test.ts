@@ -21,6 +21,7 @@ describe('@lacasa/api-client root entry point', () => {
         'ads',
         'agents',
         'auth',
+        'contact',
         'coworkers',
         'leads',
         'publish',

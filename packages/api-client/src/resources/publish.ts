@@ -7,7 +7,7 @@
  * with a content script, which doesn't exist as a concept on mobile. That
  * stays app-level in apps/web.
  */
-import type { ConfirmInput, IgPublishInput, MapFieldsInput, ReassignInput } from '@lacasa/domain';
+import type { ConfirmInput, IgPublishInput, MapFieldsInput, ReassignInput, TgPublishInput, YtReportInput } from '@lacasa/domain';
 import type { AssistedChannel } from '@lacasa/domain/enums';
 import type { ApiClient } from '../core/client';
 
@@ -43,6 +43,13 @@ export interface InstagramAccount {
   media_count?: number;
 }
 
+export interface TgPublishResult {
+  chatId: string;
+  ok: boolean;
+  messageId?: number | null;
+  error?: string;
+}
+
 export interface PublishStatusChannel {
   channel: string;
   status: string;
@@ -73,6 +80,29 @@ export function createPublishResource(client: ApiClient) {
       return client.request<{ ok: boolean; igAssistConsentAt: string }>({
         method: 'POST',
         path: '/publish/instagram/consent',
+      });
+    },
+
+    // Server-side Telegram publish (token path) -- the direct-token twin of
+    // publishInstagram above. There is no getTelegramAccounts() here yet:
+    // this port only covers the publish + status-report round trip; account
+    // enrichment (apps/web/src/lib/userStore.js's enrichTelegramAccounts)
+    // and its token-in-URL avatar problem are a separate, not-yet-built piece.
+    publishTelegram(input: TgPublishInput) {
+      return client.request<{ publication: Publication; results: TgPublishResult[] }>({
+        method: 'POST',
+        path: '/publish/telegram',
+        body: input,
+      });
+    },
+
+    // YouTube stays a client-side OAuth upload; this only reports the
+    // outcome back so YOUTUBE shows up in the status grid.
+    reportYoutubeStatus(input: YtReportInput) {
+      return client.request<{ publication: Publication }>({
+        method: 'POST',
+        path: '/publish/youtube',
+        body: input,
       });
     },
 

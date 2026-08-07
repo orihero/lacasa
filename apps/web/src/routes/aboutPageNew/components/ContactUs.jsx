@@ -2,58 +2,64 @@ import { useState } from "react";
 import { style } from "../../../util/styles";
 import Button from "./Button";
 import { useTranslation } from "react-i18next";
-import axios from "axios";
+import { apiClient } from "../../../lib/apiClient";
 
+// Used to POST directly to https://api.telegram.org/bot<TOKEN>/sendMessage
+// with a hardcoded bot token literal committed in this file — the worst of
+// the browser-side Telegram leaks (docs/05-migration-plan.md Phase E). The
+// form now hits the server's public POST /api/contact (apps/api/src/routes/
+// contact.js), which relays to the office Telegram channel using its own
+// server-held TG_BOT_TOKEN/TG_CONTACT_CHAT_ID — neither ever reaches the
+// browser. Client-side required/phone-format checks are kept as an
+// early UX guard; the server re-validates independently (it has to, since
+// this route is public and unauthenticated).
 const ContactUs = () => {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     message: "",
   });
+  const [isSending, setIsSending] = useState(false);
   const { t } = useTranslation();
 
   const handleSubmit = async () => {
+    if (isSending) return;
+
     if (!formData.name || !formData.phone) {
-      console.log("Majburiy maydonlar to'ldirilmagan");
       alert(t("requiredFields"));
-    } else if (!formData.phone.match(/^\+998\d{9}$/)) {
-      console.log("Telefon raqami noto'g'ri formatda");
+      return;
+    }
+    if (!formData.phone.match(/^\+998\d{9}$/)) {
       alert(t("invalidPhone"));
-    } else {
-      const message = `
-      Name: ${formData.name}
-      Phone: ${formData.phone}
-      Message: ${formData.message}
-      `;
-      const formDataTelegram = new FormData();
-      formDataTelegram.append("chat_id", "-1002366623212");
-      formDataTelegram.append("text", message);
-      formDataTelegram.append("parse_mode", "Markdown");
-      const token = "7558469078:AAFkpNkDzySQM79gJLBOyCTeidl1Y8uwY6Q"; // Your Bot Token
+      return;
+    }
 
-      try {
-        const response = await axios.post(
-          `https://api.telegram.org/bot${token}/sendMessage`,
-          formDataTelegram,
-        );
-        console.log("Message sent successfully:", response.data);
-        alert(t("messageSent"));
-      } catch (error) {
-        console.error("Xatolik yuz berdi:", error);
-        return null;
-      }
-
-      const newEntry = {
+    setIsSending(true);
+    try {
+      await apiClient.contact.submit({
         name: formData.name,
         phone: formData.phone,
         message: formData.message,
-      };
-      console.log("Ma'lumotlar yuborildi:", newEntry);
+      });
+      alert(t("messageSent"));
       setFormData({
         name: "",
         phone: "",
         message: "",
       });
+    } catch (error) {
+      console.error("Failed to send contact message:", error);
+      // A failed send must be visible, not silently swallowed — surface a
+      // specific message for rate limiting (POST /api/contact is 5/min per
+      // IP) and a generic one for everything else (validation, the server's
+      // TG_BOT_TOKEN being unconfigured, Telegram rejecting the relay).
+      if (error?.response?.status === 429) {
+        alert(t("messageRateLimited"));
+      } else {
+        alert(t("messageSendFailed"));
+      }
+    } finally {
+      setIsSending(false);
     }
   };
 

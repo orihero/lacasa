@@ -11,9 +11,11 @@ async function loadSession() {
   return user;
 }
 
-// Telegram chat ids aren't secret, so resolving them into displayable
-// channel info (title, avatar) still happens client-side via TGService.
-// Moving this server-side is tracked separately — left as-is here.
+// Telegram chat ids aren't secret, but resolving them into displayable
+// channel info (title, avatar) required the bot token and has no
+// server-side equivalent today — see services/tg.ts's file header.
+// TGService.init() now just wraps the raw ids into stub accounts (id only,
+// nothing fabricated).
 async function enrichTelegramAccounts(userData) {
   if (!userData.tgChatIds?.length) return [];
   return TGService.init(userData.tgChatIds);

@@ -1,5 +1,26 @@
 import { gapi } from "gapi-script";
 import MediaUploader from "./cors_upload";
+import { apiClient } from "../lib/apiClient";
+
+// YouTube uploads stay client-side (the user's own OAuth token, per
+// docs/08-publish-tracking.md — this is NOT part of the Telegram-token
+// leak this migration fixes). What was missing is the report-back: the
+// server never learned whether an upload happened, so YOUTUBE never showed
+// up in the publish-status grid. reportYoutubeStatus() below posts the
+// outcome to POST /api/publish/youtube after the resumable upload settles.
+// It deliberately never throws — a failed report-back must not mask the
+// upload result the user already saw via onComplete/onError's alert().
+async function reportYoutubeStatus(
+  input:
+    | { adId: string; status: "PUBLISHED"; externalId: string }
+    | { adId: string; status: "FAILED"; errorMessage?: string },
+): Promise<void> {
+  try {
+    await apiClient.publish.reportYoutubeStatus(input);
+  } catch (error) {
+    console.error("Failed to report YouTube publish status to the server:", error);
+  }
+}
 
 export class YTService {
   // Initialize the YouTube API client
@@ -58,7 +79,9 @@ export class YTService {
     }
   };
 
-  // Upload a video to YouTube
+  // Upload a video to YouTube. `adId` is the ad this upload belongs to
+  // (draft or real) — required so the report-back in onComplete/onError can
+  // tell the server which AdPublication row to upsert.
   public static uploadVideo = async (
     file: File,
     metadata: Record<string, any>,
@@ -66,6 +89,7 @@ export class YTService {
       estimatedSecondsRemaining: number,
       percentageComplete: number,
     ) => void,
+    adId: string,
   ): Promise<void> => {
     if (!file) {
       alert("Please select a file to upload");
@@ -91,16 +115,30 @@ export class YTService {
         onComplete: (data: string) => {
           const uploadResponse = JSON.parse(data);
           console.log("Video uploaded successfully:", uploadResponse);
+          const externalId = uploadResponse?.id;
+          if (externalId) {
+            void reportYoutubeStatus({ adId, status: "PUBLISHED", externalId });
+          } else {
+            console.error("YouTube upload response had no video id; cannot report status", uploadResponse);
+            void reportYoutubeStatus({
+              adId,
+              status: "FAILED",
+              errorMessage: "Upload succeeded but the response had no video id",
+            });
+          }
         },
         onError: (error: string) => {
+          let errorMessage = "An error occurred during the upload.";
           try {
             const errorResponse = JSON.parse(error);
-            console.error("YouTube API Error:", errorResponse.error.message);
-            alert(`Error: ${errorResponse.error.message}`);
+            errorMessage = errorResponse?.error?.message ?? errorMessage;
+            console.error("YouTube API Error:", errorMessage);
+            alert(`Error: ${errorMessage}`);
           } catch {
             console.error("Upload failed:", error);
             alert("An error occurred during the upload.");
           }
+          void reportYoutubeStatus({ adId, status: "FAILED", errorMessage });
         },
         onProgress: (data: ProgressEvent) => {
           const currentTime = Date.now();

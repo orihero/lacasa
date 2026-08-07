@@ -32,6 +32,15 @@
   border-radius: 50px;
 }
 
+.tg-avatar-placeholder {
+  background: #e4e4e4;
+}
+
+.tg-unavailable {
+  color: #999;
+  font-style: italic;
+}
+
 .tg-info {
   display: flex;
   flex-direction: column;

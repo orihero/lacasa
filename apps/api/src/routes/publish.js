@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { igPublishSchema, mapFieldsSchema, confirmSchema, reassignSchema } from "@lacasa/domain";
+import { igPublishSchema, mapFieldsSchema, confirmSchema, reassignSchema, tgPublishSchema, ytReportSchema } from "@lacasa/domain";
 import { requireAuth, loadCurrentUser } from "../middleware/auth.js";
 import { actorFields } from "../middleware/roles.js";
 import * as publishService from "../services/publishService.js";
@@ -44,6 +44,40 @@ router.get("/instagram/accounts", async (req, res, next) => {
     res.json({ accounts });
   } catch (e) {
     next(e);
+  }
+});
+
+router.post("/telegram", async (req, res, next) => {
+  try {
+    const parsed = tgPublishSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });
+    }
+    const actor = actorFields(req.currentUser);
+    if (!actor) {
+      return res.status(403).json({ error: { code: "forbidden", message: "Only agents and coworkers can publish" } });
+    }
+    const result = await publishService.publishTelegramDirect(req.ctx, { ...parsed.data, actor });
+    res.json(result);
+  } catch (e) {
+    handleServiceError(e, res, next);
+  }
+});
+
+router.post("/youtube", async (req, res, next) => {
+  try {
+    const parsed = ytReportSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });
+    }
+    const actor = actorFields(req.currentUser);
+    if (!actor) {
+      return res.status(403).json({ error: { code: "forbidden", message: "Only agents and coworkers can report publish status" } });
+    }
+    const publication = await publishService.reportYoutubeStatus(req.ctx, { ...parsed.data, actor });
+    res.json({ publication });
+  } catch (e) {
+    handleServiceError(e, res, next);
   }
 });
 

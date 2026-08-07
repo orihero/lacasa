@@ -42,6 +42,35 @@ describe('publish resource', () => {
     expect(calls[0]).toMatchObject({ method: 'POST', url: 'http://api.test/publish/instagram/consent' });
   });
 
+  it('publishTelegram POSTs /publish/telegram with the payload as body', async () => {
+    const { publish, calls } = setup({ publication: {}, results: [] });
+
+    await publish.publishTelegram({
+      adId: 'ad-1',
+      caption: 'For sale',
+      imageUrls: ['https://x/1.jpg'],
+      chatIds: ['-100123'],
+    });
+
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      url: 'http://api.test/publish/telegram',
+      body: { adId: 'ad-1', caption: 'For sale', imageUrls: ['https://x/1.jpg'], chatIds: ['-100123'] },
+    });
+  });
+
+  it('reportYoutubeStatus POSTs /publish/youtube with the payload as body', async () => {
+    const { publish, calls } = setup({ publication: {} });
+
+    await publish.reportYoutubeStatus({ adId: 'ad-1', status: 'PUBLISHED', externalId: 'dQw4w9WgXcQ' });
+
+    expect(calls[0]).toMatchObject({
+      method: 'POST',
+      url: 'http://api.test/publish/youtube',
+      body: { adId: 'ad-1', status: 'PUBLISHED', externalId: 'dQw4w9WgXcQ' },
+    });
+  });
+
   it('mapFields POSTs /publish/:channel/map-fields', async () => {
     const { publish, calls } = setup({});
 

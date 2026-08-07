@@ -1,5 +1,6 @@
 import { ALL_CHANNELS } from "@lacasa/domain";
 import { fetchAccountInfo, publishCarousel } from "../lib/instagram.js";
+import { sendMediaGroup } from "../lib/telegram.js";
 import { logActivityEvent } from "../lib/activity.js";
 import { config } from "../lib/config.js";
 
@@ -138,6 +139,161 @@ export async function listInstagramAccounts(ctx, actor) {
       }
     }),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Server-side Telegram publish (token path, mechanism "bot-api")
+
+// AdPublication.adId has no FK to Ad (see the file-header comment above), so
+// there is nothing to own-check for a draft id -- reassignDraft() re-keys
+// those onto a real ad id later, at which point this check starts applying.
+// Shared by publishTelegramDirect and reportYoutubeStatus: both accept a
+// caller-supplied adId and both need "may only act on your own ad" enforced
+// the same way, unlike publishInstagramDirect (which never takes an
+// arbitrary adId belonging to someone else's ad -- it only ever touches the
+// caller's own AgentIgToken rows).
+async function assertOwnsAd(ctx, adId, actor) {
+  if (adId.startsWith("draft-")) return;
+  const ad = await ctx.prisma.ad.findUnique({ where: { id: adId }, select: { agentId: true } });
+  if (!ad) {
+    throw httpError(404, "ad_not_found", "Ad not found");
+  }
+  if (ad.agentId !== actor.agentId) {
+    throw httpError(403, "forbidden", "You may only publish your own ad");
+  }
+}
+
+export async function publishTelegramDirect(ctx, { adId, caption, imageUrls, chatIds, actor }) {
+  await assertOwnsAd(ctx, adId, actor);
+
+  // Unlike Instagram (one AgentIgToken row per connected account, checked
+  // against igUserIds), Telegram has no per-agent token table -- the bot
+  // token is one global secret (config.TG_BOT_TOKEN) and the *targets* are
+  // request-supplied chat ids. Without this check any authenticated agent
+  // could point the bot at an arbitrary chat id; User.tgChatIds is the list
+  // they're actually allowed to post to.
+  //
+  // tgChatIds lives on the AGENT's own row, never a coworker's -- same rule
+  // auth.js's resolveAgentContext documents ("a coworker's connected IG/TG
+  // accounts belong to their agent"). actor.user is req.currentUser, i.e.
+  // the *caller's* row, which for a COWORKER is not the agent's row, so it
+  // must never be read directly here -- doing so left coworkers unable to
+  // ever pass this check (their own tgChatIds is always empty).
+  const tgUser = actor.coworkerId
+    ? await ctx.prisma.user.findUnique({ where: { id: actor.agentId }, select: { tgChatIds: true } })
+    : actor.user;
+  const allowed = new Set((tgUser?.tgChatIds ?? []).map((id) => String(id)));
+  const targets = [...new Set(chatIds)].filter((id) => allowed.has(id));
+  if (!targets.length) {
+    throw httpError(400, "no_connected_accounts", "None of the requested chat ids are connected to this account");
+  }
+
+  const now = new Date();
+
+  // Checked before any network call -- same reasoning as llm_unconfigured
+  // in mapFieldsForChannel, a missing token can't be fixed by retrying. But
+  // unlike llm_unconfigured (thrown before any publish attempt exists),
+  // this call already represents one, so it must still land in
+  // AdPublication or the status grid silently hides that it ever happened.
+  if (!config.TG_CONFIGURED) {
+    const message = "Telegram bot token is not configured on the server (TG_BOT_TOKEN). Ask an administrator to set it.";
+    const results = targets.map((chatId) => ({ chatId, ok: false, error: message }));
+    await ctx.prisma.adPublication.upsert({
+      where: { adId_channel: { adId, channel: "TELEGRAM" } },
+      create: {
+        adId,
+        channel: "TELEGRAM",
+        status: "FAILED",
+        attempts: 1,
+        lastAttemptAt: now,
+        errorMessage: message,
+        requestedById: actor.user.id,
+        payload: { mechanism: "bot-api", results },
+      },
+      update: {
+        status: "FAILED",
+        attempts: { increment: 1 },
+        lastAttemptAt: now,
+        errorMessage: message,
+        requestedById: actor.user.id,
+        payload: { mechanism: "bot-api", results },
+      },
+    });
+    throw httpError(503, "tg_unconfigured", message);
+  }
+
+  const results = [];
+  for (const chatId of targets) {
+    try {
+      const r = await sendMediaGroup({ chatId, imageUrls, caption });
+      results.push({ chatId, ok: true, messageId: r.messageId });
+    } catch (e) {
+      results.push({ chatId, ok: false, error: e.message });
+    }
+  }
+
+  const succeeded = results.filter((r) => r.ok);
+  const publication = await ctx.prisma.adPublication.upsert({
+    where: { adId_channel: { adId, channel: "TELEGRAM" } },
+    create: {
+      adId,
+      channel: "TELEGRAM",
+      status: succeeded.length ? "PUBLISHED" : "FAILED",
+      externalId: succeeded[0]?.messageId != null ? String(succeeded[0].messageId) : null,
+      attempts: 1,
+      lastAttemptAt: now,
+      publishedAt: succeeded.length ? now : null,
+      errorMessage: succeeded.length ? null : (results.find((r) => !r.ok)?.error ?? null),
+      requestedById: actor.user.id,
+      payload: { mechanism: "bot-api", results },
+    },
+    update: {
+      status: succeeded.length ? "PUBLISHED" : "FAILED",
+      externalId: succeeded[0]?.messageId != null ? String(succeeded[0].messageId) : null,
+      attempts: { increment: 1 },
+      lastAttemptAt: now,
+      publishedAt: succeeded.length ? now : null,
+      errorMessage: succeeded.length ? null : (results.find((r) => !r.ok)?.error ?? null),
+      requestedById: actor.user.id,
+      payload: { mechanism: "bot-api", results },
+    },
+  });
+
+  return { publication: serializePublication(publication), results };
+}
+
+// ---------------------------------------------------------------------------
+// YouTube status report-back (no server-side upload -- docs/08 §4: the
+// browser uploads under the user's own OAuth and reports the outcome here so
+// YOUTUBE shows up in the status grid alongside the other channels).
+
+export async function reportYoutubeStatus(ctx, { adId, status, externalId, externalUrl, errorMessage, actor }) {
+  await assertOwnsAd(ctx, adId, actor);
+
+  const now = new Date();
+  // externalUrl is validated (ytReportSchema) to already be a real
+  // youtube.com/youtu.be watch link when the caller sends one; when they
+  // don't, derive it from externalId rather than leaving it null, so a
+  // report that only bothered to send the video id still gets a working
+  // status-grid link.
+  const resolvedUrl = externalUrl ?? (externalId ? `https://www.youtube.com/watch?v=${externalId}` : null);
+  const data = {
+    status,
+    externalId: externalId ?? null,
+    externalUrl: resolvedUrl,
+    lastAttemptAt: now,
+    publishedAt: status === "PUBLISHED" ? now : null,
+    errorMessage: status === "FAILED" ? (errorMessage ?? null) : null,
+    requestedById: actor.user.id,
+    payload: { mechanism: "browser-oauth-report", reportedStatus: status },
+  };
+  const publication = await ctx.prisma.adPublication.upsert({
+    where: { adId_channel: { adId, channel: "YOUTUBE" } },
+    create: { adId, channel: "YOUTUBE", attempts: 1, ...data },
+    update: { attempts: { increment: 1 }, ...data },
+  });
+
+  return serializePublication(publication);
 }
 
 // One-time opt-in for extension-assisted Instagram posting (docs/09 §2.2).

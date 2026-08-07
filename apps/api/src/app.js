@@ -18,6 +18,7 @@ import myAdsRouter from "./routes/myAds.js";
 import leadsRouter from "./routes/leads.js";
 import savedAdsRouter from "./routes/savedAds.js";
 import statisticsRouter from "./routes/statistics.js";
+import contactRouter from "./routes/contact.js";
 
 // Builds a fully wired Express app. Takes NO action beyond that: no
 // app.listen(), no scheduleIgTokenRefresh() — those are src/server.js's job.
@@ -69,8 +70,7 @@ export function createApp(ctx = {}) {
   app.use("/api/leads", leadsRouter);
   app.use("/api/saved-ads", savedAdsRouter);
   app.use("/api/statistics", statisticsRouter);
-
-  // Route modules still to come: /api/contact (docs/05-migration-plan.md Phase E)
+  app.use("/api/contact", contactRouter);
 
   // The `_next` parameter is load-bearing and must stay, unused as it is:
   // Express recognises error-handling middleware by arity alone (fn.length

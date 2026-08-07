@@ -317,6 +317,8 @@
   "invalidPhone": "Telefon raqami noto'g'ri formatda",
   "sendMassage": "Xabar yuborish",
   "messageSent": "Xabar yuborildi",
+  "messageSendFailed": "Xabarni yuborib bo'lmadi. Birozdan so'ng qayta urinib ko'ring.",
+  "messageRateLimited": "Juda ko'p xabar yuborildi — bir daqiqa kutib, qayta urinib ko'ring.",
   "month": "oy",
   "features": "Xususiyatlar",
   "pricing": "Narxlar",

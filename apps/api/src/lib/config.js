@@ -89,9 +89,17 @@ export const ENV_VARS = [
   {
     name: "TG_BOT_TOKEN",
     type: "string",
-    comment: "Social publishing (server-held; rotate the old leaked tokens before use)",
+    comment:
+      "Server-side Telegram publish + contact relay (rotate the old leaked tokens before use). Left optional " +
+      "like IG_APP_ID/ANTHROPIC_API_KEY: unset degrades /api/publish/telegram and /api/contact to a clean " +
+      "503 (TG_CONFIGURED below), it does not fail boot -- flipping this to required would break every dev " +
+      "machine and CI job that has never set it.",
   },
-  { name: "TG_CONTACT_CHAT_ID", type: "string" },
+  {
+    name: "TG_CONTACT_CHAT_ID",
+    type: "string",
+    comment: "Office chat POST /api/contact relays to; unset also degrades that route to a 503, same reasoning as TG_BOT_TOKEN",
+  },
 ];
 
 function zodFor(spec) {
@@ -137,6 +145,7 @@ export function loadConfig(env = process.env) {
     MINIO_PUBLIC_URL: data.MINIO_PUBLIC_URL ?? `http://localhost:9000/${data.MINIO_BUCKET}`,
     IG_CONFIGURED: Boolean(data.IG_APP_ID && data.IG_APP_SECRET && data.IG_REDIRECT_URI),
     LLM_CONFIGURED: Boolean(data.ANTHROPIC_API_KEY),
+    TG_CONFIGURED: Boolean(data.TG_BOT_TOKEN),
   };
 }
 

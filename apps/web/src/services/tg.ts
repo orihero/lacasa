@@ -1,4 +1,38 @@
-import axios from "axios";
+// Telegram integration for apps/web.
+//
+// Publishing used to POST straight to
+// https://api.telegram.org/bot${VITE_TG_BOT_TOKEN}/sendMediaGroup from the
+// browser, which meant a live bot token was compiled into the public JS
+// bundle (docs/05-migration-plan.md Phase E — a real credential leak, not
+// just bad practice). The bot token must never reach the browser again.
+// Publishing now goes through the server's stored token via
+// POST /api/publish/telegram (apps/api/src/routes/publish.js), reached here
+// through the app's authed @lacasa/api-client instance (../lib/apiClient) —
+// the same client crosspost.ts already uses for server-side Instagram
+// publishing.
+//
+// Account *enrichment* (title, username, avatar, member count) used to be
+// fetched the same insecure way, via getChat / getChatMembersCount /
+// getFile. There is no server-side equivalent for that today — no
+// GET /publish/telegram/accounts route exists (see the API agent's own
+// scope notes: "did not build a GET /publish/telegram/accounts endpoint").
+// Rather than leave those calls half-working against a token that no
+// longer exists here, they have been removed outright. init() now only
+// wraps the caller's raw chat ids — which aren't secret in themselves, see
+// apps/web/src/lib/userStore.js's enrichTelegramAccounts comment — into stub
+// accounts with nothing but `id` set; every display field is intentionally
+// left undefined rather than fabricated. This mirrors apps/console's
+// ConnectedAccountsScreen, which shows tgChatIds's *count* only for the
+// identical reason ("tgChatIds has no per-channel name field; never
+// fabricate channel names" — mockups/f/PLAN.md §4). Consumers
+// (TgProfileCard, AdsAdd, AdsEdit) render an honest "unavailable" state for
+// the missing fields.
+//
+// LOST: per-channel title/username/avatar/member count. Call sites that
+// relied on it: TgProfileCard.tsx (all four fields), AdsAdd.tsx's and
+// AdsEdit.tsx's inline Telegram preview cards (file_path/title/username).
+import type { TgPublishResult } from "@lacasa/api-client";
+import { apiClient } from "../lib/apiClient";
 
 export interface ITGAccount {
   id?: number;
@@ -8,90 +42,36 @@ export interface ITGAccount {
   members_count?: number;
 }
 
+export interface TgPublishArgs {
+  adId: string;
+  caption: string;
+  imageUrls: string[];
+  chatIds: Array<string | number>;
+}
+
 export class TGService {
-  public static BOT_TOKEN: string | undefined = import.meta.env
-    .VITE_TG_BOT_TOKEN;
   public static TgAccounts: ITGAccount[] = [];
 
-  private static axiosInstance = axios.create({
-    baseURL: `https://api.telegram.org/bot${import.meta.env.VITE_TG_BOT_TOKEN}`,
-  });
-
-  // Initialize Telegram service with chat IDs
+  // Wraps the user's raw Telegram chat ids into placeholder accounts — no
+  // network call. See file header for why the old getChat enrichment was
+  // removed instead of kept half-working.
   public static init = async (chats: number[]): Promise<ITGAccount[]> => {
-    try {
-      if (!this.BOT_TOKEN) {
-        throw new Error("Telegram BOT_TOKEN is not defined");
-      }
-
-      const chatInfoPromises = chats.map((chatId) =>
-        this.getChatInfo(chatId).catch((error: unknown): null => {
-          console.error(
-            `Failed to fetch chat info for chat ID ${chatId}:`,
-            error,
-          );
-          return null; // Skip failed chat info
-        }),
-      );
-
-      const resolvedChatInfo = await Promise.all(chatInfoPromises);
-      this.TgAccounts = resolvedChatInfo.filter(
-        (account): account is ITGAccount => account !== null,
-      );
-
-      return this.TgAccounts;
-    } catch (error) {
-      console.error("Error initializing Telegram service:", error);
-      return [];
-    }
+    this.TgAccounts = chats.map((id) => ({ id }));
+    return this.TgAccounts;
   };
 
-  // Get chat information
-  private static getChatInfo = async (chat_id: number): Promise<ITGAccount> => {
-    const data: ITGAccount = {};
-
-    try {
-      // Fetch basic chat info
-      const chatInfoResponse = await this.axiosInstance.get("/getChat", {
-        params: { chat_id },
-      });
-
-      const {
-        result: { title, username, id, photo },
-      } = chatInfoResponse.data;
-
-      data.title = title;
-      data.username = username;
-      data.id = id;
-
-      // Fetch chat member count
-      const memberCountResponse = await this.axiosInstance.get(
-        "/getChatMembersCount",
-        {
-          params: { chat_id },
-        },
-      );
-      data.members_count = memberCountResponse.data.result;
-
-      // Fetch chat photo if it exists
-      if (photo?.big_file_id) {
-        const fileResponse = await this.axiosInstance.get("/getFile", {
-          params: { file_id: photo.big_file_id },
-        });
-
-        const filePath = fileResponse.data.result.file_path;
-        if (filePath) {
-          data.file_path = `https://api.telegram.org/file/bot${this.BOT_TOKEN}/${filePath}`;
-        }
-      }
-    } catch (error) {
-      console.error(
-        `Error getting Telegram chat info for chat ID ${chat_id}:`,
-        error,
-      );
-      throw new Error("Error fetching chat info");
-    }
-
-    return data;
+  // Publishes photos + caption to the given chats via the server's stored
+  // bot token (POST /api/publish/telegram). Replaces the old raw
+  // sendMediaGroup POST to api.telegram.org.
+  public static publish = async (
+    input: TgPublishArgs,
+  ): Promise<{ results: TgPublishResult[] }> => {
+    const { results } = await apiClient.publish.publishTelegram({
+      adId: input.adId,
+      caption: input.caption,
+      imageUrls: input.imageUrls,
+      chatIds: input.chatIds.map(String),
+    });
+    return { results };
   };
 }

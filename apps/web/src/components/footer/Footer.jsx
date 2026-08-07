@@ -1,12 +1,18 @@
-import axios from "axios";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Button from "../../routes/aboutPageNew/components/Button";
 import { style } from "../../util/styles";
 import InstagramIcon from "../icons/InstagramIcon";
 import TelegramIcon from "../icons/TelegramIcon";
+import { apiClient } from "../../lib/apiClient";
 import "./footer.scss";
 
+// This footer contact form used to duplicate ContactUs.jsx's exact bug: a
+// hardcoded Telegram bot token literal and chat id, POSTing straight to
+// https://api.telegram.org/bot<TOKEN>/sendMessage from the browser (see
+// docs/05-migration-plan.md Phase E). Same fix as ContactUs.jsx: relay
+// through the server's public POST /api/contact instead — the token and
+// chat id now live only in apps/api's config.
 const Footer = () => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
@@ -14,49 +20,42 @@ const Footer = () => {
     phone: "",
     message: "",
   });
+  const [isSending, setIsSending] = useState(false);
 
   const handleSubmit = async () => {
+    if (isSending) return;
+
     if (!formData.name || !formData.phone) {
-      console.log("Majburiy maydonlar to'ldirilmagan");
       alert(t("requiredFields"));
-    } else if (!formData.phone.match(/^\+998\d{9}$/)) {
-      console.log("Telefon raqami noto'g'ri formatda");
+      return;
+    }
+    if (!formData.phone.match(/^\+998\d{9}$/)) {
       alert(t("invalidPhone"));
-    } else {
-      const message = `
-      Name: ${formData.name}
-      Phone: ${formData.phone}
-      Message: ${formData.message}
-      `;
-      const formDataTelegram = new FormData();
-      formDataTelegram.append("chat_id", "-1002366623212");
-      formDataTelegram.append("text", message);
-      formDataTelegram.append("parse_mode", "Markdown");
-      const token = "7558469078:AAFkpNkDzySQM79gJLBOyCTeidl1Y8uwY6Q"; // Your Bot Token
+      return;
+    }
 
-      try {
-        const response = await axios.post(
-          `https://api.telegram.org/bot${token}/sendMessage`,
-          formDataTelegram,
-        );
-        console.log("Message sent successfully:", response.data);
-        alert(t("messageSent"));
-      } catch (error) {
-        console.error("Xatolik yuz berdi:", error);
-        return null;
-      }
-
-      const newEntry = {
+    setIsSending(true);
+    try {
+      await apiClient.contact.submit({
         name: formData.name,
         phone: formData.phone,
         message: formData.message,
-      };
-      console.log("Ma'lumotlar yuborildi:", newEntry);
+      });
+      alert(t("messageSent"));
       setFormData({
         name: "",
         phone: "",
         message: "",
       });
+    } catch (error) {
+      console.error("Failed to send contact message:", error);
+      if (error?.response?.status === 429) {
+        alert(t("messageRateLimited"));
+      } else {
+        alert(t("messageSendFailed"));
+      }
+    } finally {
+      setIsSending(false);
     }
   };
 

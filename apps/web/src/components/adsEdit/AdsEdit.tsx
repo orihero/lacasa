@@ -21,10 +21,9 @@ import {
   Modal,
   Typography,
 } from "@mui/material";
-import axios from "axios";
 import { buildCaption, convertDisplayPrice } from "@lacasa/domain";
 import type { CurrencyCodeKey } from "@lacasa/domain";
-import type { InstagramAccount } from "@lacasa/api-client";
+import type { InstagramAccount, TgPublishResult } from "@lacasa/api-client";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { FieldValues } from "react-hook-form";
@@ -49,6 +48,7 @@ import {
 import IgProfileCard from "../igProfileCard/IgProfileCard";
 import TgProfileCard from "../tgProfileCard/TgProfileCard";
 import YtVideoCard from "../ytVideoCard/YtVideoCard";
+import { TGService } from "../../services/tg";
 import type { ITGAccount } from "../../services/tg";
 import "./adsEdit.scss";
 import ImageGrid from "./components/ImageGrid";
@@ -99,7 +99,7 @@ const AdsEdit = () => {
   );
   const [, setVideoSrc] = useState<File | string | undefined>(undefined);
   const [openModal, setOpenModal] = useState("");
-  const [resTG, setResTg] = useState([]);
+  const [resTG, setResTg] = useState<TgPublishResult[]>([]);
   const [priceType, setPriceType] = useState<CurrencyCodeKey>("uzs");
   const [nearPlacesList, setNearPlaceList] = useState<string[]>([]);
   const [optionList, setOptionList] = useState<AdOptionItem[]>([]);
@@ -266,46 +266,38 @@ const AdsEdit = () => {
 
   const onSubmitTG = async () => {
     const allValues = getValues();
+    // Matches the pre-existing behavior exactly: only newly-dropped files
+    // are sent, not the ad's already-uploaded photos (unlike onSubmitIG,
+    // which uses collectPhotoUrls()) — not this migration's job to change.
     const photos = await Promise.all(extFiles.map((e) => assetUpload(e.file)));
 
+    // NOTE: unlike AdsAdd's onSubmitTG, the caption here has never included
+    // the hashtags prefix — a pre-existing inconsistency between the two
+    // forms, left as-is (not this migration's job to reconcile).
     const caption = buildCaption(allValues, priceType, t);
+    const chatIds = publishSelectSocial.map((socialItem) => String(socialItem.id));
 
-    const responses = await Promise.all(
-      publishSelectSocial.map(async (socialItem) => {
-        const formData = new FormData();
-        formData.append("chat_id", String(socialItem.id));
-        formData.append("protect_content", "true");
-        formData.append(
-          "media",
-          JSON.stringify(
-            photos.map((e, i) =>
-              i === photos.length - 1
-                ? { type: "photo", media: e, caption }
-                : { type: "photo", media: e },
-            ),
-          ),
-        );
-
-        try {
-          const res = await axios.post(
-            `https://api.telegram.org/bot${
-              import.meta.env.VITE_TG_BOT_TOKEN
-            }/sendMediaGroup`,
-            formData,
-          );
-
-          return res.data?.result[0];
-        } catch (error) {
-          console.error(error);
-          return null;
-        }
-      }),
-    );
-
-    const successfulResponses = responses.filter(
-      (response) => response !== null,
-    );
-    setResTg([...resTG, ...successfulResponses]);
+    try {
+      // Publishing happens server-side with the stored bot token — no
+      // Telegram token ever reaches the browser.
+      const { results } = await TGService.publish({
+        adId: id,
+        caption,
+        imageUrls: photos,
+        chatIds,
+      });
+      const successful = results.filter((r) => r.ok);
+      const failed = results.filter((r) => !r.ok);
+      setResTg([...resTG, ...successful]);
+      if (failed.length) {
+        toast.error(`Telegram publish failed for ${failed.map((f) => f.chatId).join(", ")}`);
+      } else if (successful.length) {
+        toast.success("Telegram post published!");
+      }
+    } catch (error) {
+      console.error("Error publishing to Telegram:", error);
+      toast.error(error?.response?.data?.error?.message ?? "Error publishing to Telegram");
+    }
   };
 
   // Existing photos already have public URLs; newly dropped files get
@@ -973,11 +965,15 @@ const AdsEdit = () => {
             <AccordionDetails>
               <div className="tg-content-preview">
                 <div className="tg-channel-logo">
-                  <img src={currentUser?.tgAccounts[0].file_path} alt="" />
+                  {currentUser?.tgAccounts[0]?.file_path ? (
+                    <img src={currentUser.tgAccounts[0].file_path} alt="" />
+                  ) : (
+                    <div className="tg-avatar-placeholder" aria-hidden="true" />
+                  )}
                 </div>
                 <div className="tg-post-content">
                   <div className="tg-post-header">
-                    <h5>{currentUser?.tgAccounts[0].title}</h5>
+                    <h5>{currentUser?.tgAccounts[0]?.title ?? "Telegram channel"}</h5>
                   </div>
                   <div className="tg-post-img-div">
                     <ImageGrid images={extFiles} />
@@ -1050,11 +1046,13 @@ const AdsEdit = () => {
                       )}
                     </div>
                     <div className="tg-footer-text">
-                      <a
-                        href={`https://t.me/${currentUser?.tgAccounts[0].username}`}
-                      >
-                        t.me/{currentUser?.tgAccounts[0].username}
-                      </a>
+                      {currentUser?.tgAccounts[0]?.username ? (
+                        <a href={`https://t.me/${currentUser.tgAccounts[0].username}`}>
+                          t.me/{currentUser.tgAccounts[0].username}
+                        </a>
+                      ) : (
+                        <span className="tg-unavailable">Channel link unavailable</span>
+                      )}
                       <div className="tg-createAt">
                         <span>12.7 K</span>
                         <span>
@@ -1273,32 +1271,41 @@ const AdsEdit = () => {
                           />
 
                           {resTG.map((e) => {
-                            if (e.chat.id == item.id) {
-                              return (
-                                <div
-                                  key={e.message_id}
-                                  onClick={() => {
-                                    const url = `https://t.me/${item.username}/${e.message_id}`;
-                                    navigator.clipboard
-                                      .writeText(url)
-                                      .then(() => {
-                                        alert(
-                                          "Link copied to clipboard: " + url,
-                                        );
-                                      })
-                                      .catch((error) => {
-                                        console.error(
-                                          "Failed to copy text: ",
-                                          error,
-                                        );
-                                      });
-                                  }}
-                                  className="tg-message-share-icon"
-                                >
-                                  <ShareIcon />
-                                </div>
-                              );
-                            }
+                            if (e.chatId != String(item.id)) return null;
+                            return (
+                              <div
+                                key={e.messageId ?? e.chatId}
+                                onClick={() => {
+                                  // Channel usernames aren't known client-side
+                                  // any more (see TgProfileCard's honest
+                                  // "unavailable" state) so a real t.me link
+                                  // can't be built without one.
+                                  if (!item.username) {
+                                    alert(
+                                      "This channel's username isn't known, so a shareable link can't be built.",
+                                    );
+                                    return;
+                                  }
+                                  const url = `https://t.me/${item.username}/${e.messageId}`;
+                                  navigator.clipboard
+                                    .writeText(url)
+                                    .then(() => {
+                                      alert(
+                                        "Link copied to clipboard: " + url,
+                                      );
+                                    })
+                                    .catch((error) => {
+                                      console.error(
+                                        "Failed to copy text: ",
+                                        error,
+                                      );
+                                    });
+                                }}
+                                className="tg-message-share-icon"
+                              >
+                                <ShareIcon />
+                              </div>
+                            );
                           })}
                         </div>
                       );

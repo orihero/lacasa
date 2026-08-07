@@ -11,6 +11,7 @@ import { createApiClient, type CreateApiClientOptions } from './core/client';
 import { createAdsResource } from './resources/ads';
 import { createAgentsResource } from './resources/agents';
 import { createAuthResource } from './resources/auth';
+import { createContactResource } from './resources/contact';
 import { createCoworkersResource } from './resources/coworkers';
 import { createLeadsResource } from './resources/leads';
 import { createPublishResource } from './resources/publish';
@@ -26,6 +27,7 @@ export * from './core/client';
 export * from './resources/ads';
 export * from './resources/agents';
 export * from './resources/auth';
+export * from './resources/contact';
 export * from './resources/coworkers';
 export * from './resources/leads';
 export * from './resources/publish';
@@ -45,6 +47,7 @@ export interface LaCasaApiClient {
   ads: ReturnType<typeof createAdsResource>;
   agents: ReturnType<typeof createAgentsResource>;
   auth: ReturnType<typeof createAuthResource>;
+  contact: ReturnType<typeof createContactResource>;
   coworkers: ReturnType<typeof createCoworkersResource>;
   leads: ReturnType<typeof createLeadsResource>;
   publish: ReturnType<typeof createPublishResource>;
@@ -67,6 +70,7 @@ export function createLaCasaApiClient(options: CreateApiClientOptions): LaCasaAp
     ads: createAdsResource(client),
     agents: createAgentsResource(client),
     auth: createAuthResource(client),
+    contact: createContactResource(client),
     coworkers: createCoworkersResource(client),
     leads: createLeadsResource(client),
     publish: createPublishResource(client),

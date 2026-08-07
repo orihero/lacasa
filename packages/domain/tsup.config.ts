@@ -23,6 +23,7 @@ export default defineConfig({
     'schemas/lead': 'src/schemas/lead.ts',
     'schemas/user': 'src/schemas/user.ts',
     'schemas/publish': 'src/schemas/publish.ts',
+    'schemas/contact': 'src/schemas/contact.ts',
     errors: 'src/errors.ts',
   },
   format: ['esm', 'cjs'],

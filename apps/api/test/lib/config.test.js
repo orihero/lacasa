@@ -33,13 +33,20 @@ describe("loadConfig", () => {
     expect(config.LLM_MODEL).toBe("claude-opus-5");
   });
 
-  it("derives IG_CONFIGURED / LLM_CONFIGURED from the presence of their vars", () => {
+  it("derives IG_CONFIGURED / LLM_CONFIGURED / TG_CONFIGURED from the presence of their vars", () => {
     expect(loadConfig(VALID_ENV).IG_CONFIGURED).toBe(false);
     expect(loadConfig(VALID_ENV).LLM_CONFIGURED).toBe(false);
+    expect(loadConfig(VALID_ENV).TG_CONFIGURED).toBe(false);
     expect(
       loadConfig({ ...VALID_ENV, IG_APP_ID: "a", IG_APP_SECRET: "b", IG_REDIRECT_URI: "c", ANTHROPIC_API_KEY: "k" })
         .IG_CONFIGURED,
     ).toBe(true);
+    expect(loadConfig({ ...VALID_ENV, TG_BOT_TOKEN: "t" }).TG_CONFIGURED).toBe(true);
+  });
+
+  it("TG_CONTACT_CHAT_ID stays optional independently of TG_BOT_TOKEN", () => {
+    expect(loadConfig({ ...VALID_ENV, TG_BOT_TOKEN: "t" }).TG_CONTACT_CHAT_ID).toBeUndefined();
+    expect(loadConfig({ ...VALID_ENV, TG_CONTACT_CHAT_ID: "-100123" }).TG_CONTACT_CHAT_ID).toBe("-100123");
   });
 
   it("respects an explicit MINIO_PUBLIC_URL instead of deriving one", () => {

@@ -68,9 +68,13 @@ Root scripts fan out across every workspace: `npm run build`, `npm run lint`,
 MinIO console: http://localhost:9001 (user `lacasa`, password `lacasa_dev_secret`).
 Prisma Studio (DB browser): `npm run studio -w @lacasa/api`.
 
-> ⚠️ `apps/web` still publishes to Telegram from the browser with the bot token
-> in the bundle, and `ContactUs.jsx` has one hardcoded in source. That token is
-> burned and needs rotating — see docs/05 Phase E.
+> ⚠️ Telegram publishing and the contact form now go through `apps/api`
+> (`POST /publish/telegram`, `POST /contact`) — the bot token lives only in
+> the server's env and is no longer compiled into the `apps/web` bundle or
+> hardcoded in source. The **old token is still burned and needs rotating**:
+> it shipped in public bundles and one hardcoded literal for a long time, so
+> it remains in git history regardless of what the code does today — see
+> docs/05 Phase E.4.
 
 ## CI
 

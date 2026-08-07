@@ -34,5 +34,6 @@ export * from './schemas/ad';
 export * from './schemas/lead';
 export * from './schemas/user';
 export * from './schemas/publish';
+export * from './schemas/contact';
 
 export * from './errors';
