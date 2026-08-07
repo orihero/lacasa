@@ -1,0 +1,382 @@
+// La Casa data model — see docs/03-data-model.md for the Firestore mapping.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  AGENT
+  COWORKER
+}
+
+// Realtor sign-up (mockups/SCREENS.md §13). Mirrored in
+// packages/domain/src/enums/users.ts, which owns the wire-format keys.
+
+enum RealtorKind {
+  SOLO
+  AGENCY
+}
+
+// An application, not a permission: only APPROVED promotes role to AGENT.
+enum RealtorStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TeamSize {
+  JUST_ME
+  TWO_TO_FIVE
+  SIX_TO_FIFTEEN
+  SIXTEEN_PLUS
+}
+
+enum AdType {
+  RESIDENTIAL
+  NONRESIDENTIAL
+}
+
+enum AdCategory {
+  RENT
+  SALE
+}
+
+enum Repairment {
+  NOT_REPAIRED
+  NORMAL
+  GOOD
+  EXCELLENT
+}
+
+enum Furniture {
+  WITH
+  WITHOUT
+}
+
+enum AdStage {
+  ACTIVE // Firestore stage "1"
+  SOLD   // "2"
+  DRAFT  // "3"
+}
+
+enum CurrencyCode {
+  UZS
+  USD
+}
+
+// Distinguishes a photo from the video the CRM upload form already accepts
+// (up to 70MB; POST /api/uploads/presign already allows video/* content
+// types) once a per-AdPhoto row can represent either. Mirrored in
+// packages/domain/src/enums/ads.ts, which owns the wire-format keys.
+enum AdMediaType {
+  PHOTO
+  VIDEO
+}
+
+enum LeadStatus {
+  NEW
+  COULD_NOT_CONNECT
+  NEED_TO_CALL_BACK
+  REJECTED
+  ACCEPTED
+}
+
+enum EventType {
+  AD_CREATED         // Firestore statistics stage 1
+  AD_SOLD            // 2
+  AD_DRAFT_UPDATED   // 3
+  LEAD_CREATED       // 4
+  LEAD_STATUS_CHANGED // 5
+  OLX_CROSSPOST_STARTED   // extension session start — drives the OLX daily rate limit
+  OLX_CROSSPOST_COMPLETED
+  OLX_CROSSPOST_ABORTED
+  IG_ASSIST_STARTED       // extension session start — drives the IG-assist daily rate limit
+  IG_ASSIST_COMPLETED
+  IG_ASSIST_ABORTED
+}
+
+enum PublishChannel {
+  TELEGRAM
+  INSTAGRAM
+  YOUTUBE
+  OLX
+  REALTING
+}
+
+enum PublishStatus {
+  PENDING                 // never attempted, or reset
+  DRAFTED_AWAITING_REVIEW // extension-assisted: form filled, human hasn't clicked Publish/Share yet
+  PUBLISHED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  fullName     String   @map("full_name")
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(USER)
+  phoneNumber  String?  @map("phone_number")
+  avatarUrl    String?  @map("avatar_url")
+  tgChatIds    BigInt[] @map("tg_chat_ids")
+
+  // Realtor application, filled in at sign-up and null for buyers. Set on the
+  // account that applied — a coworker's team facts live on their agent.
+  realtorKind      RealtorKind?  @map("realtor_kind")
+  realtorStatus    RealtorStatus @default(NONE) @map("realtor_status")
+  agencyName       String?       @map("agency_name")
+  officePhone      String?       @map("office_phone")
+  teamSize         TeamSize?     @map("team_size")
+  realtorAppliedAt DateTime?     @map("realtor_applied_at") @db.Timestamptz()
+  realtorDecidedAt DateTime?     @map("realtor_decided_at") @db.Timestamptz()
+
+  // coworker → owning agent
+  agentId   String? @map("agent_id") @db.Uuid
+  agent     User?   @relation("AgentCoworkers", fields: [agentId], references: [id], onDelete: SetNull)
+  coworkers User[]  @relation("AgentCoworkers")
+
+  // One-time opt-in for extension-assisted Instagram posting (risk disclosure).
+  igAssistConsentAt DateTime? @map("ig_assist_consent_at") @db.Timestamptz()
+
+  igTokens            AgentIgToken[]
+  publicationRequests AdPublication[] @relation("PublicationRequestedBy")
+  ads                 Ad[]            @relation("AdAgent")
+  coworkerAds    Ad[]            @relation("AdCoworker")
+  leads          Lead[]          @relation("LeadAgent")
+  coworkerLeads  Lead[]          @relation("LeadCoworker")
+  events         ActivityEvent[] @relation("EventAgent")
+  coworkerEvents ActivityEvent[] @relation("EventCoworker")
+  savedAds       SavedAd[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([agentId])
+  @@index([role])
+  // Whoever reviews applications reads this one status at a time.
+  @@index([realtorStatus])
+  @@map("users")
+}
+
+model AgentIgToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  agentId     String    @map("agent_id") @db.Uuid
+  agent       User      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  accessToken String    @map("access_token")
+  igUserId    String    @map("ig_user_id")
+  igUsername  String?   @map("ig_username")
+  // Null for legacy hand-minted tokens with unknown expiry; the refresh job skips those.
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz()
+  refreshedAt DateTime? @map("refreshed_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([agentId, igUserId])
+  @@index([agentId])
+  @@index([expiresAt])
+  @@map("agent_ig_tokens")
+}
+
+// One row per (ad, channel), upserted on every publish attempt — the status
+// grid is a single findMany. adId is a plain string (today a Firestore doc id;
+// ads migrate to Postgres in a later phase, so no FK yet).
+model AdPublication {
+  id      String         @id @default(uuid()) @db.Uuid
+  adId    String         @map("ad_id")
+  channel PublishChannel
+  status  PublishStatus  @default(PENDING)
+
+  externalId  String? @map("external_id")  // TG message_id, IG media id, YT video id, OLX ad id
+  externalUrl String? @map("external_url")
+
+  // Channel-specific audit payload: IG container id / mechanism ("graph-api"
+  // vs "extension-assisted"), the OLX LLM field-map, etc.
+  payload Json? @default("{}")
+
+  attempts      Int       @default(0)
+  lastAttemptAt DateTime? @map("last_attempt_at") @db.Timestamptz()
+  publishedAt   DateTime? @map("published_at") @db.Timestamptz()
+  errorMessage  String?   @map("error_message")
+
+  requestedById String? @map("requested_by_id") @db.Uuid
+  requestedBy   User?   @relation("PublicationRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([adId, channel])
+  @@index([channel, status])
+  @@map("ad_publications")
+}
+
+model Ad {
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String
+  city        String
+  district    String
+  address     String?
+  reference   String?
+  type        AdType
+  category    AdCategory
+  repairment  Repairment?
+  rooms       Int?
+  area        Decimal?     @db.Decimal(10, 2)
+  storey      Int?
+  floors      Int?
+  furniture   Furniture?
+  hashtags    String?
+  price       Decimal      @db.Decimal(14, 2)
+  priceType   CurrencyCode @map("price_type")
+  stage       AdStage      @default(ACTIVE)
+  description String?
+  nearPlaces  String[]     @map("near_places")
+  options     Json         @default("[]")
+  active      Boolean      @default(true)
+
+  // Listing-detail map pin (docs/10-backend-for-liquid-glass.md §3).
+  // Nullable and independent at the column level -- the "must be set
+  // together" rule isn't a DB constraint, it's enforced in
+  // apps/api/src/services/adService.js#validateCoordinates, which has the
+  // full picture a CHECK constraint wouldn't on a PATCH that only touches
+  // one of the two (see that function's comment). Decimal(9,6): 3 integer
+  // digits + 6 fractional covers signed longitude's -180..180 range (lat's
+  // -90..90 needs fewer integer digits but shares the column type/scale).
+  // No backfill/geocoding here -- existing ads simply stay NULL until an
+  // agent sets a pin; a batch geocode pass is an explicit follow-up.
+  lat Decimal? @db.Decimal(9, 6)
+  lng Decimal? @db.Decimal(9, 6)
+
+  // Embedded 3D tour on listing detail (docs/10 §3, SCREENS.md §7). Plain
+  // TEXT like address/reference/description -- the 2048-char cap is
+  // app-level only. Constrained to absolute http(s) at the write boundary
+  // (packages/domain's adInputSchema, enforced by routes/ads.js) because it
+  // is rendered as an <iframe src> with no sandbox attribute, where a
+  // javascript:/data: scheme would execute in the visitor's origin.
+  tour3dLink String? @map("tour_3d_link")
+
+  agentId    String  @map("agent_id") @db.Uuid
+  agent      User    @relation("AdAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  coworkerId String? @map("coworker_id") @db.Uuid
+  coworker   User?   @relation("AdCoworker", fields: [coworkerId], references: [id], onDelete: SetNull)
+
+  photos  AdPhoto[]
+  events  ActivityEvent[]
+  savedBy SavedAd[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([agentId, stage])
+  @@index([stage, active])
+  @@map("ads")
+}
+
+model AdPhoto {
+  id        String      @id @default(uuid()) @db.Uuid
+  adId      String      @map("ad_id") @db.Uuid
+  ad        Ad          @relation(fields: [adId], references: [id], onDelete: Cascade)
+  objectKey String      @map("object_key")
+  url       String
+  position  Int         @default(0)
+  // Defaulted rather than required: no producer sets this on write today
+  // (photosCreateData in adService.js only ever sends url/objectKey/position),
+  // so every row — existing and newly created — becomes PHOTO until a future
+  // video-upload producer starts passing it explicitly.
+  mediaType AdMediaType @default(PHOTO) @map("media_type")
+
+  @@index([adId])
+  @@map("ad_photos")
+}
+
+// A buyer's favourited listing (the heart control, mockups/SCREENS.md §17).
+// Its own table rather than a flag on Ad because it is per-(user, ad): the
+// same listing is saved by one buyer and not another. Only USER accounts get
+// rows here — the heart is hidden for agents and coworkers, and the API
+// enforces that rather than trusting the client (docs/10 §5 Decision 5).
+model SavedAd {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adId      String   @map("ad_id") @db.Uuid
+  ad        Ad       @relation(fields: [adId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  // Saving twice is the same fact, not two — this is what makes POST idempotent.
+  @@unique([userId, adId])
+  @@index([userId])
+  @@index([adId])
+  @@map("saved_ads")
+}
+
+model Lead {
+  id                  String     @id @default(uuid()) @db.Uuid
+  fullName            String     @map("full_name")
+  phone               String
+  email               String?
+  budget              Decimal?   @db.Decimal(14, 2)
+  comment             String?
+  conversationComment String?    @map("conversation_comment")
+  status              LeadStatus @default(NEW)
+  source              String?
+  callbackDate        DateTime?  @map("callback_date") @db.Timestamptz()
+  active              Boolean    @default(true)
+
+  agentId    String  @map("agent_id") @db.Uuid
+  agent      User    @relation("LeadAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  coworkerId String? @map("coworker_id") @db.Uuid
+  coworker   User?   @relation("LeadCoworker", fields: [coworkerId], references: [id], onDelete: SetNull)
+
+  events ActivityEvent[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([agentId])
+  @@index([coworkerId])
+  @@map("leads")
+}
+
+model ActivityEvent {
+  id   String    @id @default(uuid()) @db.Uuid
+  type EventType
+
+  agentId    String  @map("agent_id") @db.Uuid
+  agent      User    @relation("EventAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  coworkerId String? @map("coworker_id") @db.Uuid
+  coworker   User?   @relation("EventCoworker", fields: [coworkerId], references: [id], onDelete: SetNull)
+  adId       String? @map("ad_id") @db.Uuid
+  ad         Ad?     @relation(fields: [adId], references: [id], onDelete: SetNull)
+  leadId     String? @map("lead_id") @db.Uuid
+  lead       Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  meta Json?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@index([agentId, createdAt])
+  @@index([type])
+  @@map("activity_events")
+}
+
+model CurrencyRate {
+  id        String       @id @default(uuid()) @db.Uuid
+  code      CurrencyCode @unique
+  rate      Decimal      @db.Decimal(14, 2)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("currency_rates")
+}
+
+model NearbyPlaceOption {
+  id       String @id @default(uuid()) @db.Uuid
+  label    String @unique
+  position Int    @default(0)
+
+  @@map("nearby_place_options")
+}

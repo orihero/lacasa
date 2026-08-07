@@ -1,0 +1,29 @@
+{
+  "name": "@lacasa/extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "La Casa cross-poster — autofills OLX.uz and Instagram from a La Casa listing; you review and publish.",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "@lacasa/crosspost-protocol": "*",
+    "@lacasa/domain": "*"
+  },
+  "devDependencies": {
+    "@lacasa/config-eslint": "*",
+    "@lacasa/config-vitest": "*",
+    "@types/chrome": "^0.0.280",
+    "@vitest/coverage-v8": "^3.2.7",
+    "esbuild": "^0.24.0",
+    "eslint": "^8.57.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

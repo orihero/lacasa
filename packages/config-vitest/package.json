@@ -1,0 +1,32 @@
+{
+  "name": "@lacasa/config-vitest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "exports": {
+    "./node": "./node.js",
+    "./react": "./react.js",
+    "./react/server": "./setup/react.setup.js"
+  },
+  "files": [
+    "node.js",
+    "react.js",
+    "setup"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "msw": "^2.15.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.2.7",
+    "vitest": "^3.2.7"
+  },
+  "peerDependencies": {
+    "@testing-library/react": "^16.0.0",
+    "vitest": "^3.2.7"
+  }
+}

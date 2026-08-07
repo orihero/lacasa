@@ -1,0 +1,773 @@
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Casa Web · Agent — Console</title>
+<meta name="description" content="Agent CRM surface: dashboard, listings, editor, leads table + kanban, coworkers, publish status. Dense instrument direction.">
+<!--FONTS-->
+<style>
+/* ============================================================================
+   La Casa Web · Surface 2 — CONSOLE  (role: AGENT / COWORKER)
+
+   Same brand, inverted priorities. The marketplace sells with photography; the
+   console is where an agent spends six hours a day, so every decision here
+   trades delight for density:
+
+     · 34px table rows instead of 22px-radius cards
+     · photography demoted to a 34px thumbnail — it is a row identifier, not a hero
+     · magenta stops being decoration and becomes a signal: it marks exactly one
+       thing per screen (the live metric, the failed channel, the overdue lead)
+     · tabular numerals everywhere a number can be compared down a column
+     · a persistent left rail, because an agent navigates by section, not by feed
+
+   It is still unmistakably La Casa — Poppins, the same accent, the same radii
+   family one step tighter — but it reads as an instrument, not a storefront.
+   ========================================================================= */
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+
+:root{
+  --ink:#15151b; --ink-2:#41414e; --muted:#7a7a88; --faint:#a4a4b1;
+  --app:#eeeef2; --card:#fff; --sunk:#f5f5f8; --rail:#fbfbfd;
+  --line:rgba(24,22,38,.1); --line-2:rgba(24,22,38,.06);
+  --accent:#f5439b; --accent-soft:rgba(245,67,155,.12);
+  --accent-grad:linear-gradient(158deg,#ff77b8 0%,#f5439b 46%,#e5227f 100%);
+  --accent-shadow:0 8px 18px -8px rgba(229,34,127,.5);
+  --ok:#0f9d58; --ok-soft:rgba(15,157,88,.13);
+  --warn:#d98218; --warn-soft:rgba(217,130,24,.14);
+  --err:#dc3545; --err-soft:rgba(220,53,69,.13);
+  --info:#3b6fd4; --info-soft:rgba(59,111,212,.13);
+  --shadow:0 1px 2px rgba(24,22,38,.05),0 8px 24px -18px rgba(24,22,38,.4);
+}
+:root[data-theme=dark]{
+  --ink:#eeeef4; --ink-2:#bcbcca; --muted:#8a8a99; --faint:#63636f;
+  --app:#0a0a0e; --card:#15151c; --sunk:#101016; --rail:#101016;
+  --line:rgba(255,255,255,.09); --line-2:rgba(255,255,255,.05);
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -18px rgba(0,0,0,.9);
+}
+body{background:var(--app);color:var(--ink);min-height:100vh;
+  font-family:Poppins,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;font-size:13px}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer;text-align:left}
+img{display:block;max-width:100%}
+.i{display:inline-flex;flex:none;width:1em;height:1em;line-height:0}
+.i>svg{display:block;width:100%;height:100%}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:11.5px}
+
+/* ---- shell --------------------------------------------------------------- */
+.shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+.rail{background:var(--rail);border-right:1px solid var(--line);display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh}
+.rail__top{padding:18px 16px 14px;display:flex;align-items:center;gap:9px}
+.logo__m{width:28px;height:28px;border-radius:9px;background:var(--accent-grad);display:grid;
+  place-items:center;color:#fff;font-size:14px;box-shadow:var(--accent-shadow)}
+.rail__top b{font-size:14.5px;font-weight:700;letter-spacing:-.3px}
+.rail__top span{font-size:9.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;display:block}
+.rail__s{padding:14px 16px 6px;font-size:9.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.9px;color:var(--faint)}
+.rail nav{padding:0 10px;display:flex;flex-direction:column;gap:1px}
+.rail nav button{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:9px;
+  font-size:12.5px;font-weight:500;color:var(--ink-2);position:relative}
+.rail nav button:hover{background:var(--sunk)}
+.rail nav button.is-active{background:var(--sunk);color:var(--ink);font-weight:600}
+.rail nav button.is-active::before{content:"";position:absolute;left:-10px;top:50%;transform:translateY(-50%);
+  width:3px;height:17px;border-radius:0 3px 3px 0;background:var(--accent)}
+.rail nav .i{font-size:15px;color:var(--muted)}
+.rail nav button.is-active .i{color:var(--accent)}
+.rail nav em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:700;
+  background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:2px 7px}
+.rail__foot{margin-top:auto;padding:12px;border-top:1px solid var(--line)}
+.who{display:flex;align-items:center;gap:9px;padding:8px;border-radius:11px}
+.who:hover{background:var(--sunk)}
+.who__av{width:30px;height:30px;border-radius:50%;background-size:cover;background-position:center;flex:none}
+.who b{font-size:12px;font-weight:600;display:block;line-height:1.3}
+.who span{font-size:10.5px;color:var(--muted)}
+
+/* ---- topbar -------------------------------------------------------------- */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{height:54px;border-bottom:1px solid var(--line);background:var(--card);display:flex;
+  align-items:center;gap:12px;padding:0 20px;position:sticky;top:0;z-index:40}
+.top h1{font-size:14.5px;font-weight:600;letter-spacing:-.2px}
+.top .sp{flex:1}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;width:230px;color:var(--muted);font-size:12px;background:var(--sunk)}
+.search .i{font-size:14px}
+.ib{width:31px;height:31px;border-radius:9px;display:grid;place-items:center;font-size:15px;
+  color:var(--ink-2);position:relative;border:1px solid var(--line);background:var(--card)}
+.ib:hover{background:var(--sunk)}
+.ib__d{position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 1.5px var(--card)}
+.body{padding:20px;flex:1}
+
+/* ---- primitives ---------------------------------------------------------- */
+.btn{border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:600;display:inline-flex;
+  align-items:center;gap:7px;justify-content:center;white-space:nowrap;border:1px solid transparent}
+.btn .i{font-size:14px}
+.btn--p{background:var(--accent-grad);color:#fff;box-shadow:var(--accent-shadow)}
+.btn--g{border-color:var(--line);background:var(--card)}
+.btn--g:hover{background:var(--sunk)}
+.btn--d{border-color:var(--line);background:var(--card);color:var(--err)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+.panel__h{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.panel__h h2{font-size:13px;font-weight:600}
+.panel__h p{font-size:11px;color:var(--muted);margin-top:1px}
+.panel__h .sp{flex:1}
+.tag{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:3px 8px;font-size:10.5px;
+  font-weight:600;white-space:nowrap}
+.tag--ok{background:var(--ok-soft);color:var(--ok)}
+.tag--warn{background:var(--warn-soft);color:var(--warn)}
+.tag--err{background:var(--err-soft);color:var(--err)}
+.tag--info{background:var(--info-soft);color:var(--info)}
+.tag--acc{background:var(--accent-soft);color:var(--accent)}
+.tag--mute{background:var(--sunk);color:var(--muted)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+/* ---- stat cards ---------------------------------------------------------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--shadow)}
+.stat__l{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);font-weight:500}
+.stat__l .i{font-size:14px}
+.stat__v{font-size:27px;font-weight:700;letter-spacing:-1px;margin:7px 0 4px;line-height:1}
+.stat__d{font-size:11px;display:flex;align-items:center;gap:5px;font-weight:600}
+.stat__d .i{font-size:12px}
+.up{color:var(--ok)} .down{color:var(--err)}
+.stat--live{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft),var(--shadow)}
+
+/* ---- chart --------------------------------------------------------------- */
+.chart{padding:16px}
+.chart svg{width:100%;height:190px;display:block;overflow:visible}
+.legend{display:flex;gap:16px;font-size:11px;color:var(--muted);padding:0 16px 14px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:9px;height:9px;border-radius:3px;display:block}
+
+/* ---- tables -------------------------------------------------------------- */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.75px;color:var(--faint);
+  text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--sunk)}
+.tbl td{padding:8px 14px;border-bottom:1px solid var(--line-2);font-size:12.5px;vertical-align:middle}
+.tbl tbody tr{height:46px}
+.tbl tbody tr:hover{background:var(--sunk)}
+.tbl tbody tr.is-sel{background:var(--accent-soft)}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl .r{text-align:right}
+.cellmain{display:flex;align-items:center;gap:10px;min-width:0}
+.thumb{width:34px;height:34px;border-radius:7px;background-size:cover;background-position:center;
+  flex:none;background-color:var(--sunk)}
+.cellmain b{font-size:12.5px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:290px}
+.cellmain span{font-size:10.5px;color:var(--muted)}
+.acts{display:flex;gap:3px;justify-content:flex-end}
+.acts button{width:27px;height:27px;border-radius:7px;display:grid;place-items:center;font-size:14px;color:var(--muted)}
+.acts button:hover{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.avstack{display:flex}
+.avstack div{width:24px;height:24px;border-radius:50%;background-size:cover;background-position:center;
+  border:1.5px solid var(--card);margin-left:-7px}
+.avstack div:first-child{margin-left:0}
+
+/* ---- toolbar ------------------------------------------------------------- */
+.tools{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:2px;gap:2px}
+.seg button{padding:5px 12px;border-radius:7px;font-size:12px;font-weight:600;color:var(--muted)}
+.seg button.is-on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+.filt{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;
+  padding:6px 11px;font-size:12px;background:var(--card);font-weight:500}
+.filt .i{font-size:13px;color:var(--muted)}
+.sp{flex:1}
+
+/* ---- kanban -------------------------------------------------------------- */
+.kb{display:grid;grid-template-columns:repeat(5,minmax(210px,1fr));gap:11px;align-items:start;overflow-x:auto;padding-bottom:8px}
+.kb__c{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:9px;min-height:180px}
+.kb__h{display:flex;align-items:center;gap:7px;padding:3px 5px 10px;font-size:11.5px;font-weight:700}
+.kb__h em{font-style:normal;margin-left:auto;font-size:10.5px;color:var(--muted);background:var(--card);
+  border-radius:20px;padding:2px 7px;border:1px solid var(--line)}
+.kbc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:7px;
+  box-shadow:var(--shadow);cursor:grab}
+.kbc b{font-size:12.5px;font-weight:600;display:block}
+.kbc .mono{color:var(--muted);display:block;margin:3px 0 8px}
+.kbc__f{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line-2)}
+.kbc__f .who__av{width:21px;height:21px}
+.kbc__f span{font-size:10.5px;color:var(--muted)}
+
+/* ---- editor -------------------------------------------------------------- */
+.two{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+.form{padding:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.f{display:flex;flex-direction:column;gap:5px}
+.f--full{grid-column:1/-1}
+.f label{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.f div.in{border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;background:var(--sunk);
+  display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:35px}
+.f div.in .i{font-size:13px;color:var(--faint)}
+.f div.in.ta{min-height:76px;align-items:flex-start;line-height:1.6;color:var(--ink-2)}
+.hint{font-size:10.5px;color:var(--muted)}
+.phgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
+.phgrid div{aspect-ratio:1;border-radius:9px;background-size:cover;background-position:center;
+  background-color:var(--sunk);position:relative;border:1px solid var(--line)}
+.phgrid .add{display:grid;place-items:center;border:1px dashed var(--line);color:var(--muted);font-size:17px}
+.phgrid .cover{position:absolute;left:4px;bottom:4px;font-size:8.5px;font-weight:700;background:rgba(0,0,0,.62);
+  color:#fff;border-radius:4px;padding:2px 5px}
+.chn{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line-2)}
+.chn:last-child{border-bottom:0}
+.chn .i{font-size:17px;color:var(--muted)}
+.chn b{font-size:12.5px;font-weight:600;display:block}
+.chn span{font-size:10.5px;color:var(--muted)}
+.chn .sp{flex:1}
+.sw{width:34px;height:20px;border-radius:20px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.sw.is-on{background:var(--accent)}
+.sw.is-on::after{transform:translateX(14px)}
+.cb{width:17px;height:17px;border-radius:5px;border:1.5px solid var(--line);display:grid;place-items:center;
+  font-size:10px;color:#fff;flex:none}
+.cb.is-on{background:var(--accent);border-color:var(--accent)}
+.cb .i{opacity:0}
+.cb.is-on .i{opacity:1}
+
+/* ---- activity ------------------------------------------------------------ */
+.act{display:flex;gap:11px;padding:11px 16px;border-bottom:1px solid var(--line-2)}
+.act:last-child{border-bottom:0}
+.act__i{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;font-size:14px;flex:none}
+.act b{font-size:12.5px;font-weight:600;display:block;line-height:1.45}
+.act span{font-size:10.5px;color:var(--muted)}
+
+.dev{position:fixed;right:16px;bottom:16px;z-index:200;display:flex;gap:8px}
+.dev button{border-radius:9px;padding:7px 12px;font-size:11.5px;font-weight:600;display:inline-flex;
+  align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
+.ix{position:fixed;inset:0;z-index:210;background:rgba(10,9,16,.6);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:24px}
+.ix.is-open{display:flex}
+.ix__p{background:var(--card);border-radius:16px;padding:22px;max-width:560px;width:100%;
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.ix__p h3{font-size:13.5px;margin-bottom:3px}
+.ix__p p{font-size:11.5px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.ix__g{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.ix__g button{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12px;
+  font-weight:600;background:var(--sunk)}
+.ix__g button b{display:block;font-size:10px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.screen{display:none}
+.screen.is-on{display:block}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+@media(max-width:860px){.shell{grid-template-columns:1fr}.rail{display:none}}
+</style>
+
+<div class="shell">
+  <!-- ======================= RAIL ======================== -->
+  <aside class="rail">
+    <div class="rail__top">
+      <span class="logo__m"><span class="i" data-i="house-fill"></span></span>
+      <div><b>La Casa</b><span>Agent console</span></div>
+    </div>
+    <div class="rail__s">Workspace</div>
+    <nav>
+      <button data-go="a-dash"><span class="i" data-i="squares-four-fill"></span> Statistics</button>
+      <button data-go="a-listings"><span class="i" data-i="buildings-fill"></span> My ads <em>8</em></button>
+      <button data-go="a-editor"><span class="i" data-i="note-pencil"></span> Listing editor</button>
+      <button data-go="a-publish"><span class="i" data-i="broadcast"></span> Publish status</button>
+    </nav>
+    <div class="rail__s">Pipeline</div>
+    <nav>
+      <button data-go="a-leads"><span class="i" data-i="users-three-fill"></span> Leads <em>27</em></button>
+      <button data-go="a-kanban"><span class="i" data-i="kanban-fill"></span> Kanban</button>
+    </nav>
+    <div class="rail__s">Team</div>
+    <nav>
+      <button data-go="a-coworkers"><span class="i" data-i="user-fill"></span> Coworkers <em>4</em></button>
+      <button data-go="a-accounts"><span class="i" data-i="link-simple"></span> Connected accounts</button>
+    </nav>
+    <div class="rail__foot">
+      <div class="who">
+        <div class="who__av" data-ph="ag-javlon"></div>
+        <div><b>Javlon Rustamov</b><span>Agent · Chilonzor</span></div>
+        <span class="i" data-i="caret-up-down" style="margin-left:auto;font-size:13px;color:var(--muted)"></span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- ======================= TOPBAR ====================== -->
+    <header class="top">
+      <h1 data-title-for="a-dash">Statistics</h1>
+      <h1 data-title-for="a-listings">My ads</h1>
+      <h1 data-title-for="a-editor">Update New Post · #a3f21</h1>
+      <h1 data-title-for="a-publish">Publish status · #a3f21</h1>
+      <h1 data-title-for="a-leads">Leads</h1>
+      <h1 data-title-for="a-kanban">Kanban</h1>
+      <h1 data-title-for="a-coworkers">Coworkers</h1>
+      <h1 data-title-for="a-accounts">Connected accounts</h1>
+      <div class="sp"></div>
+      <div class="search"><span class="i" data-i="magnifying-glass"></span> Search ads, leads…</div>
+      <button class="ib"><span class="i" data-i="bell"></span><i class="ib__d"></i></button>
+      <button class="ib"><span class="i" data-i="gear-fill"></span></button>
+      <button class="btn btn--p"><span class="i" data-i="plus"></span> Add new post</button>
+    </header>
+
+    <!-- ======================= DASHBOARD =================== -->
+    <section class="screen body" id="a-dash">
+      <div class="stats">
+        <div class="stat"><div class="stat__l"><span class="i" data-i="buildings-fill"></span> Ads created</div>
+          <div class="stat__v num">42</div><div class="stat__d up"><span class="i" data-i="arrow-up-right"></span> +12 vs last month</div></div>
+        <div class="stat"><div class="stat__l"><span class="i" data-i="tag-fill"></span> Ads sold</div>
+          <div class="stat__v num">11</div><div class="stat__d up"><span class="i" data-i="arrow-up-right"></span> +3 vs last month</div></div>
+        <div class="stat stat--live"><div class="stat__l"><span class="i" data-i="users-three-fill"></span> Active leads</div>
+          <div class="stat__v num">27</div><div class="stat__d" style="color:var(--accent)"><span class="i" data-i="circle-fill" style="font-size:7px"></span> 2 need a callback today</div></div>
+        <div class="stat"><div class="stat__l"><span class="i" data-i="user-fill"></span> Coworkers</div>
+          <div class="stat__v num">4</div><div class="stat__d" style="color:var(--muted)">2 active this week</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start">
+        <div class="panel">
+          <div class="panel__h"><div><h2>This month</h2><p>Ads created vs sold, day 1–12</p></div><div class="sp"></div>
+            <div class="seg"><button class="is-on">Month</button><button>Quarter</button><button>Year</button></div></div>
+          <div class="chart">
+            <svg viewBox="0 0 620 190" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#f5439b" stop-opacity=".28"/>
+                  <stop offset="100%" stop-color="#f5439b" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <g stroke="currentColor" stroke-opacity=".08" stroke-width="1">
+                <line x1="0" y1="10" x2="620" y2="10"/><line x1="0" y1="55" x2="620" y2="55"/>
+                <line x1="0" y1="100" x2="620" y2="100"/><line x1="0" y1="145" x2="620" y2="145"/>
+                <line x1="0" y1="180" x2="620" y2="180"/>
+              </g>
+              <!-- created: 2,1,3,0,2,1,4,1,2,1,3,2  (max 4 → y = 180 - v*42.5) -->
+              <path d="M10,95 L65,138 L120,53 L175,180 L230,95 L285,138 L340,10 L395,138 L450,95 L505,138 L560,53 L610,95 L610,180 L10,180 Z" fill="url(#gA)"/>
+              <path d="M10,95 L65,138 L120,53 L175,180 L230,95 L285,138 L340,10 L395,138 L450,95 L505,138 L560,53 L610,95"
+                    fill="none" stroke="#f5439b" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+              <!-- sold: 0,0,1,0,1,0,2,0,1,0,1,1 -->
+              <path d="M10,180 L65,180 L120,138 L175,180 L230,138 L285,180 L340,95 L395,180 L450,138 L505,180 L560,138 L610,138"
+                    fill="none" stroke="currentColor" stroke-opacity=".38" stroke-width="2" stroke-dasharray="4 4" stroke-linejoin="round"/>
+              <circle cx="340" cy="10" r="4" fill="#f5439b"/>
+              <g font-size="10" fill="currentColor" fill-opacity=".45" font-family="Poppins">
+                <text x="6" y="189">1</text><text x="171" y="189">4</text><text x="336" y="189">7</text>
+                <text x="501" y="189">10</text><text x="598" y="189">12</text>
+              </g>
+            </svg>
+          </div>
+          <div class="legend">
+            <span><i style="background:#f5439b"></i> Created</span>
+            <span><i style="background:currentColor;opacity:.38"></i> Sold</span>
+            <span style="margin-left:auto">Peak: day 7 · 4 created</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__h"><div><h2>Recent activity</h2><p>Last 2 days</p></div></div>
+          <div class="act"><div class="act__i" style="background:var(--accent-soft);color:var(--accent)"><span class="i" data-i="users-three-fill"></span></div>
+            <div><b>New lead: Dilnoza Yusupova is interested in your Chilonzor listing</b><span>2 min ago</span></div></div>
+          <div class="act"><div class="act__i" style="background:var(--info-soft);color:var(--info)"><span class="i" data-i="instagram-logo-fill"></span></div>
+            <div><b>Instagram post published — Bright 3-room apartment in Chilonzor is now live</b><span>1 h ago</span></div></div>
+          <div class="act"><div class="act__i" style="background:var(--warn-soft);color:var(--warn)"><span class="i" data-i="clock"></span></div>
+            <div><b>Callback reminder — Call Aziz Karimov today at 15:00</b><span>3 h ago</span></div></div>
+          <div class="act"><div class="act__i" style="background:var(--ok-soft);color:var(--ok)"><span class="i" data-i="check-circle-fill"></span></div>
+            <div><b>Listing sold — Two-room flat in Mirobod marked as Sold</b><span>Yesterday</span></div></div>
+          <div class="act"><div class="act__i" style="background:var(--sunk);color:var(--muted)"><span class="i" data-i="user-fill"></span></div>
+            <div><b>Sardor Abdullayev created Retail space near Chorsu bazaar</b><span>2 days ago</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= MY ADS ====================== -->
+    <section class="screen body" id="a-listings">
+      <div class="tools">
+        <div class="seg"><button class="is-on">All 8</button><button>Active 5</button><button>Sold 1</button><button>Draft 1</button></div>
+        <span class="filt"><span class="i" data-i="funnel-fill"></span> Chilonzor</span>
+        <span class="filt"><span class="i" data-i="caret-up-down"></span> Newest first</span>
+        <div class="sp"></div>
+        <button class="btn btn--g"><span class="i" data-i="upload-simple"></span> Export</button>
+        <button class="btn btn--p"><span class="i" data-i="plus"></span> Add new post</button>
+      </div>
+      <div class="panel">
+        <table class="tbl" data-rows>
+          <thead><tr><th style="width:38%">Listing</th><th>Ref</th><th>Deal</th><th class="r">Price</th>
+            <th class="r">Rooms</th><th class="r">Area</th><th>Status</th><th>Channels</th><th>Author</th><th></th></tr></thead>
+          <tbody>
+            <tr data-row class="is-sel"><td><div class="cellmain"><div class="thumb" data-ph="ad1001"></div>
+              <div><b>Bright 3-room apartment in Chilonzor</b><span>Chilonzor · 4/9</span></div></div></td>
+              <td class="mono">#a3f21</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$78,000</td>
+              <td class="r num">3</td><td class="r num">65 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--info">IG</span> <span class="tag tag--info">TG</span></td><td><div class="avstack"><div data-ph="ag-javlon"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1002"></div>
+              <div><b>Renovated studio near Yunusobod metro</b><span>Yunusobod · 2/5</span></div></div></td>
+              <td class="mono">#b71c4</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$350/mo</td>
+              <td class="r num">1</td><td class="r num">32 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--info">TG</span></td><td><div class="avstack"><div data-ph="ag-shahnoza"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1003"></div>
+              <div><b>Family house with garden in Sergeli</b><span>Sergeli · 1/2</span></div></div></td>
+              <td class="mono">#c92e8</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$120,000</td>
+              <td class="r num">5</td><td class="r num">140 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--err">OLX failed</span></td><td><div class="avstack"><div data-ph="ag-javlon"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1004"></div>
+              <div><b>Office space on Amir Temur avenue</b><span>Mirzo Ulugbek · 6/12</span></div></div></td>
+              <td class="mono">#d40a7</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$900/mo</td>
+              <td class="r num">4</td><td class="r num">110 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--info">IG</span></td><td><div class="avstack"><div data-ph="ag-otabek"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="dist-mirobod"></div>
+              <div><b>Two-room flat in Mirobod</b><span>Mirobod · 7/16</span></div></div></td>
+              <td class="mono">#e5b13</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$62,500</td>
+              <td class="r num">2</td><td class="r num">54 m²</td><td><span class="tag tag--acc">Sold</span></td>
+              <td><span class="tag tag--mute">—</span></td><td><div class="avstack"><div data-ph="ag-shahnoza"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1006"></div>
+              <div><b>Retail space near Chorsu bazaar</b><span>Shayxontohur · 1/1</span></div></div></td>
+              <td class="mono">#f8c30</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$1,200/mo</td>
+              <td class="r num">2</td><td class="r num">48 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--info">TG</span></td><td><div class="avstack"><div data-ph="ag-sardor"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="promo-yashnobod"></div>
+              <div><b>New-build 4-room in Yashnobod</b><span>Yashnobod · 12/17</span></div></div></td>
+              <td class="mono">#0a4d9</td><td><span class="tag tag--mute">Sale</span></td><td class="r num">$95,000</td>
+              <td class="r num">4</td><td class="r num">88 m²</td><td><span class="tag tag--warn">Draft</span></td>
+              <td><span class="tag tag--mute">Not published</span></td><td><div class="avstack"><div data-ph="ag-otabek"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+
+            <tr data-row><td><div class="cellmain"><div class="thumb" data-ph="ad1008"></div>
+              <div><b>Renovated 1-room near Yakkasaroy park</b><span>Yakkasaroy · 3/5</span></div></div></td>
+              <td class="mono">#1e6f2</td><td><span class="tag tag--mute">Rent</span></td><td class="r num">$400/mo</td>
+              <td class="r num">1</td><td class="r num">38 m²</td><td><span class="tag tag--ok"><i class="dot"></i> Active</span></td>
+              <td><span class="tag tag--info">IG</span> <span class="tag tag--info">TG</span></td><td><div class="avstack"><div data-ph="ag-kamola"></div></div></td>
+              <td><div class="acts"><button data-go="a-editor"><span class="i" data-i="note-pencil"></span></button>
+                <button data-go="a-publish"><span class="i" data-i="broadcast"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= EDITOR ====================== -->
+    <section class="screen body" id="a-editor">
+      <div class="tools">
+        <button class="btn btn--g" data-go="a-listings"><span class="i" data-i="arrow-left"></span> My ads</button>
+        <span class="tag tag--ok"><i class="dot"></i> Active</span>
+        <span class="mono" style="color:var(--muted)">#a3f21 · updated 03.08.2026 | 09:15</span>
+        <div class="sp"></div>
+        <button class="btn btn--d"><span class="i" data-i="trash"></span> Delete</button>
+        <button class="btn btn--g">Save draft</button>
+        <button class="btn btn--p"><span class="i" data-i="check-bold"></span> Save</button>
+      </div>
+      <div class="two">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="panel">
+            <div class="panel__h"><div><h2>Property details</h2><p>Fields mirror the Prisma <span class="mono">Ad</span> model</p></div></div>
+            <div class="form">
+              <div class="fgrid">
+                <div class="f f--full"><label>Title</label><div class="in">Bright 3-room apartment in Chilonzor</div></div>
+                <div class="f"><label>City</label><div class="in">Tashkent <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>District</label><div class="in">Chilonzor <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Type</label><div class="in">Residential <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Category</label><div class="in">Sale <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Price</label><div class="in num">78,000</div></div>
+                <div class="f"><label>Currency</label><div class="in">USD <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Rooms</label><div class="in num">3</div></div>
+                <div class="f"><label>Area, m²</label><div class="in num">65</div></div>
+                <div class="f"><label>Storey</label><div class="in num">4</div></div>
+                <div class="f"><label>Floors</label><div class="in num">9</div></div>
+                <div class="f"><label>Repairment</label><div class="in">Euro <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f"><label>Furniture</label><div class="in">Furnished <span class="i" data-i="caret-down-fill"></span></div></div>
+                <div class="f f--full"><label>Description</label>
+                  <div class="in ta">A bright corner apartment on the fourth floor of a well-kept nine-storey block, two minutes from Chilonzor metro. Three separate rooms, a renovated kitchen with built-in appliances, and a glazed balcony facing the courtyard.</div></div>
+                <div class="f f--full"><label>Hashtags</label><div class="in" style="color:var(--muted)">#chilonzor #3xona #tashkent</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__h"><div><h2>Media</h2><p>11 photos · 1 panorama · max 70 MB per video</p></div><div class="sp"></div>
+              <button class="btn btn--g"><span class="i" data-i="camera-fill"></span> Upload</button></div>
+            <div class="form">
+              <div class="phgrid">
+                <div data-ph="ad1001-hero"><span class="cover">Cover</span></div>
+                <div data-ph="ad1001-a"></div>
+                <div data-ph="ad1001-b"></div>
+                <div data-ph="ad1001-c"><span class="cover">360°</span></div>
+                <div class="add"><span class="i" data-i="plus"></span></div>
+              </div>
+              <p class="hint" style="margin-top:10px">Drag to reorder. The first photo is used as the cover everywhere — search results, Telegram and Instagram.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="panel">
+            <div class="panel__h"><div><h2>Publish</h2><p>Select channels</p></div></div>
+            <div class="form" style="padding:8px 16px 16px">
+              <div class="chn"><span class="i" data-i="instagram-logo-fill"></span>
+                <div><b>Instagram</b><span>@javlon.realty · connected</span></div><div class="sp"></div>
+                <button class="cb is-on" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn"><span class="i" data-i="telegram-logo-fill"></span>
+                <div><b>Telegram</b><span>2 channels · connected</span></div><div class="sp"></div>
+                <button class="cb is-on" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn"><span class="i" data-i="youtube-logo-fill"></span>
+                <div><b>YouTube</b><span>Not connected</span></div><div class="sp"></div>
+                <button class="cb" data-chk><span class="i" data-i="check-bold"></span></button></div>
+              <div class="chn" style="opacity:.5"><span class="i" data-i="storefront-fill"></span>
+                <div><b>OLX</b><span>Requires the browser extension</span></div><div class="sp"></div>
+                <button class="cb"><span class="i" data-i="check-bold"></span></button></div>
+              <button class="btn btn--p" style="width:100%;margin-top:12px"><span class="i" data-i="paper-plane-tilt-fill"></span> Publish to 2 channels</button>
+              <p class="hint" style="margin-top:9px">OLX cross-posting is only available from the desktop app (requires a browser extension).</p>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__h"><div><h2>Visibility</h2></div></div>
+            <div class="form" style="padding:8px 16px 16px">
+              <div class="chn"><div><b>Active</b><span>Visible in search results</span></div><div class="sp"></div>
+                <button class="sw is-on" data-sw></button></div>
+              <div class="chn"><div><b>Assign coworker</b><span>Sardor Abdullayev</span></div><div class="sp"></div>
+                <span class="i" data-i="caret-down-fill" style="font-size:13px;color:var(--muted)"></span></div>
+              <div class="chn"><div><b>Mark as sold</b><span>Moves to the Sold stage</span></div><div class="sp"></div>
+                <button class="sw" data-sw></button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= PUBLISH STATUS =============== -->
+    <section class="screen body" id="a-publish">
+      <div class="tools">
+        <button class="btn btn--g" data-go="a-editor"><span class="i" data-i="arrow-left"></span> Editor</button>
+        <div class="sp"></div>
+        <button class="btn btn--g"><span class="i" data-i="arrow-right"></span> Retry failed</button>
+      </div>
+      <div class="panel">
+        <div class="panel__h"><div><h2>Bright 3-room apartment in Chilonzor</h2>
+          <p class="mono">#a3f21 · one row per (ad, channel)</p></div></div>
+        <table class="tbl">
+          <thead><tr><th>Channel</th><th>Automation</th><th>Status</th><th>External</th><th>Last attempt</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><div class="cellmain"><span class="i" data-i="instagram-logo-fill" style="font-size:18px;color:var(--muted)"></span>
+              <div><b>Instagram</b><span>@javlon.realty</span></div></div></td>
+              <td><span class="tag tag--mute">Full API</span></td><td><span class="tag tag--ok"><i class="dot"></i> Published</span></td>
+              <td class="mono">instagram.com/p/C8x…</td><td class="num">03.08.2026 | 11:42</td>
+              <td><div class="acts"><button><span class="i" data-i="arrow-up-right"></span></button></div></td></tr>
+            <tr><td><div class="cellmain"><span class="i" data-i="telegram-logo-fill" style="font-size:18px;color:var(--muted)"></span>
+              <div><b>Telegram</b><span>@lacasa_tashkent</span></div></div></td>
+              <td><span class="tag tag--mute">Bot API</span></td><td><span class="tag tag--ok"><i class="dot"></i> Published</span></td>
+              <td class="mono">t.me/lacasa_tashkent/412</td><td class="num">03.08.2026 | 11:42</td>
+              <td><div class="acts"><button><span class="i" data-i="arrow-up-right"></span></button></div></td></tr>
+            <tr><td><div class="cellmain"><span class="i" data-i="storefront-fill" style="font-size:18px;color:var(--muted)"></span>
+              <div><b>OLX</b><span>Extension-assisted</span></div></div></td>
+              <td><span class="tag tag--mute">Form fill</span></td><td><span class="tag tag--warn"><i class="dot"></i> Awaiting review</span></td>
+              <td class="mono" style="color:var(--muted)">—</td><td class="num">03.08.2026 | 11:40</td>
+              <td><div class="acts"><button><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+            <tr><td><div class="cellmain"><span class="i" data-i="youtube-logo-fill" style="font-size:18px;color:var(--muted)"></span>
+              <div><b>YouTube</b><span>Not connected</span></div></div></td>
+              <td><span class="tag tag--mute">Browser OAuth</span></td><td><span class="tag tag--err"><i class="dot"></i> Failed</span></td>
+              <td class="mono" style="color:var(--err)">Token expired — reconnect</td><td class="num">03.08.2026 | 11:39</td>
+              <td><div class="acts"><button><span class="i" data-i="arrow-right"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= LEADS ======================= -->
+    <section class="screen body" id="a-leads">
+      <div class="tools">
+        <div class="seg"><button class="is-on" data-go="a-leads">Table</button><button data-go="a-kanban">Kanban</button></div>
+        <span class="filt"><span class="i" data-i="funnel-fill"></span> All stages</span>
+        <span class="filt"><span class="i" data-i="user-fill"></span> All agents</span>
+        <div class="sp"></div>
+        <button class="btn btn--p"><span class="i" data-i="plus"></span> Create lead</button>
+      </div>
+      <div class="panel">
+        <table class="tbl" data-rows>
+          <thead><tr><th style="width:24%">Lead</th><th>Phone</th><th class="r">Budget</th><th style="width:26%">Interest</th>
+            <th>Stage</th><th>Agent</th><th></th></tr></thead>
+          <tbody>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--accent-soft);
+              display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:12px">DY</div>
+              <div><b>Dilnoza Yusupova</b><span>Created 03.08.2026</span></div></div></td>
+              <td class="mono">+998901234501</td><td class="r num">$50,000</td>
+              <td>2–3 room apartment, Chilonzor or Yunusobod</td>
+              <td><span class="tag tag--info"><i class="dot"></i> New</span></td>
+              <td><div class="avstack"><div data-ph="ag-javlon"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--warn-soft);
+              display:grid;place-items:center;color:var(--warn);font-weight:700;font-size:12px">AK</div>
+              <div><b>Aziz Karimov</b><span>Callback 15:00 today</span></div></div></td>
+              <td class="mono">+998933456712</td><td class="r num">$80,000</td>
+              <td>Family house, Sergeli</td>
+              <td><span class="tag tag--warn"><i class="dot"></i> Need to call back</span></td>
+              <td><div class="avstack"><div data-ph="ag-javlon"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--sunk);
+              display:grid;place-items:center;color:var(--muted);font-weight:700;font-size:12px">MT</div>
+              <div><b>Malika Tosheva</b><span>3 attempts</span></div></div></td>
+              <td class="mono">+998977654321</td><td class="r num">$1,000/mo</td>
+              <td>Office rental, city center</td>
+              <td><span class="tag tag--mute"><i class="dot"></i> Could not connect</span></td>
+              <td><div class="avstack"><div data-ph="ag-shahnoza"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--ok-soft);
+              display:grid;place-items:center;color:var(--ok);font-weight:700;font-size:12px">BN</div>
+              <div><b>Bekzod Nazarov</b><span>Deal closed</span></div></div></td>
+              <td class="mono">+998912345678</td><td class="r num">$60,000</td>
+              <td>2-room flat, Mirobod</td>
+              <td><span class="tag tag--ok"><i class="dot"></i> Accepted</span></td>
+              <td><div class="avstack"><div data-ph="ag-shahnoza"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--err-soft);
+              display:grid;place-items:center;color:var(--err);font-weight:700;font-size:12px">RI</div>
+              <div><b>Ravshan Ismoilov</b><span>Budget mismatch</span></div></div></td>
+              <td class="mono">+998995551122</td><td class="r num">$100,000</td>
+              <td>4-room new build, Yashnobod</td>
+              <td><span class="tag tag--err"><i class="dot"></i> Rejected</span></td>
+              <td><div class="avstack"><div data-ph="ag-javlon"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%;background:var(--accent-soft);
+              display:grid;place-items:center;color:var(--accent);font-weight:700;font-size:12px">NE</div>
+              <div><b>Nodira Ergasheva</b><span>Created 03.08.2026</span></div></div></td>
+              <td class="mono">+998911223344</td><td class="r num">$400/mo</td>
+              <td>1-room studio near metro</td>
+              <td><span class="tag tag--info"><i class="dot"></i> New</span></td>
+              <td><div class="avstack"><div data-ph="ag-shahnoza"></div></div></td>
+              <td><div class="acts"><button><span class="i" data-i="phone-fill"></span></button><button><span class="i" data-i="note-pencil"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= KANBAN ====================== -->
+    <section class="screen body" id="a-kanban">
+      <div class="tools">
+        <div class="seg"><button data-go="a-leads">Table</button><button class="is-on" data-go="a-kanban">Kanban</button></div>
+        <span class="filt"><span class="i" data-i="user-fill"></span> All agents</span>
+        <div class="sp"></div>
+        <button class="btn btn--p"><span class="i" data-i="plus"></span> Create lead</button>
+      </div>
+      <div class="kb">
+        <div class="kb__c"><div class="kb__h"><span class="dot" style="color:var(--info)"></span> New <em>2</em></div>
+          <div class="kbc"><b>Dilnoza Yusupova</b><span class="mono">+998901234501 · $50,000</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">2–3 room apartment, Chilonzor or Yunusobod</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-javlon"></div><span>Javlon</span></div></div>
+          <div class="kbc"><b>Nodira Ergasheva</b><span class="mono">+998911223344 · $400/mo</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">1-room studio near metro</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-shahnoza"></div><span>Shahnoza</span></div></div>
+        </div>
+        <div class="kb__c"><div class="kb__h"><span class="dot" style="color:var(--muted)"></span> Could not connect <em>1</em></div>
+          <div class="kbc"><b>Malika Tosheva</b><span class="mono">+998977654321 · $1,000/mo</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">Office rental, city center</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-shahnoza"></div><span>3 attempts</span></div></div>
+        </div>
+        <div class="kb__c"><div class="kb__h"><span class="dot" style="color:var(--warn)"></span> Need to call back <em>1</em></div>
+          <div class="kbc" style="border-color:var(--warn)"><b>Aziz Karimov</b><span class="mono">+998933456712 · $80,000</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">Family house, Sergeli</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-javlon"></div>
+              <span class="tag tag--warn" style="margin-left:auto"><span class="i" data-i="clock"></span> 15:00</span></div></div>
+        </div>
+        <div class="kb__c"><div class="kb__h"><span class="dot" style="color:var(--err)"></span> Rejected <em>1</em></div>
+          <div class="kbc"><b>Ravshan Ismoilov</b><span class="mono">+998995551122 · $100,000</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">4-room new build, Yashnobod</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-javlon"></div><span>Budget mismatch</span></div></div>
+        </div>
+        <div class="kb__c"><div class="kb__h"><span class="dot" style="color:var(--ok)"></span> Accepted <em>1</em></div>
+          <div class="kbc"><b>Bekzod Nazarov</b><span class="mono">+998912345678 · $60,000</span>
+            <div style="font-size:11.5px;color:var(--ink-2);line-height:1.5">2-room flat, Mirobod</div>
+            <div class="kbc__f"><div class="who__av" data-ph="ag-shahnoza"></div>
+              <span class="tag tag--ok" style="margin-left:auto">Closed</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= COWORKERS =================== -->
+    <section class="screen body" id="a-coworkers">
+      <div class="tools">
+        <span class="filt"><span class="i" data-i="user-fill"></span> Under Javlon Rustamov</span>
+        <div class="sp"></div>
+        <button class="btn btn--p"><span class="i" data-i="plus"></span> Create coworker</button>
+      </div>
+      <div class="panel">
+        <table class="tbl" data-rows>
+          <thead><tr><th style="width:30%">Coworker</th><th>Email</th><th>Phone</th><th class="r">Listings</th>
+            <th class="r">Closed</th><th>Last active</th><th></th></tr></thead>
+          <tbody>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%" data-ph="ag-sardor"></div>
+              <div><b>Sardor Abdullayev</b><span>Coworker</span></div></div></td>
+              <td class="mono">sardor@lacasa.uz</td><td class="mono">+998901112233</td>
+              <td class="r num">11</td><td class="r num">3</td><td class="num">2 days ago</td>
+              <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+            <tr data-row><td><div class="cellmain"><div class="thumb" style="border-radius:50%" data-ph="ag-kamola"></div>
+              <div><b>Kamola Rashidova</b><span>Coworker · under Shahnoza</span></div></div></td>
+              <td class="mono">kamola@lacasa.uz</td><td class="mono">+998904445566</td>
+              <td class="r num">8</td><td class="r num">2</td><td class="num">Today</td>
+              <td><div class="acts"><button><span class="i" data-i="note-pencil"></span></button><button><span class="i" data-i="trash"></span></button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= ACCOUNTS ==================== -->
+    <section class="screen body" id="a-accounts">
+      <div class="two">
+        <div class="panel">
+          <div class="panel__h"><div><h2>Connected accounts</h2><p>Status switches are read-only indicators</p></div></div>
+          <div class="form" style="padding:8px 16px 16px">
+            <div class="chn"><span class="i" data-i="instagram-logo-fill"></span>
+              <div><b>Instagram</b><span>@javlon.realty · token refreshes 02.10.2026</span></div><div class="sp"></div>
+              <span class="sw is-on"></span><button class="btn btn--g" style="margin-left:10px">Disconnect</button></div>
+            <div class="chn"><span class="i" data-i="telegram-logo-fill"></span>
+              <div><b>Telegram</b><span>2 channels connected</span></div><div class="sp"></div>
+              <span class="sw is-on"></span><button class="btn btn--g" style="margin-left:10px">Manage</button></div>
+            <div class="chn"><span class="i" data-i="youtube-logo-fill"></span>
+              <div><b>YouTube</b><span style="color:var(--err)">Token expired — reconnect required</span></div><div class="sp"></div>
+              <span class="sw"></span><button class="btn btn--p" style="margin-left:10px">Reconnect</button></div>
+            <div class="chn"><span class="i" data-i="storefront-fill"></span>
+              <div><b>OLX</b><span>Browser extension v1.2 detected</span></div><div class="sp"></div>
+              <span class="sw is-on"></span><button class="btn btn--g" style="margin-left:10px">Settings</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__h"><div><h2>Extension</h2></div></div>
+          <div class="form">
+            <p style="font-size:12px;color:var(--ink-2);line-height:1.65">The La Casa browser extension fills OLX and
+            Instagram forms for you, then hands control back so you click Publish yourself. It never posts on your behalf.</p>
+            <button class="btn btn--g" style="width:100%;margin-top:12px"><span class="i" data-i="arrow-up-right"></span> Open extension settings</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="dev">
+  <button data-index-toggle><span class="i" data-i="squares-four-fill"></span> Screens</button>
+  <button data-theme-toggle><span class="i" data-i="eye"></span> Theme</button>
+</div>
+<div class="ix" data-index>
+  <div class="ix__p">
+    <h3>Agent console · 8 screens</h3>
+    <p>The working surface. Density over delight — tables, not cards; photography demoted to a row identifier.</p>
+    <div class="ix__g">
+      <button data-go="a-dash">Statistics <b>4 stats + 12-day chart</b></button>
+      <button data-go="a-listings">My ads <b>all 8 seed listings</b></button>
+      <button data-go="a-editor">Listing editor <b>form + media + publish</b></button>
+      <button data-go="a-publish">Publish status <b>per-channel grid</b></button>
+      <button data-go="a-leads">Leads <b>6 leads, table view</b></button>
+      <button data-go="a-kanban">Kanban <b>5 fixed columns</b></button>
+      <button data-go="a-coworkers">Coworkers <b>2 rows</b></button>
+      <button data-go="a-accounts">Connected accounts <b>IG / TG / YT / OLX</b></button>
+    </div>
+  </div>
+</div>
+
+<!--ICONS-->
+<!--PHOTOS-->
+<!--RUNTIME-->
