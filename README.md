@@ -1,7 +1,19 @@
 # La Casa — Real Estate Platform
 
-React + Vite SPA (public listings + agent CRM dashboard) being migrated from
-Firebase to a local-first stack: **Express API + PostgreSQL + MinIO**.
+An npm-workspaces monorepo for a real-estate marketplace + agent CRM, running on
+**Express + PostgreSQL + MinIO**. Migrated off Firebase (see
+[docs/05-migration-plan.md](docs/05-migration-plan.md) for what is left).
+
+## Workspaces
+
+| Workspace | What it is | Dev port |
+|---|---|---|
+| `apps/api` | Express + Prisma REST API — the single backend for every surface | 4200 |
+| `apps/web` | Public marketplace + the legacy realtor dashboard (React 18) | 5273 |
+| `apps/console` | The Direction F agent console (React 19 + Tailwind) | 5274 |
+| `apps/extension` | Chrome extension for OLX / Instagram crossposting | — |
+| `apps/mobile_flutter` | Flutter mobile client | — |
+| `packages/*` | `api-client`, `domain`, `crosspost-protocol` + shared eslint/ts/vitest configs | — |
 
 ## Docs
 
@@ -11,13 +23,19 @@ Firebase to a local-first stack: **Express API + PostgreSQL + MinIO**.
 | [docs/02-target-architecture.md](docs/02-target-architecture.md) | To-be design (API, auth, uploads, integrations) |
 | [docs/03-data-model.md](docs/03-data-model.md) | Firestore → Postgres mapping |
 | [docs/04-api-spec.md](docs/04-api-spec.md) | REST API v1 endpoints |
-| [docs/05-migration-plan.md](docs/05-migration-plan.md) | Phased migration plan & status |
+| [docs/05-migration-plan.md](docs/05-migration-plan.md) | Phased migration plan & **current status** |
+| [docs/06-cross-posting.md](docs/06-cross-posting.md) | Crossposting design |
+| [docs/07-olx-crosspost-extension.md](docs/07-olx-crosspost-extension.md) | The OLX extension |
+| [docs/08-publish-tracking.md](docs/08-publish-tracking.md) | `AdPublication` and publish status |
+| [docs/09-instagram-onboarding.md](docs/09-instagram-onboarding.md) | IG OAuth + Meta App Review |
+| [mockups/SCREENS.md](mockups/SCREENS.md) | Mobile screen spec |
+| [mockups/f/PLAN.md](mockups/f/PLAN.md) | Console adaptation plan |
 
 ## Local development
 
-Prereqs: Node 20+, Yarn (frontend) / npm (server), and either native
-PostgreSQL 16+ & MinIO (scoop: `scoop install postgresql minio minio-client`)
-or Docker Desktop.
+Prereqs: Node 20+ and either native PostgreSQL 16+ & MinIO
+(scoop: `scoop install postgresql minio minio-client`) or Docker Desktop.
+Flutter is only needed for `apps/mobile_flutter`.
 
 ```sh
 # 1. Infrastructure: Postgres (:5432) + MinIO (:9000, console :9001)
@@ -29,25 +47,30 @@ or Docker Desktop.
 #    Option B — Docker:
 docker compose up -d
 
-# 2. API
-cd server
-cp .env.example .env        # then edit if needed
+# 2. Install everything once, from the repo root (npm workspaces)
 npm install
-npx prisma migrate dev      # creates schema
-npm run seed                # currency rate, nearby places, agent@lacasa.dev / password123
-npm run dev                 # http://localhost:4200/api/health
 
-# 3. Frontend
-yarn
-yarn dev                    # http://localhost:5273
+# 3. API
+cp apps/api/.env.example apps/api/.env    # then edit if needed
+npx prisma migrate dev -w @lacasa/api     # creates schema
+npm run seed -w @lacasa/api               # currency rate, nearby places, agent@lacasa.dev / password123
+npm run dev:api                           # http://localhost:4200/api/health
+
+# 4. Frontends (each needs the API running)
+npm run dev:web                           # http://localhost:5273
+npm run dev:console                       # http://localhost:5274
+npm run dev:mobile-flutter                # needs the Flutter SDK
 ```
 
-MinIO console: http://localhost:9001 (user `lacasa`, password `lacasa_dev_secret`).
-Prisma Studio (DB browser): `cd server && npm run studio`.
+Root scripts fan out across every workspace: `npm run build`, `npm run lint`,
+`npm run test`, `npm run typecheck`. To scope one, add `-w @lacasa/<name>`.
 
-> Note: the frontend still talks to Firebase until the migration phases in
-> docs/05 land; the API currently serves `/api/health`, `/api/utils/*`, and
-> `/api/uploads/presign`.
+MinIO console: http://localhost:9001 (user `lacasa`, password `lacasa_dev_secret`).
+Prisma Studio (DB browser): `npm run studio -w @lacasa/api`.
+
+> ⚠️ `apps/web` still publishes to Telegram from the browser with the bot token
+> in the bundle, and `ContactUs.jsx` has one hardcoded in source. That token is
+> burned and needs rotating — see docs/05 Phase E.
 
 ## CI
 
