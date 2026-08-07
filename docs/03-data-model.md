@@ -212,8 +212,10 @@ The overloaded `stage` int becomes a named enum:
 Cities/districts (14 regions, 203 districts) stay bundled JSON rather than
 tables — the data is static and only feeds dropdowns. It lives in
 `packages/domain/src/data/regions.json`, imported as
-`@lacasa/domain/data/regions`, so apps/web and apps/mobile share one copy
-instead of each carrying their own (docs/10 §5 Decision 2/3). No API route:
+`@lacasa/domain/data/regions`, so every JS surface shares one copy instead of
+each carrying its own (docs/10 §5 Decision 2/3). Only apps/web consumes it
+today; the Flutter app will need its own copy, since it can't import from npm.
+No API route:
 nothing about it changes at runtime.
 
 Promote to `regions`/`districts` tables later if server-side filter validation

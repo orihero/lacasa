@@ -1,9 +1,0 @@
-{
-  "extends": "@lacasa/config-typescript/react-library.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "allowJs": true,
-    "customConditions": ["react-native"]
-  },
-  "include": ["src", "App.tsx", "index.ts"]
-}

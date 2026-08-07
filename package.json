@@ -2,18 +2,13 @@
   "name": "lacasa",
   "private": true,
   "version": "0.0.0",
-  "description": "La Casa — real-estate CRM monorepo (web console, REST API, crosspost extension, mobile app)",
+  "description": "La Casa — real-estate CRM monorepo (web marketplace, agent console, REST API, crosspost extension, Flutter mobile app)",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "engines": {
     "node": ">=20"
-  },
-  "overrides": {
-    "react-native": {
-      "react": "19.2.3"
-    }
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,
