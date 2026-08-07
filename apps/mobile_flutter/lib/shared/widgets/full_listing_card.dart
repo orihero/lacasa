@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
 import '../../theme/theme.dart';
+import '../formatters/formatters.dart';
 import 'favourite_button.dart';
 import 'listing_photo.dart';
 import 'price_pill.dart';
@@ -127,21 +128,8 @@ class FullListingCard extends StatelessWidget {
     );
   }
 
-  String _specLine(Ad ad) {
-    final rooms = ad.rooms;
-    final roomsPart = rooms == null
-        ? null
-        : '$rooms room${rooms == 1 ? '' : 's'}';
-    final areaPart = ad.area == null ? null : '${_trimNum(ad.area!)} m²';
-    final floorPart = (ad.storey != null && ad.floors != null)
-        ? '${ad.storey}/${ad.floors}'
-        : null;
-    return [roomsPart, areaPart, floorPart].whereType<String>().join(' · ');
-  }
-
-  String _trimNum(double value) {
-    return value == value.roundToDouble()
-        ? value.round().toString()
-        : value.toString();
-  }
+  // The spec line's rules moved to `Formatters.statLine` once
+  // `listing-detail` needed the identical strings — see that method's doc
+  // comment. Same output as the private helper this replaced.
+  String _specLine(Ad ad) => Formatters.statLine(ad);
 }

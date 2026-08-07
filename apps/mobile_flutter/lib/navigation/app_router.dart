@@ -31,6 +31,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/home/home.dart';
+import '../features/listing_detail/listing_detail.dart';
 import '../features/photo_gallery/photo_gallery.dart';
 import '../features/search/search.dart';
 import 'auth_session.dart';
@@ -128,10 +129,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 path: RoutePaths.home,
                 builder: (context, state) => const HomeFeedScreen(),
                 routes: [
+                  // Declared once per branch rather than as one top-level
+                  // route: SCREENS.md §1 lists `listing-detail` under
+                  // "Pushed (full-screen, back-stack)", so it must keep the
+                  // tab bar and stay in the back stack of the tab it was
+                  // opened from. `branchPrefix` is what lets the screen
+                  // push its own siblings (agent-profile) into that same
+                  // branch — see `listing_detail_screen.dart`.
                   GoRoute(
                     path: 'listing/:id',
-                    builder: (context, state) =>
-                        _placeholder('Listing ${state.pathParameters['id']}'),
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.home,
+                    ),
                   ),
                   GoRoute(
                     path: 'agent/:id',
@@ -161,8 +171,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'listing/:id',
-                    builder: (context, state) =>
-                        _placeholder('Listing ${state.pathParameters['id']}'),
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.search,
+                    ),
                   ),
                 ],
               ),
@@ -329,12 +341,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // No-chrome full-screen pages — root navigator, but a plain push
       // transition rather than the fullscreenDialog (slide-up) treatment.
       // `photoGallery` carries no path params, so its ad + start index
-      // arrive via `extra:` (see `photo_gallery_args.dart`). That channel
-      // is untyped, and `listing-detail` — the only screen that will ever
-      // push here — is not built yet, so a bare
-      // `state.extra as PhotoGalleryArgs` would throw for anything that
-      // reaches this route today (a deep link, a restored route stack, or
-      // a mistyped push). Degrade to the placeholder instead of crashing.
+      // arrive via `extra:` (see `photo_gallery_args.dart`).
+      // `listing-detail` is now the one screen that pushes here, and it
+      // always supplies a well-formed payload — but `extra:` is an untyped
+      // channel, and a deep link or a restored route stack reaches this
+      // route with nothing at all. A bare `state.extra as PhotoGalleryArgs`
+      // would throw for those, so the type check stays: it guards the cases
+      // no caller controls, not the one that does.
       GoRoute(
         path: RoutePaths.photoGallery,
         parentNavigatorKey: rootNavigatorKey,

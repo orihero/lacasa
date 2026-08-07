@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/home/home.dart';
+import 'package:lacasa_mobile/features/listing_detail/listing_detail.dart';
 import 'package:lacasa_mobile/features/search/search.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
@@ -47,10 +48,7 @@ void main() {
     // Push a detail route within the Home branch (not a tab switch).
     router.push('/home/listing/ad-1001');
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('screen-Listing ad-1001')),
-      findsOneWidget,
-    );
+    expect(find.byType(ListingDetailScreen), findsOneWidget);
     expect(find.byType(HomeFeedScreen), findsNothing);
 
     // Switch to the Search tab via the real tab bar button.
@@ -62,7 +60,7 @@ void main() {
     expect(find.byType(SearchScreen), findsOneWidget);
     // The Home branch's IndexedStack entry is offstage, not disposed, but
     // it should no longer be the visible screen.
-    expect(find.byKey(const ValueKey('screen-Listing ad-1001')), findsNothing);
+    expect(find.byType(ListingDetailScreen), findsNothing);
 
     // Switch back to Home.
     await tester.tap(find.byKey(const ValueKey('navTab-0')));
@@ -70,10 +68,7 @@ void main() {
 
     // The pushed detail screen is still there — Home's back stack was
     // preserved across the round trip, not reset to its tab root.
-    expect(
-      find.byKey(const ValueKey('screen-Listing ad-1001')),
-      findsOneWidget,
-    );
+    expect(find.byType(ListingDetailScreen), findsOneWidget);
     expect(find.byType(HomeFeedScreen), findsNothing);
   });
 
@@ -84,10 +79,7 @@ void main() {
 
     router.push('/home/listing/ad-1001');
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey('screen-Listing ad-1001')),
-      findsOneWidget,
-    );
+    expect(find.byType(ListingDetailScreen), findsOneWidget);
 
     // Home is already the current branch — tapping it again is the
     // "initialLocation" case: pop back to the branch's root.
@@ -95,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeFeedScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('screen-Listing ad-1001')), findsNothing);
+    expect(find.byType(ListingDetailScreen), findsNothing);
   });
 
   testWidgets(

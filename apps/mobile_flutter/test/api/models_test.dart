@@ -282,12 +282,29 @@ void main() {
     });
 
     test('falls back to .unknown for an error code this client predates', () {
+      // This used to use 'rate_limited' as its stand-in for an unmapped
+      // code. That stopped being one when POST /api/contact gained a client
+      // and the three codes it sends were added to the enum — so this now
+      // uses a code the server genuinely does not send, which is what the
+      // test was always about.
       final body = ApiErrorBody.fromJson({
-        'code': 'rate_limited',
+        'code': 'some_code_added_next_year',
         'message': 'Slow down',
       });
       expect(body.code, ApiErrorCode.unknown);
       expect(body.message, 'Slow down');
+    });
+
+    test('decodes the three POST /api/contact codes', () {
+      // Guards the mapping the contact sheet branches on to tell "nobody is
+      // configured to receive this" apart from "Telegram refused, try
+      // again" — see contact_sheet.dart's `_messageFor`.
+      ApiErrorCode codeOf(String wire) =>
+          ApiErrorBody.fromJson({'code': wire, 'message': ''}).code;
+
+      expect(codeOf('rate_limited'), ApiErrorCode.rateLimited);
+      expect(codeOf('contact_unconfigured'), ApiErrorCode.contactUnconfigured);
+      expect(codeOf('contact_relay_failed'), ApiErrorCode.contactRelayFailed);
     });
   });
 }

@@ -112,4 +112,72 @@ void main() {
       expect(Formatters.adIdBadge('ab'), '#ab');
     });
   });
+
+  // The size/stat rules were private helpers duplicated in FullListingCard
+  // and CompactListingCard until listing-detail needed the identical
+  // strings. These tests are what keeps the three call sites agreeing.
+  group('Formatters size rules', () {
+    test('pluralizes rooms, and answers null for an unstated count', () {
+      expect(Formatters.rooms(1), '1 room');
+      expect(Formatters.rooms(3), '3 rooms');
+      // Not "0 rooms" — the caller drops the segment entirely.
+      expect(Formatters.rooms(null), isNull);
+    });
+
+    test('trims a whole-valued area rather than rendering "65.0 m²"', () {
+      expect(Formatters.area(65), '65 m²');
+      expect(Formatters.area(64.5), '64.5 m²');
+      expect(Formatters.area(null), isNull);
+    });
+
+    test('needs both halves of a floor, never rendering "4/" or "/9"', () {
+      expect(Formatters.floor(4, 9), '4/9');
+      expect(Formatters.floor(4, null), isNull);
+      expect(Formatters.floor(null, 9), isNull);
+    });
+
+    test('statLine drops absent parts along with their separators', () {
+      Ad ad({int? rooms, num? area, int? storey, int? floors}) =>
+          Ad.fromJson({
+            ..._adJson(price: 1, category: 'sale'),
+            'rooms': rooms,
+            'area': area,
+            'storey': storey,
+            'floors': floors,
+          });
+
+      expect(
+        Formatters.statLine(ad(rooms: 3, area: 65, storey: 4, floors: 9)),
+        '3 rooms · 65 m² · 4/9',
+      );
+      // A sparse ad must not leave a dangling separator.
+      expect(Formatters.statLine(ad(area: 65)), '65 m²');
+      expect(Formatters.statLine(ad()), '');
+    });
+
+    test('statLine omits the floor for the compact card', () {
+      final ad = Ad.fromJson({
+        ..._adJson(price: 1, category: 'sale'),
+        'rooms': 3,
+        'area': 65,
+        'storey': 4,
+        'floors': 9,
+      });
+
+      expect(
+        Formatters.statLine(ad, includeFloor: false),
+        '3 rooms · 65 m²',
+      );
+    });
+  });
+
+  group('Formatters.groupedNumber', () {
+    test('applies the price grouping rule to a bare number', () {
+      // listing-detail's price-per-m² footer needs this grouping without
+      // having an Ad to hand.
+      expect(Formatters.groupedNumber(1200), '1,200');
+      expect(Formatters.groupedNumber(999), '999');
+      expect(Formatters.groupedNumber(1234567), '1,234,567');
+    });
+  });
 }

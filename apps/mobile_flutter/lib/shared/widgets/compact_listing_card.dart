@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
 import '../../theme/theme.dart';
+import '../formatters/formatters.dart';
 import 'favourite_button.dart';
 import 'listing_photo.dart';
 import 'price_pill.dart';
@@ -99,18 +100,8 @@ class CompactListingCard extends StatelessWidget {
     );
   }
 
-  String _specLine(Ad ad) {
-    final rooms = ad.rooms;
-    final roomsPart = rooms == null
-        ? null
-        : '$rooms room${rooms == 1 ? '' : 's'}';
-    final areaPart = ad.area == null ? null : '${_trimNum(ad.area!)} m²';
-    return [roomsPart, areaPart].whereType<String>().join(' · ');
-  }
-
-  String _trimNum(double value) {
-    return value == value.roundToDouble()
-        ? value.round().toString()
-        : value.toString();
-  }
+  // See `FullListingCard._specLine` — same promotion to
+  // `Formatters.statLine`, with `includeFloor: false` preserving this
+  // card's own no-storey/floors rule.
+  String _specLine(Ad ad) => Formatters.statLine(ad, includeFloor: false);
 }

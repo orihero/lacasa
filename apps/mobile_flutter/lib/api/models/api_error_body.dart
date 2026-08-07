@@ -22,6 +22,13 @@ enum ApiErrorCode {
   llmEmpty,
   dailyCap,
   notADraft,
+  // The three `POST /api/contact` codes (`apps/api/src/routes/contact.js`).
+  // Added when that route gained a client (`resources/contact_resource.dart`)
+  // — before that they existed server-side but nothing here could branch on
+  // them, so they fell through to `unknown` like any unrecognized code.
+  rateLimited,
+  contactUnconfigured,
+  contactRelayFailed,
   internal,
   unknown;
 
@@ -40,6 +47,9 @@ enum ApiErrorCode {
     'llm_empty' => ApiErrorCode.llmEmpty,
     'daily_cap' => ApiErrorCode.dailyCap,
     'not_a_draft' => ApiErrorCode.notADraft,
+    'rate_limited' => ApiErrorCode.rateLimited,
+    'contact_unconfigured' => ApiErrorCode.contactUnconfigured,
+    'contact_relay_failed' => ApiErrorCode.contactRelayFailed,
     'internal' => ApiErrorCode.internal,
     _ => ApiErrorCode.unknown,
   };

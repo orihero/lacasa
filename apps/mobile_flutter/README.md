@@ -14,7 +14,7 @@ This replaced an Expo/React Native prototype (deleted 2026-08-07) — see
 flutter pub get
 flutter run          # or, from the repo root: npm run dev:mobile-flutter
 flutter analyze      # must be clean
-flutter test         # 109 tests
+flutter test         # 159 tests
 ```
 
 Point it at a running `apps/api` (port 4200) via `lib/api/env.dart`.
@@ -43,22 +43,48 @@ whole tree, so every tab navigates somewhere. Screens not yet built render
 | 3 | `home-feed` | **Built** |
 | 4 | `listing-search` | **Built** — reachable at `/search` |
 | 5 | `filter-sheet` | **Built** — a bottom sheet, not a route; opened from search's Filters button |
-| 8 | `photo-gallery` | **Built** — `/photo-gallery`, reached via `extra:` |
-| 7 | `listing-detail` | **Partial** — data layer only, no screen yet; still a placeholder |
+| 7 | `listing-detail` | **Built** — `/home/listing/:id` and `/search/listing/:id` |
+| 8 | `photo-gallery` | **Built** — `/photo-gallery`, pushed from `listing-detail`'s hero |
+| 11 | `contact-sheet` | **Built** — a bottom sheet; `listing-detail`'s "Submit an application" CTA |
 | 6 | `map-view` | **Not started** |
-| 1, 2, 9–38 | onboarding, agents, profile, auth, and the whole Work/CRM tab | **Not started** |
+| 1, 2, 9, 10, 12–38 | onboarding, agents, profile, auth, and the whole Work/CRM tab | **Not started** |
 
-Buyer-side screens are being built first; the Work tab (agent CRM) comes after.
+**The buyer browse flow now closes end to end**: home or search → listing
+detail → photo gallery, and detail → contact. The Work tab (agent CRM) comes
+after the remaining buyer screens.
+
+`listing-detail` is declared once per shell branch rather than as one
+top-level route, because SCREENS.md §1 lists it under "Pushed (full-screen,
+back-stack)" — it keeps the tab bar and stays in the back stack of whichever
+tab it was opened from. It takes a `branchPrefix` so the sibling routes it
+pushes (`agent-profile`) resolve into that same branch.
 
 ### Known gaps
 
-- **`listing-detail` is the missing link in the browse flow.** Search → detail
-  and home → detail both still land on a placeholder, which also means nothing
-  pushes `photo-gallery` yet. The gallery route degrades to its placeholder
-  rather than crashing when it gets no `extra:` payload.
 - **`map-view` has no map package.** `flutter_map` + `latlong2` were the chosen
   dependencies (matching `apps/web`'s Leaflet/OSM, no API key needed) but were
   reverted rather than left unused — re-add them when the screen is built.
+  `listing-detail`'s Location section is the visible consequence: it shows the
+  ad's real coordinates as text and says the map preview is unavailable,
+  rather than drawing a decorative grid that reads as a real map.
+- **Three platform affordances are stand-ins, not the real thing**, because
+  each needs a plugin this app doesn't depend on and adding one is a
+  `pubspec.yaml`-plus-platform-config change rather than a screen build:
+  `listing-detail`'s share button copies the listing link instead of opening
+  the OS share sheet (`share_plus`) — which is also what the source mockup's
+  own share button does; the agent block's call button copies the phone number
+  instead of dialling (`url_launcher`); and `tour3dLink` is not surfaced at
+  all, since embedding a 3D tour needs a webview.
+- **`contact-sheet` reports success without sending unless the live switch is
+  on.** Its fixture repository accepts and discards, like every other
+  feature's — but for a form whose purpose is delivering a message to a
+  person, that default is more dangerous than a feed rendering seed data. Any
+  build a real user touches needs `--dart-define=LACASA_CONTACT_LIVE_API=true`;
+  see `features/contact/data/contact_mode.dart`.
+- **The message field is capped at 200 characters, the server allows 2000.**
+  SCREENS.md §3.11 says 200 and the tighter of the two is enforced, so the
+  three implementations building against the spec agree. Worth reconciling
+  upstream.
 - **`listing-search` filters and sorts client-side.** There is no server-side
   search or sort endpoint; `search_repository.dart` documents this. Sorting a
   page of results client-side is not the same as sorting the whole set, and
@@ -67,5 +93,6 @@ Buyer-side screens are being built first; the Work tab (agent CRM) comes after.
   203-district vocabulary that lives in `@lacasa/domain`'s `regions.json`,
   which Dart cannot import from npm. It needs its own copy or an API endpoint —
   see `docs/03-data-model.md`.
-- **`search` and `filter` have no tests yet.** Their build agents were cut off
-  before writing any. Everything else here is covered.
+- **`search` and `filter` still have no tests.** Their build agents were cut
+  off before writing any, and this pass did not close that — everything else
+  here is covered, `listing-detail` and `contact-sheet` included.

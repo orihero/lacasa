@@ -18,7 +18,15 @@ abstract final class Formatters {
   /// to style the `/month` suffix smaller/lighter than the rest of the
   /// string; this stays a plain string so both call sites — and this
   /// file's own tests — stay trivial.
-  static String groupedPrice(Ad ad) => _groupInteger(ad.price);
+  static String groupedPrice(Ad ad) => groupedNumber(ad.price);
+
+  /// [groupedPrice]'s rule applied to a bare number, for the figures that
+  /// need the identical thousands grouping without being an [Ad]'s own
+  /// price — currently `listing-detail`'s price-per-m² footer. Exposed as
+  /// its own entry point rather than having such callers fake an [Ad]:
+  /// grouping digits was never an ad-shaped operation, [groupedPrice] just
+  /// happened to be the first caller.
+  static String groupedNumber(num value) => _groupInteger(value);
 
   /// The full price string per SCREENS.md's rule: `$ {price}` for a sale
   /// ad, `$ {price}/month` for a rent ad, thousands grouped, no decimals.
@@ -77,4 +85,63 @@ abstract final class Formatters {
   /// and never this short, but a fixture/test id might be.
   static String adIdBadge(String id) =>
       '#${id.length <= 5 ? id : id.substring(0, 5)}';
+
+  // ---- Size/stat rules -------------------------------------------------
+  //
+  // SCREENS.md writes these as `{rooms} room`, `{area} m²`,
+  // `{storey}/{floors}` in three separate places (the shared listing card
+  // §2's preamble, `map-view`'s pin preview, and `listing-detail`'s Sizes
+  // section). They started as private helpers duplicated in
+  // `FullListingCard` and `CompactListingCard`; `listing-detail` needed the
+  // identical strings, and a third copy is where a rule stops being a rule.
+  //
+  // One deliberate divergence from the spec's literal text, carried
+  // forward from those cards rather than introduced here: the spec's
+  // `{rooms} room` is pluralized ("3 rooms", not "3 room"). Rendering
+  // "3 room" would read as a typo to every user; the spec is writing a
+  // template, not fixing English.
+
+  /// `3 rooms` / `1 room`, or `null` when the ad states no room count —
+  /// `null` rather than `0 rooms`, so a caller can omit the segment
+  /// entirely instead of asserting something the wire never said.
+  static String? rooms(int? rooms) {
+    if (rooms == null) return null;
+    return '$rooms room${rooms == 1 ? '' : 's'}';
+  }
+
+  /// `65 m²`, or `null` when the ad states no area. Trailing `.0` is
+  /// trimmed — the wire carries area as a double, and "65.0 m²" is noise.
+  static String? area(double? area) {
+    if (area == null) return null;
+    return '${trimNum(area)} m²';
+  }
+
+  /// `4/9`, or `null` unless the ad states **both** storey and floors —
+  /// "4/" or "/9" is worse than saying nothing.
+  static String? floor(int? storey, int? floors) {
+    if (storey == null || floors == null) return null;
+    return '$storey/$floors';
+  }
+
+  /// The `·`-joined stat line under a listing card's title —
+  /// `3 rooms · 65 m² · 4/9`. Whichever parts the ad doesn't state are
+  /// dropped, separators included, so a sparse ad never renders a dangling
+  /// `·`. Pass [includeFloor] as `false` for the compact card, which has no
+  /// room for it (see `CompactListingCard`'s own doc comment).
+  static String statLine(Ad ad, {bool includeFloor = true}) {
+    return [
+      rooms(ad.rooms),
+      area(ad.area),
+      if (includeFloor) floor(ad.storey, ad.floors),
+    ].whereType<String>().join(' · ');
+  }
+
+  /// Renders a whole-valued double without its `.0`. Public because
+  /// `listing-detail`'s Sizes rows need the bare number in a context
+  /// [area] already suffixes.
+  static String trimNum(double value) {
+    return value == value.roundToDouble()
+        ? value.round().toString()
+        : value.toString();
+  }
 }

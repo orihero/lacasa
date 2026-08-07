@@ -19,6 +19,7 @@ import 'env.dart';
 import 'resources/ads_resource.dart';
 import 'resources/agents_resource.dart';
 import 'resources/auth_resource.dart';
+import 'resources/contact_resource.dart';
 import 'resources/saved_ads_resource.dart';
 import 'token_storage.dart';
 import 'transport.dart';
@@ -35,6 +36,7 @@ export 'models/saved_ad.dart';
 export 'resources/ads_resource.dart';
 export 'resources/agents_resource.dart';
 export 'resources/auth_resource.dart';
+export 'resources/contact_resource.dart';
 export 'resources/saved_ads_resource.dart';
 export 'token_storage.dart';
 export 'transport.dart';
@@ -45,12 +47,14 @@ class LaCasaApi {
   final AdsResource ads;
   final SavedAdsResource savedAds;
   final AgentsResource agents;
+  final ContactResource contact;
 
   LaCasaApi(this.client)
     : auth = AuthResource(client),
       ads = AdsResource(client),
       savedAds = SavedAdsResource(client),
-      agents = AgentsResource(client);
+      agents = AgentsResource(client),
+      contact = ContactResource(client);
 
   /// Builds the real stack: dio over the network, tokens in the platform
   /// keystore/keychain, base URL from [apiBaseUrl] (or [baseUrl] to
