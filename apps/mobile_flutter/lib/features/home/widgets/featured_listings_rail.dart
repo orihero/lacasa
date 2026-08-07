@@ -14,11 +14,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../navigation/route_paths.dart';
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
-import 'full_listing_card.dart';
-import 'rail_states.dart';
-import 'section_header.dart';
 
 const double _cardWidth = 230;
 // Photo (148) + the title/spec/where text block below it. Generous rather

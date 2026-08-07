@@ -21,14 +21,4 @@ class FixtureHomeFeedRepository implements HomeFeedRepository {
       ..sort((a, b) => b.adsCount.compareTo(a.adsCount));
     return sorted.take(5).toList();
   }
-
-  @override
-  Future<Set<String>> fetchInitialSavedAdIds() async =>
-      homeFeedFixtureSavedAdIds;
-
-  @override
-  Future<void> saveAd(String adId) async {}
-
-  @override
-  Future<void> unsaveAd(String adId) async {}
 }

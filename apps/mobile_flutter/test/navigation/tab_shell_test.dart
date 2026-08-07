@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/home/home.dart';
+import 'package:lacasa_mobile/features/search/search.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
@@ -55,7 +56,10 @@ void main() {
     // Switch to the Search tab via the real tab bar button.
     await tester.tap(find.byKey(const ValueKey('navTab-1')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('screen-Search')), findsOneWidget);
+    // Was `screen-Search` (the PlaceholderScreen key) until /search started
+    // rendering the real screen — same assertion, now against the widget
+    // type rather than a placeholder's debug key.
+    expect(find.byType(SearchScreen), findsOneWidget);
     // The Home branch's IndexedStack entry is offstage, not disposed, but
     // it should no longer be the visible screen.
     expect(find.byKey(const ValueKey('screen-Listing ad-1001')), findsNothing);

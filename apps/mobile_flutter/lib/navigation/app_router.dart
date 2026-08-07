@@ -31,6 +31,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/home/home.dart';
+import '../features/photo_gallery/photo_gallery.dart';
+import '../features/search/search.dart';
 import 'auth_session.dart';
 import 'placeholder_screen.dart';
 import 'profile_role_screen.dart';
@@ -150,7 +152,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.search,
-                builder: (context, state) => _placeholder('Search'),
+                builder: (context, state) => const SearchScreen(),
                 routes: [
                   GoRoute(
                     path: 'agent/:id',
@@ -326,10 +328,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       // No-chrome full-screen pages — root navigator, but a plain push
       // transition rather than the fullscreenDialog (slide-up) treatment.
+      // `photoGallery` carries no path params, so its ad + start index
+      // arrive via `extra:` (see `photo_gallery_args.dart`). That channel
+      // is untyped, and `listing-detail` — the only screen that will ever
+      // push here — is not built yet, so a bare
+      // `state.extra as PhotoGalleryArgs` would throw for anything that
+      // reaches this route today (a deep link, a restored route stack, or
+      // a mistyped push). Degrade to the placeholder instead of crashing.
       GoRoute(
         path: RoutePaths.photoGallery,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => _placeholder('Photo Gallery'),
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! PhotoGalleryArgs) return _placeholder('Photo Gallery');
+          return PhotoGalleryScreen(args: args);
+        },
       ),
       GoRoute(
         path: RoutePaths.mapView,

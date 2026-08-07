@@ -9,8 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../navigation/route_paths.dart';
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import 'section_header.dart';
 
 class _DistrictSpec {
   const _DistrictSpec(this.name, this.gradient);

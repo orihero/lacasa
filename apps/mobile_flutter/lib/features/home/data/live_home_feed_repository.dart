@@ -21,23 +21,4 @@ class LiveHomeFeedRepository implements HomeFeedRepository {
       ..sort((a, b) => b.adsCount.compareTo(a.adsCount));
     return sorted.take(5).toList();
   }
-
-  @override
-  Future<Set<String>> fetchInitialSavedAdIds() async {
-    try {
-      final saved = await _api.savedAds.list();
-      return saved.map((row) => row.ad.id).toSet();
-    } on ApiException {
-      // A non-buyer session gets `forbidden`/an empty list anyway; any other
-      // failure here shouldn't stop the rest of the screen from rendering —
-      // favourites just start out looking unsaved.
-      return const {};
-    }
-  }
-
-  @override
-  Future<void> saveAd(String adId) => _api.savedAds.save(adId);
-
-  @override
-  Future<void> unsaveAd(String adId) => _api.savedAds.unsave(adId);
 }

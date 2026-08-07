@@ -1,4 +1,4 @@
-/// Riverpod state for the Home feed screen. Four independent pieces of
+/// Riverpod state for the Home feed screen. Three independent pieces of
 /// state, deliberately not merged into one "screen state" provider, so a
 /// failure/retry in one (e.g. Top Agents) never touches the others (build
 /// spec: "a rail that fails must degrade on its own without taking the
@@ -7,11 +7,16 @@
 /// - [homeFeedAdsProvider] — the one browse-feed list backing both the
 ///   Featured Listings rail and the Explore Nearby grid.
 /// - [topAgentsProvider] — the Top Agents rail's own independent fetch.
-/// - [favouriteAdIdsProvider] — the saved/favourited ad id set, with
-///   optimistic toggle + revert-on-failure.
 /// - [selectedCategoryChipProvider] — purely local UI state for the
 ///   decorative category chip row (build spec: selecting a chip "must only
 ///   update local state — it must not fire a fetch").
+///
+/// A fourth piece used to live here too: the saved/favourited ad id set.
+/// It moved to `lib/shared/state/favourite_ad_ids_provider.dart` once a
+/// second feature needed the exact same set a Home listing card's heart
+/// already reflects — see that file's doc comment. `FavouriteButton`
+/// (`lib/shared/widgets/favourite_button.dart`) reads it from there now;
+/// nothing in this file references favourites any more.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,54 +43,6 @@ class TopAgentsNotifier extends AsyncNotifier<List<AgentSummary>> {
 final topAgentsProvider =
     AsyncNotifierProvider<TopAgentsNotifier, List<AgentSummary>>(
       TopAgentsNotifier.new,
-    );
-
-/// Optimistic favourite/save toggle (build spec, "Favourite / heart control
-/// — Behavior"): flips [state] immediately, then confirms with the
-/// repository; a failure reverts the flip and rethrows so the caller (a
-/// widget with access to a [BuildContext]) can surface a toast.
-class FavouriteAdIdsNotifier extends Notifier<Set<String>> {
-  @override
-  Set<String> build() {
-    // Seed asynchronously: start empty (unfavourited) rather than blocking
-    // the whole screen's first frame on this secondary fetch, then fill in
-    // once it resolves. `fetchInitialSavedAdIds` itself never throws (see
-    // its doc comment), so no error handling is needed here.
-    Future(() async {
-      final ids = await ref
-          .read(homeFeedRepositoryProvider)
-          .fetchInitialSavedAdIds();
-      // Guard against a state write after this provider was disposed
-      // (e.g. the screen was popped while the seed fetch was in flight).
-      if (ref.mounted) state = ids;
-    });
-    return const <String>{};
-  }
-
-  Future<void> toggle(String adId) async {
-    final repository = ref.read(homeFeedRepositoryProvider);
-    final wasFavourite = state.contains(adId);
-    state = wasFavourite ? ({...state}..remove(adId)) : ({...state}..add(adId));
-
-    try {
-      if (wasFavourite) {
-        await repository.unsaveAd(adId);
-      } else {
-        await repository.saveAd(adId);
-      }
-    } catch (_) {
-      // Revert the optimistic flip and let the caller show a toast.
-      state = wasFavourite
-          ? ({...state}..add(adId))
-          : ({...state}..remove(adId));
-      rethrow;
-    }
-  }
-}
-
-final favouriteAdIdsProvider =
-    NotifierProvider<FavouriteAdIdsNotifier, Set<String>>(
-      FavouriteAdIdsNotifier.new,
     );
 
 /// Local-only selection index into the category chip row. "All" (index 0)

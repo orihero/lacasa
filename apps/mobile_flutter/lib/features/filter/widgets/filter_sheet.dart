@@ -1,0 +1,457 @@
+/// `filter-sheet` (SCREENS.md §3.5) — the buyer-facing full listing
+/// attribute filter form, opened as a swipe-to-dismiss bottom sheet (§1:
+/// "Bottom sheet (swipe-to-dismiss, partial height)") from
+/// `listing-search`'s toolbar (and, later, `my-listings`'s — see
+/// [isCrm]).
+///
+/// **Not a route.** Unlike `map-view`/`photo-gallery`, `filter-sheet` has
+/// no entry in `route_paths.dart`/`app_router.dart` — SCREENS.md buckets
+/// it as a bottom sheet, not a pushed/modal screen, and the recon brief
+/// confirms there is nothing to wire in the router for it. The
+/// integration point is [showFilterSheet], called directly from whichever
+/// screen owns a "Filters" button:
+/// ```dart
+/// import 'package:lacasa_mobile/features/filter/filter.dart';
+///
+/// final applied = await showFilterSheet(context, initialFilters: currentFilters);
+/// if (applied != null) {
+///   // re-run the search/list fetch with `applied`.
+/// }
+/// ```
+/// Returns the caller's new [AdFilters] on "Apply Filters" (commit +
+/// close), or `null` if the sheet was dismissed any other way (close "X",
+/// swipe-down, back gesture on the scrim) — the caller's own applied
+/// filters are the source of truth; this sheet never mutates anything
+/// outside itself, per this task's "return its result to the caller
+/// rather than mutating global state directly" requirement.
+///
+/// **CRM variant extension seam.** SCREENS.md §3.5 also describes a
+/// second variant, opened from `my-listings`, that appends Sort + Status
+/// fields to this same form. `my-listings` is out of this task's scope
+/// (screens 4–8 only), so that variant is not built — [isCrm] exists as
+/// an obvious, unwired seam (`FilterSheet` accepts and threads it through,
+/// but nothing branches on it yet) for whoever builds `my-listings` to
+/// extend rather than fork this file.
+library;
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../api/api.dart';
+import '../../../theme/theme.dart';
+import '../state/filter_count_provider.dart';
+import 'filter_area_section.dart';
+import 'filter_category_type_section.dart';
+import 'filter_city_district_section.dart';
+import 'filter_furniture_repair_section.dart';
+import 'filter_price_section.dart';
+import 'filter_rooms_section.dart';
+import 'filter_sheet_footer.dart';
+import 'filter_storey_section.dart';
+
+/// Opens `FilterSheet` as a modal bottom sheet and returns its result —
+/// see this file's doc comment for the exact contract.
+Future<AdFilters?> showFilterSheet(
+  BuildContext context, {
+  AdFilters initialFilters = const AdFilters(),
+  bool isCrm = false,
+}) {
+  return showModalBottomSheet<AdFilters>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) =>
+        FilterSheet(initialFilters: initialFilters, isCrm: isCrm),
+  );
+}
+
+class FilterSheet extends ConsumerStatefulWidget {
+  const FilterSheet({
+    super.key,
+    this.initialFilters = const AdFilters(),
+    this.isCrm = false,
+  });
+
+  final AdFilters initialFilters;
+
+  /// See this file's doc comment — accepted but not yet wired to any
+  /// Sort/Status UI.
+  final bool isCrm;
+
+  @override
+  ConsumerState<FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends ConsumerState<FilterSheet> {
+  late String? _city;
+  late String? _district;
+  late AdCategory? _category;
+  late AdType? _type;
+  late int? _rooms;
+  late num? _areaMin;
+  late num? _areaMax;
+  late int? _priceMin;
+  late int? _priceMax;
+  late Furniture? _furniture;
+  late Repairment? _repairment;
+  late int? _storey;
+
+  late final TextEditingController _cityController;
+  late final TextEditingController _districtController;
+  late final TextEditingController _areaMinController;
+  late final TextEditingController _areaMaxController;
+  late final TextEditingController _storeyController;
+
+  AdFilters get _draft => AdFilters(
+    city: _city,
+    district: _district,
+    category: _category,
+    type: _type,
+    rooms: _rooms,
+    repairment: _repairment,
+    storey: _storey,
+    furniture: _furniture,
+    areaMin: _areaMin,
+    areaMax: _areaMax,
+    priceMin: _priceMin,
+    priceMax: _priceMax,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _applyToLocalState(_seedDefaults(widget.initialFilters));
+    _cityController = TextEditingController(text: _city ?? '');
+    _districtController = TextEditingController(text: _district ?? '');
+    _areaMinController = TextEditingController(
+      text: _areaMin == null ? '' : _trimNum(_areaMin!),
+    );
+    _areaMaxController = TextEditingController(
+      text: _areaMax == null ? '' : _trimNum(_areaMax!),
+    );
+    _storeyController = TextEditingController(
+      text: _storey?.toString() ?? '',
+    );
+    // Seed the live count preview immediately (no debounce) so the Apply
+    // button already shows a number before the user touches anything.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(filterCountProvider.notifier).recountNow(_draft);
+    });
+  }
+
+  @override
+  void dispose() {
+    _cityController.dispose();
+    _districtController.dispose();
+    _areaMinController.dispose();
+    _areaMaxController.dispose();
+    _storeyController.dispose();
+    super.dispose();
+  }
+
+  /// Furniture/Repair are the only two fields SCREENS.md §3.5 gives a
+  /// stated default (`withFurniture`, `notRepaired`) — applied whenever
+  /// the incoming value is `null`. A caller re-opening the sheet with
+  /// previously-*applied* filters that explicitly cleared one of these
+  /// two back to "any" gets that `null` preserved as-is (the field was
+  /// deliberately set, not merely never touched) — this only fills the
+  /// gap for a truly fresh `const AdFilters()`.
+  static AdFilters _seedDefaults(AdFilters initial) {
+    return AdFilters(
+      city: initial.city,
+      district: initial.district,
+      category: initial.category,
+      type: initial.type,
+      rooms: initial.rooms,
+      repairment: initial.repairment ?? Repairment.notRepaired,
+      storey: initial.storey,
+      furniture: initial.furniture ?? Furniture.withFurniture,
+      areaMin: initial.areaMin,
+      areaMax: initial.areaMax,
+      priceMin: initial.priceMin,
+      priceMax: initial.priceMax,
+    );
+  }
+
+  void _applyToLocalState(AdFilters f) {
+    _city = f.city;
+    _district = f.district;
+    _category = f.category;
+    _type = f.type;
+    _rooms = f.rooms;
+    _areaMin = f.areaMin;
+    _areaMax = f.areaMax;
+    _priceMin = f.priceMin?.round();
+    _priceMax = f.priceMax?.round();
+    _furniture = f.furniture;
+    _repairment = f.repairment;
+    _storey = f.storey;
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+    ref.read(filterCountProvider.notifier).scheduleRecount(_draft);
+  }
+
+  void _onCityChanged(String value) {
+    final trimmed = value.trim();
+    _city = trimmed.isEmpty ? null : trimmed;
+    if (_city == null && _district != null) {
+      // City cleared: the free-text District field has nothing to be
+      // "cascaded" from any more, so clear it too rather than leaving a
+      // district value with no city attached.
+      _district = null;
+      _districtController.clear();
+    }
+    _onFieldChanged();
+  }
+
+  void _onDistrictChanged(String value) {
+    final trimmed = value.trim();
+    _district = trimmed.isEmpty ? null : trimmed;
+    _onFieldChanged();
+  }
+
+  void _onAreaMinChanged(String value) {
+    _areaMin = num.tryParse(value);
+    _onFieldChanged();
+  }
+
+  void _onAreaMaxChanged(String value) {
+    _areaMax = num.tryParse(value);
+    _onFieldChanged();
+  }
+
+  void _onStoreyChanged(String value) {
+    _storey = int.tryParse(value);
+    _onFieldChanged();
+  }
+
+  void _reset() {
+    setState(() {
+      _applyToLocalState(_seedDefaults(const AdFilters()));
+      _cityController.clear();
+      _districtController.clear();
+      _areaMinController.clear();
+      _areaMaxController.clear();
+      _storeyController.clear();
+    });
+    // Reset is one explicit action, not a stream of edits — recount
+    // immediately rather than debouncing it.
+    unawaited(ref.read(filterCountProvider.notifier).recountNow(_draft));
+  }
+
+  void _apply() {
+    Navigator.of(context).pop(_draft);
+  }
+
+  String _trimNum(num value) =>
+      value == value.roundToDouble()
+          ? value.round().toString()
+          : value.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final countAsync = ref.watch(filterCountProvider);
+    final districtEnabled = _city != null;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: FractionallySizedBox(
+        heightFactor: 0.88,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(AppRadii.sheet),
+              topRight: Radius.circular(AppRadii.sheet),
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.line,
+                  borderRadius: AppRadii.pill,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenGutter,
+                  AppSpacing.lg,
+                  AppSpacing.base,
+                  AppSpacing.base,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Filters',
+                        style: type.sheetTitle.copyWith(color: colors.ink),
+                      ),
+                    ),
+                    GestureDetector(
+                      key: const ValueKey('filterSheet-close'),
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.ink2,
+                        size: 22,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ScrollConfiguration(
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    overscroll: false,
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenGutter,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FilterCityDistrictSection(
+                          cityController: _cityController,
+                          districtController: _districtController,
+                          districtEnabled: districtEnabled,
+                          onCityChanged: _onCityChanged,
+                          onDistrictChanged: _onDistrictChanged,
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterCategoryTypeSection(
+                          category: _category,
+                          type: _type,
+                          onCategoryChanged: (v) {
+                            _category = v;
+                            _onFieldChanged();
+                          },
+                          onTypeChanged: (v) {
+                            _type = v;
+                            _onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterRoomsSection(
+                          rooms: _rooms,
+                          onChanged: (v) {
+                            _rooms = v;
+                            _onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterAreaSection(
+                          areaMinController: _areaMinController,
+                          areaMaxController: _areaMaxController,
+                          onAreaMinChanged: _onAreaMinChanged,
+                          onAreaMaxChanged: _onAreaMaxChanged,
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterPriceSection(
+                          priceMin: _priceMin,
+                          priceMax: _priceMax,
+                          onPriceMinChanged: (v) {
+                            _priceMin = v;
+                            _onFieldChanged();
+                          },
+                          onPriceMaxChanged: (v) {
+                            _priceMax = v;
+                            _onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterFurnitureRepairSection(
+                          furniture: _furniture,
+                          repairment: _repairment,
+                          onFurnitureChanged: (v) {
+                            _furniture = v;
+                            _onFieldChanged();
+                          },
+                          onRepairmentChanged: (v) {
+                            _repairment = v;
+                            _onFieldChanged();
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.section),
+                        FilterStoreySection(
+                          storeyController: _storeyController,
+                          onChanged: _onStoreyChanged,
+                        ),
+                        if (countAsync.hasError) ...[
+                          const SizedBox(height: AppSpacing.base),
+                          _CountErrorRow(
+                            onRetry: () => ref
+                                .read(filterCountProvider.notifier)
+                                .recountNow(_draft),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.section),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenGutter,
+                  AppSpacing.base,
+                  AppSpacing.screenGutter,
+                  AppSpacing.lg,
+                ),
+                child: FilterSheetFooter(onReset: _reset, onApply: _apply),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CountErrorRow extends StatelessWidget {
+  const _CountErrorRow({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return Row(
+      children: [
+        Icon(
+          Icons.error_outline_rounded,
+          size: 16,
+          color: AppStatusColors.warningText,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            "Couldn't calculate matching listings.",
+            style: type.bodySmall.copyWith(color: AppStatusColors.warningText),
+          ),
+        ),
+        GestureDetector(
+          key: const ValueKey('filterSheet-countRetry'),
+          onTap: onRetry,
+          child: Text(
+            'Retry',
+            style: type.label.copyWith(color: AppAccent.color),
+          ),
+        ),
+      ],
+    );
+  }
+}

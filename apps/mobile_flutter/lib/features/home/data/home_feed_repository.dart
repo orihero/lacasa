@@ -8,6 +8,13 @@
 /// throws (`lib/api/api_exception.dart`) so widgets only need to know about
 /// that one exception hierarchy regardless of which implementation is
 /// active.
+///
+/// This interface used to carry three more methods for the saved/favourited
+/// ad id set (`fetchInitialSavedAdIds`/`saveAd`/`unsaveAd`). They moved to
+/// `lib/shared/state/favourite_ad_ids_repository.dart` once a second
+/// feature needed the exact same favourited state Home's own cards
+/// reflect — see that file's doc comment for why a per-feature copy was
+/// rejected.
 library;
 
 import '../../../api/api.dart';
@@ -21,14 +28,4 @@ abstract class HomeFeedRepository {
 
   /// Top 5 agents by [AgentSummary.adsCount], descending.
   Future<List<AgentSummary>> fetchTopAgents();
-
-  /// The set of ad ids already saved by the current session, used to seed
-  /// [FavouriteAdIdsNotifier]'s initial state. Never throws — a failure to
-  /// load existing favourites degrades to "nothing is favourited yet"
-  /// rather than blocking the rest of the screen.
-  Future<Set<String>> fetchInitialSavedAdIds();
-
-  Future<void> saveAd(String adId);
-
-  Future<void> unsaveAd(String adId);
 }

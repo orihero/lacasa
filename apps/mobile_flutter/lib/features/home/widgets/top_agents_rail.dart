@@ -15,11 +15,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../navigation/route_paths.dart';
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
-import 'agent_avatar.dart';
-import 'rail_states.dart';
-import 'section_header.dart';
 
 class TopAgentsRail extends ConsumerWidget {
   const TopAgentsRail({super.key});

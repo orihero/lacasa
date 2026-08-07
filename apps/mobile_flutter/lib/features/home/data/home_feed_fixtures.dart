@@ -181,7 +181,3 @@ final List<AgentSummary> homeFeedFixtureAgents = [
   _agent(id: 'agent-shahnoza', fullName: 'Shahnoza Yoldosheva', adsCount: 18),
   _agent(id: 'agent-otabek', fullName: 'Otabek Yusupov', adsCount: 31),
 ].map(AgentSummary.fromJson).toList(growable: false);
-
-/// Matches the mockup's own demo state: `ad-1001`'s heart renders filled
-/// (`fav g on`) everywhere it appears, every other card starts unfavourited.
-final Set<String> homeFeedFixtureSavedAdIds = {'ad-1001'};

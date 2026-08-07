@@ -11,8 +11,10 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/home/home.dart';
 import 'package:lacasa_mobile/features/home/state/home_feed_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_favourite_ad_ids_repository.dart';
 import 'support/fake_home_feed_repository.dart';
 
 Map<String, dynamic> _adJson({
@@ -88,6 +90,7 @@ void main() {
   Future<ProviderContainer> pumpHomeFeedScreen(
     WidgetTester tester, {
     required FakeHomeFeedRepository repository,
+    FakeFavouriteAdIdsRepository? favouritesRepository,
     UserRole? role,
   }) async {
     // The whole feed is one tall CustomScrollView; a default 800x600 test
@@ -109,7 +112,12 @@ void main() {
       // fetchFeedCallCount assertions non-deterministic. Disabled here so
       // "one call, then one more after Retry" stays exact.
       retry: (retryCount, error) => null,
-      overrides: [homeFeedRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        homeFeedRepositoryProvider.overrideWithValue(repository),
+        favouriteAdIdsRepositoryProvider.overrideWithValue(
+          favouritesRepository ?? FakeFavouriteAdIdsRepository(),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     if (role != null) {
@@ -339,11 +347,15 @@ void main() {
     testWidgets(
       'tapping the heart optimistically toggles and calls the repository',
       (tester) async {
-        final repo = FakeHomeFeedRepository(
-          ads: _fiveAds,
+        final repo = FakeHomeFeedRepository(ads: _fiveAds);
+        final favouritesRepo = FakeFavouriteAdIdsRepository(
           savedAdIds: const {},
         );
-        await pumpHomeFeedScreen(tester, repository: repo);
+        await pumpHomeFeedScreen(
+          tester,
+          repository: repo,
+          favouritesRepository: favouritesRepo,
+        );
 
         final heartFinder = find.descendant(
           of: find.byKey(const ValueKey('favourite-ad-1000')),
@@ -354,7 +366,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('favourite-ad-1000')));
         await tester.pumpAndSettle();
 
-        expect(repo.saveCallCount, 1);
+        expect(favouritesRepo.saveCallCount, 1);
         expect(
           find.descendant(
             of: find.byKey(const ValueKey('favourite-ad-1000')),

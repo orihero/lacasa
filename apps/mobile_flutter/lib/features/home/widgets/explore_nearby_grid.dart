@@ -16,11 +16,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
-import 'compact_listing_card.dart';
-import 'rail_states.dart';
-import 'section_header.dart';
 
 class ExploreNearbyGrid extends ConsumerWidget {
   const ExploreNearbyGrid({super.key});
