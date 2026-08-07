@@ -30,26 +30,26 @@ credentials; there is no mock-data mode.
 Other scripts (all run the same way, `-w @lacasa/console`): `build`, `typecheck`, `lint`, `test`,
 `test -- --coverage`.
 
-## Screens: built vs. placeholder
+## Screens: build status
 
-Of the 8 screens `mockups/f/PLAN.md` §3 wireframes, four are real and four are `<ComingSoon>`
-placeholders (`src/screens/ComingSoon.tsx` — names the screen and cites the exact `PLAN.md`
-subsection, never a lorem-ipsum stand-in):
+All 8 screens `mockups/f/PLAN.md` §3 wireframes are real and wired against the live API — there is no
+longer a `<ComingSoon>` placeholder anywhere in the route table (`src/screens/ComingSoon.tsx` itself
+has been removed now that nothing references it):
 
 | Route | Screen | Status |
 |---|---|---|
 | `/login` | Login | Built |
-| `/statistics` | Statistics | Placeholder (§3.1) |
+| `/statistics` | Statistics | Built (§3.1) |
 | `/ads` | My ads | Built (§3.2) |
-| `/ads/new`, `/ads/:id/edit` | Listing editor | Placeholder (§3.3) |
+| `/ads/new`, `/ads/:id/edit` | Listing editor | Built (§3.3) |
 | `/publish` | Publish status | Built |
 | `/leads` | Leads | Built (§3.5) |
-| `/leads/kanban` | Kanban | Placeholder (§3.6) |
+| `/leads/kanban` | Kanban | Built (§3.6) |
 | `/coworkers` | Coworkers | Built (§3.7) |
-| `/accounts` | Connected accounts | Placeholder (§3.8) |
+| `/accounts` | Connected accounts | Built (§3.8) |
 
-A placeholder screen is a real, routable, PageHead-and-EmptyState component — not a blank page — so
-the rail/topbar/routing all work end to end today; only that screen's own content is still to come.
+Every screen is a real, routable component reading real `@tanstack/react-query` hooks — not a
+blank page — so the rail/topbar/routing and every screen's own content all work end to end today.
 
 ## Design rules a future contributor must not break
 
@@ -103,7 +103,9 @@ already fetches, rather than inventing an endpoint).
   `useCoworkers`, `usePublish`, `useStatistics`), plus `queryKeys.ts`. A screen-local hook is
   promoted here once a second screen could plausibly want it.
 - `src/lib/` — `apiClient` (the configured `@lacasa/api-client` instance), `auth.tsx`
-  (`AuthProvider`/`useAuth`/`RequireAuth`), `format.ts`, `labels.ts`.
+  (`AuthProvider`/`useAuth`/`RequireAuth`), `format.ts`, `labels.ts`, `leadHelpers.ts` (pure `Lead`
+  logic — due/overdue callback + wire-status narrowing — shared by Leads, Kanban and Statistics; lives
+  here rather than under one screen's folder because three screens depend on it).
 - `src/screens/<name>/` — one folder per screen; a built screen owns its own local components,
   derivation helpers and tests.
 - `src/test/render.tsx` — the shared test-mount workaround every screen/component test uses in place

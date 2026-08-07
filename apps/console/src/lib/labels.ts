@@ -19,6 +19,7 @@ import {
   ALL_CHANNELS,
   type AdCategoryKey,
   type AdStageKey,
+  type AdTypeKey,
   type Channel,
   type FurnitureKey,
   type LeadStatusKey,
@@ -48,6 +49,16 @@ export const AD_STAGE_TONE: Record<AdStageKey, Tone> = {
 export const AD_CATEGORY_LABEL: Record<AdCategoryKey, string> = {
   rent: 'Rent',
   sale: 'Sale',
+};
+
+// ---------------------------------------------------------------------------
+// Ad.type — residential/nonresidential. Added for the Listing editor screen
+// (mockups/f/PLAN.md §3.3's "Type" field) — every other Ad enum already had
+// a label map here, this one didn't exist yet.
+
+export const AD_TYPE_LABEL: Record<AdTypeKey, string> = {
+  residential: 'Residential',
+  nonresidential: 'Non-residential',
 };
 
 // ---------------------------------------------------------------------------

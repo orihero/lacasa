@@ -14,7 +14,7 @@
 import type { Lead } from '@lacasa/api-client';
 import type { LeadStatusKey } from '@lacasa/domain';
 import { LEAD_STATUS_ORDER } from '@/lib/labels';
-import { asLeadStatusKey } from '../leads/leadHelpers';
+import { asLeadStatusKey } from '@/lib/leadHelpers';
 
 export type KanbanColumns = Record<LeadStatusKey, Lead[]>;
 

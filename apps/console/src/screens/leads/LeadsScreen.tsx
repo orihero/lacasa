@@ -42,7 +42,7 @@ import { ClockIcon, FunnelIcon, PlusIcon, UserIcon, UsersThreeIcon } from '@/ui/
 import { useLeads, useUpdateLead } from '@/data/useLeads';
 import { CreateLeadModal } from './CreateLeadModal';
 import { StageSelect } from './StageSelect';
-import { asLeadStatusKey, isCallbackDueOrOverdue } from './leadHelpers';
+import { asLeadStatusKey, isCallbackDueOrOverdue } from '@/lib/leadHelpers';
 
 const COLUMN_COUNT = 6;
 

@@ -4,7 +4,7 @@
  * `GET /statistics/coworkers` return verbatim (src/data/useStatistics.ts):
  *
  *  - "N need a callback today", under the Active leads tile — reuses
- *    `isCallbackDueOrOverdue` from screens/leads/leadHelpers (the exact rule
+ *    `isCallbackDueOrOverdue` from `@/lib/leadHelpers` (the exact rule
  *    the Leads table's own callback warn-tag uses) rather than a second,
  *    slightly-different "is this due" definition living here.
  *  - "N active this week", under the Coworkers tile — a coworker counts once
@@ -22,7 +22,7 @@
  */
 import type { CoworkerStatisticEvent, Lead } from '@lacasa/api-client';
 import { toValidDate } from '@lacasa/domain';
-import { isCallbackDueOrOverdue } from '@/screens/leads/leadHelpers';
+import { isCallbackDueOrOverdue } from '@/lib/leadHelpers';
 
 export function countCallbacksDueToday(leads: readonly Lead[], now: Date = new Date()): number {
   return leads.filter((lead) => isCallbackDueOrOverdue(lead.callbackDate, now)).length;

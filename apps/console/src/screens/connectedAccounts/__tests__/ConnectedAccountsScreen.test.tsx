@@ -114,6 +114,12 @@ describe("ConnectedAccountsScreen — Instagram (the one real, per-account chann
     );
   });
 
+  it("says Meta App Review still gates real publishing instead of implying Connect alone is enough", () => {
+    render(<ConnectedAccountsScreen />);
+    expect(screen.getByText(/instagram_business_content_publish/)).toBeInTheDocument();
+    expect(screen.getByText(/Meta App Review/)).toBeInTheDocument();
+  });
+
   it("disconnects a real account by igUserId when Disconnect is clicked", async () => {
     const mutate = vi.fn();
     vi.mocked(useInstagramAccounts).mockReturnValue(
@@ -126,6 +132,54 @@ describe("ConnectedAccountsScreen — Instagram (the one real, per-account chann
 
     await userEvent.click(screen.getByRole("button", { name: "Disconnect" }));
     expect(mutate).toHaveBeenCalledWith("ig1", expect.anything());
+  });
+
+  it("shows a loading state instead of a stale or fabricated account list", () => {
+    vi.mocked(useInstagramAccounts).mockReturnValue(igAccountsResult({ data: undefined, isLoading: true }));
+    render(<ConnectedAccountsScreen />);
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+  });
+
+  it("shows a real error message instead of silently rendering 'Not connected' when the accounts fetch fails", () => {
+    vi.mocked(useInstagramAccounts).mockReturnValue(igAccountsResult({ data: undefined, isError: true }));
+    render(<ConnectedAccountsScreen />);
+    expect(screen.getByText("Couldn't load connected accounts.")).toBeInTheDocument();
+  });
+
+  it("surfaces a failed Disconnect instead of swallowing it silently", () => {
+    vi.mocked(useInstagramAccounts).mockReturnValue(
+      igAccountsResult({ data: [{ igUserId: "ig1", username: "javlon.realty", expiresAt: null }] }),
+    );
+    vi.mocked(useDisconnectInstagram).mockReturnValue(
+      mutationResult<ReturnType<typeof useDisconnectInstagram>>({
+        isError: true,
+        error: { message: "Network error — could not disconnect" },
+        variables: "ig1",
+      }),
+    );
+    render(<ConnectedAccountsScreen />);
+    expect(screen.getByText("Network error — could not disconnect")).toBeInTheDocument();
+  });
+
+  it("disables Connect and Disconnect for a coworker account — the server 403s both for any role but AGENT", () => {
+    vi.mocked(useAuth).mockReturnValue(
+      authResult({
+        user: {
+          id: "u2",
+          fullName: "Sardor Abdullayev",
+          email: "sardor@lacasa.uz",
+          phoneNumber: null,
+          role: "COWORKER",
+          agentId: "u1",
+        },
+      }),
+    );
+    vi.mocked(useInstagramAccounts).mockReturnValue(
+      igAccountsResult({ data: [{ igUserId: "ig1", username: "javlon.realty", expiresAt: null }] }),
+    );
+    render(<ConnectedAccountsScreen />);
+    expect(screen.getByRole("button", { name: "Connect another" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Disconnect" })).toBeDisabled();
   });
 });
 

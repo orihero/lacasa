@@ -33,6 +33,11 @@ export function useAd(id: string): UseQueryResult<Ad> {
   return useQuery({
     queryKey: queryKeys.ads.detail(id),
     queryFn: () => apiClient.ads.getById(id),
+    // enabled-guarded the same way usePublish.ts's per-ad hooks are: the
+    // Listing editor screen renders this same hook unconditionally (React's
+    // hooks rule) for both /ads/new (no id yet) and /ads/:id/edit, and an
+    // empty id must never reach GET /ads/ as a real request.
+    enabled: Boolean(id),
   });
 }
 
