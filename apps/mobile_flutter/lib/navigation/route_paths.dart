@@ -35,11 +35,43 @@ abstract final class RoutePaths {
   static const agents = '/agents';
   static const agentProfile = '/agents/:id';
 
+  // `agent-profile`'s "Ads List" grid pushes a listing, and a pushed screen
+  // stays in the back stack of the tab it was opened from (SCREENS.md §1),
+  // so this branch needs its own copy of `listing-detail` — the same reason
+  // Home and Search each declare one. It does not collide with
+  // [agentProfile]: three path segments versus two.
+  static const agentsListingDetail = '/agents/listing/:id';
+
+  // And that listing's own agent block pushes back out to a profile, using
+  // the same `{branchPrefix}/agent/:id` shape every branch honours (see
+  // `listing_detail_screen.dart`). Redundant with [agentProfile] as a
+  // *destination* — both render `AgentProfileScreen` — but not as a
+  // *path*: `listing-detail` builds its target from the branch prefix it
+  // was handed and cannot special-case one branch without the prefix
+  // contract meaning something different per branch.
+  static const agentsAgentProfile = '/agents/agent/:id';
+
   // ---- Branch 4: Profile (one route; content switches on role) -----------
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const profileSaved = '/profile/saved';
   static const profileSettings = '/profile/settings';
+
+  // `saved-listings`'s card grid pushes a listing, exactly like `/home`,
+  // `/search` and `/agents` each do for their own tab — see
+  // `agentsListingDetail`'s note above on why a pushed screen needs its own
+  // per-branch copy of this route rather than sharing one of the others.
+  static const profileListingDetail = '/profile/listing/:id';
+
+  // `profile-agent` (agent/coworker only) and `settings` (agent only, via
+  // its Connected Accounts row) both push this — neither screen exists yet,
+  // so it renders a `PlaceholderScreen` until one does, matching
+  // `workConnectedAccounts`'s equivalent under the Work branch.
+  static const profileConnectedAccounts = '/profile/connected-accounts';
+
+  // `profile-agent`'s "Messages" row (§3.16) — no `messages` screen exists
+  // anywhere in this app yet, so this renders a `PlaceholderScreen` too.
+  static const profileMessages = '/profile/messages';
 
   // ---- Top-level routes (parentNavigatorKey: rootNavigatorKey) -----------
   // Modal/fullscreen-dialog pages — paint above the shell, tab bar never in

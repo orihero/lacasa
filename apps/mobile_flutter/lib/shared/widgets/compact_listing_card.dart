@@ -38,8 +38,16 @@ class CompactListingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 1,
+          // The photo takes whatever height the text below it doesn't, rather
+          // than an `AspectRatio(1)` square. At the grid ratio these callers
+          // use it lands at roughly square anyway — but a square is a *fixed*
+          // height, and a 2-line title on a 360px-wide phone pushed the
+          // column 15px past its cell (caught by `agent_profile_screen_test`'s
+          // narrow-width case; Home's Explore grid had the identical latent
+          // bug, hidden only by fixture titles short enough to fit on one
+          // line). Yielding the photo's height is the right trade: a listing
+          // photo a few pixels shorter is invisible, a clipped title is not.
+          Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadii.control),
               child: Stack(

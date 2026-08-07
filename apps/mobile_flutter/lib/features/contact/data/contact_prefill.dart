@@ -39,4 +39,14 @@ class ContactPrefill {
       message: 'I would like to apply for "$shortTitle" $badge$agentPart.',
     );
   }
+
+  /// SCREENS.md §3.10's "message icon → `contact-sheet` pre-filled", from
+  /// `agent-profile`. Names the agent because that is the only thing the
+  /// screen knows and the only thing the office needs to route the message;
+  /// there is no listing in context here, so no title or id badge to carry.
+  factory ContactPrefill.forAgent({required String agentName}) {
+    final name = agentName.trim();
+    if (name.isEmpty) return const ContactPrefill();
+    return ContactPrefill(message: 'I would like to get in touch with $name.');
+  }
 }

@@ -418,4 +418,71 @@ void main() {
       );
     });
   });
+
+  group('UsersResource', () {
+    test(
+      'updateMe PATCHes /users/me with only the provided fields',
+      () async {
+        final transport = FakeTransport(
+          (req) async => {
+            'user': {
+              'id': 'u1',
+              'fullName': 'Updated Name',
+              'email': 'a@example.com',
+              'role': 'user',
+              'phoneNumber': null,
+              'avatar': null,
+              'agentId': null,
+              'tgChatIds': <int>[],
+              'igAccounts': <Map<String, dynamic>>[],
+              'igAssistConsentAt': null,
+              'realtor': null,
+            },
+          },
+        );
+        final users = UsersResource(buildClient(transport, token: 'tok'));
+
+        final result = await users.updateMe(fullName: 'Updated Name');
+
+        expect(transport.requests.single.method, 'PATCH');
+        expect(
+          transport.requests.single.url,
+          'https://api.example.com/users/me',
+        );
+        // email/phoneNumber/avatar/password were never passed — the null-aware
+        // map entries (`'key': ?value`) must omit them entirely rather than
+        // sending explicit `null`s the server would happily accept but that
+        // don't reflect "leave this column untouched".
+        expect(transport.requests.single.body, {'fullName': 'Updated Name'});
+        expect(result.user.fullName, 'Updated Name');
+      },
+    );
+
+    test(
+      'updateMe rethrows a 409 email_taken ApiErrorException unchanged',
+      () async {
+        final transport = FakeTransport(
+          (req) async => throw ApiErrorException(
+            body: const ApiErrorBody(
+              code: ApiErrorCode.emailTaken,
+              message: 'Email is already registered',
+            ),
+            statusCode: 409,
+          ),
+        );
+        final users = UsersResource(buildClient(transport, token: 'tok'));
+
+        await expectLater(
+          users.updateMe(email: 'taken@example.com'),
+          throwsA(
+            isA<ApiErrorException>().having(
+              (e) => e.code,
+              'code',
+              ApiErrorCode.emailTaken,
+            ),
+          ),
+        );
+      },
+    );
+  });
 }

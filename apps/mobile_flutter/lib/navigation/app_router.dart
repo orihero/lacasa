@@ -30,10 +30,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/api.dart';
+import '../features/agents/agents.dart';
+import '../features/auth/auth.dart';
+import '../features/edit_profile/edit_profile.dart';
 import '../features/home/home.dart';
 import '../features/listing_detail/listing_detail.dart';
+import '../features/map_view/map_view.dart';
+import '../features/onboarding/onboarding.dart';
+import '../features/permissions/permissions.dart';
 import '../features/photo_gallery/photo_gallery.dart';
+import '../features/saved_listings/saved_listings.dart';
 import '../features/search/search.dart';
+import '../features/settings/settings.dart';
 import 'auth_session.dart';
 import 'placeholder_screen.dart';
 import 'profile_role_screen.dart';
@@ -50,11 +59,27 @@ final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 /// still pointing at it) should shrink over time.
 Widget _placeholder(String name) => PlaceholderScreen(name: name);
 
-/// `/work*` guard + `/work` initial-screen-by-role redirect (build spec,
-/// "Work's initial screen by role" and "Why the Work branch always
-/// exists", point 2).
-String? _redirect(GoRouterState state, AuthSessionState authState) {
+/// The onboarding gate (SCREENS.md §3.1: "App first launch") + `/work*`
+/// guard + `/work` initial-screen-by-role redirect (build spec, "Work's
+/// initial screen by role" and "Why the Work branch always exists",
+/// point 2).
+String? _redirect(
+  GoRouterState state,
+  AuthSessionState authState, {
+  required bool hasSeenOnboarding,
+}) {
   final loc = state.matchedLocation;
+
+  // Onboarding is checked first and applies to every location: on a first
+  // launch there is no destination in the app the user should reach ahead
+  // of it, deep link or otherwise. `hasSeenOnboarding` is known
+  // synchronously here by construction — see `main.dart`.
+  if (!hasSeenOnboarding) {
+    return loc == RoutePaths.onboarding ? null : RoutePaths.onboarding;
+  }
+  // And once it's done, `/onboarding` is not somewhere to go back to.
+  if (loc == RoutePaths.onboarding) return RoutePaths.home;
+
   final onWorkBranch =
       loc == RoutePaths.work || loc.startsWith('${RoutePaths.work}/');
   if (!onWorkBranch) return null;
@@ -92,13 +117,26 @@ class _AuthRouterRefresh extends ChangeNotifier {
     ) {
       if (previous?.role != next.role) notifyListeners();
     });
+
+    // The onboarding flag flips exactly once per install, when the carousel
+    // is finished or skipped. Re-running [_redirect] on that flip is what
+    // lets `OnboardingScreen`'s `context.go(home)` actually land instead of
+    // being bounced straight back by a gate still reading "unseen".
+    _onboardingSubscription = ref.listen<bool>(onboardingSeenProvider, (
+      previous,
+      next,
+    ) {
+      if (previous != next) notifyListeners();
+    });
   }
 
   late final ProviderSubscription<AuthSessionState> _subscription;
+  late final ProviderSubscription<bool> _onboardingSubscription;
 
   @override
   void dispose() {
     _subscription.close();
+    _onboardingSubscription.close();
     super.dispose();
   }
 }
@@ -115,8 +153,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: RoutePaths.home,
     refreshListenable: refresh,
-    redirect: (context, state) =>
-        _redirect(state, ref.read(authSessionProvider)),
+    redirect: (context, state) => _redirect(
+      state,
+      ref.read(authSessionProvider),
+      hasSeenOnboarding: ref.read(onboardingSeenProvider),
+    ),
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
@@ -145,8 +186,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'agent/:id',
-                    builder: (context, state) =>
-                        _placeholder('Agent ${state.pathParameters['id']}'),
+                    builder: (context, state) => AgentProfileScreen(
+                      agentId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.home,
+                    ),
                   ),
                   GoRoute(
                     path: 'notifications',
@@ -166,8 +209,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'agent/:id',
-                    builder: (context, state) =>
-                        _placeholder('Agent ${state.pathParameters['id']}'),
+                    builder: (context, state) => AgentProfileScreen(
+                      agentId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.search,
+                    ),
                   ),
                   GoRoute(
                     path: 'listing/:id',
@@ -226,7 +271,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'settings',
-                    builder: (context, state) => _placeholder('Work Settings'),
+                    builder: (context, state) =>
+                        const SettingsScreen(branchPrefix: RoutePaths.work),
                   ),
                   GoRoute(
                     path: 'connected-accounts',
@@ -255,12 +301,34 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RoutePaths.agents,
-                builder: (context, state) => _placeholder('Agents'),
+                builder: (context, state) => const AgentsDirectoryScreen(),
                 routes: [
+                  // Declared before `:id` so the more specific three-segment
+                  // pattern is matched first — see RoutePaths'
+                  // `agentsListingDetail` note on why this branch carries its
+                  // own listing-detail route at all.
+                  GoRoute(
+                    path: 'listing/:id',
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.agents,
+                    ),
+                  ),
+                  // The target that listing's agent block pushes back to —
+                  // see RoutePaths' `agentsAgentProfile` note.
+                  GoRoute(
+                    path: 'agent/:id',
+                    builder: (context, state) => AgentProfileScreen(
+                      agentId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.agents,
+                    ),
+                  ),
                   GoRoute(
                     path: ':id',
-                    builder: (context, state) =>
-                        _placeholder('Agent ${state.pathParameters['id']}'),
+                    builder: (context, state) => AgentProfileScreen(
+                      agentId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.agents,
+                    ),
                   ),
                 ],
               ),
@@ -277,16 +345,41 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'edit',
-                    builder: (context, state) => _placeholder('Edit Profile'),
+                    builder: (context, state) => const EditProfileScreen(),
                   ),
                   GoRoute(
                     path: 'saved',
-                    builder: (context, state) => _placeholder('Saved'),
+                    builder: (context, state) => const SavedListingsScreen(),
                   ),
                   GoRoute(
                     path: 'settings',
                     builder: (context, state) =>
-                        _placeholder('Profile Settings'),
+                        const SettingsScreen(branchPrefix: RoutePaths.profile),
+                  ),
+                  // Neither screen exists yet — `profile-agent`'s Connected
+                  // Accounts/Messages rows and `settings`'s own Connected
+                  // Accounts row (agent-only) push these so they at least
+                  // resolve instead of 404ing; see `route_paths.dart`'s
+                  // `profileConnectedAccounts`/`profileMessages` notes.
+                  GoRoute(
+                    path: 'connected-accounts',
+                    builder: (context, state) =>
+                        _placeholder('Connected Accounts'),
+                  ),
+                  GoRoute(
+                    path: 'messages',
+                    builder: (context, state) => _placeholder('Messages'),
+                  ),
+                  // Same convention as `/home`, `/search`, `/agents`'
+                  // own copies — see `route_paths.dart`'s
+                  // `agentsListingDetail` note — this branch needs its own
+                  // because `saved-listings`'s grid pushes into it.
+                  GoRoute(
+                    path: 'listing/:id',
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.profile,
+                    ),
                   ),
                 ],
               ),
@@ -302,23 +395,25 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.onboarding,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
-          child: _placeholder('Onboarding'),
+          child: OnboardingScreen(),
         ),
       ),
       GoRoute(
         path: RoutePaths.login,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) =>
-            MaterialPage(fullscreenDialog: true, child: _placeholder('Login')),
+        pageBuilder: (context, state) => const MaterialPage(
+          fullscreenDialog: true,
+          child: LoginScreen(),
+        ),
       ),
       GoRoute(
         path: RoutePaths.register,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
-          child: _placeholder('Register'),
+          child: RegisterScreen(),
         ),
       ),
       GoRoute(
@@ -332,9 +427,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.permissionsPrimer,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
-          child: _placeholder('Permissions Primer'),
+          child: PermissionsPrimerScreen(),
         ),
       ),
 
@@ -357,10 +452,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           return PhotoGalleryScreen(args: args);
         },
       ),
+      // `map-view` takes the current result set through `extra:` as a
+      // fallback only — it prefers live search state (see
+      // `map_view_screen.dart`). So unlike `photoGallery` above, a missing
+      // or wrong-typed `extra` is not a degraded case worth a placeholder:
+      // the screen simply reads the provider, which is what it does on
+      // every normal entry anyway.
       GoRoute(
         path: RoutePaths.mapView,
         parentNavigatorKey: rootNavigatorKey,
-        builder: (context, state) => _placeholder('Map View'),
+        builder: (context, state) {
+          final extra = state.extra;
+          return MapViewScreen(
+            fallbackAds: extra is List<Ad> ? extra : const [],
+          );
+        },
       ),
     ],
   );

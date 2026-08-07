@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
+import 'package:lacasa_mobile/features/agents/agents.dart';
 import 'package:lacasa_mobile/features/listing_detail/listing_detail.dart';
 // Not exported from the feature barrel — the hero is an internal piece, and
 // this is the only place outside the screen that needs to name it (to tap
@@ -347,15 +348,16 @@ void main() {
 
       await scrollToAndTap(tester, find.text('Javlon Rustamov'));
 
-      // `agent-profile` is still a placeholder, so this asserts on which
-      // one is on screen — and the id in its name is what proves the push
-      // resolved `/home/agent/:id` (the Home branch's own child route)
-      // rather than the Agents-tab `/agents/:id`, which would have reset
-      // the user out of the tab they were browsing in.
-      expect(
-        find.byKey(const ValueKey('screen-Agent agent-javlon')),
-        findsOneWidget,
+      // `agent-profile` is a real screen now, so this reads its own
+      // arguments rather than a placeholder's name. `branchPrefix` is what
+      // proves the push resolved `/home/agent/:id` (the Home branch's own
+      // child route) rather than the Agents-tab `/agents/:id`, which would
+      // have reset the user out of the tab they were browsing in.
+      final profile = tester.widget<AgentProfileScreen>(
+        find.byType(AgentProfileScreen),
       );
+      expect(profile.agentId, 'agent-javlon');
+      expect(profile.branchPrefix, '/home');
       expect(find.byType(ListingDetailScreen), findsNothing);
     });
   });
