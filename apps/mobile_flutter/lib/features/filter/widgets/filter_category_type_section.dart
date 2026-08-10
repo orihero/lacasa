@@ -7,9 +7,8 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
-import 'filter_choice_chip_group.dart';
-import 'filter_field_label.dart';
 
 class FilterCategoryTypeSection extends StatelessWidget {
   const FilterCategoryTypeSection({
@@ -30,16 +29,16 @@ class FilterCategoryTypeSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FilterFieldLabel('Category'),
-        FilterChoiceChipGroup<AdCategory>(
+        const FieldLabel('Category'),
+        ChoiceChipGroup<AdCategory>(
           keyPrefix: 'filterCategory',
           options: filterCategoryOptions,
           selected: category,
           onChanged: onCategoryChanged,
         ),
         const SizedBox(height: 14),
-        const FilterFieldLabel('Type'),
-        FilterChoiceChipGroup<AdType>(
+        const FieldLabel('Type'),
+        ChoiceChipGroup<AdType>(
           keyPrefix: 'filterType',
           options: filterTypeOptions,
           selected: type,

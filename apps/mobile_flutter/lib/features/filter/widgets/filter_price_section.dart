@@ -17,9 +17,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
-import 'filter_choice_chip_group.dart';
-import 'filter_field_label.dart';
 
 String groupThousands(int value) {
   final digits = value.toString();
@@ -54,8 +53,8 @@ class FilterPriceSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FilterFieldLabel('Min price'),
-        FilterChoiceChipGroup<int>(
+        const FieldLabel('Min price'),
+        ChoiceChipGroup<int>(
           keyPrefix: 'filterPriceMin',
           options: options,
           selected: priceMin,
@@ -63,8 +62,8 @@ class FilterPriceSection extends StatelessWidget {
           isEnabled: (value) => priceMax == null || value <= priceMax!,
         ),
         const SizedBox(height: 14),
-        const FilterFieldLabel('Max price'),
-        FilterChoiceChipGroup<int>(
+        const FieldLabel('Max price'),
+        ChoiceChipGroup<int>(
           keyPrefix: 'filterPriceMax',
           options: options,
           selected: priceMax,

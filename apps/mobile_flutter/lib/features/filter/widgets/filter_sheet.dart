@@ -25,13 +25,18 @@
 /// outside itself, per this task's "return its result to the caller
 /// rather than mutating global state directly" requirement.
 ///
-/// **CRM variant extension seam.** SCREENS.md §3.5 also describes a
-/// second variant, opened from `my-listings`, that appends Sort + Status
-/// fields to this same form. `my-listings` is out of this task's scope
-/// (screens 4–8 only), so that variant is not built — [isCrm] exists as
-/// an obvious, unwired seam (`FilterSheet` accepts and threads it through,
-/// but nothing branches on it yet) for whoever builds `my-listings` to
-/// extend rather than fork this file.
+/// **CRM variant.** SCREENS.md §3.5 also describes a second variant,
+/// opened from `my-listings`, that appends Sort + Status fields to this
+/// same form. [isCrm] (plus [FilterSheet]'s own `initialSort`/
+/// `initialStatus`) is that variant's switch — wired by `my-listings`
+/// (`features/my_listings/`), the one and only caller of
+/// [showCrmFilterSheet] (see rule 3 in the build contract's §0 and §3.1).
+/// [showFilterSheet]'s own `isCrm` parameter is kept for source
+/// compatibility with the seam's original shape but should be left at its
+/// `false` default by every caller other than [showCrmFilterSheet] itself
+/// — a caller that wants the CRM fields back needs [showCrmFilterSheet]'s
+/// richer [FilterSheetResult] return type, not [showFilterSheet]'s bare
+/// [AdFilters].
 library;
 
 import 'dart:async';
@@ -49,21 +54,61 @@ import 'filter_furniture_repair_section.dart';
 import 'filter_price_section.dart';
 import 'filter_rooms_section.dart';
 import 'filter_sheet_footer.dart';
+import 'filter_sort_status_section.dart';
 import 'filter_storey_section.dart';
 
+/// The sheet's full result — [filters] is always populated; [sort]/
+/// [status] are only ever non-null when the sheet was opened via
+/// [showCrmFilterSheet] ([sort] specifically: always non-null in that
+/// case, since `AdSort` has no "unset" value of its own — see
+/// `filter_sort_status_section.dart`).
+class FilterSheetResult {
+  const FilterSheetResult({required this.filters, this.sort, this.status});
+
+  final AdFilters filters;
+  final AdSort? sort;
+  final AdStage? status;
+}
+
 /// Opens `FilterSheet` as a modal bottom sheet and returns its result —
-/// see this file's doc comment for the exact contract.
+/// see this file's doc comment for the exact contract. The buyer-facing
+/// entry point: only ever returns the [AdFilters] half of
+/// [FilterSheetResult], since no caller other than [showCrmFilterSheet]
+/// needs the Sort/Status fields.
 Future<AdFilters?> showFilterSheet(
   BuildContext context, {
   AdFilters initialFilters = const AdFilters(),
   bool isCrm = false,
-}) {
-  return showModalBottomSheet<AdFilters>(
+}) async {
+  final result = await showModalBottomSheet<FilterSheetResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (context) =>
         FilterSheet(initialFilters: initialFilters, isCrm: isCrm),
+  );
+  return result?.filters;
+}
+
+/// The CRM entry point (`my-listings` only — see this file's doc comment).
+/// Returns the full [FilterSheetResult] (filters + sort + status), or
+/// `null` on any dismissal other than "Apply Filters".
+Future<FilterSheetResult?> showCrmFilterSheet(
+  BuildContext context, {
+  AdFilters initialFilters = const AdFilters(),
+  AdSort initialSort = AdSort.newest,
+  AdStage? initialStatus,
+}) {
+  return showModalBottomSheet<FilterSheetResult>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => FilterSheet(
+      initialFilters: initialFilters,
+      isCrm: true,
+      initialSort: initialSort,
+      initialStatus: initialStatus,
+    ),
   );
 }
 
@@ -72,13 +117,20 @@ class FilterSheet extends ConsumerStatefulWidget {
     super.key,
     this.initialFilters = const AdFilters(),
     this.isCrm = false,
+    this.initialSort = AdSort.newest,
+    this.initialStatus,
   });
 
   final AdFilters initialFilters;
 
-  /// See this file's doc comment — accepted but not yet wired to any
-  /// Sort/Status UI.
+  /// See this file's doc comment.
   final bool isCrm;
+
+  /// Only read when [isCrm] is true.
+  final AdSort initialSort;
+
+  /// Only read when [isCrm] is true.
+  final AdStage? initialStatus;
 
   @override
   ConsumerState<FilterSheet> createState() => _FilterSheetState();
@@ -97,6 +149,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late Furniture? _furniture;
   late Repairment? _repairment;
   late int? _storey;
+
+  /// Only ever read/mutated when [FilterSheet.isCrm] is true — see this
+  /// file's doc comment.
+  late AdSort _sort;
+  late AdStage? _status;
 
   late final TextEditingController _cityController;
   late final TextEditingController _districtController;
@@ -123,6 +180,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   void initState() {
     super.initState();
     _applyToLocalState(_seedDefaults(widget.initialFilters));
+    _sort = widget.initialSort;
+    _status = widget.initialStatus;
     _cityController = TextEditingController(text: _city ?? '');
     _districtController = TextEditingController(text: _district ?? '');
     _areaMinController = TextEditingController(
@@ -131,14 +190,19 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _areaMaxController = TextEditingController(
       text: _areaMax == null ? '' : _trimNum(_areaMax!),
     );
-    _storeyController = TextEditingController(
-      text: _storey?.toString() ?? '',
-    );
+    _storeyController = TextEditingController(text: _storey?.toString() ?? '');
     // Seed the live count preview immediately (no debounce) so the Apply
     // button already shows a number before the user touches anything.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(filterCountProvider.notifier).recountNow(_draft);
-    });
+    // Skipped entirely for the CRM variant — see `filter_sheet_footer.dart`'s
+    // `showLiveCount` doc comment for why that preview would be dishonest
+    // there (it queries the wrong, buyer-facing endpoint).
+    if (!widget.isCrm) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(filterCountProvider.notifier).recountNow(_draft);
+        }
+      });
+    }
   }
 
   @override
@@ -192,7 +256,17 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   void _onFieldChanged() {
     setState(() {});
-    ref.read(filterCountProvider.notifier).scheduleRecount(_draft);
+    if (!widget.isCrm) {
+      ref.read(filterCountProvider.notifier).scheduleRecount(_draft);
+    }
+  }
+
+  void _onSortChanged(AdSort sort) {
+    setState(() => _sort = sort);
+  }
+
+  void _onStatusChanged(AdStage? status) {
+    setState(() => _status = status);
   }
 
   void _onCityChanged(String value) {
@@ -237,26 +311,40 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
       _areaMinController.clear();
       _areaMaxController.clear();
       _storeyController.clear();
+      if (widget.isCrm) {
+        _sort = AdSort.newest;
+        _status = null;
+      }
     });
-    // Reset is one explicit action, not a stream of edits — recount
-    // immediately rather than debouncing it.
-    unawaited(ref.read(filterCountProvider.notifier).recountNow(_draft));
+    if (!widget.isCrm) {
+      // Reset is one explicit action, not a stream of edits — recount
+      // immediately rather than debouncing it.
+      unawaited(ref.read(filterCountProvider.notifier).recountNow(_draft));
+    }
   }
 
   void _apply() {
-    Navigator.of(context).pop(_draft);
+    Navigator.of(context).pop(
+      FilterSheetResult(
+        filters: _draft,
+        sort: widget.isCrm ? _sort : null,
+        status: widget.isCrm ? _status : null,
+      ),
+    );
   }
 
-  String _trimNum(num value) =>
-      value == value.roundToDouble()
-          ? value.round().toString()
-          : value.toString();
+  String _trimNum(num value) => value == value.roundToDouble()
+      ? value.round().toString()
+      : value.toString();
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final countAsync = ref.watch(filterCountProvider);
+    // Never watched for the CRM variant — see `showLiveCount`'s doc
+    // comment on `filter_sheet_footer.dart` for why that preview doesn't
+    // apply there.
+    final countAsync = widget.isCrm ? null : ref.watch(filterCountProvider);
     final districtEnabled = _city != null;
 
     return Padding(
@@ -389,7 +477,17 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                           storeyController: _storeyController,
                           onChanged: _onStoreyChanged,
                         ),
-                        if (countAsync.hasError) ...[
+                        if (widget.isCrm) ...[
+                          const SizedBox(height: AppSpacing.section),
+                          FilterSortStatusSection(
+                            sort: _sort,
+                            status: _status,
+                            onSortChanged: (v) =>
+                                _onSortChanged(v ?? AdSort.newest),
+                            onStatusChanged: _onStatusChanged,
+                          ),
+                        ],
+                        if (countAsync != null && countAsync.hasError) ...[
                           const SizedBox(height: AppSpacing.base),
                           _CountErrorRow(
                             onRetry: () => ref
@@ -410,7 +508,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   AppSpacing.screenGutter,
                   AppSpacing.lg,
                 ),
-                child: FilterSheetFooter(onReset: _reset, onApply: _apply),
+                child: FilterSheetFooter(
+                  onReset: _reset,
+                  onApply: _apply,
+                  showLiveCount: !widget.isCrm,
+                ),
               ),
             ],
           ),

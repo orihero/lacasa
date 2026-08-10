@@ -1,5 +1,11 @@
-/// SCREENS.md §3.4: "Results: vertical Listing Card list, infinite scroll.
-/// Empty state: 'No listings match your search.'"
+/// SCREENS.md §3.4: "Results: vertical Listing Card list, infinite scroll."
+/// The empty-state copy itself follows §1's formatting convention (3)
+/// instead of §3.4's own literal text — that convention corrects the web
+/// app's misspelled "Not fount post" to "No listings found" **everywhere**,
+/// which supersedes any per-screen wording left over from before that rule
+/// was written. `agent_ads_grid.dart`'s Ads List empty state already
+/// follows the corrected copy; this list didn't, and disagreed with it
+/// (real bug, found while writing this screen's first tests).
 ///
 /// Uses the shared [FullListingCard] (`lib/shared/widgets/
 /// full_listing_card.dart`) — its own doc comment names this exact screen
@@ -73,7 +79,7 @@ class SearchResultsList extends ConsumerWidget {
             children: const [
               FullWidthState(
                 icon: Icons.search_off_rounded,
-                message: 'No listings match your search.',
+                message: 'No listings found.',
               ),
             ],
           );

@@ -21,13 +21,12 @@
 library;
 
 import '../../../api/api.dart';
+import '../../../shared/widgets/choice_chip_group.dart';
 
-/// One labeled value for a single-select chip group.
-class FilterOption<T> {
-  const FilterOption(this.value, this.label);
-  final T value;
-  final String label;
-}
+/// One labeled value for a single-select chip group — an alias for the
+/// shared [ChoiceOption], kept under this feature's own name since every
+/// call site here already spells it `FilterOption`.
+typedef FilterOption<T> = ChoiceOption<T>;
 
 const List<int> filterRoomOptions = [1, 2, 3, 4, 5, 6];
 
@@ -70,4 +69,33 @@ const List<FilterOption<Repairment>> filterRepairOptions = [
   FilterOption(Repairment.normal, 'Normal'),
   FilterOption(Repairment.good, 'Good'),
   FilterOption(Repairment.excellent, 'Excellent'),
+];
+
+// ---------------------------------------------------------------------
+// CRM-variant-only fields (SCREENS.md §3.5: "CRM variant ... appends
+// Sort ... and Status") — `my-listings` (`features/my_listings/`) is the
+// one and only caller that ever passes `isCrm: true` to `showFilterSheet`/
+// `showCrmFilterSheet`; see `widgets/filter_sort_status_section.dart`.
+// ---------------------------------------------------------------------
+
+/// Same 3 values `AdSort` (`api/resources/agent_ads_resource.dart`) wires
+/// on `GET /my/ads`'s `sort` param — reusing that enum directly (rather
+/// than a second client-only mirror the way `listing-search`'s own
+/// `SearchSort` does) since `my-listings`'s Sort really is a server
+/// parameter, unlike `listing-search`'s client-only re-sort of an
+/// unsortable public feed.
+const List<FilterOption<AdSort>> filterCrmSortOptions = [
+  FilterOption(AdSort.newest, 'Newest'),
+  FilterOption(AdSort.highestPrice, 'Highest price'),
+  FilterOption(AdSort.lowestPrice, 'Lowest price'),
+];
+
+/// SCREENS.md §3.5's Status field — `AdStage.unknown` deliberately excluded
+/// (never a real, selectable filter value; matches `filterCrmStatusOptions`
+/// having no "any" chip counterpart of its own — the chip group's own
+/// deselect-to-null behavior already covers "All stages").
+const List<FilterOption<AdStage>> filterCrmStatusOptions = [
+  FilterOption(AdStage.active, 'Active'),
+  FilterOption(AdStage.sold, 'Sold'),
+  FilterOption(AdStage.draft, 'Draft'),
 ];

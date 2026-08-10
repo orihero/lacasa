@@ -5,7 +5,15 @@
 /// why this lives here rather than staying Home-only.
 ///
 /// Promoted verbatim out of `features/home/widgets/section_header.dart` —
-/// no behavior change, only its address moved.
+/// no behavior change, only its address moved. [padding] was added later,
+/// promoting `work_dashboard`'s private `_SectionTitle` into this widget:
+/// every original caller sits in a scroll view with zero horizontal
+/// padding of its own and relies on this widget's default screen-gutter
+/// inset, but Dashboard's "Coworker statistics" heading lives inside a
+/// `Column` whose parent `SingleChildScrollView` already applies that same
+/// gutter — adding a second one would double-indent it relative to every
+/// sibling section. Dashboard passes [EdgeInsets.zero] rather than getting
+/// its own near-identical copy of this widget.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,11 +26,17 @@ class SectionHeader extends StatelessWidget {
     required this.title,
     this.linkLabel,
     this.onLink,
+    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
   });
 
   final String title;
   final String? linkLabel;
   final VoidCallback? onLink;
+
+  /// Defaults to the screen-gutter inset every original (Home-rail) caller
+  /// relies on. A caller already inside a padded container — see this
+  /// file's doc comment — passes [EdgeInsets.zero] instead.
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +44,7 @@ class SectionHeader extends StatelessWidget {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+      padding: padding,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

@@ -4,8 +4,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import 'filter_field_label.dart';
 import 'filter_text_field.dart';
 
 class FilterAreaSection extends StatelessWidget {
@@ -31,7 +31,7 @@ class FilterAreaSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FilterFieldLabel('Min. total area'),
+              const FieldLabel('Min. total area'),
               FilterTextField(
                 key: const ValueKey('filterField-areaMin'),
                 controller: areaMinController,
@@ -48,7 +48,7 @@ class FilterAreaSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FilterFieldLabel('Max total area'),
+              const FieldLabel('Max total area'),
               FilterTextField(
                 key: const ValueKey('filterField-areaMax'),
                 controller: areaMaxController,

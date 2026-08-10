@@ -143,6 +143,17 @@ enum CurrencyCode {
     'usd' => CurrencyCode.usd,
     _ => CurrencyCode.unknown,
   };
+
+  /// Added alongside the Work build's `AdWriteInput`
+  /// (`models/ad_write_input.dart`) — the first write path for this enum;
+  /// every prior caller only ever read [Ad.priceType], never sent one back.
+  String get wire => switch (this) {
+    CurrencyCode.uzs => 'uzs',
+    CurrencyCode.usd => 'usd',
+    CurrencyCode.unknown => throw StateError(
+      'CurrencyCode.unknown has no wire value',
+    ),
+  };
 }
 
 /// `media[].mediaType`.
@@ -191,6 +202,148 @@ enum RealtorStatus {
     'approved' => RealtorStatus.approved,
     'rejected' => RealtorStatus.rejected,
     _ => RealtorStatus.unknown,
+  };
+}
+
+/// `Lead.status` — fixed order (`LEAD_STATUS_ORDER` in
+/// `packages/domain/src/enums/leads.ts`), also the Kanban column order
+/// (SCREENS.md §31/§34, `apps/console/src/screens/kanban/*`). There is
+/// deliberately **no** 6th "success/closed" member — `LeadStatus.SUCCESS`
+/// does not exist in the Prisma schema; every console/web screen that might
+/// want one flags the gap instead of fabricating it, and SCREENS.md never
+/// asks for one either.
+enum LeadStatus {
+  newLead, // 'new' — `new` alone can't be a Dart identifier
+  couldNotConnect,
+  needToCallBack,
+  rejected,
+  accepted,
+  unknown;
+
+  static LeadStatus fromWire(String? value) => switch (value) {
+    'new' => LeadStatus.newLead,
+    'could_not_connect' => LeadStatus.couldNotConnect,
+    'need_to_call_back' => LeadStatus.needToCallBack,
+    'rejected' => LeadStatus.rejected,
+    'accepted' => LeadStatus.accepted,
+    _ => LeadStatus.unknown,
+  };
+
+  String get wire => switch (this) {
+    LeadStatus.newLead => 'new',
+    LeadStatus.couldNotConnect => 'could_not_connect',
+    LeadStatus.needToCallBack => 'need_to_call_back',
+    LeadStatus.rejected => 'rejected',
+    LeadStatus.accepted => 'accepted',
+    LeadStatus.unknown => throw StateError(
+      'LeadStatus.unknown has no wire value',
+    ),
+  };
+
+  /// `LEAD_STATUS_ORDER` — the fixed left-to-right Kanban column order
+  /// (SCREENS.md §31: New → Could Not Connect → Need To Call Back →
+  /// Rejected → Accepted). [unknown] is deliberately absent: a lead the
+  /// server sends with a status this client doesn't recognize should never
+  /// silently claim a Kanban column.
+  static const List<LeadStatus> kanbanOrder = [
+    LeadStatus.newLead,
+    LeadStatus.couldNotConnect,
+    LeadStatus.needToCallBack,
+    LeadStatus.rejected,
+    LeadStatus.accepted,
+  ];
+}
+
+/// Publish channel — `AdPublication.channel` / `ALL_CHANNELS`
+/// (`apps/api/src/routes/publish.js`). Wire values are the raw upper-case
+/// Postgres enum, NOT lowercased like every other enum in this file — kept
+/// verbatim rather than normalized, since `[wire]` round-trips it straight
+/// into query strings/bodies unchanged.
+enum Channel {
+  telegram,
+  instagram,
+  youtube,
+  olx,
+  realting,
+  unknown;
+
+  static Channel fromWire(String? value) => switch (value) {
+    'TELEGRAM' => Channel.telegram,
+    'INSTAGRAM' => Channel.instagram,
+    'YOUTUBE' => Channel.youtube,
+    'OLX' => Channel.olx,
+    'REALTING' => Channel.realting,
+    _ => Channel.unknown,
+  };
+
+  String get wire => switch (this) {
+    Channel.telegram => 'TELEGRAM',
+    Channel.instagram => 'INSTAGRAM',
+    Channel.youtube => 'YOUTUBE',
+    Channel.olx => 'OLX',
+    Channel.realting => 'REALTING',
+    Channel.unknown => throw StateError('Channel.unknown has no wire value'),
+  };
+
+  /// `GET /publish/ads/:adId/status`'s fixed response order
+  /// (`ALL_CHANNELS`) — always exactly these 5, in this order, synthesizing
+  /// a PENDING placeholder for any channel with no publish attempt yet.
+  static const List<Channel> allChannels = [
+    Channel.telegram,
+    Channel.instagram,
+    Channel.youtube,
+    Channel.olx,
+    Channel.realting,
+  ];
+}
+
+/// `AdPublication.status` — also the raw upper-case Postgres enum, same
+/// verbatim-wire convention as [Channel].
+enum PublishStatus {
+  pending,
+  draftedAwaitingReview,
+  published,
+  failed,
+  unknown;
+
+  static PublishStatus fromWire(String? value) => switch (value) {
+    'PENDING' => PublishStatus.pending,
+    'DRAFTED_AWAITING_REVIEW' => PublishStatus.draftedAwaitingReview,
+    'PUBLISHED' => PublishStatus.published,
+    'FAILED' => PublishStatus.failed,
+    _ => PublishStatus.unknown,
+  };
+
+  String get wire => switch (this) {
+    PublishStatus.pending => 'PENDING',
+    PublishStatus.draftedAwaitingReview => 'DRAFTED_AWAITING_REVIEW',
+    PublishStatus.published => 'PUBLISHED',
+    PublishStatus.failed => 'FAILED',
+    PublishStatus.unknown => throw StateError(
+      'PublishStatus.unknown has no wire value',
+    ),
+  };
+}
+
+/// `CoworkerStatisticEvent.stage` (`GET /statistics/coworkers`) — a numeric
+/// `EVENT_STAGE` code, NOT the same value space as [AdStage]'s "1"/"2"/"3"
+/// despite the overlapping digits. Named `ActivityEventStage` (not
+/// `EventStage`) to keep that distinction visible at every call site.
+enum ActivityEventStage {
+  adCreated, // 1
+  adSold, // 2
+  adDraftUpdated, // 3
+  leadCreated, // 4
+  leadStatusChanged, // 5
+  unknown;
+
+  static ActivityEventStage fromWire(int? value) => switch (value) {
+    1 => ActivityEventStage.adCreated,
+    2 => ActivityEventStage.adSold,
+    3 => ActivityEventStage.adDraftUpdated,
+    4 => ActivityEventStage.leadCreated,
+    5 => ActivityEventStage.leadStatusChanged,
+    _ => ActivityEventStage.unknown,
   };
 }
 

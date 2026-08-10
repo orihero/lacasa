@@ -7,8 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import 'filter_field_label.dart';
 import 'filter_text_field.dart';
 
 class FilterCityDistrictSection extends StatelessWidget {
@@ -36,7 +36,7 @@ class FilterCityDistrictSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FilterFieldLabel('City'),
+              const FieldLabel('City'),
               FilterTextField(
                 key: const ValueKey('filterField-city'),
                 controller: cityController,
@@ -51,7 +51,7 @@ class FilterCityDistrictSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FilterFieldLabel('District'),
+              const FieldLabel('District'),
               FilterTextField(
                 key: const ValueKey('filterField-district'),
                 controller: districtController,

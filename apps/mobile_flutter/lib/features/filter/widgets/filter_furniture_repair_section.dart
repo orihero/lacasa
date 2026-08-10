@@ -9,9 +9,8 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
-import 'filter_choice_chip_group.dart';
-import 'filter_field_label.dart';
 
 class FilterFurnitureRepairSection extends StatelessWidget {
   const FilterFurnitureRepairSection({
@@ -32,16 +31,16 @@ class FilterFurnitureRepairSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FilterFieldLabel('Furniture'),
-        FilterChoiceChipGroup<Furniture>(
+        const FieldLabel('Furniture'),
+        ChoiceChipGroup<Furniture>(
           keyPrefix: 'filterFurniture',
           options: filterFurnitureOptions,
           selected: furniture,
           onChanged: onFurnitureChanged,
         ),
         const SizedBox(height: 14),
-        const FilterFieldLabel('Repair'),
-        FilterChoiceChipGroup<Repairment>(
+        const FieldLabel('Repair'),
+        ChoiceChipGroup<Repairment>(
           keyPrefix: 'filterRepair',
           options: filterRepairOptions,
           selected: repairment,

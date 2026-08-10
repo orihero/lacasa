@@ -201,11 +201,31 @@ class RecentSearchesNotifier extends AsyncNotifier<List<String>> {
   /// Adds [query] to the front of the list (most-recent-first),
   /// de-duplicating case-insensitively and capping at
   /// [maxRecentSearches]. No-ops for a blank query.
+  ///
+  /// Reads the *settled* list via [future] rather than `state.value`
+  /// directly — a real race, caught while writing this screen's first
+  /// tests: [build]'s `load()` is async (a keystore read), and the search
+  /// bar's 300ms debounce can easily fire before it resolves on a cold
+  /// launch. Reading/writing `state` in that window used to work — the new
+  /// query appeared as a chip immediately — only for `build()`'s own
+  /// pending `Future` to resolve moments later and silently overwrite it
+  /// with the pre-load list, so the chip vanished again. Awaiting [future]
+  /// first guarantees `build()` has already landed before this method reads
+  /// or writes anything.
   Future<void> addQuery(String query) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
 
-    final current = state.value ?? const <String>[];
+    List<String> current;
+    try {
+      current = await future;
+    } catch (_) {
+      // A failed initial load already degrades to "no recents yet" (see
+      // recent_searches_repository.dart) — a query searched afterwards
+      // should still be recorded for this session, not silently dropped.
+      current = const <String>[];
+    }
+
     final deduped = [
       trimmed,
       ...current.where((q) => q.toLowerCase() != trimmed.toLowerCase()),

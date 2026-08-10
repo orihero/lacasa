@@ -5,6 +5,18 @@
 /// 3 listings, tap to apply them", the one number both spec lines can
 /// coherently refer to at once — flagged in the build report since
 /// SCREENS.md never states outright that these are the same number).
+///
+/// **[showLiveCount] — the CRM-variant carve-out.** `filter_count_provider.
+/// dart`'s preview is wired to the buyer-facing public feed
+/// (`FilterRepository`/`GET /ads`, always `stage: "ACTIVE"` — see that
+/// provider's own doc comment), which has nothing to do with what
+/// `my-listings`'s own agent-scoped, all-stages `GET /my/ads` fetch would
+/// actually return for the same draft filters. Showing that number on the
+/// CRM variant's Apply button would be a fabricated count — the honesty
+/// rule this codebase's build contract calls its strongest convention — so
+/// `my-listings` passes `showLiveCount: false` and this button falls back
+/// to a plain, static "Apply Filters" label with no [filterCountProvider]
+/// read at all.
 library;
 
 import 'package:flutter/material.dart';
@@ -18,15 +30,29 @@ class FilterSheetFooter extends ConsumerWidget {
     super.key,
     required this.onReset,
     required this.onApply,
+    this.showLiveCount = true,
   });
 
   final VoidCallback onReset;
   final VoidCallback onApply;
+  final bool showLiveCount;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    if (!showLiveCount) {
+      return _FooterRow(
+        colors: colors,
+        type: type,
+        onReset: onReset,
+        onApply: onApply,
+        label: 'Apply Filters',
+        isLoading: false,
+      );
+    }
+
     final countAsync = ref.watch(filterCountProvider);
 
     final label = countAsync.when(
@@ -36,6 +62,36 @@ class FilterSheetFooter extends ConsumerWidget {
       error: (_, _) => 'Apply Filters',
     );
 
+    return _FooterRow(
+      colors: colors,
+      type: type,
+      onReset: onReset,
+      onApply: onApply,
+      label: label,
+      isLoading: countAsync.isLoading,
+    );
+  }
+}
+
+class _FooterRow extends StatelessWidget {
+  const _FooterRow({
+    required this.colors,
+    required this.type,
+    required this.onReset,
+    required this.onApply,
+    required this.label,
+    required this.isLoading,
+  });
+
+  final LaCasaColors colors;
+  final LaCasaTypography type;
+  final VoidCallback onReset;
+  final VoidCallback onApply;
+  final String label;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -70,7 +126,7 @@ class FilterSheetFooter extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (countAsync.isLoading) ...[
+                  if (isLoading) ...[
                     const SizedBox(
                       width: 12,
                       height: 12,

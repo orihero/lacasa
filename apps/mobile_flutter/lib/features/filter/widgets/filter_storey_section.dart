@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'filter_field_label.dart';
+import '../../../shared/shared.dart';
 import 'filter_text_field.dart';
 
 class FilterStoreySection extends StatelessWidget {
@@ -21,7 +21,7 @@ class FilterStoreySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FilterFieldLabel('Storey'),
+        const FieldLabel('Storey'),
         FilterTextField(
           key: const ValueKey('filterField-storey'),
           controller: storeyController,

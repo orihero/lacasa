@@ -33,16 +33,22 @@ import 'package:go_router/go_router.dart';
 import '../api/api.dart';
 import '../features/agents/agents.dart';
 import '../features/auth/auth.dart';
+import '../features/coworkers/coworkers.dart';
 import '../features/edit_profile/edit_profile.dart';
 import '../features/home/home.dart';
+import '../features/leads/leads.dart';
 import '../features/listing_detail/listing_detail.dart';
+import '../features/listing_editor/listing_editor.dart';
 import '../features/map_view/map_view.dart';
+import '../features/my_listings/my_listings.dart';
 import '../features/onboarding/onboarding.dart';
 import '../features/permissions/permissions.dart';
 import '../features/photo_gallery/photo_gallery.dart';
 import '../features/saved_listings/saved_listings.dart';
 import '../features/search/search.dart';
 import '../features/settings/settings.dart';
+import '../features/work_dashboard/work_dashboard.dart';
+import '../features/work_misc/work_misc.dart';
 import 'auth_session.dart';
 import 'placeholder_screen.dart';
 import 'profile_role_screen.dart';
@@ -193,7 +199,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'notifications',
-                    builder: (context, state) => _placeholder('Notifications'),
+                    builder: (context, state) => const NotificationsScreen(),
                   ),
                 ],
               ),
@@ -240,31 +246,47 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'dashboard',
-                    builder: (context, state) => _placeholder('Dashboard'),
+                    builder: (context, state) => const DashboardScreen(),
                   ),
                   GoRoute(
                     path: 'my-listings',
-                    builder: (context, state) => _placeholder('My Listings'),
+                    builder: (context, state) => const MyListingsScreen(),
                   ),
                   GoRoute(
                     path: 'leads',
-                    builder: (context, state) => _placeholder('Leads'),
+                    builder: (context, state) => const LeadsListScreen(),
                     routes: [
                       GoRoute(
                         path: 'kanban',
                         builder: (context, state) =>
-                            _placeholder('Leads Kanban'),
+                            const LeadsKanbanScreen(),
+                      ),
+                      // §33, pushed. `lead-detail`/`kanban-move-sheet`
+                      // (§32/§34) are bottom sheets — deliberately no
+                      // route for either, see `route_paths.dart`'s
+                      // `workCreateLead` note.
+                      GoRoute(
+                        path: 'create',
+                        builder: (context, state) => const CreateLeadScreen(),
                       ),
                     ],
                   ),
                   GoRoute(
                     path: 'coworkers',
-                    builder: (context, state) => _placeholder('Coworkers'),
+                    builder: (context, state) => const CoworkersListScreen(),
                     routes: [
+                      // Declared before `:id` so the static `create`
+                      // segment is matched first — same reasoning as
+                      // `agentsListingDetail`'s note in `route_paths.dart`.
+                      GoRoute(
+                        path: 'create',
+                        builder: (context, state) =>
+                            const AddCoworkerScreen(),
+                      ),
                       GoRoute(
                         path: ':id',
-                        builder: (context, state) => _placeholder(
-                          'Coworker ${state.pathParameters['id']}',
+                        builder: (context, state) => CoworkerDetailScreen(
+                          coworkerId: state.pathParameters['id']!,
                         ),
                       ),
                     ],
@@ -277,18 +299,38 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'connected-accounts',
                     builder: (context, state) =>
-                        _placeholder('Connected Accounts'),
+                        const ConnectedAccountsScreen(),
                   ),
                   GoRoute(
                     path: 'edit-listing/:id',
-                    builder: (context, state) => _placeholder(
-                      'Edit Listing ${state.pathParameters['id']}',
+                    builder: (context, state) => EditListingScreen(
+                      adId: state.pathParameters['id']!,
                     ),
                   ),
                   GoRoute(
                     path: 'publish-status/:id',
-                    builder: (context, state) => _placeholder(
-                      'Publish Status ${state.pathParameters['id']}',
+                    builder: (context, state) => PublishStatusScreen(
+                      adId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  // Work's own copies of `notifications`/`messages` — see
+                  // `route_paths.dart`'s `workNotifications` note for why
+                  // these are separate from Home's/Profile's.
+                  GoRoute(
+                    path: 'notifications',
+                    builder: (context, state) => const NotificationsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'messages',
+                    builder: (context, state) => const MessagesScreen(),
+                  ),
+                  // `my-listings`' own copy of `listing-detail` — see
+                  // `route_paths.dart`'s `workListingDetail` note.
+                  GoRoute(
+                    path: 'listing/:id',
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.work,
                     ),
                   ),
                 ],
@@ -364,11 +406,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'connected-accounts',
                     builder: (context, state) =>
-                        _placeholder('Connected Accounts'),
+                        const ConnectedAccountsScreen(),
                   ),
                   GoRoute(
                     path: 'messages',
-                    builder: (context, state) => _placeholder('Messages'),
+                    builder: (context, state) => const MessagesScreen(),
                   ),
                   // Same convention as `/home`, `/search`, `/agents`'
                   // own copies — see `route_paths.dart`'s
@@ -419,9 +461,9 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.createListing,
         parentNavigatorKey: rootNavigatorKey,
-        pageBuilder: (context, state) => MaterialPage(
+        pageBuilder: (context, state) => const MaterialPage(
           fullscreenDialog: true,
-          child: _placeholder('Create Listing'),
+          child: CreateListingScreen(),
         ),
       ),
       GoRoute(

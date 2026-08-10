@@ -8,13 +8,16 @@
 /// it a feature-agnostic name.
 ///
 /// **Copy is the caller's job, not this file's** — [RailRetryCard] and
-/// [FullWidthState] both take a [message] string because the right copy
-/// differs per screen (`listing-search`'s empty state is "No listings
-/// match your search.", `map-view`'s pin set might say something else
-/// entirely). The one rule every caller must follow: SCREENS.md's copy is
+/// [FullWidthState] both take a [message] string because the loading/error
+/// copy differs per screen (`map-view`'s pin set might phrase its own
+/// failure differently than `listing-search`'s). The one rule every
+/// *empty-result* caller must follow: SCREENS.md's copy is
 /// **"No listings found"**, never the web app's misspelled "Not fount
 /// post" (`apps/web/src/components/list/List.jsx:9`, confirmed real, and
-/// exactly the kind of legacy bug this rebuild exists to not reproduce).
+/// exactly the kind of legacy bug this rebuild exists to not reproduce) —
+/// `listing-search`'s own empty state used to disagree with this rule
+/// ("No listings match your search."); that was a bug, fixed alongside
+/// this screen's first tests.
 ///
 /// Promoted verbatim out of `features/home/widgets/rail_states.dart` — no
 /// behavior change, only its address (and file name — "rail" implied

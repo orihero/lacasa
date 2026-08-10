@@ -322,7 +322,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _NavRow(onBack: _handleCancel),
+              NavRow(title: 'Edit Profile', onBack: _handleCancel),
               Expanded(
                 child: user == null
                     ? _SignedOutState(onGoBack: _leave)
@@ -374,56 +374,6 @@ class _SignedOutState extends StatelessWidget {
         message: 'Sign in to edit your profile.',
         actionLabel: 'Go back',
         onAction: onGoBack,
-      ),
-    );
-  }
-}
-
-class _NavRow extends StatelessWidget {
-  const _NavRow({required this.onBack});
-
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.base,
-        AppSpacing.md,
-        AppSpacing.screenGutter,
-        AppSpacing.md,
-      ),
-      child: Row(
-        children: [
-          Semantics(
-            button: true,
-            label: 'Back',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onBack,
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: colors.ink,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              'Edit Profile',
-              overflow: TextOverflow.ellipsis,
-              style: type.navTitle.copyWith(color: colors.ink),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -495,7 +445,7 @@ class _FormBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.section),
-            _FormField(
+            LabelledFormField(
               label: 'Full name',
               controller: fullName,
               errorText: fullNameError,
@@ -504,7 +454,7 @@ class _FormBody extends StatelessWidget {
               onChanged: onFieldChanged,
             ),
             const SizedBox(height: AppSpacing.lg),
-            _FormField(
+            LabelledFormField(
               label: 'Phone',
               controller: phone,
               errorText: phoneError,
@@ -517,7 +467,7 @@ class _FormBody extends StatelessWidget {
               onChanged: onFieldChanged,
             ),
             const SizedBox(height: AppSpacing.lg),
-            _FormField(
+            LabelledFormField(
               label: 'Email',
               controller: email,
               errorText: emailError,
@@ -526,7 +476,7 @@ class _FormBody extends StatelessWidget {
               onChanged: onFieldChanged,
             ),
             const SizedBox(height: AppSpacing.lg),
-            _FormField(
+            LabelledFormField(
               label: 'Password',
               controller: password,
               errorText: passwordError,
@@ -534,7 +484,7 @@ class _FormBody extends StatelessWidget {
               obscureText: obscurePassword,
               textInputAction: TextInputAction.done,
               onChanged: onFieldChanged,
-              trailing: _VisibilityToggle(
+              trailing: VisibilityToggle(
                 obscured: obscurePassword,
                 onTap: onTogglePasswordVisibility,
               ),
@@ -623,139 +573,6 @@ class _AvatarUploader extends StatelessWidget {
           style: type.bodySmall.copyWith(color: colors.faint),
         ),
       ],
-    );
-  }
-}
-
-/// A labelled input on the `.glf` flat-glass material, matching
-/// `contact_sheet.dart`'s `_Field` — extended with a per-field [errorText]
-/// line (§3.18 gives each field its own message, unlike `contact-sheet`'s
-/// single form-level error) and an optional [trailing] widget (the
-/// password show/hide toggle).
-class _FormField extends StatelessWidget {
-  const _FormField({
-    required this.label,
-    required this.controller,
-    this.errorText,
-    this.hintText,
-    this.keyboardType,
-    this.textInputAction,
-    this.obscureText = false,
-    this.inputFormatters,
-    this.trailing,
-    required this.onChanged,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final String? errorText;
-  final String? hintText;
-  final TextInputType? keyboardType;
-  final TextInputAction? textInputAction;
-  final bool obscureText;
-  final List<TextInputFormatter>? inputFormatters;
-  final Widget? trailing;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final hasError = errorText != null;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: type.label.copyWith(color: colors.muted),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        GlassSurface(
-          variant: GlassVariant.flatForm,
-          borderRadius: BorderRadius.circular(AppRadii.control),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.base,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  keyboardType: keyboardType,
-                  textInputAction: textInputAction,
-                  obscureText: obscureText,
-                  inputFormatters: inputFormatters,
-                  onChanged: (_) => onChanged(),
-                  style: type.body.copyWith(color: colors.ink),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: hintText,
-                    hintStyle: type.body.copyWith(color: colors.faint),
-                  ),
-                ),
-              ),
-              ?trailing,
-            ],
-          ),
-        ),
-        if (hasError) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                size: 14,
-                color: AppStatusColors.errorText,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  errorText!,
-                  style: type.bodySmall.copyWith(
-                    color: AppStatusColors.errorText,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _VisibilityToggle extends StatelessWidget {
-  const _VisibilityToggle({required this.obscured, required this.onTap});
-
-  final bool obscured;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-
-    return Semantics(
-      button: true,
-      label: obscured ? 'Show password' : 'Hide password',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Icon(
-            obscured
-                ? Icons.visibility_outlined
-                : Icons.visibility_off_outlined,
-            size: 18,
-            color: colors.muted,
-          ),
-        ),
-      ),
     );
   }
 }

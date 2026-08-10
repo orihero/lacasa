@@ -3,9 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
-import 'filter_choice_chip_group.dart';
-import 'filter_field_label.dart';
 
 class FilterRoomsSection extends StatelessWidget {
   const FilterRoomsSection({
@@ -22,8 +21,8 @@ class FilterRoomsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FilterFieldLabel('Rooms'),
-        FilterChoiceChipGroup<int>(
+        const FieldLabel('Rooms'),
+        ChoiceChipGroup<int>(
           keyPrefix: 'filterRooms',
           options: [
             for (final n in filterRoomOptions) FilterOption(n, '$n'),
