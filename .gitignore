@@ -54,6 +54,12 @@ apps/mobile_flutter/ios/Pods/
 apps/mobile_flutter/ios/.symlinks/
 apps/mobile_flutter/ios/Runner/GeneratedPluginRegistrant.*
 
+# Pitch decks (presentation/) — the sources are src/*.html and fonts/*.woff2.
+# The built decks are those with the woff2 files inlined as base64 (~1MB each) and
+# the shots/ PNGs are QA output; both are reproducible with build.mjs / shots.mjs.
+presentation/*.html
+presentation/shots/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

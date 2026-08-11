@@ -14,10 +14,31 @@ This replaced an Expo/React Native prototype (deleted 2026-08-07) — see
 flutter pub get
 flutter run          # or, from the repo root: npm run dev:mobile-flutter
 flutter analyze      # must be clean
-flutter test         # 702 tests
+flutter test         # 944 passing, 0 failing (verified 2026-08-11) — the
+                      # fixture/interface-drift caveat that used to live here
+                      # is gone: whatever produced it has been fixed upstream
 ```
 
-Point it at a running `apps/api` (port 4200) via `lib/api/env.dart`.
+**Live by default.** Every feature's `data/*_mode.dart` switch resolves through
+`lib/api/app_mode.dart#resolveUseLiveApi`: with no `--dart-define`s at all, the
+app talks to a real `apps/api` (default `http://localhost:4200/api`, see
+`lib/api/env.dart` to point it elsewhere) instead of bundled fixtures. This
+was inverted from the old fixtures-by-default posture once every feature had
+a live implementation to fall back on — `flutter test` is unaffected either
+way, since `app_mode.dart`'s own `FLUTTER_TEST` check forces fixtures for
+every widget test regardless of any `--dart-define`, so no test ever fires
+real HTTP.
+
+**To run against fixtures instead** (no server needed, deterministic seed
+data):
+```bash
+flutter run --dart-define=LACASA_USE_FIXTURES=true
+# or, from the repo root:
+npm run dev:mobile-flutter:fixtures
+```
+A single feature can also be forced to fixtures on its own — e.g.
+`--dart-define=LACASA_CONTACT_LIVE_API=false` — while everything else stays
+live; each `*_mode.dart` file documents its own flag name.
 
 ## Layout
 
@@ -26,8 +47,9 @@ Point it at a running `apps/api` (port 4200) via `lib/api/env.dart`.
 | `lib/api/` | Typed API layer — client, transport, token storage, models, resources |
 | `lib/navigation/` | `route_paths.dart` (every path, declared once), `app_router.dart` (go_router tree), role-aware tab shell |
 | `lib/theme/` | Colour/spacing/radii/typography tokens + the liquid-glass surface |
-| `lib/shared/` | Widgets and formatters used by more than one feature — including cross-feature-promoted ones like `NavRow`, `LabelledFormField`/`VisibilityToggle`, `FieldLabel` and `ChoiceChipGroup<T>` (see the consolidation note under Known gaps) |
+| `lib/shared/` | Widgets and formatters used by more than one feature — including cross-feature-promoted ones like `NavRow`, `LabelledFormField`/`VisibilityToggle`, `FieldLabel`, `ChoiceChipGroup<T>`, `dialOrCopyPhone`, `RatingStars` and `LoadMoreFooter` (see the consolidation note under Known gaps); `shared/platform/` holds the seams onto real device capabilities — `LinkLauncher` (`url_launcher`/`share_plus`) and `MediaPicker` (`image_picker`), alongside `features/permissions/data/permission_gateway.dart`'s `PermissionGateway`, which stayed in its feature folder rather than moving here since `permissions-primer` is its only caller |
 | `lib/features/<name>/` | One directory per feature: `data/` (repository + fixture/live impls), `state/` (Riverpod), `widgets/`, `formatters/` |
+| `lib/l10n/` | Localization: `app_{en,uz,ru}.arb` (source of truth for every string + its `@key` description), `generated/` (committed `flutter gen-l10n` output), `README.md` (extraction conventions) and `GLOSSARY.md` (agreed en/uz/ru domain-term renderings). See Known gaps for status |
 
 `lib/features/home/` is the reference implementation of that layout — copy its
 patterns rather than inventing new ones.
@@ -41,15 +63,15 @@ whole tree, so every tab navigates somewhere. Screens not yet built render
 | # | Screen | Status |
 |---|---|---|
 | 1 | `onboarding` | **Built** — `/onboarding`; shown once, gated by `app_router.dart`'s redirect |
-| 2 | `permissions-primer` | **Built** — `/permissions-primer`; "Allow" is not yet wired to an OS prompt, see gaps |
+| 2 | `permissions-primer` | **Built** — `/permissions-primer`; "Allow" raises the real OS prompt for the Camera & Photos row; the Notifications row stays a deliberate `unavailable` stub (see gaps) |
 | 3 | `home-feed` | **Built** |
 | 4 | `listing-search` | **Built** — reachable at `/search` |
 | 5 | `filter-sheet` | **Built** — a bottom sheet, not a route; opened from search's Filters button |
 | 6 | `map-view` | **Built** — `/map-view`, from search's map toggle and `listing-detail`'s Location block |
-| 7 | `listing-detail` | **Built** — `/home/listing/:id`, `/search/listing/:id`, `/agents/listing/:id` |
+| 7 | `listing-detail` | **Built** — `/home/listing/:id`, `/search/listing/:id`, `/agents/listing/:id`; Share/Call are real (`LinkLauncher`, copy-and-toast fallback); a `tour3dLink` on the ad shows a "Live 3D Tour" banner that pushes a real, origin-pinned webview; the agent block now shows the agent's address and rating too (see Known gaps) |
 | 8 | `photo-gallery` | **Built** — `/photo-gallery`, pushed from `listing-detail`'s hero |
-| 9 | `agents-directory` | **Built** — the Agents tab root, `/agents` |
-| 10 | `agent-profile` | **Built** — one route per branch: `/agents/:id`, `/home/agent/:id`, `/search/agent/:id` |
+| 9 | `agents-directory` | **Built** — the Agents tab root, `/agents`; cards now show `address` and a real `"Review: {rating}/5"` row (see Known gaps for the closed agent-rating gap) |
+| 10 | `agent-profile` | **Built** — one route per branch: `/agents/:id`, `/home/agent/:id`, `/search/agent/:id`; identity block gained address/rating too, plus a Reviews section with a leave/edit/delete-a-review sheet (an addition beyond SCREENS.md — see Known gaps) |
 | 11 | `contact-sheet` | **Built** — a bottom sheet; `listing-detail`'s CTA and `agent-profile`'s Message button |
 | 12 | `login` | **Built** — `/login`, a root-navigator modal |
 | 13 | `register` | **Built** — `/register`, a root-navigator modal |
@@ -60,22 +82,22 @@ whole tree, so every tab navigates somewhere. Screens not yet built render
 | 18 | `edit-profile` | **Built** — `/profile/edit` |
 | 19 | `settings` | **Built** — `/profile/settings` and `/work/settings` |
 | 20 | `language-sheet` | **Built** — a bottom sheet, not a route; opened from every Language row |
-| 21 | `connected-accounts` | **Built** — `/work/connected-accounts` and `/profile/connected-accounts` (one screen, two routes); Instagram is fully live-shaped (media/follower/following counts, "Connect Instagram" copies the OAuth URL to the clipboard rather than opening an in-app WebView, per Meta's own restriction), Telegram is a count-only row (no per-channel API), YouTube is a visibly-disabled "Beta" pair (see gaps) |
-| 22 | `notifications` | **Built** — `/work/notifications` and `/home/notifications`; fixture data only, contextual taps route to `lead-detail`/`edit-listing`/`publish-status`/`coworker-detail` per §22 (see gaps for the missing backend) |
+| 21 | `connected-accounts` | **Built** — `/work/connected-accounts` and `/profile/connected-accounts` (one screen, two routes); Instagram is fully live-shaped (media/follower/following counts, "Connect Instagram" now opens the OAuth URL in the external browser via `LinkLauncher`, per Meta's own restriction against an in-app WebView — falling back to copy-and-toast only if nothing on the device can open it), Telegram is a count-only row (no per-channel API), YouTube is a visibly-disabled "Beta" pair (see gaps) |
+| 22 | `notifications` | **Built** — `/work/notifications` and `/home/notifications`; `GET /notifications` backs live mode for real now (see Known gaps for what closed), contextual taps route to `lead-detail`/`edit-listing`/`publish-status`/`coworker-detail` per §22 |
 | 23 | `messages` | **Built** — `/work/messages` and `/profile/messages`; renders §23's own "coming soon, contact leads by phone" banner rather than a chat UI, exactly as specified |
-| 24 | `dashboard` | **Built** — `/work/dashboard`, the Work tab's landing screen for `role: "agent"` (coworker sessions skip it, landing on `my-listings` instead, per §24's own note); the chart and the coworker table's Sale count are honest stand-ins (see gaps) |
-| 25 | `my-listings` | **Built** — `/work/my-listings`, the Work tab's landing screen for `role: "coworker"`; wires `filter-sheet`'s CRM (`isCrm`) variant for Sort + Status; "infinite scroll" pages a client-side window (see gaps) |
-| 26 | `create-listing` | **Built** — `/create-listing`, a root-navigator modal from `my-listings`' "+"; the full §26 field set (Address, Reference, Nearby chips, Additional Info, video) rather than `apps/console`'s reduced one; photo/video pickers are stand-ins (see gaps) |
+| 24 | `dashboard` | **Built** — `/work/dashboard`, the Work tab's landing screen for `role: "agent"` (coworker sessions skip it, landing on `my-listings` instead, per §24's own note); the "Ads statistics" chart plots a real server-bucketed series and the coworker table's Sale count is a real number in both modes now (see gaps for what closed) |
+| 25 | `my-listings` | **Built** — `/work/my-listings`, the Work tab's landing screen for `role: "coworker"`; wires `filter-sheet`'s CRM (`isCrm`) variant for Sort + Status; "infinite scroll" is real `GET /my/ads` keyset paging, and Status is a real server filter too |
+| 26 | `create-listing` | **Built** — `/create-listing`, a root-navigator modal from `my-listings`' "+"; the full §26 field set (Address, Reference, Nearby chips, Additional Info, video) rather than `apps/console`'s reduced one; photo/video pickers are real (camera or gallery, via `MediaPicker`), with a client-side size check ahead of upload |
 | 27 | `edit-listing` | **Built** — `/work/edit-listing/:id`, from `my-listings`' edit icon; same field set as `create-listing`, pre-filled, plus the publish section and Delete |
 | 28 | `publish-channels-sheet` | **Built** — a bottom sheet, not a route; opened from `create-listing`/`edit-listing`'s per-channel publish buttons |
-| 29 | `publish-status` | **Built** — `/work/publish-status/:id`, from `edit-listing`'s "Publish Status" link; Retry on a failed row is visibly present but disabled (see gaps) |
+| 29 | `publish-status` | **Built** — `/work/publish-status/:id`, from `edit-listing`'s "Publish Status" link; Retry on a failed Telegram/Instagram row is wired for real, distinguishing every server rejection reason on screen; YouTube/OLX/Realting stay visibly disabled with their reason (see gaps) |
 | 30 | `leads-list` | **Built** — `/work/leads` |
-| 31 | `leads-kanban` | **Built** — `/work/leads/kanban`, from `leads-list`'s view toggle; card footer omits the coworker avatar/name slot (see gaps) |
+| 31 | `leads-kanban` | **Built** — `/work/leads/kanban`, from `leads-list`'s view toggle; card footer resolves and shows the assigned coworker's name whenever `Lead.coworkerId` is set (see Known gaps for what closed and why the old refusal was wrong) |
 | 32 | `lead-detail` | **Built** — a bottom sheet, not a route; opened from `leads-list`/`leads-kanban` row taps and from a lead `notification` tap |
 | 33 | `create-lead` | **Built** — `/work/leads/create`, from `leads-list`/`leads-kanban`'s "+ Add new lead" |
 | 34 | `kanban-move-sheet` | **Built** — a bottom sheet, not a route; opened by `leads-kanban`'s long-press "Move to…" only when the destination needs a call-back time or a conversation note, per §34 |
 | 35 | `coworkers-list` | **Built** — `/work/coworkers`, agent role only; hidden entirely (no "+ Add new coworker") for a SOLO-kind agent, matching the server's own `solo_realtor` 403 |
-| 36 | `coworker-detail` | **Built** — `/work/coworkers/:id`; listings-count/last-active are derived client-side, avatar upload is a stand-in (see gaps) |
+| 36 | `coworker-detail` | **Built** — `/work/coworkers/:id`; listings-count/last-active come from the server's own `GET /statistics/coworkers/summary` aggregate now, avatar upload is real for an AGENT (managing) session (see gaps) |
 | 37 | `add-coworker` | **Built** — `/work/coworkers/create`, from `coworkers-list`'s "+" |
 | 38 | `delete-confirm` | **Built** — a shared helper (`confirmDelete` in `shared/widgets/delete_confirm.dart`), not a route; called from `edit-listing`/`lead-detail`/`coworker-detail`'s Delete buttons |
 
@@ -85,12 +107,27 @@ notifications, messages, the dashboard, My Ads with its CRM filter sheet,
 the full create/edit-listing flow with its publish sheet and status screen,
 leads (list, kanban, detail sheet, create, the kanban move sheet) and
 coworkers (list, detail, add) — on top of the signed-out surface, auth and
-the whole Profile branch already built before it. What is left is not a
-missing screen: it's the gaps below — real photo/video/avatar pickers, a
-live-mode notifications backend, `url_launcher`-backed OAuth/tel/share
-affordances, and the handful of server-side data gaps (agent rating, region
-vocabulary, coworker deal counts, a bucketed statistics endpoint) that no
-client-side code can close honestly on its own.
+the whole Profile branch already built before it. A later integration pass
+made every remaining platform stand-in real: photo/video/avatar pickers
+(`image_picker`), tel/share/OAuth-open affordances (`url_launcher`/
+`share_plus`), the Camera & Photos permission prompt (`permission_handler`),
+listing-detail's 3D tour (`webview_flutter`), and map-view's pin clustering
+(`flutter_map_marker_cluster`). What is left is not a missing screen: it's
+the gaps below — chiefly the Notifications *permission* row and the Settings
+push toggle (no push-messaging plugin exists to back either, see gaps) — and
+a handful of remaining server-side data gaps that no client-side code can
+close honestly on its own. The agent `address`/rating gap that used to be
+listed here is closed — see Known gaps below. `search`/`filter`'s own
+former gaps — client-side search/sort/pagination and the missing region
+vocabulary — are closed as of this slice too (`GET /ads`'s `q`/`sort`/
+paging, `GET /regions`); so is the dashboard's chart, the coworkers
+cluster's "listings count"/"last active"/"Sale count" (`GET
+/statistics/ads/series`, `GET /statistics/coworkers/summary`), `my-listings`'
+pagination, publish retry for Telegram/Instagram, and — this integration
+pass — the `notifications` feed's live backend (`GET /notifications`) and the
+contact form's fixtures-by-default danger (both `notifications` and
+`contact` now default to live like everything else, see Known gaps below for
+what each closed and didn't).
 
 `auth_session.dart` is real as of this slice: `signInWithPassword`/
 `registerAccount`/`signOut` call through to `AuthRepository`
@@ -104,119 +141,324 @@ back-stack)" — it keeps the tab bar and stays in the back stack of whichever
 tab it was opened from. It takes a `branchPrefix` so the sibling routes it
 pushes (`agent-profile`) resolve into that same branch.
 
+`tour-3d-view` (`/tour-3d-view`) is a no-chrome, root-navigator route
+alongside `photo-gallery`/`map-view` — not one of SCREENS.md's 38 numbered
+screens, since it exists to surface `Ad.tour3dLink`, a field SCREENS.md §7
+already specs but the app previously left unsurfaced entirely (see the old
+"gaps" entry this replaced). Same-origin navigation guard and a render-side
+scheme check independent of the server's own — see
+`tour3d_view_screen.dart`'s doc comment.
+
 ### Known gaps
 
-- **`permissions-primer`'s "Allow" does not raise an OS prompt.** Doing so
-  needs `permission_handler` plus `CAMERA`/`READ_MEDIA_IMAGES`/
-  `POST_NOTIFICATIONS` in `AndroidManifest.xml` and the matching `Info.plist`
-  usage descriptions — declarations deliberately **not** added, because
-  nothing in the app uses either capability yet (`create-listing`/
-  `edit-listing`'s photo/video pickers and `edit-profile`/`coworker-detail`'s
-  avatar pickers are all documented stand-ins with no image-picker
-  dependency, see below; there is no push plugin here and no device-token
-  endpoint in `apps/api`).
-  Requesting permissions for features that do not exist is what store review
-  flags. The screen requests through a `PermissionGateway` interface whose
-  default answers "unavailable" and whose row says exactly that; whichever
-  feature needs the permission first adds the plugin, the manifest entries it
-  genuinely needs, and one implementation — and the screen starts working
-  unchanged. See `features/permissions/data/permission_gateway.dart`.
-- **`map-view` does not cluster pins.** At Tashkent-wide zoom a dense result
-  set overlaps. The honest fix is a clustering package, not a hand-rolled
-  approximation. The screen does report `"n of m on the map"` whenever some
-  results have no coordinates and therefore cannot be drawn at all.
-- **No agent `address` or rating.** SCREENS.md §3.9's agent card asks for an
-  `address` line and a `"Review: {rating}/5"` star row. Neither exists: `User`
-  has no address column and there is no review/rating table anywhere in the
-  schema, so `GET /agents` could not send either. Both are omitted rather than
-  faked — a hardcoded star rating is a false trust signal, which is the one
-  worth refusing outright. Needs a data-model decision upstream.
-- **Several platform affordances are stand-ins, not the real thing**, because
-  each needs a plugin this app doesn't depend on and adding one is a
-  `pubspec.yaml`-plus-platform-config change rather than a screen build:
-  `listing-detail`'s share button copies the listing link instead of opening
-  the OS share sheet (`share_plus`) — which is also what the source mockup's
-  own share button does; every call button (`listing-detail`'s agent block,
-  `agent-profile`'s Call action, `profile-agent`'s phone row) copies the phone
-  number instead of dialling, and `profile-buyer`'s "Register as Agent" copies
-  the Google Form URL instead of opening it (all four want `url_launcher`).
-  `tour3dLink` is also not surfaced at all, since embedding a 3D tour needs a
-  webview. `connected-accounts`' "Connect Instagram" (§21) is the Work-tab
-  instance of the same gap: `InstagramAuthResource.connectUrl()` returns a
-  real OAuth URL, copied to the clipboard rather than opened, for the same
-  reason — SCREENS.md §21 itself forbids an in-app WebView here regardless
-  of tooling, so `url_launcher` is what would close it, not a different
-  approach. Every one of these says on screen what it actually did.
-- **`language-sheet` stores a preference nothing reads yet.** Picking En/Uz/Ru
-  persists and closes, per §3.20 — but there is no ARB catalogue, no
-  `flutter_localizations` delegate, and no translated strings: every screen's
-  copy is hardcoded English, exactly as SCREENS.md's preamble specifies. The
-  sheet says so under the options rather than pretending. Real localisation is
-  a separate, large task (extracting every string in `features/`); the provider
-  in `features/language/state/` is the seam it plugs into, and that file's doc
-  comment lists the concrete steps.
-- **`edit-profile`'s avatar uploader cannot pick an image.** §3.18 wants a
-  native picker; there is no image-picker dependency, and `permissions-primer`'s
-  grant path is itself a documented no-op seam. The avatar renders, the control
-  states that changing it isn't available yet, and no dependency was added on
-  spec — the same call `permission_gateway.dart` documents at length.
-- **`settings`' Notifications toggle has nothing to switch on.** There is no
-  push infrastructure anywhere in the project — no messaging plugin here, no
-  device-token endpoint in `apps/api`. It persists a preference and says on
-  screen that nothing is delivered yet, rather than flipping silently and
-  implying a subscription that does not exist.
+- ~~`permissions-primer`'s "Allow" does not raise an OS prompt~~ **Closed for
+  Camera & Photos.** `permission_handler` plus `CAMERA`/`READ_MEDIA_IMAGES`/
+  `READ_MEDIA_VIDEO` in `AndroidManifest.xml` and the matching `Info.plist`
+  usage descriptions now back the row, since `create-listing`/`edit-listing`'s
+  photo/video pickers and the three avatar controls genuinely need them —
+  see `features/permissions/data/permission_gateway.dart`'s
+  `PermissionHandlerGateway`. **The Notifications row is still
+  `PermissionOutcome.unavailable`, and stays that way on purpose — this is
+  still true even though `apps/api` gained real push plumbing this session**
+  (a `DeviceToken` table, `POST`/`DELETE /push/devices`, and a
+  `pushService` wired into the real lead/sold/publish trigger points — see
+  the Notifications-toggle gap below for the full picture). None of that
+  reaches this screen: `POST_NOTIFICATIONS` is still **not** declared in
+  the manifest, and `permission_gateway.dart`'s short-circuit to
+  `PermissionOutcome.unavailable` is untouched on purpose, because
+  `apps/api`'s new send path (`pushService.js#sendPushToUser`) itself
+  degrades to a logged no-op until FCM credentials are configured — which
+  they never are today, see the toggle gap below for what that actually
+  requires. Requesting a permission for a capability that still can't
+  deliver a single message is what store review flags, not what earns
+  trust.
+- ~~`map-view` does not cluster pins~~ **Closed.** Overlapping pins now merge
+  via `flutter_map_marker_cluster` (the honest fix this note used to call
+  for, not a hand-rolled density approximation), restyled in this app's
+  tokens — see `features/map_view/widgets/map_cluster_marker.dart`. The
+  screen still reports `"n of m on the map"` whenever some results have no
+  coordinates and therefore cannot be drawn at all, and now shows an
+  explanatory card instead of a silent empty map when zero results have one.
+- ~~No agent `address` or rating~~ **Closed.** `User` gained an `address`
+  column and a real `agent_reviews` table backs `ratingAverage`/
+  `ratingCount` now (`GET /agents`/`GET /agents/:id`, plus
+  `GET /agents/:id/reviews`, `POST /agents/:id/reviews`,
+  `DELETE /agents/:id/reviews/me`). SCREENS.md §3.9's address line and
+  `"Review: {rating}/5"` star row render on the directory card, the
+  `agent-profile` identity block, and `listing-detail`'s agent block —
+  `shared/widgets/rating_stars.dart`'s `RatingStars`. **`ratingAverage ==
+  null` still renders "No reviews yet", never a zero-star row** — that null
+  is the whole reason this gap was refused rather than faked the first time
+  around, and the fix preserves it rather than papering over it now that
+  real data exists.
+
+  A full leave/edit/delete-a-review surface (`agent_review_sheet.dart`,
+  opened from `agent-profile`'s new Reviews section) ships alongside the
+  display. **This is beyond SCREENS.md** — §3.9 only specs the rating
+  *display*, not a submission form, since there was no review table to
+  submit into when the spec was written; `mockups/SCREENS.md` should gain a
+  §3.9a (or similar) describing it. Two honest limitations, both
+  documented at their call sites rather than worked around: (1) "Edit your
+  review" only recognizes an existing review that happens to be on an
+  already-loaded page of the list — there is no `GET /agents/:id/reviews/me`
+  endpoint to ask directly, so a review from long enough ago that it has
+  scrolled past the loaded pages shows "Leave a review" instead until the
+  user pages down to it (the server's own upsert-on-`(agentId, authorId)`
+  means this never creates a duplicate, only mislabels a button); (2) the
+  client pre-empts the server's self-review 403 for the common case (typed
+  from the caller's `AuthUser` when it's the same person as the profile),
+  but cannot for a race with another device, which still surfaces the
+  server's real 403 with real copy.
+- ~~Several platform affordances are stand-ins, not the real thing~~
+  **Closed.** `url_launcher`/`share_plus` are both in `pubspec.yaml` now,
+  reached through `shared/platform/link_launcher.dart`'s `LinkLauncher`
+  seam: `listing-detail`'s share button hands the OS share sheet a real
+  title/price/link payload; every call button (`listing-detail`'s agent
+  block, `agent-profile`'s Call action, `profile-agent`'s phone row —
+  the byte-identical logic across all three is now
+  `shared/widgets/dial_or_copy.dart`'s `dialOrCopyPhone`) dials a real
+  `tel:` intent; `profile-buyer`'s "Register as Agent" and
+  `connected-accounts`' "Connect Instagram" (§21) open their URLs in the
+  external browser. None of these treat a device that can't do it as a dead
+  end — no dialer, no browser, or the OS declining the intent all fall back
+  to the previous copy-and-toast behaviour, with the toast saying so
+  honestly rather than pretending the tap did nothing.
+- ~~`language-sheet` stores a preference nothing reads yet~~ ~~most screens'
+  strings are not through it yet~~ **Done — but read the machine-translation
+  caveat below before shipping.** `flutter_localizations` and `intl` are in
+  `pubspec.yaml`, `l10n.yaml` generates `AppLocalizations` into
+  `lib/l10n/generated/` (committed — see that file's own header comment for
+  why) from `lib/l10n/app_{en,uz,ru}.arb`, and `app.dart` watches
+  `languageProvider` and drives `MaterialApp.locale` from it. Every screen's
+  user-visible English string is extracted (683 ARB keys as of the
+  integration pass that reconciled six agents' work — 688 minus seven
+  duplicate `"Retry"` keys consolidated onto the pre-existing
+  `sharedRetryLabel`, plus two for a genuine miss: `language-sheet`'s own
+  title/close button had been left hardcoded, see `lib/l10n/README.md`'s
+  extraction-groups note) and translated into all three locales — no
+  English-fallback keys.
+
+  **uz/ru are machine-translated and have not had a native-speaker review
+  pass.** This is the most important caveat here: every string reads as
+  plausible, grammatically-agreeing Uzbek/Russian to a non-native reviewer
+  and passed every automated check this run could devise (glossary
+  consistency, plural-category completeness, byte-identical English), but
+  none of that substitutes for a native speaker reading the shipped copy in
+  context. Budget a review pass — ideally against the running app, not the
+  ARB files in isolation — before this ships to real Uzbek/Russian-speaking
+  users.
+
+  **Proven, not just asserted, three ways** (`test/l10n/` and
+  `test/features/language/`):
+  - **The switch is live.** Picking En/Uz/Ru in the sheet changes the app
+    locale the same frame, no restart —
+    `language_sheet_test.dart`'s `'selecting a language changes the live
+    app locale, no restart needed'`.
+  - **The choice survives a restart.** `language_provider_test.dart` proves
+    a selection written by one `ProviderContainer` (one app launch, in
+    Riverpod terms) is read back correctly by a fresh one sharing the same
+    backing store — the actual persistence contract
+    `secure_language_repository.dart` promises, not just that `save`/`load`
+    were called.
+  - **The content is real, not just present.** `three_locale_rendering_proof_test.dart`
+    pumps real screens under `en`/`uz`/`ru` and asserts the *visible* text
+    differs per locale and is never the silent English fallback a missing
+    ARB key produces — covering a plural (`listingRoomsCount`'s Russian
+    one/few/many/other categories), a placeholder
+    (`settingsAboutRowSubtitle`'s "Version {version}"), and a form's
+    validation messages (`edit-profile`'s required-field/phone-format
+    errors, SCREENS.md §18).
+
+  **Longer-language layout checked, one real overflow found and fixed.**
+  Russian runs 30-50% longer than English and Uzbek can run longer still, so
+  this pass re-ran the existing "layout holds at real phone widths"
+  (360/390/430px) overflow groups under `ru`/`uz` too, across the highest-risk
+  screens (forms, chip rows, toolbars) — not just `en` as before. One real
+  defect surfaced: `register`'s Solo agent/Agency chip row was a bare `Row`
+  that fit English's "Solo agent"/"Agency" at every width but overflowed by
+  16px under Russian's longer "Частный риелтор"/"Агентство" at 360px: fixed
+  by switching it to `Wrap` (`register_screen.dart`), matching the pattern
+  the same file's team-size chip row already used. Every other screen
+  checked (settings, edit-profile, saved-listings, my-listings,
+  notifications, connected-accounts, language-sheet, login) held with no
+  overflow under either locale.
+
+  A handful of strings are deliberately left as English/passthrough and
+  reported as such in `lib/l10n/README.md`'s "what not to extract" rule:
+  server-authored `ApiErrorBody.message` text, bundled fixture/seed data,
+  the "La Casa" brand name, wire-value enums, and two genuine cross-group
+  blockers flagged inline where they live — `contact/data/contact_prefill.dart`'s
+  pre-filled message builders and `shared/state/uploads_repository.dart`'s
+  `describeUploadError` — both left un-localized because migrating them
+  would require a signature change reaching into another feature group's
+  files (`listing_editor/widgets/form/photos_step.dart`,
+  `shared/widgets/avatar_upload_control.dart`); still true as of this
+  integration pass, not yet closed.
+  `lib/l10n/GLOSSARY.md` fixes the en/uz/ru rendering of this product's
+  domain terms; this pass re-checked it against all 683 keys and corrected
+  three drifts it found — `reviewsRatingRequiredError` used "baho"/"оценку"
+  (grade/mark) instead of the glossary's "reyting"/"рейтинг" for the numeric
+  star rating, `permissionsNotificationsRowBody` (uz) said "nashr holati"
+  where every other "publish status" string says "e'lon qilish holati", and
+  `listingEditorPriceTypeFieldLabel` (uz) said the literal "Narx turi"
+  ("price type") for what the field actually is — a currency selector — where
+  the Russian string already correctly said "Тип валюты" ("currency type").
+  `mockups/SCREENS.md`'s preamble still says the app's copy is English —
+  that line predates this pass and is now out of date; not edited here since
+  the spec is shared across three implementations, but it should say
+  something like "copy is in `lib/l10n/`, En/Uz/Ru" instead.
+- **`settings`' Notifications toggle still has nothing to switch on — the
+  server half of push exists now, the client half deliberately doesn't.**
+  `apps/api` gained a `DeviceToken` model (`prisma/schema.prisma`), `POST`/
+  `DELETE /push/devices` (`routes/push.js`) and a `pushService.js` wired
+  into the real trigger points — an `ActivityEvent` write for a new/moved
+  lead or a sold ad, and every Telegram/Instagram publish outcome — so the
+  four kinds `GET /notifications` already serves as a pull feed now have a
+  real push counterpart to fire alongside them. But `pushService.js#sendPushToUser`
+  is written to **never fail the write that triggered it** and degrades to
+  a logged no-op whenever `FCM_SERVER_KEY` is unset (`config.js`'s
+  `PUSH_CONFIGURED`) — which today it always is, because nothing has
+  configured it yet. Nothing on the Flutter side changed at all, on
+  purpose: no messaging plugin in `pubspec.yaml`, `POST_NOTIFICATIONS`
+  still undeclared, `permission_gateway.dart`'s short-circuit untouched (see
+  above), and this toggle still just persists a local preference and says
+  on screen that nothing is delivered yet, rather than flipping silently
+  and implying a subscription that does not exist.
+
+  **Four things a human has to supply that no code in this repo can
+  produce**, before any of the above can go live: a Firebase project (to
+  mint the FCM credentials `pushService.js` needs); the resulting
+  `google-services.json` (Android) and `GoogleService-Info.plist` (iOS)
+  config files the client-side messaging plugin would need bundled; an
+  APNs key for iOS delivery, which needs a paid Apple Developer Program
+  membership to generate; and a `firebase-admin` service-account key for
+  `apps/api` itself (or, if `pushService.js`'s current legacy-HTTP
+  `FCM_SERVER_KEY` approach is kept instead of migrating to the modern
+  Admin SDK, just that legacy server key from the same Firebase project).
+
+  **Once those land, a future developer's list is short and mechanical**:
+  add a messaging plugin (`firebase_messaging` or equivalent) to
+  `pubspec.yaml`; declare `POST_NOTIFICATIONS` in `AndroidManifest.xml`
+  (and register for remote notifications on iOS); remove
+  `permission_gateway.dart`'s short-circuit so `AppPermission.notifications`
+  routes through the plugin like Camera & Photos already does; call the
+  now-real `POST /push/devices` with the token the plugin hands back
+  (nothing in `UploadsResource`/`api.dart` has to change — this is a new
+  resource call, not a rewire); and set `FCM_SERVER_KEY` in `apps/api`'s
+  environment, which is the one step that flips `pushService.js` from a
+  logged no-op to actually delivering. Being this exact about the ordering
+  is the point of this entry: it's what stops someone shipping a
+  permission prompt for a capability that still can't deliver anything the
+  moment before that last step lands.
 - **Sign-out clears the session even if the keystore write fails, and says so.**
   `flutter_secure_storage`'s `delete` is a platform channel and can throw; the
   in-memory session is dropped unconditionally, but a stored token that
   survives would sign the account back in on next launch, so the failure is
   surfaced to the user rather than swallowed. See `AuthSessionNotifier.signOut`.
-- **`contact-sheet` reports success without sending unless the live switch is
-  on.** Its fixture repository accepts and discards, like every other
-  feature's — but for a form whose purpose is delivering a message to a
-  person, that default is more dangerous than a feed rendering seed data. Any
-  build a real user touches needs `--dart-define=LACASA_CONTACT_LIVE_API=true`;
-  see `features/contact/data/contact_mode.dart`.
-- **The message field is capped at 200 characters, the server allows 2000.**
-  SCREENS.md §3.11 says 200 and the tighter of the two is enforced, so the
-  three implementations building against the spec agree. Worth reconciling
-  upstream.
-- **`listing-search` filters and sorts client-side.** There is no server-side
-  search or sort endpoint; `search_repository.dart` documents this. Sorting a
-  page of results client-side is not the same as sorting the whole set, and
-  that will matter once result counts grow.
-- **No region/district data.** `filter-sheet`'s city/district selects need the
-  203-district vocabulary that lives in `@lacasa/domain`'s `regions.json`,
-  which Dart cannot import from npm. It needs its own copy or an API endpoint —
-  see `docs/03-data-model.md`.
-- **`create-listing`/`edit-listing`'s photo and video pickers, and
-  `coworker-detail`/`add-coworker`'s avatar uploader, cannot pick a file.**
-  Same call as `edit-profile`'s avatar control above: no `image_picker`/
-  `file_picker` dependency was added (`WORK_TAB_CONTRACT.md` §5.2), so there
-  is nothing to hand `UploadsResource.presign`/`putBytes` real bytes from.
-  Every one of these controls renders `MediaUploadUnavailableNotice` and
-  says on screen that upload isn't available in this build yet, rather than
-  silently doing nothing. `UploadsResource` itself is real and correct —
-  it's one picker plugin (plus the platform permission declarations
-  `permissions-primer`'s gap already covers) away from working unchanged.
-- **The dashboard's "Ads statistics" chart has no charting library, and in
-  live mode is not a daily series.** `GET /statistics/ads` returns two
-  period totals (`adsNewCount`/`adsSoldCount`), never a bucketed series —
-  there is no server endpoint to plot 12 points against
-  (`WORK_TAB_CONTRACT.md` §7.1). Fixture mode hand-paints the real 12-point
-  seed series (`workDashboardChartFixture`) with a plain `CustomPainter`,
-  matching `apps/console`'s own choice not to pull in a charting library for
-  one screen; live mode degrades to `apps/console`'s honest two-bar "Created
-  vs Sold" period comparison rather than fabricating a smoother line than
-  `/statistics/ads` actually supports. Needs a bucketed statistics endpoint
-  upstream before a real time series is possible on either platform.
-- **`notifications` has no backend at all.** No `notifications` route, no
-  `Notification` model, nothing anywhere in `apps/api`
-  (`WORK_TAB_CONTRACT.md` §7.11). Fixture mode renders
-  `workNotificationsFixture` as-is; a live implementation would have to
-  synthesize notifications from `GET /leads` + `GET /publish/status` +
-  `GET /my/ads` + `GET /statistics/coworkers`, which is a real design
-  decision (poll cadence, de-duplication, read/unread persistence) left for
-  a task of its own, not something this build could fabricate honestly.
+- ~~`contact-sheet` reports success without sending unless the live switch is
+  on~~ **Closed by the live-by-default inversion.** Every feature's default
+  flipped from fixtures to live this run (see "Running it" above) — `contact`
+  included, so the dangerous case ("Message sent successfully." for a
+  message that reached nobody) now needs deliberately opting *into*
+  fixtures (`--dart-define=LACASA_CONTACT_LIVE_API=false`, or the global
+  `LACASA_USE_FIXTURES=true`) rather than out of them. `flutter test` still
+  always gets fixtures regardless, so no widget test can send a real
+  message. Live, the server still answers 503 `contact_unconfigured` unless
+  `TG_CONTACT_CHAT_ID` is set — the sheet surfaces that distinctly rather
+  than as a generic failure, since no amount of retrying fixes it.
+- ~~The message field is capped at 200 characters, the server allows 2000~~
+  **Closed.** SCREENS.md §3.11, `packages/domain`'s `contactSchema` (the zod
+  boundary `apps/api`'s `POST /contact` actually validates against,
+  `routes/contact.js`) and this app's `contactMessageMaxLength` are all
+  reconciled onto the same number now: **500**, not the old 200 or 2000.
+  `contact_sheet.dart`'s own doc comment records why 500: 200 was too tight
+  for a realistic property enquiry (a move-in date, a budget and a question
+  already runs past 230 characters), and 2000 was a server ceiling nobody
+  had actually built a client against. `apps/web`'s dedicated Contact-Us page
+  form (`ContactUs.jsx`) matches at 500 too — but its footer's near-duplicate
+  contact form (`Footer.jsx`) still has `maxLength="200"`, a residual
+  inconsistency in that surface this pass didn't touch (outside this file's
+  ownership to fix, noted here only so this entry doesn't overstate "web" as
+  one reconciled thing when it's really two forms, one still stale).
+- ~~`listing-search` filters and sorts client-side~~ **Closed.** `GET /ads`
+  gained `?q=`, a whitelisted `?sort=`, and opt-in keyset paging
+  (`docs/04-api-spec.md`'s Ads section); `search_repository.dart` sends all
+  three server-side now, and the results list's "infinite scroll" is a real
+  paged fetch loop (`SearchResultsNotifier.loadMore`,
+  `search_results_list.dart`) rather than lazy widget building over an
+  already-complete list.
+- ~~No region/district data~~ **Closed.** `GET /regions` now serves the
+  `@lacasa/domain` region/district vocabulary over HTTP
+  (`regions_repository.dart`); `filter-sheet`'s City/District fields are a
+  cascading picker sourced from it (`filter_city_district_section.dart`),
+  cached for the process lifetime rather than re-fetched on every sheet open
+  (`regions_repository_provider.dart#regionsDataProvider`). Fixture mode
+  bundles a small vocabulary matched to this build's own seed ads
+  (`filter_regions_fixtures.dart`) rather than the real 203-district one —
+  see that file's doc comment for why a subset with the *real* official
+  (Uzbek-language) names would have silently broken fixture-mode filtering
+  instead.
+- ~~`create-listing`/`edit-listing`'s photo and video pickers, and every
+  avatar uploader, cannot pick a file~~ **Closed.** `image_picker` is in
+  `pubspec.yaml`; `shared/platform/media_picker.dart`'s `MediaPicker` seam
+  backs `create-listing`/`edit-listing`'s photo and video steps and all
+  three avatar controls (`edit-profile`, `coworker-detail` for an AGENT
+  session, `add-coworker`). A picked file is checked against a client-side
+  size ceiling (5MB photo / 70MB video — SCREENS.md §26; there is no
+  server-side limit) before ever reaching `UploadsResource.presign`, and a
+  cancelled OS picker is silently a no-op rather than an error, per
+  `MediaPicker`'s own `null`-means-cancelled contract.
+  ~~One corner is still open: none of the three avatar controls block Save
+  while a pick+upload is still in flight~~ **Closed.**
+  `AvatarUploadControl` gained a required `onUploadStateChanged` callback —
+  fires the instant a pick turns into an upload (before the upload even
+  starts) and clears once it settles (success, failure, or a picker cancel
+  never reaches it at all). All three call sites (`edit-profile`,
+  `add-coworker`, `coworker-detail`) track it and block Save with
+  **"Please wait for the photo to finish uploading."** while `true`, the
+  same shape `create-listing`/`edit-listing`'s existing
+  `hasPendingUploads` check already used — a blocked Save rather than an
+  awaited in-flight upload, chosen to match that established precedent
+  rather than invent a second pattern for the same race.
+- ~~The dashboard's "Ads statistics" chart has no charting library, and in
+  live mode is not a daily series~~ **Closed.** `GET /statistics/ads/series`
+  now exists and returns a real, server-bucketed day/hour series
+  (`WORK_TAB_CONTRACT.md` §7.1, superseded) — still no charting library
+  (`ads_statistics_panel.dart`'s plain `CustomPainter` stays, matching
+  `apps/console`'s own choice not to pull one in for one screen), but both
+  fixture and live mode now plot the same real `AdsSeries` shape through one
+  rendering path, with axis labels formatted by the response's own
+  `granularity` (hour vs day) rather than assuming a daily series. Fixture
+  mode's series is still built from the real §4.6 seed points
+  (`workDashboardChartFixture`), just wrapped in the same shape live data
+  arrives in instead of read directly by the widget. **Found while verifying
+  this endpoint against a running server, not by reading source alone**: the
+  bucketed series endpoint genuinely has no all-time mode (an unbounded
+  series has no sane bound on response size) and silently defaults to
+  `today` when `filterType` is omitted — left alone, selecting "All" on the
+  dashboard's time-range selector would have shown correct all-time stat
+  tiles next to a chart quietly showing only today, the same screen
+  disagreeing with itself about what "All" means. `LiveDashboardRepository
+  .fetchAdsSeries` now remaps `StatisticsFilter.all` to `.thisMonth` for the
+  series call only (the stat tiles keep the real all-time mode
+  `fetchAdsStatistics` has) — matching what `FixtureDashboardRepository`
+  already did for `.all`, not inventing a new convention.
+- ~~`notifications` has no backend at all~~ **Closed.** `GET /notifications`
+  now exists server-side (`WORK_TAB_CONTRACT.md` §7.11, superseded) —
+  `LiveNotificationsRepository` calls it directly instead of synthesizing a
+  feed from `GET /leads` + `GET /my/ads` + `GET /statistics/coworkers` +
+  `GET /coworkers`, which also closes that old synthesis's real limitation:
+  it could only honestly cover 3 of SCREENS.md §4.4's 4 notification kinds
+  (`publish` needed `lastAttemptAt`, which `PublishResource.statusForAds`
+  doesn't expose; the server's own implementation reads it directly and has
+  no such gap). `unread` is computed server-side against whatever `since`
+  the caller sends, not a stored flag — there is still no persisted
+  read-state table anywhere in `apps/api`, by design (see
+  `notificationService.js`'s own header comment) — so this client persists
+  its own client-side watermark (`notifications_watermark_repository.dart`,
+  `flutter_secure_storage`-backed) across visits and sends it as `since`,
+  omitting it entirely on a genuine first-ever visit so everything honestly
+  comes back unread.
 - **YouTube and OLX are not actually publishable from this app.**
   `PublishResource` has no direct-publish call for YouTube — only
   `reportYoutube`, a report-back for an upload that happened somewhere else
@@ -228,38 +470,60 @@ pushes (`agent-profile`) resolve into that same branch.
   buttons, `connected-accounts`'s YouTube section) rather than pretending to
   work. Facebook Marketplace is omitted from the publish surface entirely,
   same as `apps/console` — no compliant automation path exists for either.
-- **`publish-status`'s Retry on a failed attempt is visibly present but
-  disabled.** Neither `publishInstagram` nor `publishTelegram` is designed
-  to distinguish "re-attempt this exact failed request" from "publish
-  fresh," and `apps/console` permanently disables the same affordance for
-  the same reason (`WORK_TAB_CONTRACT.md` §7.3). Wiring it would need a
-  dedicated retry endpoint upstream; until then it stays disabled rather
-  than risking a silent double-post.
-- **Coworkers' "listings count"/"last active"/"Sale count" are derived
-  client-side, and one of them is a permanent em dash.** `Coworker` carries
-  only 5 fields on the wire — no count, no activity timestamp, no deal
-  total (`WORK_TAB_CONTRACT.md` §7.6). Listings count and last-active are
-  folded client-side from `AgentAdsResource.myList()` and
-  `StatisticsResource.coworkers()`'s raw `ActivityEvent` rows respectively
-  — both real, both derived, not fabricated. "Sale count"/"deals closed" has
-  no backing data anywhere in the schema — not even an event type to fold —
-  so the dashboard's coworker table and `coworkers-list`/`coworker-detail`
-  render an honest em dash for it instead of a fabricated number. Needs a
-  schema change (a "deal closed" event or column) upstream.
-- **`my-listings`'s "infinite scroll" pages a client-side window, not the
-  server.** `AgentAdsResource.myList()` has no `limit`/`cursor`/`page` — it
-  always returns the complete list (`WORK_TAB_CONTRACT.md` §7.7). The
-  screen fetches everything once and reveals it in local pages to keep the
-  infinite-scroll feel SCREENS.md §25 asks for, but there is nothing
-  server-side actually being paged against; this will matter once an
-  agent's ad count grows past what's comfortable to fetch in one call.
-- **`leads-kanban`'s card footer has no assigned-coworker identity to
-  show.** `Lead` carries no agent-identity field distinct from its own
-  `agentId`/`coworkerId` — every lead is already scoped server-side to the
-  signed-in agent, so §31's "coworker avatar/name" footer slot has nothing
-  real to bind for an agent's own view (`WORK_TAB_CONTRACT.md` §7.8). The
-  slot is omitted rather than fabricated; the created-at half of the footer
-  is real (`Lead.createdAt`).
+- **`publish-status`'s Retry is wired for Telegram/Instagram, closed
+  2026-08-11.** `POST /publish/ads/:adId/:channel/retry` now exists and
+  replays the exact original request server-side, so it's a genuinely
+  different call from a fresh `publishInstagram`/`publishTelegram` — no
+  more risk of silently re-deriving different input (`WORK_TAB_CONTRACT.md`
+  §7.3, closed). The control is enabled only for the two channels with a
+  real server-to-server call to replay; the server also 409s a
+  `PUBLISHED` row (retry would double-post) and a `DRAFTED_AWAITING_REVIEW`
+  one (a human may be mid-flight), and 400s a stale/never-failed row — each
+  a distinct `ApiErrorException.code` the screen renders as its own
+  message, not one generic "failed" toast. YouTube (no server-side publish
+  call at all — only a report-back for a browser upload) and OLX (needs the
+  desktop browser extension, no mobile equivalent) stay visibly disabled
+  with their stated reason, same as `apps/console`; Realting (a scheduled
+  feed sync, no per-ad call) would too, if a FAILED row for it were ever
+  reachable, which nothing in this app currently produces.
+- ~~Coworkers' "listings count"/"last active"/"Sale count" are derived
+  client-side, and one of them is a permanent em dash~~ **Closed.**
+  `Coworker` still carries only 5 fields on the wire (no count, no activity
+  timestamp, no deal total) — but `GET /statistics/coworkers/summary` now
+  folds that server-side into one row per coworker
+  (`WORK_TAB_CONTRACT.md` §7.6, superseded), and `coworkers-list`/
+  `coworker-detail` read it directly instead of folding
+  `AgentAdsResource.myList()`/`StatisticsResource.coworkers()` themselves.
+  **"Sale count"/"deals closed" was wrongly judged to have no backing data
+  at all** — there's still no `LeadStatus.SUCCESS`-shaped status, but
+  `ActivityEventStage.adSold` events always carried `coworkerId`; the
+  dashboard's coworker table now folds that stage from the same event
+  stream it already reads for "Ads count" (`CoworkerStatRow.saleCount`),
+  and the summary endpoint's own `adsSoldCount` covers the same figure for
+  `coworkers-list`/`coworker-detail`. A genuinely-zero count now renders
+  `0`, not an em dash — the dash is reserved for a fetch that hasn't
+  resolved, per this app's honesty rule.
+- ~~`leads-kanban`'s card footer has no assigned-coworker identity to
+  show.~~ **Closed — and the original refusal was wrong.** This entry used
+  to claim `Lead` carries no agent-identity field distinct from its own
+  `agentId`/`coworkerId`; that premise doesn't hold. `Lead.coworkerId` is a
+  real, populated field (`leadService.js#serializeLead`, the same
+  empty-string-means-none convention as `Ad.coworkerId`), set from the
+  acting user on create when they're a COWORKER — and since leads are
+  agent-scoped, not coworker-scoped, a coworker's own board shows the
+  *whole team's* leads, so resolving that id is the only place on that
+  board that tells them who owns a card. `kanban_card.dart`'s
+  `_CoworkerFooter` resolves it against the already-cached
+  `coworkersListProvider` roster — the same plain provider `coworkers-list`
+  itself reads, so this triggers no fetch of its own — see
+  `WORK_TAB_CONTRACT.md` §7.8, which records the same correction rather
+  than quietly dropping the old (wrong) ruling. Two honest degradations,
+  neither a fabrication: the coworker slot is omitted outright for an empty
+  `coworkerId` (a solo agent's — and a lone coworker's — leads always are,
+  and the coworkers feature is hidden for that session anyway), and while
+  the roster is loading or has failed to load the footer shows only the
+  created-at half (`Lead.createdAt`) — never a placeholder name, never a
+  spinner standing in for one.
 - **Two widget shapes each had two independent, near-identical
   implementations before this slice's integration pass** — `profile-buyer`/
   `profile-agent`'s Logout confirm dialog vs. `settings`'s own bespoke one
@@ -297,6 +561,45 @@ pushes (`agent-profile`) resolve into that same branch.
   tuned for how many fields each form packs in) and forcing one shape onto
   forms that were never the same would just move the duplication into
   `LabelledFormField`'s parameter list instead of removing it.
+- **A third pass, made once the platform stand-ins above went real, found
+  one more byte-identical repeat**: the dial-a-number-with-a-copy-fallback
+  logic — request through `LinkLauncher.dial`, and on `false` copy the
+  number and toast `"Couldn't open the dialer — phone number copied:
+  $phone"` — existed independently, three separate times, in
+  `profile-agent`'s phone row, `listing-detail`'s agent block, and
+  `agent-profile`'s Call action, each written at its own call site with no
+  visibility into the other two. Now `shared/widgets/dial_or_copy.dart`'s
+  `dialOrCopyPhone`. `LinkLauncher.open`'s two other callers
+  (`profile-buyer`'s "Register as Agent", `connected-accounts`' "Connect
+  Instagram") were **not** folded in alongside it — each opens a different,
+  hardcoded URL with its own toast copy naming what failed to open, so
+  there is no shared logic to extract, only two call sites that happen to
+  use the same seam.
+- **A fourth pass, made while auditing this app's now-several server-paged
+  lists for consistency, found one more near-duplicate.** `search`'s
+  scroll-triggered infinite scroll (`search_results_list.dart`) had its own
+  private `_LoadMoreFooter` — a spinner, or a tappable "Couldn't load more —
+  Retry" row once a load-more call actually fails — and `my-listings`' own
+  scroll-triggered list (`my_listings_list.dart`) had the same shape of
+  problem (an invisible scroll-triggered fetch, with no way to tell the user
+  anything went wrong) but no visible failure state at all: a failed
+  load-more there just silently reset to a spinner-shaped sentinel with no
+  explanation. Promoted to `shared/widgets/load_more_footer.dart`'s
+  `LoadMoreFooter`, parameterized on its own `retryKey`/`spinnerKey` (each
+  caller keeps its own existing widget-test keys rather than a shared
+  literal forcing a rename), and `my-listings` gained the same
+  `loadMoreFailed` state search already had (`MyListingsPageState
+  .loadMoreFailed`) to actually drive it. **Deliberately not adopted by**
+  `agent-profile`'s reviews list (`agent_reviews_section.dart`): that surface
+  pages via an explicit "Show more reviews" tap, not a scroll listener, so
+  the button reappearing after a failure already **is** the retry
+  affordance — a second "failed" label under a button whose own
+  reappearance already says "try again" would be noise, not clarity. Three
+  server-paged surfaces now exist (`search`, `my-listings`, `agents`'
+  reviews); each still has its own `PageState`-shaped Riverpod notifier
+  (different item types, different fetch signatures, one genuinely different
+  trigger mechanism) — only the failure-UI sentinel itself was duplicated
+  code worth removing, not the paging state management around it.
 
 ## Maps
 
@@ -320,7 +623,17 @@ Two things about that are load-bearing rather than incidental:
 Layout is verified with widget tests that pin `tester.view.physicalSize` to
 360/390/430-wide phones and assert no `RenderFlex` overflow — see
 `test/phone_width_overflow_test.dart` and the per-screen `layout holds at real
-phone widths` groups. Browser screenshots of the web build are **not** a
+phone widths` groups. `leads/widgets/kanban_column_test.dart`'s own
+`'layout holds at real phone widths under ru/uz'` group is the widest of
+these: every `LeadStatus` column (5, `.unknown` excluded), at all 3 widths,
+under both `ru` and `uz` (30 cases), each card carrying a resolved,
+fairly-long-named coworker in its footer — the content most likely to
+squeeze this layout. It replaced a
+throwaway probe that only `print()`d on exception and never called `expect`,
+so it could never actually fail CI regardless of what it rendered; the
+load-bearing change was asserting on `tester.takeException()` instead of
+just eyeballing console output. Browser screenshots of the web build are
+**not** a
 reliable substitute: the Flutter canvas does not consistently adopt Chrome's
 `--window-size`, so a screenshot at a phone viewport shows clipping that is an
 artifact of the canvas rather than a real layout fault.
