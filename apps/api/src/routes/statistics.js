@@ -1,40 +1,21 @@
 import { Router } from "express";
 import { requireAuth, loadCurrentUser } from "../middleware/auth.js";
 import { effectiveAgentId } from "../middleware/roles.js";
-import { EVENT_STAGE } from "../lib/enums.js";
+import * as statisticsService from "../services/statisticsService.js";
 
 const router = Router();
 
 router.use(requireAuth, loadCurrentUser);
 
-function dateRangeFor(filterType) {
-  const now = new Date();
-  switch (filterType) {
-    case "today": {
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(now);
-      end.setHours(23, 59, 59, 999);
-      return [start, end];
-    }
-    case "thisWeek": {
-      const start = new Date(now);
-      start.setDate(now.getDate() - now.getDay());
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
-      return [start, end];
-    }
-    case "thisMonth": {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      end.setHours(23, 59, 59, 999);
-      return [start, end];
-    }
-    default:
-      return [null, null];
+// Any httpError thrown by statisticsService (see its `status`/`code`) maps
+// straight to the matching HTTP response; anything else falls through to
+// the app's generic error middleware. Mirrors routes/publish.js's
+// handleServiceError.
+function handleServiceError(e, res, next) {
+  if (e.status) {
+    return res.status(e.status).json({ error: { code: e.code, message: e.message } });
   }
+  next(e);
 }
 
 router.get("/ads", async (req, res, next) => {
@@ -43,17 +24,24 @@ router.get("/ads", async (req, res, next) => {
     if (!agentId) {
       return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
     }
-    const [start, end] = dateRangeFor(req.query.filterType);
-    const range = start && end ? { gte: start, lte: end } : undefined;
-
-    const [adsNewCount, adsSoldCount] = await Promise.all([
-      req.ctx.prisma.activityEvent.count({ where: { agentId, type: "AD_CREATED", ...(range ? { createdAt: range } : {}) } }),
-      req.ctx.prisma.activityEvent.count({ where: { agentId, type: "AD_SOLD", ...(range ? { createdAt: range } : {}) } }),
-    ]);
-
-    res.json({ adsNewCount, adsSoldCount });
+    res.json(await statisticsService.getAdsCounts(req.ctx, agentId, req.query.filterType));
   } catch (e) {
-    next(e);
+    handleServiceError(e, res, next);
+  }
+});
+
+// Bucketed AD_CREATED/AD_SOLD time series — see statisticsService.js for the
+// granularity rule and the zero-fill/timezone reasoning. `?filterType=` reuses
+// the today/thisWeek/thisMonth vocabulary; an explicit `?from=&to=` overrides it.
+router.get("/ads/series", async (req, res, next) => {
+  try {
+    const agentId = effectiveAgentId(req.currentUser);
+    if (!agentId) {
+      return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
+    }
+    res.json(await statisticsService.getAdsSeries(req.ctx, agentId, req.query));
+  } catch (e) {
+    handleServiceError(e, res, next);
   }
 });
 
@@ -63,20 +51,24 @@ router.get("/coworkers", async (req, res, next) => {
     if (!agentId) {
       return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
     }
-    const events = await req.ctx.prisma.activityEvent.findMany({ where: { agentId } });
-    res.json(
-      events.map((e) => ({
-        id: e.id,
-        agentId: e.agentId,
-        coworkerId: e.coworkerId ?? "",
-        adId: e.adId ?? "",
-        leadId: e.leadId ?? "",
-        stage: EVENT_STAGE[e.type],
-        createdAt: { seconds: Math.floor(new Date(e.createdAt).getTime() / 1000) },
-      })),
-    );
+    res.json(await statisticsService.getCoworkerEvents(req.ctx, agentId));
   } catch (e) {
-    next(e);
+    handleServiceError(e, res, next);
+  }
+});
+
+// Aggregated per-coworker counts (ads created/sold, leads created) plus
+// last-active timestamp, folded from the same ActivityEvent rows GET
+// /coworkers already exposes raw — see statisticsService.js#getCoworkerSummary.
+router.get("/coworkers/summary", async (req, res, next) => {
+  try {
+    const agentId = effectiveAgentId(req.currentUser);
+    if (!agentId) {
+      return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
+    }
+    res.json(await statisticsService.getCoworkerSummary(req.ctx, agentId));
+  } catch (e) {
+    handleServiceError(e, res, next);
   }
 });
 

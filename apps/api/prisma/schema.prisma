@@ -117,6 +117,16 @@ enum PublishStatus {
   FAILED
 }
 
+// Which push transport a DeviceToken's token string belongs to. The mobile
+// app registers one FCM registration token per install regardless of OS
+// (Firebase relays iOS delivery through APNs itself), so this is a record of
+// which OS the token came from for diagnostics/targeting, not a second
+// delivery mechanism the server has to implement -- see pushService.js.
+enum DevicePlatform {
+  IOS
+  ANDROID
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   fullName     String   @map("full_name")
@@ -125,6 +135,7 @@ model User {
   role         UserRole @default(USER)
   phoneNumber  String?  @map("phone_number")
   avatarUrl    String?  @map("avatar_url")
+  address      String?  @map("address")
   tgChatIds    BigInt[] @map("tg_chat_ids")
 
   // Realtor application, filled in at sign-up and null for buyers. Set on the
@@ -146,6 +157,7 @@ model User {
   igAssistConsentAt DateTime? @map("ig_assist_consent_at") @db.Timestamptz()
 
   igTokens            AgentIgToken[]
+  deviceTokens        DeviceToken[]
   publicationRequests AdPublication[] @relation("PublicationRequestedBy")
   ads                 Ad[]            @relation("AdAgent")
   coworkerAds    Ad[]            @relation("AdCoworker")
@@ -154,6 +166,12 @@ model User {
   events         ActivityEvent[] @relation("EventAgent")
   coworkerEvents ActivityEvent[] @relation("EventCoworker")
   savedAds       SavedAd[]
+
+  // Reviews left ABOUT this user (as the reviewed agent) vs reviews this
+  // user WROTE (as the author) -- two distinct relations off the same model,
+  // see AgentReview below.
+  reviewsReceived AgentReview[] @relation("ReviewSubject")
+  reviewsWritten  AgentReview[] @relation("ReviewAuthor")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
@@ -181,6 +199,36 @@ model AgentIgToken {
   @@index([agentId])
   @@index([expiresAt])
   @@map("agent_ig_tokens")
+}
+
+// One row per registered device (mobile app install) a user's push
+// notifications can be delivered to. This is server-side plumbing only:
+// there is no Flutter plugin wired up to actually call POST /push/devices
+// yet (permission_gateway.dart's short-circuit still stands — see its own
+// header comment), and pushService.js's send path degrades to a logged
+// no-op until FCM_SERVER_KEY is configured (lib/config.js). The table and
+// routes exist now so that work can land later without a schema migration
+// blocking it.
+model DeviceToken {
+  id       String         @id @default(uuid()) @db.Uuid
+  userId   String         @map("user_id") @db.Uuid
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Opaque provider token (an FCM registration token in practice); this
+  // table doesn't interpret it, only stores and dedupes it.
+  token    String
+  platform DevicePlatform
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Re-registering the same device (app relaunch resending its current FCM
+  // token, or a reinstall that happens to get reissued the same one) is the
+  // same fact, not a second row -- this is what makes POST idempotent.
+  // Mirrors SavedAd's @@unique([userId, adId]) dedup shape
+  // (savedAdRepository.js#upsertSavedAd).
+  @@unique([userId, token])
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 // One row per (ad, channel), upserted on every publish attempt — the status
@@ -379,4 +427,37 @@ model NearbyPlaceOption {
   position Int    @default(0)
 
   @@map("nearby_place_options")
+}
+
+// A buyer/user's review of an agent (mockups/SCREENS.md agent-profile
+// rating). rating's 1..5 range is enforced in TWO places on purpose: a CHECK
+// constraint at the DB layer (schema.prisma/Prisma has no range-constraint
+// syntax, so it only exists in the migration SQL) as the last line of
+// defense against any writer that bypasses the service, and again in
+// src/services/reviewService.js so a bad value is rejected with a normal
+// { error } envelope instead of surfacing a raw Postgres constraint-violation
+// to the client.
+model AgentReview {
+  id String @id @default(uuid()) @db.Uuid
+
+  agentId String @map("agent_id") @db.Uuid
+  agent   User   @relation("ReviewSubject", fields: [agentId], references: [id], onDelete: Cascade)
+
+  authorId String @map("author_id") @db.Uuid
+  author   User   @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  rating  Int
+  comment String?
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // One review per (author, agent) -- an average that ten posts from the
+  // same account could swing wouldn't mean anything, so a re-review edits
+  // the existing row instead of adding another.
+  @@unique([agentId, authorId])
+  // Serves both reads this model has: the aggregate ("all reviews for one
+  // agent") and the list ("...ordered by newest first").
+  @@index([agentId, createdAt])
+  @@map("agent_reviews")
 }

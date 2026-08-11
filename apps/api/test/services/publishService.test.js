@@ -337,6 +337,304 @@ describe("publishTelegramDirect", () => {
   });
 });
 
+describe("retryPublish", () => {
+  const ORIGINAL_TOKEN = config.TG_BOT_TOKEN;
+  const ORIGINAL_CONFIGURED = config.TG_CONFIGURED;
+
+  afterEach(() => {
+    config.TG_BOT_TOKEN = ORIGINAL_TOKEN;
+    config.TG_CONFIGURED = ORIGINAL_CONFIGURED;
+    vi.unstubAllGlobals();
+  });
+
+  it("400s not_retryable for youtube/olx/realting, each with its own named reason, without touching the database", async () => {
+    const ctx = { prisma: createFakePrisma() };
+    for (const channelKey of ["youtube", "olx", "realting"]) {
+      await expect(
+        publishService.retryPublish(ctx, { adId: "draft-1", channelKey, actor: makeActor() }),
+      ).rejects.toMatchObject({ status: 400, code: "not_retryable" });
+    }
+  });
+
+  it("404s unknown_channel for a channel key that isn't a real PublishChannel at all", async () => {
+    const ctx = { prisma: createFakePrisma() };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "not-a-channel", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 404, code: "unknown_channel" });
+  });
+
+  it("403s when the ad belongs to a different agent (ownership checked before any AdPublication read)", async () => {
+    const findUnique = vi.fn().mockResolvedValue({ agentId: "someone-else" });
+    const adPublicationFindUnique = vi.fn();
+    const ctx = {
+      prisma: createFakePrisma({ ad: { findUnique }, adPublication: { findUnique: adPublicationFindUnique } }),
+    };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "ad-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 403, code: "forbidden" });
+    expect(adPublicationFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("400s not_failed when there is no AdPublication row at all (never attempted)", async () => {
+    const ctx = { prisma: createFakePrisma({ adPublication: { findUnique: vi.fn().mockResolvedValue(null) } }) };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 400, code: "not_failed" });
+  });
+
+  it("400s not_failed for a PENDING row", async () => {
+    const ctx = { prisma: createFakePrisma({ adPublication: { findUnique: vi.fn().mockResolvedValue({ status: "PENDING" }) } }) };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 400, code: "not_failed" });
+  });
+
+  it("409s already_published for a PUBLISHED row -- retrying it is how you get two live posts", async () => {
+    const ctx = { prisma: createFakePrisma({ adPublication: { findUnique: vi.fn().mockResolvedValue({ status: "PUBLISHED" }) } }) };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "instagram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 409, code: "already_published" });
+  });
+
+  it("409s awaiting_review for DRAFTED_AWAITING_REVIEW -- a human may already be mid-flight in their own tab", async () => {
+    const ctx = { prisma: createFakePrisma({ adPublication: { findUnique: vi.fn().mockResolvedValue({ status: "DRAFTED_AWAITING_REVIEW" }) } }) };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "instagram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 409, code: "awaiting_review" });
+  });
+
+  it("409s retry_unavailable for a FAILED row with no stored request to replay", async () => {
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: { findUnique: vi.fn().mockResolvedValue({ status: "FAILED", payload: { mechanism: "bot-api" } }) },
+      }),
+    };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 409, code: "retry_unavailable" });
+  });
+
+  it("409s retry_in_progress when the conditional claim affects zero rows (another retry already won the race)", async () => {
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: "agent-1",
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+        user: { findUnique: vi.fn().mockResolvedValue({ id: "agent-1", role: "AGENT", agentId: null }) },
+      }),
+    };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 409, code: "retry_in_progress" });
+  });
+
+  it("claims with the exact conditional WHERE (adId, channel, status: FAILED), then replays the stored request through publishTelegramDirect and lands PUBLISHED", async () => {
+    config.TG_BOT_TOKEN = "test-token";
+    config.TG_CONFIGURED = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, result: [{ message_id: 999 }] }) }),
+    );
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const upsert = vi.fn().mockResolvedValue({ id: "p1", status: "PUBLISHED", externalId: "999", attempts: 2 });
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: "agent-1",
+            payload: { request: { caption: "Sunny flat", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+          updateMany,
+          upsert,
+        },
+        user: { findUnique: vi.fn().mockResolvedValue({ id: "agent-1", role: "AGENT", agentId: null }) },
+      }),
+    };
+    const actor = makeActor({ user: { tgChatIds: [111n] } });
+
+    const result = await publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor });
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { adId: "draft-1", channel: "TELEGRAM", status: "FAILED" },
+      data: { status: "PENDING" },
+    });
+    // The claim itself never increments attempts -- publishTelegramDirect's
+    // own upsert does that exactly once, on the update branch, since the row
+    // already exists. If retryPublish incremented too, a retry would count
+    // as two attempts instead of one.
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: expect.objectContaining({ status: "PUBLISHED", attempts: { increment: 1 } }) }),
+    );
+    expect(result.publication.status).toBe("PUBLISHED");
+    expect(result.publication.externalId).toBe("999");
+  });
+
+  it("rescues the claimed row back to FAILED (attempts incremented once) when the replay errors before publishTelegramDirect itself touches the row", async () => {
+    // no_connected_accounts is thrown by publishTelegramDirect before any
+    // upsert of its own -- this proves retryPublish's catch block, not
+    // publishTelegramDirect, is what saves the claimed row from being
+    // stranded at PENDING forever.
+    const updateMany = vi.fn().mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 1 });
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: "agent-1",
+            // chat id "999" is no longer on the actor's connected chats below.
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["999"] } },
+          }),
+          updateMany,
+        },
+        user: { findUnique: vi.fn().mockResolvedValue({ id: "agent-1", role: "AGENT", agentId: null }) },
+      }),
+    };
+    const actor = makeActor({ user: { tgChatIds: [111n] } });
+
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor }),
+    ).rejects.toMatchObject({ status: 400, code: "no_connected_accounts" });
+
+    expect(updateMany).toHaveBeenCalledTimes(2);
+    expect(updateMany.mock.calls[0][0]).toEqual({
+      where: { adId: "draft-1", channel: "TELEGRAM", status: "FAILED" },
+      data: { status: "PENDING" },
+    });
+    expect(updateMany.mock.calls[1][0]).toMatchObject({
+      where: { adId: "draft-1", channel: "TELEGRAM", status: "PENDING" },
+      data: expect.objectContaining({ status: "FAILED", attempts: { increment: 1 } }),
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Ownership gate for a draft- adId (the cross-tenant hole assertOwnsAd's
+  // early return leaves open -- see retryPublish's own comment on the
+  // assertOwnsAd call, and assertOwnsPublicationRow's comment).
+
+  it("403s a cross-tenant retry of another agent's draft-id publication before ever claiming the row", async () => {
+    const userFindUnique = vi.fn().mockResolvedValue({ id: "agent-A", role: "AGENT", agentId: null });
+    const updateMany = vi.fn();
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: "agent-A",
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+          updateMany,
+        },
+        user: { findUnique: userFindUnique },
+      }),
+    };
+    const actor = makeActor({ agentId: "agent-B" });
+
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor }),
+    ).rejects.toMatchObject({ status: 403, code: "forbidden" });
+
+    expect(userFindUnique).toHaveBeenCalledWith({ where: { id: "agent-A" }, select: { id: true, role: true, agentId: true } });
+    // Ownership is checked before the concurrency claim -- a non-owner must
+    // never get far enough to actually start a retry cycle.
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it("lets a coworker retry their own agent's draft-id publication (requestedById resolves through effectiveAgentId, not a literal id match)", async () => {
+    config.TG_BOT_TOKEN = "test-token";
+    config.TG_CONFIGURED = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, result: [{ message_id: 1000 }] }) }),
+    );
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const upsert = vi.fn().mockResolvedValue({ id: "p1", status: "PUBLISHED", externalId: "1000" });
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          // The original attempt was requested by the agent themself
+          // (requestedById: "agent-1"); a coworker of that same agent is
+          // now retrying it.
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: "agent-1",
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+          updateMany,
+          upsert,
+        },
+        // Same mock backs both lookups this path makes: assertOwnsPublicationRow's
+        // (id/role/agentId) and publishTelegramDirect's own coworker branch
+        // (tgChatIds), both keyed on "agent-1".
+        user: { findUnique: vi.fn().mockResolvedValue({ id: "agent-1", role: "AGENT", agentId: null, tgChatIds: [111n] }) },
+      }),
+    };
+    const actor = makeActor({ user: { id: "coworker-9", tgChatIds: [] }, agentId: "agent-1", coworkerId: "coworker-9" });
+
+    const result = await publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor });
+
+    expect(result.publication.status).toBe("PUBLISHED");
+  });
+
+  it("403s when requestedById is null for a draft-id row -- an unverifiable owner fails closed, not open", async () => {
+    const ctx = {
+      prisma: createFakePrisma({
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            requestedById: null, // e.g. the original requester's User row was later deleted (onDelete: SetNull)
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+        },
+        // No `user.findUnique` stub: a null requestedById must short-circuit
+        // before ever looking a requester up.
+      }),
+    };
+    await expect(
+      publishService.retryPublish(ctx, { adId: "draft-1", channelKey: "telegram", actor: makeActor() }),
+    ).rejects.toMatchObject({ status: 403, code: "forbidden" });
+  });
+
+  it("does not require requestedById for a real (non-draft) adId -- assertOwnsAd's Ad.agentId check already proved ownership", async () => {
+    config.TG_BOT_TOKEN = "test-token";
+    config.TG_CONFIGURED = true;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, result: [{ message_id: 1 }] }) }),
+    );
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const upsert = vi.fn().mockResolvedValue({ id: "p1", status: "PUBLISHED" });
+    const ctx = {
+      prisma: createFakePrisma({
+        ad: { findUnique: vi.fn().mockResolvedValue({ agentId: "agent-1" }) },
+        adPublication: {
+          findUnique: vi.fn().mockResolvedValue({
+            status: "FAILED",
+            // The original requester's account was later deleted -- if this
+            // real-adId path also required a resolvable requester, the agent
+            // who genuinely owns this ad would be wrongly locked out.
+            requestedById: null,
+            payload: { request: { caption: "c", imageUrls: ["https://x/1.jpg"], chatIds: ["111"] } },
+          }),
+          updateMany,
+          upsert,
+        },
+        // No `user.findUnique` stub: the real-adId path must never call it.
+      }),
+    };
+    const actor = makeActor({ agentId: "agent-1", user: { tgChatIds: [111n] } });
+
+    const result = await publishService.retryPublish(ctx, { adId: "ad-1", channelKey: "telegram", actor });
+
+    expect(result.publication.status).toBe("PUBLISHED");
+  });
+});
+
 describe("reportYoutubeStatus", () => {
   it("throws 403 forbidden when the ad belongs to a different agent (can't report someone else's ad)", async () => {
     const ctx = { prisma: createFakePrisma({ ad: { findUnique: vi.fn().mockResolvedValue({ agentId: "someone-else" }) } }) };

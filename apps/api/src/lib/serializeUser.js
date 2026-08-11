@@ -13,6 +13,7 @@ export function serializeUser(user, { igAccounts = [], tgChatIds } = {}) {
     role: user.role.toLowerCase(),
     phoneNumber: user.phoneNumber,
     avatar: user.avatarUrl,
+    address: user.address ?? null,
     agentId: user.agentId,
     tgChatIds: (tgChatIds ?? user.tgChatIds ?? []).map(Number),
     igAccounts,

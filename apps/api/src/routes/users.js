@@ -11,6 +11,7 @@ const updateSchema = z.object({
   phoneNumber: z.string().max(30).optional(),
   email: z.string().email().optional(),
   avatar: z.string().max(2000).optional(),
+  address: z.string().max(500).optional(),
   password: z.string().min(6).max(200).optional(),
 });
 
@@ -20,13 +21,14 @@ router.patch("/me", requireAuth, async (req, res, next) => {
     if (!parsed.success) {
       return res.status(400).json({ error: { code: "validation", message: parsed.error.issues[0].message } });
     }
-    const { fullName, phoneNumber, email, avatar, password } = parsed.data;
+    const { fullName, phoneNumber, email, avatar, address, password } = parsed.data;
 
     const data = {};
     if (fullName !== undefined) data.fullName = fullName;
     if (phoneNumber !== undefined) data.phoneNumber = phoneNumber;
     if (email !== undefined) data.email = email;
     if (avatar !== undefined) data.avatarUrl = avatar;
+    if (address !== undefined) data.address = address;
     if (password) data.passwordHash = await bcrypt.hash(password, 10);
 
     const user = await req.ctx.prisma.user.update({ where: { id: req.auth.sub }, data });

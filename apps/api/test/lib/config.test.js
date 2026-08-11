@@ -25,6 +25,16 @@ describe("loadConfig", () => {
     expect(config.OLX_DAILY_CAP).toBe(15);
     expect(config.IG_ASSIST_DAILY_CAP).toBe(5);
     expect(config.MINIO_USE_SSL).toBe(false);
+    expect(config.STATISTICS_TIMEZONE).toBe("Asia/Tashkent");
+  });
+
+  it("accepts any IANA zone STATISTICS_TIMEZONE is pointed at, and rejects a nonsense one", () => {
+    expect(loadConfig({ ...VALID_ENV, STATISTICS_TIMEZONE: "America/Los_Angeles" }).STATISTICS_TIMEZONE).toBe(
+      "America/Los_Angeles",
+    );
+    expect(() => loadConfig({ ...VALID_ENV, STATISTICS_TIMEZONE: "Mars/Olympus_Mons" })).toThrowError(
+      /STATISTICS_TIMEZONE must be a valid IANA timezone name/,
+    );
   });
 
   it("treats a blank KEY= (empty string) the same as unset", () => {
@@ -33,15 +43,17 @@ describe("loadConfig", () => {
     expect(config.LLM_MODEL).toBe("claude-opus-5");
   });
 
-  it("derives IG_CONFIGURED / LLM_CONFIGURED / TG_CONFIGURED from the presence of their vars", () => {
+  it("derives IG_CONFIGURED / LLM_CONFIGURED / TG_CONFIGURED / PUSH_CONFIGURED from the presence of their vars", () => {
     expect(loadConfig(VALID_ENV).IG_CONFIGURED).toBe(false);
     expect(loadConfig(VALID_ENV).LLM_CONFIGURED).toBe(false);
     expect(loadConfig(VALID_ENV).TG_CONFIGURED).toBe(false);
+    expect(loadConfig(VALID_ENV).PUSH_CONFIGURED).toBe(false);
     expect(
       loadConfig({ ...VALID_ENV, IG_APP_ID: "a", IG_APP_SECRET: "b", IG_REDIRECT_URI: "c", ANTHROPIC_API_KEY: "k" })
         .IG_CONFIGURED,
     ).toBe(true);
     expect(loadConfig({ ...VALID_ENV, TG_BOT_TOKEN: "t" }).TG_CONFIGURED).toBe(true);
+    expect(loadConfig({ ...VALID_ENV, FCM_SERVER_KEY: "k" }).PUSH_CONFIGURED).toBe(true);
   });
 
   it("TG_CONTACT_CHAT_ID stays optional independently of TG_BOT_TOKEN", () => {

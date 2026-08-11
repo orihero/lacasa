@@ -13,15 +13,12 @@ router.get("/", async (req, res, next) => {
     if (!agentId) {
       return res.status(403).json({ error: { code: "forbidden", message: "Not allowed for this role" } });
     }
-    const sort = req.query.sort;
-    const orderBy =
-      sort === "highestPrice"
-        ? { price: "desc" }
-        : sort === "lowestPrice"
-          ? { price: "asc" }
-          : { createdAt: "desc" };
-
-    res.json(await adService.listAds(req.ctx, req.query, { agentId, orderBy }));
+    // `sort`/`q`/`stage`/`limit`/`cursor`/`paged` all flow straight through
+    // to adService.listAds via `req.query` -- it resolves `sort` through its
+    // own wire-value whitelist (which still recognises `highestPrice`/
+    // `lowestPrice`, the two values this route used to map by hand right
+    // here), so there's nothing left for this route to compute itself.
+    res.json(await adService.listAds(req.ctx, req.query, { agentId }));
   } catch (e) {
     next(e);
   }

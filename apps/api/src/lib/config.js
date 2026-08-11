@@ -100,7 +100,50 @@ export const ENV_VARS = [
     type: "string",
     comment: "Office chat POST /api/contact relays to; unset also degrades that route to a 503, same reasoning as TG_BOT_TOKEN",
   },
+  {
+    name: "FCM_SERVER_KEY",
+    type: "string",
+    comment:
+      "Firebase Cloud Messaging legacy server key for push notifications (pushService.js). Optional like " +
+      "TG_BOT_TOKEN/ANTHROPIC_API_KEY: unset degrades every push send to a logged no-op (PUSH_CONFIGURED " +
+      "below) instead of failing boot or failing whatever write (a lead, a publish outcome) triggered the " +
+      "push attempt -- see lib/activity.js and publishService.js for those trigger points. There is " +
+      "deliberately no client wired up to register a device yet (docs/09's mobile-app slice keeps " +
+      "permission_gateway.dart's short-circuit in place until this exists end-to-end); this var only gates " +
+      "the server's half.",
+  },
+  {
+    name: "STATISTICS_TIMEZONE",
+    type: "string",
+    timezone: true,
+    default: "Asia/Tashkent",
+    example: "Asia/Tashkent",
+    comment:
+      "IANA zone that defines what 'today'/'thisWeek'/'thisMonth' mean for GET /api/statistics/ads and " +
+      ".../ads/series (statisticsService.js#dateRangeFor). This is a single-market product -- phone numbers " +
+      "are validated ^+998\\d{9}$ and the region vocabulary is Uzbekistan's 14 regions/203 districts -- so " +
+      "'today' means today in Uzbekistan, not wherever the API process happens to be deployed. Uzbekistan has " +
+      "run UTC+5 year-round with no DST since 1992, so one fixed zone answers correctly for every agent. A " +
+      "second market would break that assumption (either a second DST-observing zone, or just a second UTC " +
+      "offset) and would need a per-agent/per-request zone resolved from the agent's region, not one " +
+      "process-wide default.",
+  },
 ];
+
+// Delegates to Intl instead of a hardcoded allowlist: any zone the ICU data
+// bundled with this Node build recognizes is accepted, which is the same
+// data set `Intl.DateTimeFormat`/statisticsService.js will actually use at
+// request time -- validating against anything else could pass a name at
+// boot that then throws on the first request.
+function isValidTimeZone(tz) {
+  try {
+    // eslint-disable-next-line no-new
+    new Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function zodFor(spec) {
   if (spec.type === "number") {
@@ -114,9 +157,15 @@ function zodFor(spec) {
     // other than the literal string "true" (including unset) is false.
     return z.string().optional().transform((v) => v === "true");
   }
-  if (spec.required) return z.string().min(1, `${spec.name} is required`);
-  if (spec.default !== undefined) return z.string().default(spec.default);
-  return z.string().optional();
+  // `.refine()` (unlike `.min()`) lives on zod's base `ZodType`, so it has
+  // to go last regardless of which of ZodString/ZodDefault/ZodOptional the
+  // required/default branch below produces -- otherwise the timezone check
+  // would need its own copy of this required/default branching.
+  let base = spec.required ? z.string().min(1, `${spec.name} is required`) : z.string();
+  if (spec.default !== undefined) base = base.default(spec.default);
+  else if (!spec.required) base = base.optional();
+  if (spec.timezone) base = base.refine(isValidTimeZone, { message: `${spec.name} must be a valid IANA timezone name` });
+  return base;
 }
 
 const envSchema = z.object(Object.fromEntries(ENV_VARS.map((v) => [v.name, zodFor(v)])));
@@ -146,6 +195,7 @@ export function loadConfig(env = process.env) {
     IG_CONFIGURED: Boolean(data.IG_APP_ID && data.IG_APP_SECRET && data.IG_REDIRECT_URI),
     LLM_CONFIGURED: Boolean(data.ANTHROPIC_API_KEY),
     TG_CONFIGURED: Boolean(data.TG_BOT_TOKEN),
+    PUSH_CONFIGURED: Boolean(data.FCM_SERVER_KEY),
   };
 }
 

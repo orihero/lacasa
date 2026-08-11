@@ -294,3 +294,161 @@ describe("Ad.tour3dLink (docs/10 §3)", () => {
     expect(patched.body.tour3dLink).toBeNull();
   });
 });
+
+// This slice: server-side search/sort/paging on GET /api/ads and
+// GET /api/my/ads (see adService.js#listAds). Rows are written directly via
+// `prisma.ad.create` (bypassing the HTTP create endpoint) so `createdAt` and
+// `stage` can be pinned to exact values the API's own POST doesn't let a
+// caller set -- both are load-bearing for these tests (a shared `createdAt`
+// to force the keyset-tiebreak case, an explicit `stage` to prove the
+// public/CRM split without waiting on a real PATCH-to-sold flow).
+function directAdData(overrides = {}) {
+  return {
+    title: "Row",
+    district: "Yunusabad",
+    type: "RESIDENTIAL",
+    category: "SALE",
+    price: 100000,
+    priceType: "UZS",
+    stage: "ACTIVE",
+    agentId: agent.id,
+    nearPlaces: [],
+    options: [],
+    ...overrides,
+  };
+}
+
+describe("GET /api/ads — q/sort/limit/cursor (this slice)", () => {
+  const CURSOR_CITY = "CursorPagingCity";
+  const SEARCH_CITY = "SearchQCity";
+  let cursorAdIds;
+
+  beforeAll(async () => {
+    // Five ads sharing one exact timestamp -- the case a bare `?cursor=
+    // <createdAt>` can't handle (Postgres gives no ordering guarantee among
+    // tied rows), which is exactly why the cursor also carries `id`.
+    const sameInstant = new Date("2026-03-01T10:00:00.000Z");
+    const created = await Promise.all(
+      Array.from({ length: 5 }, (_, i) =>
+        prisma.ad.create({
+          data: directAdData({ title: `Cursor Ad ${i}`, city: CURSOR_CITY, price: 100000 + i, createdAt: sameInstant }),
+        }),
+      ),
+    );
+    cursorAdIds = created.map((a) => a.id).sort();
+
+    await prisma.ad.create({
+      data: directAdData({
+        title: "Searchable Description Match",
+        city: SEARCH_CITY,
+        district: "UniqueDistrictXyz",
+        address: "123 Findme Ave",
+        description: "A description mentioning UNIQUETERM inside it",
+      }),
+    });
+  });
+
+  it("pages a duplicate-timestamp set across the boundary with no drops and no duplicates", async () => {
+    const seen = [];
+    let cursor;
+    for (let i = 0; i < 10; i += 1) {
+      const res = await supertest(app)
+        .get("/api/ads")
+        .query({ city: CURSOR_CITY, limit: 2, sort: "newest", ...(cursor ? { cursor } : {}) });
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.items)).toBe(true);
+      expect(res.body.items.length).toBeLessThanOrEqual(2);
+      seen.push(...res.body.items.map((a) => a.id));
+      cursor = res.body.nextCursor;
+      if (!cursor) break;
+    }
+    expect(seen.sort()).toEqual(cursorAdIds);
+  });
+
+  it("matches q case-insensitively across title/description/address/district/city", async () => {
+    const byDescription = await supertest(app).get("/api/ads").query({ q: "uniqueterm" });
+    expect(byDescription.body.some((a) => a.city === SEARCH_CITY)).toBe(true);
+
+    const byDistrict = await supertest(app).get("/api/ads").query({ q: "UNIQUEDISTRICTXYZ" });
+    expect(byDistrict.body.some((a) => a.city === SEARCH_CITY)).toBe(true);
+
+    const byAddress = await supertest(app).get("/api/ads").query({ q: "findme" });
+    expect(byAddress.body.some((a) => a.city === SEARCH_CITY)).toBe(true);
+
+    const byCity = await supertest(app).get("/api/ads").query({ q: SEARCH_CITY.toLowerCase() });
+    expect(byCity.body.some((a) => a.city === SEARCH_CITY)).toBe(true);
+
+    const byTitle = await supertest(app).get("/api/ads").query({ q: "searchable description match".toUpperCase() });
+    expect(byTitle.body.some((a) => a.city === SEARCH_CITY)).toBe(true);
+
+    const noMatch = await supertest(app).get("/api/ads").query({ q: "definitely-not-present-anywhere-xyz" });
+    expect(noMatch.body.some((a) => a.city === SEARCH_CITY)).toBe(false);
+  });
+
+  it("falls back to the default sort for an unrecognised ?sort= instead of erroring", async () => {
+    const res = await supertest(app).get("/api/ads").query({ city: CURSOR_CITY, sort: "not-a-real-sort" });
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true); // no limit/cursor -> still the bare-array legacy shape
+    expect(res.body).toHaveLength(5);
+  });
+
+  it("caps limit at 100 even when a caller asks for more", async () => {
+    const res = await supertest(app).get("/api/ads").query({ city: CURSOR_CITY, limit: 500 });
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(5); // only 5 rows exist for this city, well under the cap
+    expect(res.body.nextCursor).toBeNull();
+  });
+
+  it("a legacy caller passing none of the new params gets the exact same bare-array response it always got", async () => {
+    const res = await supertest(app).get("/api/ads").query({ city: CURSOR_CITY });
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(5);
+    expect(res.body.every((a) => typeof a.id === "string" && a.city === CURSOR_CITY)).toBe(true);
+  });
+});
+
+describe("GET /api/ads vs GET /api/my/ads — stage scoping, stage filter, sort aliases (this slice)", () => {
+  const STAGE_CITY = "StageSplitCity";
+
+  beforeAll(async () => {
+    await Promise.all([
+      prisma.ad.create({ data: directAdData({ title: "Stage Active", city: STAGE_CITY, stage: "ACTIVE", price: 300 }) }),
+      prisma.ad.create({ data: directAdData({ title: "Stage Sold", city: STAGE_CITY, stage: "SOLD", price: 200 }) }),
+      prisma.ad.create({ data: directAdData({ title: "Stage Draft", city: STAGE_CITY, stage: "DRAFT", price: 100 }) }),
+    ]);
+  });
+
+  it("GET /api/ads (public) only ever returns the ACTIVE one, even if a caller passes ?stage=", async () => {
+    const res = await supertest(app).get("/api/ads").query({ city: STAGE_CITY, stage: "2" }); // "2" = SOLD -- must not leak it
+    expect(res.body.map((a) => a.title)).toEqual(["Stage Active"]);
+  });
+
+  it("GET /api/my/ads (authenticated) returns every stage by default", async () => {
+    const res = await supertest(app).get("/api/my/ads").set("Authorization", authHeader(agent)).query({ city: STAGE_CITY });
+    expect(res.status).toBe(200);
+    expect(res.body.map((a) => a.title).sort()).toEqual(["Stage Active", "Stage Draft", "Stage Sold"]);
+  });
+
+  it("GET /api/my/ads?stage= narrows to one stage (the CRM filter sheet)", async () => {
+    const res = await supertest(app)
+      .get("/api/my/ads")
+      .set("Authorization", authHeader(agent))
+      .query({ city: STAGE_CITY, stage: "3" }); // "3" = DRAFT
+    expect(res.body.map((a) => a.title)).toEqual(["Stage Draft"]);
+  });
+
+  it("still honors the legacy highestPrice/lowestPrice sort values apps/web and apps/console already send", async () => {
+    const desc = await supertest(app)
+      .get("/api/my/ads")
+      .set("Authorization", authHeader(agent))
+      .query({ city: STAGE_CITY, sort: "highestPrice" });
+    expect(desc.body.map((a) => a.title)).toEqual(["Stage Active", "Stage Sold", "Stage Draft"]);
+
+    const asc = await supertest(app)
+      .get("/api/my/ads")
+      .set("Authorization", authHeader(agent))
+      .query({ city: STAGE_CITY, sort: "lowestPrice" });
+    expect(asc.body.map((a) => a.title)).toEqual(["Stage Draft", "Stage Sold", "Stage Active"]);
+  });
+});

@@ -19,6 +19,9 @@ import leadsRouter from "./routes/leads.js";
 import savedAdsRouter from "./routes/savedAds.js";
 import statisticsRouter from "./routes/statistics.js";
 import contactRouter from "./routes/contact.js";
+import notificationsRouter from "./routes/notifications.js";
+import regionsRouter from "./routes/regions.js";
+import pushRouter from "./routes/push.js";
 
 // Builds a fully wired Express app. Takes NO action beyond that: no
 // app.listen(), no scheduleIgTokenRefresh() — those are src/server.js's job.
@@ -39,6 +42,12 @@ export function createApp(ctx = {}) {
   if (!llm.configured) {
     console.warn(
       "[warn] ANTHROPIC_API_KEY is not set — extension-assisted cross-posting will fail at the caption/field-mapping step.",
+    );
+  }
+
+  if (!config.PUSH_CONFIGURED) {
+    console.warn(
+      "[warn] FCM_SERVER_KEY is not set — push notifications are stored/wired but every send degrades to a logged no-op (pushService.js).",
     );
   }
 
@@ -71,6 +80,9 @@ export function createApp(ctx = {}) {
   app.use("/api/saved-ads", savedAdsRouter);
   app.use("/api/statistics", statisticsRouter);
   app.use("/api/contact", contactRouter);
+  app.use("/api/notifications", notificationsRouter);
+  app.use("/api/regions", regionsRouter);
+  app.use("/api/push", pushRouter);
 
   // The `_next` parameter is load-bearing and must stay, unused as it is:
   // Express recognises error-handling middleware by arity alone (fn.length

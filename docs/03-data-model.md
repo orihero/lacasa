@@ -24,6 +24,7 @@ the mapping decisions.
 | role | enum `user_role` (USER, AGENT, COWORKER) | role | |
 | phone_number | text? | phoneNumber | |
 | avatar_url | text? | avatar | MinIO public URL |
+| address | text? | address | free text; writable via `PATCH /users/me` |
 | agent_id | uuid? FK→users | agentId | self-reference; set only for coworkers |
 | tg_chat_ids | bigint[] | tgChatIds | agent's connected TG channels |
 | realtor_kind | enum `realtor_kind` (SOLO, AGENCY)? | — | null for buyers; set from the sign-up choice |
@@ -53,6 +54,55 @@ never sent to clients:
 | agent_id | uuid FK→users | |
 | access_token | text | server-only; excluded from all API responses |
 | created_at | timestamptz | |
+
+### `device_tokens`  ← new (no Firestore ancestor)
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| user_id | uuid FK→users ON DELETE CASCADE | any role — buyer, agent, or coworker |
+| token | text | opaque provider token (an FCM registration token in practice); this table doesn't interpret it |
+| platform | enum `device_platform` (IOS, ANDROID) | which OS the token came from, for diagnostics — Firebase relays iOS delivery through APNs itself, so this is not a second delivery mechanism to implement |
+| created_at / updated_at | timestamptz | |
+
+Server-side push-notification plumbing (`20260811130000_push_device_tokens`).
+`UNIQUE (user_id, token)` is what makes `POST /push/devices` idempotent —
+re-registering a device (an app relaunch resending its current token) is the
+same fact, not a second row, same shape as `saved_ads`'s dedup. This is
+deliberately plumbing only: no client in this monorepo calls either push
+route yet, and `pushService.js#sendPushToUser` degrades every send to a
+logged no-op until `FCM_SERVER_KEY` is configured (see docs/04 §Push and
+`apps/api/src/lib/config.js`). The table exists now so device registration
+and delivery can be built incrementally without a later migration blocking
+either half.
+
+### `agent_reviews`  ← new (no Firestore ancestor)
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid PK | |
+| agent_id | uuid FK→users ON DELETE CASCADE | the agent being reviewed |
+| author_id | uuid FK→users ON DELETE CASCADE | who wrote the review |
+| rating | int | 1..5; enforced twice — a DB `CHECK` constraint (`agent_reviews_rating_check`, Prisma has no range-constraint syntax) as the backstop, and again in `reviewService.js` so a bad value comes back as a normal `{ error }` envelope instead of a raw Postgres constraint violation |
+| comment | text? | |
+| created_at / updated_at | timestamptz | |
+
+A buyer or another agent's review of an agent (mockups/SCREENS.md §3.9's
+"Review: {rating}/5" row). `UNIQUE (agent_id, author_id)` is what makes
+`POST /agents/:id/reviews` an upsert — a second post from the same author
+edits their existing review instead of stacking a new one, so the aggregate
+can't be swung by one account posting repeatedly. `INDEX (agent_id,
+created_at)` serves both reads this table has: the per-agent rating
+aggregate and the newest-first review list. Both FKs cascade: a deleted
+agent's reviews and a deleted author's reviews are both meaningless once
+either side is gone.
+
+`GET /agents` and `GET /agents/:id` expose the aggregate as `ratingAverage`
+(rounded to one decimal) / `ratingCount`, computed with `groupBy` rather than
+stored — an agent with zero reviews reads as `ratingAverage: null,
+ratingCount: 0`, never `0`/`0.0`, since a `groupBy` COUNT can't produce a
+zero-row group and null is what lets the client render "No reviews yet"
+instead of a fabricated one-star card.
 
 ### `ads`  ← Firestore `ads`
 
@@ -213,10 +263,12 @@ Cities/districts (14 regions, 203 districts) stay bundled JSON rather than
 tables — the data is static and only feeds dropdowns. It lives in
 `packages/domain/src/data/regions.json`, imported as
 `@lacasa/domain/data/regions`, so every JS surface shares one copy instead of
-each carrying its own (docs/10 §5 Decision 2/3). Only apps/web consumes it
-today; the Flutter app will need its own copy, since it can't import from npm.
-No API route:
-nothing about it changes at runtime.
+each carrying its own (docs/10 §5 Decision 2/3). apps/web and apps/api both
+still import it directly at build time — a round trip buys a JS consumer
+nothing for data this static. `GET /api/regions` (docs/04) exists for the one
+consumer that reasoning doesn't cover: apps/mobile_flutter is Dart and cannot
+`import` an npm package, so it fetches the same vocabulary over HTTP instead,
+served straight off the same bundled JSON rather than a second copy.
 
 Promote to `regions`/`districts` tables later if server-side filter validation
 is wanted — `Ad.city`/`Ad.district` are still free text on write.

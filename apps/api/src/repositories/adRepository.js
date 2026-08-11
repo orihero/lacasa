@@ -5,8 +5,14 @@
 
 export const AD_INCLUDE = { photos: true };
 
-export function findManyAds(prisma, { where, orderBy }) {
-  return prisma.ad.findMany({ where, include: AD_INCLUDE, orderBy });
+// `take` is optional and omitted from the call entirely when absent (rather
+// than passed as `take: undefined`) so the existing non-paged callers/tests
+// that assert the exact findMany() call shape (no `take` key at all) keep
+// matching -- adding `take: undefined` to every call would still behave the
+// same at the Postgres level but would change the object shape those
+// assertions check.
+export function findManyAds(prisma, { where, orderBy, take }) {
+  return prisma.ad.findMany({ where, include: AD_INCLUDE, orderBy, ...(take ? { take } : {}) });
 }
 
 export function findAdById(prisma, id) {

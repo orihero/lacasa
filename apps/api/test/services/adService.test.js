@@ -58,6 +58,11 @@ describe("buildAdFilters", () => {
     const where = adService.buildAdFilters({ category: "not-a-real-category" });
     expect(where).toEqual({});
   });
+
+  it("maps a valid stage form-value ('1'/'2'/'3', never the raw Postgres enum name) and ignores an invalid one", () => {
+    expect(adService.buildAdFilters({ stage: "2" })).toEqual({ stage: "SOLD" });
+    expect(adService.buildAdFilters({ stage: "bogus" })).toEqual({});
+  });
 });
 
 describe("listAds", () => {
@@ -89,6 +94,155 @@ describe("listAds", () => {
       include: { photos: true },
       orderBy: { price: "desc" },
     });
+  });
+
+  it("lets an agentId-scoped caller filter by stage (the CRM filter sheet) without the public-feed ACTIVE override kicking in", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { stage: "3" }, { agentId: "agent-1" });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { agentId: "agent-1", stage: "DRAFT" } }),
+    );
+  });
+
+  it("a stray ?stage= on the public feed (no agentId) can never leak a non-ACTIVE ad", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { stage: "3" });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { stage: "ACTIVE" } }));
+  });
+
+  it("falls back to the default sort (createdAt desc) when `sort` is unrecognised, instead of erroring or passing the raw value to Prisma", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { sort: "'; drop table ads; --" });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ orderBy: { createdAt: "desc" } }));
+  });
+
+  it("still accepts the legacy highestPrice/lowestPrice sort values apps/web and apps/console already send to /my/ads", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { sort: "highestPrice" }, { agentId: "agent-1" });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ orderBy: { price: "desc" } }));
+
+    await adService.listAds({ prisma }, { sort: "lowestPrice" }, { agentId: "agent-1" });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ orderBy: { price: "asc" } }));
+  });
+
+  it("maps the new areaAsc/areaDesc sort values onto the area column", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { sort: "areaAsc" });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ orderBy: { area: "asc" } }));
+
+    await adService.listAds({ prisma }, { sort: "areaDesc" });
+    expect(findMany).toHaveBeenLastCalledWith(expect.objectContaining({ orderBy: { area: "desc" } }));
+  });
+
+  it("filters case-insensitively across title/description/address/district/city when q is given, trimmed", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { q: "  Sunny  " });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            { title: { contains: "Sunny", mode: "insensitive" } },
+            { description: { contains: "Sunny", mode: "insensitive" } },
+            { address: { contains: "Sunny", mode: "insensitive" } },
+            { district: { contains: "Sunny", mode: "insensitive" } },
+            { city: { contains: "Sunny", mode: "insensitive" } },
+          ],
+        }),
+      }),
+    );
+  });
+
+  it("ignores a blank/whitespace-only q instead of matching everything", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { q: "   " });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { stage: "ACTIVE" } }));
+  });
+
+  it("stays a bare array when no paging param is present -- legacy callers (apps/web, apps/console, apps/mobile_flutter) see no change", async () => {
+    const findMany = vi.fn().mockResolvedValue([makeAd()]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    const result = await adService.listAds({ prisma }, {});
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(findMany.mock.calls[0][0].take).toBeUndefined();
+  });
+
+  it("returns the { items, nextCursor } envelope once `limit` is present, and caps limit at 100", async () => {
+    const rows = Array.from({ length: 101 }, (_, i) => makeAd({ id: `ad-${i}` }));
+    const findMany = vi.fn().mockResolvedValue(rows); // simulates take: 101 finding a full 101st "is there more" row
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    const result = await adService.listAds({ prisma }, { limit: "500" }); // over MAX_LIMIT
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 101 }));
+    expect(result.items).toHaveLength(100);
+    expect(result.nextCursor).toEqual(expect.any(String));
+  });
+
+  it("returns nextCursor: null once the result set is shorter than `limit` (last page)", async () => {
+    const findMany = vi.fn().mockResolvedValue([makeAd()]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    const result = await adService.listAds({ prisma }, { limit: "20" });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("also pages via ?cursor= or ?paged=true alone, without ?limit=, defaulting limit to 20", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { paged: "true" });
+    expect(findMany.mock.calls[0][0].take).toBe(21);
+  });
+
+  it("keyset-cursors on (sort field, id), AND-ing the seek condition onto the existing filters rather than clobbering them", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+    const cursorRow = makeAd({ id: "ad-cursor", createdAt: new Date("2026-02-01T00:00:00Z") });
+    const cursor = Buffer.from(
+      JSON.stringify({ v: cursorRow.createdAt.toISOString(), id: cursorRow.id }),
+    ).toString("base64url");
+
+    await adService.listAds({ prisma }, { city: "Tashkent", limit: "10", cursor });
+
+    const { where, orderBy } = findMany.mock.calls[0][0];
+    expect(orderBy).toEqual([{ createdAt: "desc" }, { id: "desc" }]); // default sort ("newest") + id tiebreaker
+    expect(where.AND[0]).toEqual({ city: "Tashkent", stage: "ACTIVE" });
+    expect(where.AND[1]).toEqual({
+      OR: [{ createdAt: { lt: cursorRow.createdAt } }, { createdAt: cursorRow.createdAt, id: { lt: cursorRow.id } }],
+    });
+  });
+
+  it("treats an undecodable/forged cursor as 'start from the top' rather than 400ing", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = createFakePrisma({ ad: { findMany } });
+
+    await adService.listAds({ prisma }, { limit: "10", cursor: "not-a-real-cursor" });
+
+    expect(findMany.mock.calls[0][0].where).toEqual({ stage: "ACTIVE" });
   });
 });
 

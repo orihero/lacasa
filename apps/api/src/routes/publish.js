@@ -141,6 +141,31 @@ router.post("/reassign", async (req, res, next) => {
   }
 });
 
+// Dedicated retry path for the publish-status grid's Retry action (see
+// publishService.retryPublish's header comment for why a plain re-call of
+// POST /telegram or /instagram can't safely serve this -- neither knows
+// "re-attempt this exact failed request" from "publish fresh"). No request
+// body: the request being retried is the one already stashed on the failed
+// AdPublication row, not whatever the client happens to send this time --
+// that is the whole point, so there is nothing for the client to supply
+// beyond which ad/channel to retry.
+router.post("/ads/:adId/:channel/retry", async (req, res, next) => {
+  try {
+    const actor = actorFields(req.currentUser);
+    if (!actor) {
+      return res.status(403).json({ error: { code: "forbidden", message: "Only agents and coworkers can retry a publish" } });
+    }
+    const result = await publishService.retryPublish(req.ctx, {
+      adId: req.params.adId,
+      channelKey: req.params.channel,
+      actor,
+    });
+    res.json(result);
+  } catch (e) {
+    handleServiceError(e, res, next);
+  }
+});
+
 router.get("/ads/:adId/status", async (req, res, next) => {
   try {
     res.json(await publishService.getAdStatus(req.ctx, req.params.adId));
