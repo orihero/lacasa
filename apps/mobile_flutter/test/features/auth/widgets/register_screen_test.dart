@@ -17,6 +17,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/auth_test_data.dart';
 import '../support/fake_auth_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 /// [AuthRepository.register] never resolves until [complete] is called —
 /// used to put the full-screen spinner (§3.13's literal instruction) on
@@ -77,6 +78,7 @@ void main() {
     WidgetTester tester, {
     FakeAuthRepository? repository,
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final repo = repository ?? FakeAuthRepository();
     final container = ProviderContainer(
@@ -114,7 +116,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -160,7 +162,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -434,6 +436,47 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  // Same widths, ru/uz — the Realtor/Agency form is the screen's most
+  // crowded state (chips, hint text, extra fields), so it is the state most
+  // likely to overflow once the same words run 30-50%+ longer.
+  group('layout holds at real phone widths under ru/uz with the agency form open', () {
+    const localizedRealtorLabel = {'ru': 'Риелтор', 'uz': 'Rieltor'};
+    const localizedAgencyLabel = {'ru': 'Агентство', 'uz': 'Agentlik'};
+
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpRegister(tester, locale: locale);
+          await tester.tap(find.text(localizedRealtorLabel[locale.languageCode]!));
+          await tester.pumpAndSettle();
+          // Wrap (see register_screen.dart's fix for this exact overflow)
+          // can push the Agency chip below the fold at the narrowest
+          // widths, so scroll it into view before tapping rather than
+          // relying on tap()'s off-screen warning being harmless.
+          final agencyChip = find.text(
+            localizedAgencyLabel[locale.languageCode]!,
+          );
+          await tester.ensureVisible(agencyChip);
+          await tester.tap(agencyChip);
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

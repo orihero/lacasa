@@ -4,42 +4,60 @@
 // degrade rather than throw, because one bad array must not blank a screen
 // whose other nine sections are fine.
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/listing_detail/formatters/listing_detail_formatters.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 import '../support/listing_detail_test_ads.dart';
 
 void main() {
+  // typeLabel/categoryLabel/repairmentLabel/furnitureLabel take an
+  // AppLocalizations rather than a BuildContext (see the formatter file's
+  // own doc comment on why) — `lookupAppLocalizations` resolves one
+  // synchronously, without pumping a widget tree, exactly what a plain unit
+  // test needs.
+  final l10n = lookupAppLocalizations(const Locale('en'));
+
   group('info tag labels (SCREENS.md §3.7)', () {
     test('map each enum to the display label the spec fixes', () {
       expect(
-        ListingDetailFormatters.typeLabel(AdType.residential),
+        ListingDetailFormatters.typeLabel(l10n, AdType.residential),
         'Residential',
       );
       expect(
-        ListingDetailFormatters.typeLabel(AdType.nonresidential),
+        ListingDetailFormatters.typeLabel(l10n, AdType.nonresidential),
         'Nonresidential',
       );
-      expect(ListingDetailFormatters.categoryLabel(AdCategory.sale), 'Sale');
-      expect(ListingDetailFormatters.categoryLabel(AdCategory.rent), 'Rent');
       expect(
-        ListingDetailFormatters.repairmentLabel(Repairment.notRepaired),
+        ListingDetailFormatters.categoryLabel(l10n, AdCategory.sale),
+        'Sale',
+      );
+      expect(
+        ListingDetailFormatters.categoryLabel(l10n, AdCategory.rent),
+        'Rent',
+      );
+      expect(
+        ListingDetailFormatters.repairmentLabel(l10n, Repairment.notRepaired),
         'Not repaired',
       );
       expect(
-        ListingDetailFormatters.repairmentLabel(Repairment.excellent),
+        ListingDetailFormatters.repairmentLabel(l10n, Repairment.excellent),
         'Excellent',
       );
       // The mixed capitalization is the spec's own, reproduced deliberately
       // so three implementations render identical strings.
       expect(
-        ListingDetailFormatters.furnitureLabel(Furniture.withFurniture),
+        ListingDetailFormatters.furnitureLabel(l10n, Furniture.withFurniture),
         'With furniture',
       );
       expect(
-        ListingDetailFormatters.furnitureLabel(Furniture.withoutFurniture),
+        ListingDetailFormatters.furnitureLabel(
+          l10n,
+          Furniture.withoutFurniture,
+        ),
         'Without Furniture',
       );
     });
@@ -47,12 +65,21 @@ void main() {
     test('answer null rather than inventing a label', () {
       // An unstated attribute and one this build doesn't recognize are the
       // same thing to a reader: no tag at all.
-      expect(ListingDetailFormatters.repairmentLabel(null), isNull);
-      expect(ListingDetailFormatters.furnitureLabel(null), isNull);
-      expect(ListingDetailFormatters.repairmentLabel(Repairment.unknown), isNull);
-      expect(ListingDetailFormatters.furnitureLabel(Furniture.unknown), isNull);
-      expect(ListingDetailFormatters.typeLabel(AdType.unknown), isNull);
-      expect(ListingDetailFormatters.categoryLabel(AdCategory.unknown), isNull);
+      expect(ListingDetailFormatters.repairmentLabel(l10n, null), isNull);
+      expect(ListingDetailFormatters.furnitureLabel(l10n, null), isNull);
+      expect(
+        ListingDetailFormatters.repairmentLabel(l10n, Repairment.unknown),
+        isNull,
+      );
+      expect(
+        ListingDetailFormatters.furnitureLabel(l10n, Furniture.unknown),
+        isNull,
+      );
+      expect(ListingDetailFormatters.typeLabel(l10n, AdType.unknown), isNull);
+      expect(
+        ListingDetailFormatters.categoryLabel(l10n, AdCategory.unknown),
+        isNull,
+      );
     });
   });
 

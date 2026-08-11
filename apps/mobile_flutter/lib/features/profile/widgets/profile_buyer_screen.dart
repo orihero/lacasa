@@ -15,14 +15,14 @@
 /// degrades to an em dash rather than a null-check crash, the same call
 /// `agent_info_block.dart` makes for a missing phone.
 ///
-/// **"Register as Agent" copies a link instead of opening it** — this app
-/// has no `url_launcher` dependency (see `listing_detail_nav.dart`'s Share
-/// button for the established precedent and its own fuller rationale). The
-/// URL itself, `https://forms.gle/1Kr71PzWjqqCQcVTA`, is not invented for
-/// this task: it's the exact Google Form `apps/web/src/routes/profilePage/
+/// **"Register as Agent" opens the form via [LinkLauncher.open]** — a real
+/// external-browser launch, no longer a copy-to-clipboard stand-in. The URL
+/// itself, `https://forms.gle/1Kr71PzWjqqCQcVTA`, is not invented for this
+/// task: it's the exact Google Form `apps/web/src/routes/profilePage/
 /// profilePage.jsx`'s own "Register as Agent" link already points real
-/// buyers at, copied here so mobile's stand-in opens the same real form a
-/// desktop user would have reached.
+/// buyers at, so mobile opens the same real form a desktop user would have
+/// reached. If nothing on the device can open it, this falls back to
+/// copying the link instead, with the toast saying so honestly.
 ///
 /// **The tension SCREENS.md leaves unresolved, worth flagging explicitly**:
 /// §3.13 (`register`) now builds a full realtor-signup flow into account
@@ -44,8 +44,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
+import '../../../shared/platform/link_launcher.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../language/language.dart';
@@ -79,7 +81,7 @@ class ProfileBuyerScreen extends ConsumerWidget {
                 0,
               ),
               child: Text(
-                'Profile',
+                AppLocalizations.of(context).profileBuyerScreenTitle,
                 style: type.navTitle.copyWith(color: colors.ink),
               ),
             ),
@@ -95,36 +97,50 @@ class ProfileBuyerScreen extends ConsumerWidget {
                 children: [
                   _BuyerInfoCard(user: user),
                   const SizedBox(height: AppSpacing.section),
-                  const ListRowGroupLabel('Account'),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(context).profileBuyerAccountGroupLabel,
+                  ),
                   ListRow(
                     icon: Icons.bookmark_border_rounded,
-                    title: 'Saved Listings',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileBuyerSavedListingsRowTitle,
                     onTap: () => context.push(RoutePaths.profileSaved),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.edit_outlined,
-                    title: 'Update Profile',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileBuyerUpdateProfileRowTitle,
                     onTap: () => context.push(RoutePaths.profileEdit),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.translate_rounded,
-                    title: 'Language',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileBuyerLanguageRowTitle,
                     onTap: () => showLanguageSheet(context),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.work_outline_rounded,
-                    title: 'Register as Agent',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileBuyerRegisterAsAgentRowTitle,
                     trailingIcon: Icons.north_east_rounded,
-                    onTap: () => _copyRegisterAsAgentLink(context),
+                    onTap: () => _openRegisterAsAgentLink(context, ref),
                   ),
                   const SizedBox(height: AppSpacing.section),
-                  const ListRowGroupLabel('Session'),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(context).profileBuyerSessionGroupLabel,
+                  ),
                   ListRow(
                     icon: Icons.logout_rounded,
-                    title: 'Logout',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileBuyerLogoutRowTitle,
                     danger: true,
                     trailingIcon: null,
                     onTap: () => confirmAndSignOut(context, ref),
@@ -138,16 +154,23 @@ class ProfileBuyerScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _copyRegisterAsAgentLink(BuildContext context) async {
+  Future<void> _openRegisterAsAgentLink(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final opened = await ref
+        .read(linkLauncherProvider)
+        .open(Uri.parse(_registerAsAgentFormUrl));
+    if (!context.mounted || opened) return;
+
+    // No browser on this device, or the OS declined the launch — fall back
+    // to the previous copy-and-toast behaviour rather than a tap that
+    // looks like it did nothing.
     await Clipboard.setData(const ClipboardData(text: _registerAsAgentFormUrl));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Registration form link copied — paste it into your browser to '
-          'apply.',
-        ),
-      ),
+    LaCasaToast.showSuccess(
+      context,
+      AppLocalizations.of(context).profileBuyerRegisterLinkCopiedToast,
     );
   }
 }

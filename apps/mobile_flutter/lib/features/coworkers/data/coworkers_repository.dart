@@ -4,24 +4,25 @@
 /// network) and [LiveCoworkersRepository] (the real [LaCasaApi]) — see
 /// `coworkers_mode.dart` for which one the app wires up by default.
 ///
-/// **Five CRUD methods plus two read-only "raw material" methods.**
-/// [ads]/[activity] exist purely so a caller can derive `listingsCount`/
-/// `lastActive` client-side — [Coworker] itself carries neither field (see
-/// that model's own doc comment), matching `apps/console`'s own
-/// `deriveCoworkerMetrics` helper (`apps/console/src/data/useCoworkers.ts`)
-/// exactly: real numbers, folded from data that already has a wire
-/// contract, never invented. Kept as two separate methods rather than
-/// bundled into [list]'s own return shape so a failure in either degrades
-/// only the derived figure it feeds, never the roster itself — the same
-/// failure-isolation rule `agents_repository.dart`'s `fetchAgentAds` split
-/// follows.
+/// **Five CRUD methods plus one read-only aggregate.** [summary] backs
+/// `coworkers-list`'s "Ads count" row and `coworker-detail`'s "N listings ·
+/// Active {relative time}" summary line — [Coworker] itself carries neither
+/// figure (see that model's own doc comment). This used to be two separate
+/// methods ([ads]/[activity], long since removed) that a screen folded by
+/// `coworkerId` itself; `GET /statistics/coworkers/summary` now does that
+/// fold server-side, so this repository has one aggregate method instead of
+/// two raw-material ones. Kept independent of [list] (not bundled into its
+/// return shape) so a failed summary fetch degrades only the derived
+/// figures, never the roster itself — the same failure-isolation rule
+/// `agents_repository.dart`'s `fetchAgentAds` split follows.
 ///
-/// **"Deals closed" has no method here at all.** WORK_TAB_CONTRACT.md's
-/// ruling 7.6 is explicit: that number is `LeadStatus.SUCCESS`-shaped and
-/// no such status exists anywhere in this schema (Prisma, wire, or
-/// otherwise) — there is nothing to derive, so no method pretends to derive
-/// it. A screen wanting to say so renders an em dash directly, not a call
-/// to a method that would have to invent a zero.
+/// **"Sale count" used to have no method here at all — that was wrong.**
+/// WORK_TAB_CONTRACT.md's ruling 7.6 originally read "no such status exists
+/// anywhere in this schema" as "there is nothing to derive this from," but
+/// `ActivityEventStage.adSold` events always carried `coworkerId`, and
+/// `GET /statistics/coworkers/summary` folds them into
+/// [CoworkerSummary.adsSoldCount] — real data, now covered by [summary]
+/// along with the other two figures.
 library;
 
 import '../../../api/api.dart';
@@ -70,16 +71,10 @@ abstract class CoworkersRepository {
   /// unknown id or one outside the caller's team.
   Future<void> delete(String id);
 
-  /// Every ad visible to the caller's agent/coworker session — used purely
-  /// to derive each coworker's listings count client-side
-  /// (`Ad.coworkerId == coworker.id`), per WORK_TAB_CONTRACT.md ruling 7.6.
-  /// Independent of [list] so an ads-fetch failure degrades only the
-  /// derived count, never the roster.
-  Future<List<Ad>> ads();
-
-  /// Every [ActivityEvent] for the caller's agent — used purely to derive
-  /// each coworker's "last active" timestamp client-side (the latest
-  /// [ActivityEvent.createdAt] for a matching `coworkerId`), per ruling
-  /// 7.6. Independent of [list]/[ads] for the same reason.
-  Future<List<ActivityEvent>> activity();
+  /// `GET /statistics/coworkers/summary` — one [CoworkerSummary] row per
+  /// coworker on the caller's team (ads created/sold, leads created,
+  /// last-active timestamp). Independent of [list] so a failed summary
+  /// fetch degrades only the derived figures, never the roster — see this
+  /// file's own doc comment.
+  Future<List<CoworkerSummary>> summary();
 }

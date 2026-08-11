@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
@@ -23,6 +24,7 @@ class AgentPitchBanner extends ConsumerWidget {
 
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
@@ -41,12 +43,12 @@ class AgentPitchBanner extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Are you a real estate agent?',
+                    l10n.homeAgentPitchHeading,
                     style: type.panelHeading.copyWith(color: colors.ink),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Manage your listings, leads and team in one app.',
+                    l10n.homeAgentPitchSubtitle,
                     style: type.bodySmall.copyWith(color: colors.ink2),
                   ),
                 ],
@@ -67,7 +69,7 @@ class AgentPitchBanner extends ConsumerWidget {
                   boxShadow: AppShadows.accentGlow,
                 ),
                 child: Text(
-                  'Get Started',
+                  l10n.homeAgentPitchButtonLabel,
                   style: type.rowTitle.copyWith(color: Colors.white),
                 ),
               ),

@@ -22,6 +22,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/filter_count_provider.dart';
 
@@ -41,6 +42,7 @@ class FilterSheetFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     if (!showLiveCount) {
       return _FooterRow(
@@ -48,7 +50,7 @@ class FilterSheetFooter extends ConsumerWidget {
         type: type,
         onReset: onReset,
         onApply: onApply,
-        label: 'Apply Filters',
+        label: l10n.filterApplyButtonLabel,
         isLoading: false,
       );
     }
@@ -56,10 +58,11 @@ class FilterSheetFooter extends ConsumerWidget {
     final countAsync = ref.watch(filterCountProvider);
 
     final label = countAsync.when(
-      data: (count) =>
-          count == null ? 'Apply Filters' : 'Apply Filters ($count)',
-      loading: () => 'Apply Filters',
-      error: (_, _) => 'Apply Filters',
+      data: (count) => count == null
+          ? l10n.filterApplyButtonLabel
+          : l10n.filterApplyButtonWithCountLabel(count),
+      loading: () => l10n.filterApplyButtonLabel,
+      error: (_, _) => l10n.filterApplyButtonLabel,
     );
 
     return _FooterRow(
@@ -102,7 +105,7 @@ class _FooterRow extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
               child: Text(
-                'Reset',
+                AppLocalizations.of(context).filterResetButtonLabel,
                 style: type.rowTitle.copyWith(color: colors.ink2),
               ),
             ),

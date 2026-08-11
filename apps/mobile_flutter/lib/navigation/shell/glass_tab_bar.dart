@@ -23,27 +23,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 import '../auth_session.dart';
 import 'tab_item.dart';
 
-const List<TabItem> _alwaysOn = [
-  TabItem(branchIndex: 0, label: 'Home', icon: Icons.home_rounded),
-  TabItem(branchIndex: 1, label: 'Search', icon: Icons.search_rounded),
+// These were `const List<TabItem>` literals before localization — a
+// localized label needs a BuildContext/AppLocalizations, which a `const`
+// initializer can't provide, so each becomes a small function taking
+// [l10n] instead. [tabItemsFor]'s only caller (`GlassTabBar.build`) already
+// has a context to read AppLocalizations from.
+List<TabItem> _alwaysOn(AppLocalizations l10n) => [
+  TabItem(branchIndex: 0, label: l10n.navTabHomeLabel, icon: Icons.home_rounded),
+  TabItem(branchIndex: 1, label: l10n.navTabSearchLabel, icon: Icons.search_rounded),
 ];
 
-const _work = TabItem(branchIndex: 2, label: 'Work', icon: Icons.work_rounded);
+TabItem _work(AppLocalizations l10n) =>
+    TabItem(branchIndex: 2, label: l10n.navTabWorkLabel, icon: Icons.work_rounded);
 
-const List<TabItem> _tail = [
-  TabItem(branchIndex: 3, label: 'Agents', icon: Icons.groups_rounded),
-  TabItem(branchIndex: 4, label: 'Profile', icon: Icons.person_rounded),
+List<TabItem> _tail(AppLocalizations l10n) => [
+  TabItem(branchIndex: 3, label: l10n.navTabAgentsLabel, icon: Icons.groups_rounded),
+  TabItem(branchIndex: 4, label: l10n.navTabProfileLabel, icon: Icons.person_rounded),
 ];
 
 /// Signed-out/buyer -> 4 tabs (no Work); agent/coworker -> 5 tabs. Exactly
 /// SCREENS.md §1.
-List<TabItem> tabItemsFor(UserRole? role) {
+List<TabItem> tabItemsFor(UserRole? role, AppLocalizations l10n) {
   final canWork = role == UserRole.agent || role == UserRole.coworker;
-  return [..._alwaysOn, if (canWork) _work, ..._tail];
+  return [..._alwaysOn(l10n), if (canWork) _work(l10n), ..._tail(l10n)];
 }
 
 class GlassTabBar extends ConsumerWidget {
@@ -54,7 +61,7 @@ class GlassTabBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final role = ref.watch(authSessionProvider).role;
-    final items = tabItemsFor(role);
+    final items = tabItemsFor(role, AppLocalizations.of(context));
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 

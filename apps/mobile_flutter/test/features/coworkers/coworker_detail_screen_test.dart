@@ -4,6 +4,7 @@
 // `test/features/edit_profile/edit_profile_screen_test.dart`.
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,10 +14,17 @@ import 'package:go_router/go_router.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/coworkers/coworkers.dart';
 import 'package:lacasa_mobile/features/coworkers/state/coworkers_repository_provider.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/media_picker.dart';
+import 'package:lacasa_mobile/shared/state/uploads_repository.dart';
+import 'package:lacasa_mobile/shared/state/uploads_repository_provider.dart';
+import 'package:lacasa_mobile/shared/widgets/agent_avatar.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_media_picker.dart';
+import '../../shared/support/fake_uploads_repository.dart';
 import 'support/coworker_test_data.dart';
 import 'support/fake_coworkers_repository.dart';
 
@@ -27,10 +35,22 @@ void main() {
     String coworkerId = 'coworker-a',
     UserRole role = UserRole.agent,
     bool withBackStack = true,
+    // Both default to `null` (i.e. "leave the real provider in place") —
+    // every test in this file except the "real avatar uploader" group below
+    // never taps the avatar control, so there is nothing for these to fake
+    // and no reason to force every other test to pass a fake it doesn't
+    // use. Mirrors `add_coworker_screen_test.dart`'s `pumpScreen`.
+    MediaPicker? mediaPicker,
+    UploadsRepository? uploadsRepository,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
-      overrides: [coworkersRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        coworkersRepositoryProvider.overrideWithValue(repository),
+        if (mediaPicker != null) mediaPickerProvider.overrideWithValue(mediaPicker),
+        if (uploadsRepository != null)
+          uploadsRepositoryProvider.overrideWithValue(uploadsRepository),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -68,6 +88,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -131,6 +153,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const CoworkerDetailScreen(coworkerId: 'coworker-a'),
           ),
@@ -588,19 +612,121 @@ void main() {
     });
   });
 
-  group('avatar uploader unavailability', () {
-    testWidgets('shows the unavailable caption', (tester) async {
+  // Was "avatar uploader unavailability" — that framing (and its literal
+  // "Avatar upload isn't available in this build yet." caption) described
+  // `MediaUploadUnavailableNotice`, the honest stand-in this screen used
+  // before `shared/widgets/avatar_upload_control.dart` and its
+  // `MediaPicker`/`UploadsRepository` seams existed. `coworker_detail_screen
+  // .dart`'s own doc comment now says plainly that a managing session gets
+  // a real `AvatarUploadControl`, so asserting the old "unavailable" copy
+  // would be asserting a screen state that can no longer occur — not a real
+  // regression, just stale test intent. Rewritten below to exercise the
+  // control's actual contract, mirroring
+  // `add_coworker_screen_test.dart`'s "the real avatar uploader" group —
+  // the two differ only in that this screen seeds an existing avatar URL
+  // and labels the control "Change photo" (§36) rather than "Add photo"
+  // (§37), and that a coworker-role session gets the plain, non-tappable
+  // `AgentAvatar` instead (see the read-only group above and
+  // `coworker_detail_screen.dart`'s own doc comment on why).
+  group('the real avatar uploader (AvatarUploadControl)', () {
+    testWidgets(
+      'is labelled "Change photo" per §36, seeded with the coworker\'s '
+      'existing avatar',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          repository: FakeCoworkersRepository(
+            coworkers: [
+              coworker(id: 'coworker-a', avatar: 'https://example.test/avatars/existing.jpg'),
+            ],
+          ),
+        );
+
+        expect(find.bySemanticsLabel(RegExp('Change photo')), findsOneWidget);
+        final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+        expect(avatar.avatarUrl, 'https://example.test/avatars/existing.jpg');
+      },
+    );
+
+    testWidgets('tapping it opens the camera/gallery choice, and picking '
+        'gallery uploads the photo and swaps in its URL', (tester) async {
+      final media = PickedMedia(
+        bytes: Uint8List.fromList([1, 2, 3]),
+        fileName: 'selfie.jpg',
+        mimeType: 'image/jpeg',
+      );
       await pumpScreen(
         tester,
         repository: FakeCoworkersRepository(
           coworkers: [coworker(id: 'coworker-a')],
         ),
+        mediaPicker: FakeMediaPicker(imageResult: media),
+        uploadsRepository: FakeUploadsRepository(
+          result: 'https://example.test/avatars/new.jpg',
+        ),
       );
 
+      await tester.tap(find.bySemanticsLabel(RegExp('Change photo')));
+      await tester.pumpAndSettle();
+
+      // The camera/gallery choice sheet (media_source_sheet.dart) — both
+      // rows are on screen once the sheet has settled.
+      expect(find.text('Camera'), findsOneWidget);
+      expect(find.text('Choose from library'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('Choose from library')));
+      await tester.pumpAndSettle();
+
+      final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+      expect(avatar.avatarUrl, 'https://example.test/avatars/new.jpg');
+    });
+
+    testWidgets('a denied-permission failure from the picker is shown as '
+        'an error toast, not silently swallowed', (tester) async {
+      await pumpScreen(
+        tester,
+        repository: FakeCoworkersRepository(
+          coworkers: [coworker(id: 'coworker-a')],
+        ),
+        mediaPicker: FakeMediaPicker(
+          error: const MediaPickerException(
+            "La Casa doesn't have permission to use the camera or photo "
+            'library. Allow it in system settings, then try again.',
+          ),
+        ),
+      );
+
+      await tester.tap(find.bySemanticsLabel(RegExp('Change photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel(RegExp('Choose from library')));
+      await tester.pumpAndSettle();
+
       expect(
-        find.text("Avatar upload isn't available in this build yet."),
+        find.text(
+          "La Casa doesn't have permission to use the camera or photo "
+          'library. Allow it in system settings, then try again.',
+        ),
         findsOneWidget,
       );
+      // The picker never got as far as producing bytes, so the avatar
+      // stays on whatever it started as (here, none) rather than showing a
+      // broken preview.
+      final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+      expect(avatar.avatarUrl, isNull);
+    });
+
+    testWidgets('a coworker-role (read-only) session gets a plain, '
+        'non-tappable avatar instead of the upload control', (tester) async {
+      await pumpScreen(
+        tester,
+        repository: FakeCoworkersRepository(
+          coworkers: [coworker(id: 'coworker-a')],
+        ),
+        role: UserRole.coworker,
+      );
+
+      expect(find.bySemanticsLabel(RegExp('Change photo')), findsNothing);
+      expect(find.byType(AgentAvatar), findsOneWidget);
     });
   });
 

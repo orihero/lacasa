@@ -22,17 +22,25 @@ import 'package:lacasa_mobile/shared/map/map_tile_layer_provider.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/map_test_ads.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 /// Feeds `displayedSearchResultsProvider` — the live state map-view prefers
-/// over its `extra:` payload.
+/// over its `extra:` payload. `fetchPage` is `SearchRepository`'s current
+/// (paged) shape; this fake always answers one complete, uncursored page —
+/// map-view only ever reads `displayedSearchResultsProvider`'s unwrapped
+/// `List<Ad>`, never the paging metadata, so a single-page fake is enough.
 class _FakeSearchRepository implements SearchRepository {
   _FakeSearchRepository(this.ads);
 
   final List<Ad> ads;
 
   @override
-  Future<List<Ad>> fetchResults({AdFilters filters = const AdFilters()}) async {
-    return ads;
+  Future<AdPage> fetchPage({
+    AdFilters filters = const AdFilters(),
+    AdListSort sort = AdListSort.newest,
+    String? cursor,
+  }) async {
+    return AdPage(items: ads, nextCursor: null);
   }
 }
 
@@ -82,6 +90,8 @@ void main() {
           ),
         ],
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -188,8 +198,10 @@ void main() {
 
       expect(find.byType(MapPreviewCard), findsOneWidget);
       expect(find.text('Bright two-room near the metro'), findsOneWidget);
-      // Rendered in §3.6's own un-pluralized "{rooms} room" form.
-      expect(find.text('2 room'), findsOneWidget);
+      // SCREENS.md §3.6 writes this field as literal "{rooms} room", but the
+      // i18n pass corrects that to a real ICU plural (listingRoomsCount) —
+      // see map_preview_card.dart's doc comment. "2 rooms", not "2 room".
+      expect(find.text('2 rooms'), findsOneWidget);
     });
 
     testWidgets('an ad with no room count drops that line', (tester) async {

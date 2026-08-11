@@ -1,0 +1,3112 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-08-11",
+  "settingsScreenTitle": "Settings",
+  "@settingsScreenTitle": {
+    "description": "Nav-bar title on the Settings screen (SCREENS.md §3.19)."
+  },
+  "settingsNavBackLabel": "Back",
+  "@settingsNavBackLabel": {
+    "description": "Semantics label (screen-reader only, no visible text) on the Settings screen's back button."
+  },
+  "settingsLanguageRowTitle": "Language",
+  "@settingsLanguageRowTitle": {
+    "description": "Row title on Settings that opens the language-sheet bottom sheet."
+  },
+  "settingsConnectedAccountsRowTitle": "Connected Accounts",
+  "@settingsConnectedAccountsRowTitle": {
+    "description": "Agent-only row title on Settings; pushes the Connected Accounts screen."
+  },
+  "settingsAboutRowTitle": "About",
+  "@settingsAboutRowTitle": {
+    "description": "Row title on Settings; tapping it shows the app name/version in a toast."
+  },
+  "settingsAboutRowSubtitle": "Version {version}",
+  "@settingsAboutRowSubtitle": {
+    "description": "Subtitle under the About row on Settings: the app's version number. {version} is the hand-transcribed value from data/app_version.dart, e.g. \"1.0.0\" — not user-facing wording, so it is passed through untranslated.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.0.0"
+      }
+    }
+  },
+  "settingsAboutToastMessage": "{appName} {version}",
+  "@settingsAboutToastMessage": {
+    "description": "Snackbar shown when the About row on Settings is tapped: brand name followed by version number. Both placeholders are passed through untranslated — {appName} is the product's proper noun (see GLOSSARY.md) and {version} is a version string, neither is UI wording.",
+    "placeholders": {
+      "appName": {
+        "type": "String",
+        "example": "La Casa"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.0.0"
+      }
+    }
+  },
+  "settingsSessionGroupLabel": "Session",
+  "@settingsSessionGroupLabel": {
+    "description": "Group-label heading above the Logout row on Settings, in the sense of \"session/account\", not \"work session\"."
+  },
+  "settingsLogoutRowTitle": "Logout",
+  "@settingsLogoutRowTitle": {
+    "description": "Destructive (red) row title on Settings; signs the user out after a confirm dialog. Same word as a verb/action, not a noun."
+  },
+  "settingsLoggingOutLabel": "Signing out…",
+  "@settingsLoggingOutLabel": {
+    "description": "Transient subtitle on the Logout row on Settings while sign-out is in progress (present continuous — an in-progress action, not a completed one)."
+  },
+  "settingsSignOutTokenNotClearedMessage": "Signed out, but the saved session couldn't be removed from this device. Sign out again, or remove the app, before handing it on.",
+  "@settingsSignOutTokenNotClearedMessage": {
+    "description": "Snackbar shown when sign-out itself succeeded but deleting the locally stored session token from the device keystore failed. Shown from two call sites with byte-identical copy: Settings' own _confirmLogout, and shared/widgets/sign_out_confirm.dart's confirmAndSignOut (used by profile-buyer/profile-agent's Logout rows) — kept as one key rather than two so the two copies of the same failure sentence can never drift apart in translation. \"handing it on\" means passing the physical device to someone else — a privacy warning, not a generic error."
+  },
+  "settingsNotificationsRowTitle": "Notifications",
+  "@settingsNotificationsRowTitle": {
+    "description": "Row title on Settings for the push-notifications toggle."
+  },
+  "settingsNotificationsRowSubtitle": "Not sent yet — push notifications aren't wired up in this build.",
+  "@settingsNotificationsRowSubtitle": {
+    "description": "Honest-gap subtitle under the Notifications row on Settings: the toggle persists a real preference, but no push-notification infrastructure exists in this build yet. Do not soften or remove the honesty — see the file's own doc comment in settings_screen.dart."
+  },
+  "settingsNotificationsToggleLabel": "Notifications toggle",
+  "@settingsNotificationsToggleLabel": {
+    "description": "Semantics label on the Notifications switch control itself on Settings, distinct from the row's own \"Notifications\" title label (a screen reader needs to tell the two apart)."
+  },
+  "homeLocationPillLabel": "Tashkent, Uzbekistan",
+  "@homeLocationPillLabel": {
+    "description": "Decorative location pill in the Home header row (home_header_row.dart) — no data-go/handler on it in the source markup, so tapping it does nothing."
+  },
+  "homeNotificationsBellSemanticLabel": "{count, plural, one{Notifications, {count} unread} other{Notifications, {count} unread}}",
+  "@homeNotificationsBellSemanticLabel": {
+    "description": "Screen-reader semantics label on the Home header's notification bell icon, stating how many notifications are unread. The count is fixture-only today (no notifications-count endpoint exists — see home_header_row.dart's doc comment) but is still routed through a real ICU plural since a screen reader must announce it correctly regardless of value.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeSearchIconSemanticLabel": "Search",
+  "@homeSearchIconSemanticLabel": {
+    "description": "Screen-reader semantics label on the Home header's search icon button, which navigates to the Search tab."
+  },
+  "homeAgentPitchHeading": "Are you a real estate agent?",
+  "@homeAgentPitchHeading": {
+    "description": "Heading text on the signed-out-only agent pitch banner on Home (agent_pitch_banner.dart)."
+  },
+  "homeAgentPitchSubtitle": "Manage your listings, leads and team in one app.",
+  "@homeAgentPitchSubtitle": {
+    "description": "Subtitle text on the signed-out-only agent pitch banner on Home, under the heading."
+  },
+  "homeAgentPitchButtonLabel": "Get Started",
+  "@homeAgentPitchButtonLabel": {
+    "description": "Button label on the agent pitch banner on Home; pushes the register screen."
+  },
+  "homeCategoryAllLabel": "All",
+  "@homeCategoryAllLabel": {
+    "description": "Chip label in Home's decorative category chip row (category_chip_row.dart) — selecting it is local UI state only and never fires a fetch."
+  },
+  "homeCategoryApartmentLabel": "Apartment",
+  "@homeCategoryApartmentLabel": {
+    "description": "Chip label in Home's decorative category chip row — same non-interactive-fetch caveat as homeCategoryAllLabel."
+  },
+  "homeCategoryHouseLabel": "House",
+  "@homeCategoryHouseLabel": {
+    "description": "Chip label in Home's decorative category chip row — same non-interactive-fetch caveat as homeCategoryAllLabel."
+  },
+  "homeCategoryOfficeLabel": "Office",
+  "@homeCategoryOfficeLabel": {
+    "description": "Chip label in Home's decorative category chip row — same non-interactive-fetch caveat as homeCategoryAllLabel."
+  },
+  "homeCategoryRetailLabel": "Retail",
+  "@homeCategoryRetailLabel": {
+    "description": "Chip label in Home's decorative category chip row — same non-interactive-fetch caveat as homeCategoryAllLabel."
+  },
+  "homeExploreNearbySectionTitle": "Explore Nearby",
+  "@homeExploreNearbySectionTitle": {
+    "description": "Section-header title above the Explore Nearby grid on Home (explore_nearby_grid.dart)."
+  },
+  "homeFeaturedListingsSectionTitle": "Featured Listings",
+  "@homeFeaturedListingsSectionTitle": {
+    "description": "Section-header title above the Featured Listings rail on Home (featured_listings_rail.dart)."
+  },
+  "homeFeaturedListingsViewAllLabel": "View all",
+  "@homeFeaturedListingsViewAllLabel": {
+    "description": "Trailing link label on the Featured Listings section header on Home; navigates to the Search tab."
+  },
+  "homeFeaturedListingsRetryMessage": "Couldn't load listings",
+  "@homeFeaturedListingsRetryMessage": {
+    "description": "Message on the compact retry card shown in the Featured Listings rail's position on Home when its fetch fails."
+  },
+  "homeFeedEmptyMessage": "No listings available yet.",
+  "@homeFeedEmptyMessage": {
+    "description": "Combined whole-Home-feed-empty message, rendered in the Featured Listings rail's position (below the chips) when the Home feed returns no ads at all."
+  },
+  "homePromoOneTitle": "One Post,\nEvery Channel",
+  "@homePromoOneTitle": {
+    "description": "Two-line heading on the first hardcoded promo card in Home's promo carousel (promo_carousel.dart) — the literal newline reproduces the original two-element titleLines list joined for display."
+  },
+  "homePromoOneSubtitle": "Instagram, Telegram and YouTube",
+  "@homePromoOneSubtitle": {
+    "description": "Subtitle on the first promo card in Home's promo carousel. \"Instagram\"/\"Telegram\"/\"YouTube\" are product names and stay untranslated; only the surrounding words (e.g. \"and\") should change per language."
+  },
+  "homePromoTwoTitle": "New in\nYashnobod",
+  "@homePromoTwoTitle": {
+    "description": "Two-line heading on the second hardcoded promo card in Home's promo carousel — same newline-joins-titleLines shape as homePromoOneTitle. \"Yashnobod\" is a Tashkent district name."
+  },
+  "homePromoTwoSubtitle": "4-room new builds from $95,000",
+  "@homePromoTwoSubtitle": {
+    "description": "Subtitle on the second promo card in Home's promo carousel — hardcoded marketing copy with a fixed price, not driven by any provider or live listing data."
+  },
+  "homeTopAgentsSectionTitle": "Top Agents",
+  "@homeTopAgentsSectionTitle": {
+    "description": "Section-header title above the Top Agents rail on Home (top_agents_rail.dart)."
+  },
+  "homeTopAgentsExploreLinkLabel": "Explore",
+  "@homeTopAgentsExploreLinkLabel": {
+    "description": "Trailing link label on the Top Agents section header on Home; navigates to the Agents directory."
+  },
+  "homeTopAgentsRetryMessage": "Couldn't load agents",
+  "@homeTopAgentsRetryMessage": {
+    "description": "Message on the compact retry card shown in the Top Agents rail's position on Home when its fetch fails."
+  },
+  "homeAgentAdsCount": "{count, plural, one{{count} ad} other{{count} ads}}",
+  "@homeAgentAdsCount": {
+    "description": "Ad-count caption under an agent's avatar in the Top Agents rail on Home. The pre-existing Dart interpolation this replaces (`'${'{'}agent.adsCount{'}'} ads'`) always rendered the plural word regardless of count — a real, pre-existing bug this ICU plural corrects for the singular case per lib/l10n/README.md's plural-extraction guidance, without changing the wording any bundled fixture/test count (all >= 3) ever actually shows.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeTopDistrictsSectionTitle": "Top Districts",
+  "@homeTopDistrictsSectionTitle": {
+    "description": "Section-header title above the Top Districts rail on Home (top_districts_rail.dart)."
+  },
+  "homeTopDistrictsExploreLinkLabel": "Explore",
+  "@homeTopDistrictsExploreLinkLabel": {
+    "description": "Trailing link label on the Top Districts section header on Home; navigates to the Search tab."
+  },
+  "homeDistrictChilonzorName": "Chilonzor",
+  "@homeDistrictChilonzorName": {
+    "description": "Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name (this rail has no backing entity/endpoint; see the file's own doc comment)."
+  },
+  "homeDistrictYunusobodName": "Yunusobod",
+  "@homeDistrictYunusobodName": {
+    "description": "Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name."
+  },
+  "homeDistrictSergeliName": "Sergeli",
+  "@homeDistrictSergeliName": {
+    "description": "Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name."
+  },
+  "homeDistrictMirobodName": "Mirobod",
+  "@homeDistrictMirobodName": {
+    "description": "Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name."
+  },
+  "searchScreenTitle": "Search",
+  "@searchScreenTitle": {
+    "description": "Nav-bar title on the listing-search screen (search_screen.dart), the Search tab's root page."
+  },
+  "searchInputHint": "Search city, district, or title",
+  "@searchInputHint": {
+    "description": "Hint text inside the free-text search field on listing-search (search_bar_row.dart)."
+  },
+  "searchCancelButtonLabel": "Cancel",
+  "@searchCancelButtonLabel": {
+    "description": "Button beside the search field on listing-search; clears the field and drops focus (this is a tab root, not a pushed screen, so there is nothing to navigate back to)."
+  },
+  "searchFiltersButtonLabel": "Filters",
+  "@searchFiltersButtonLabel": {
+    "description": "Label on the listing-search toolbar's button that opens filter-sheet (search_toolbar.dart)."
+  },
+  "searchSortHighestPriceLabel": "Highest price",
+  "@searchSortHighestPriceLabel": {
+    "description": "Chip label for one of listing-search's three inline Sort options (SearchSort.label, search_providers.dart) — threaded through AppLocalizations since the enum lives in a non-widget state file."
+  },
+  "searchSortLowestPriceLabel": "Lowest price",
+  "@searchSortLowestPriceLabel": {
+    "description": "Chip label for one of listing-search's three inline Sort options — same seam as searchSortHighestPriceLabel."
+  },
+  "searchSortNewestLabel": "Newest",
+  "@searchSortNewestLabel": {
+    "description": "Chip label for one of listing-search's three inline Sort options — same seam as searchSortHighestPriceLabel. Also the default-selected sort."
+  },
+  "searchResultsRetryMessage": "Couldn't load listings.",
+  "@searchResultsRetryMessage": {
+    "description": "Full-width error message on listing-search's results list (search_results_list.dart) when the paged fetch fails."
+  },
+  "searchResultsEmptyMessage": "No listings found.",
+  "@searchResultsEmptyMessage": {
+    "description": "Full-width empty-state message on listing-search's results list when a search returns zero results."
+  },
+  "searchRecentSearchesSectionTitle": "Recent Searches",
+  "@searchRecentSearchesSectionTitle": {
+    "description": "Section-header title above the Recent Searches chip row on listing-search (recent_searches_row.dart)."
+  },
+  "searchRecentSearchesClearLabel": "Clear",
+  "@searchRecentSearchesClearLabel": {
+    "description": "Trailing link on the Recent Searches section header; clears the persisted recent-searches list."
+  },
+  "filterSheetTitle": "Filters",
+  "@filterSheetTitle": {
+    "description": "Header title on the filter-sheet bottom sheet (filter_sheet.dart), both the buyer and CRM variants."
+  },
+  "filterCountErrorMessage": "Couldn't calculate matching listings.",
+  "@filterCountErrorMessage": {
+    "description": "Inline warning row on filter-sheet (buyer variant only) shown when the live result-count preview fails to load."
+  },
+  "filterApplyButtonLabel": "Apply Filters",
+  "@filterApplyButtonLabel": {
+    "description": "Footer button label on filter-sheet when no live count is shown — the CRM variant always, or the buyer variant while the count is loading/unavailable (filter_sheet_footer.dart)."
+  },
+  "filterApplyButtonWithCountLabel": "Apply Filters ({count})",
+  "@filterApplyButtonWithCountLabel": {
+    "description": "Footer button label on filter-sheet's buyer variant once the live buyer-facing result count has loaded. {count} is a bare numeral with no accompanying noun to inflect in any of the three languages (unlike homeAgentAdsCount's \"ad(s)\"), so this is a plain placeholder rather than an ICU plural block.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filterResetButtonLabel": "Reset",
+  "@filterResetButtonLabel": {
+    "description": "Footer button on filter-sheet that clears every field back to its SCREENS.md-stated defaults."
+  },
+  "filterAreaMinFieldLabel": "Min. total area",
+  "@filterAreaMinFieldLabel": {
+    "description": "Field label above filter-sheet's minimum-total-area number input (filter_area_section.dart). Note the period after \"Min.\" — an abbreviation, byte-exact from the source string."
+  },
+  "filterAreaMaxFieldLabel": "Max total area",
+  "@filterAreaMaxFieldLabel": {
+    "description": "Field label above filter-sheet's maximum-total-area number input. Unlike filterAreaMinFieldLabel, \"Max\" here has no trailing period — byte-exact from the source string, not a typo to fix."
+  },
+  "filterCategoryFieldLabel": "Category",
+  "@filterCategoryFieldLabel": {
+    "description": "Field label above filter-sheet's Category (Rent/Sale) chip group (filter_category_type_section.dart)."
+  },
+  "filterTypeFieldLabel": "Type",
+  "@filterTypeFieldLabel": {
+    "description": "Field label above filter-sheet's Type (Residential/Nonresidential) chip group."
+  },
+  "filterCategoryRentOptionLabel": "Rent",
+  "@filterCategoryRentOptionLabel": {
+    "description": "Chip option label in filter-sheet's Category field (filter_options.dart's filterCategoryOptions)."
+  },
+  "filterCategorySaleOptionLabel": "Sale",
+  "@filterCategorySaleOptionLabel": {
+    "description": "Chip option label in filter-sheet's Category field."
+  },
+  "filterTypeResidentialOptionLabel": "Residential",
+  "@filterTypeResidentialOptionLabel": {
+    "description": "Chip option label in filter-sheet's Type field (filter_options.dart's filterTypeOptions)."
+  },
+  "filterTypeNonresidentialOptionLabel": "Nonresidential",
+  "@filterTypeNonresidentialOptionLabel": {
+    "description": "Chip option label in filter-sheet's Type field."
+  },
+  "filterCityFieldLabel": "City",
+  "@filterCityFieldLabel": {
+    "description": "Field label above filter-sheet's City picker field (filter_city_district_section.dart)."
+  },
+  "filterCityPickerTitle": "City",
+  "@filterCityPickerTitle": {
+    "description": "Header title of the City option-picker sheet opened by tapping the City field — a separate role from filterCityFieldLabel's static field label even though the text matches."
+  },
+  "filterCityAnyOptionLabel": "Any city",
+  "@filterCityAnyOptionLabel": {
+    "description": "Placeholder text on the unset City field, and the label of the leading \"clear\" row inside its option-picker sheet."
+  },
+  "filterDistrictFieldLabel": "District",
+  "@filterDistrictFieldLabel": {
+    "description": "Field label above filter-sheet's District picker field."
+  },
+  "filterDistrictPickerTitle": "District",
+  "@filterDistrictPickerTitle": {
+    "description": "Header title of the District option-picker sheet — same field-label-vs-picker-title distinction as filterCityPickerTitle."
+  },
+  "filterDistrictAnyOptionLabel": "Any district",
+  "@filterDistrictAnyOptionLabel": {
+    "description": "Placeholder text on the unset-but-enabled District field, and the label of the leading \"clear\" row inside its option-picker sheet."
+  },
+  "filterDistrictPickCityFirstPlaceholder": "Pick a city first",
+  "@filterDistrictPickCityFirstPlaceholder": {
+    "description": "Placeholder text on the District field while it is disabled because no City has been chosen yet."
+  },
+  "filterRegionsLoadingPlaceholder": "Loading…",
+  "@filterRegionsLoadingPlaceholder": {
+    "description": "Shared placeholder on filter-sheet's City and District fields while GET /regions is in flight."
+  },
+  "filterRegionsErrorPlaceholder": "Couldn't load",
+  "@filterRegionsErrorPlaceholder": {
+    "description": "Shared placeholder on filter-sheet's City and District fields when GET /regions fails to load."
+  },
+  "filterFurnitureFieldLabel": "Furniture",
+  "@filterFurnitureFieldLabel": {
+    "description": "Field label above filter-sheet's Furniture chip group (filter_furniture_repair_section.dart)."
+  },
+  "filterRepairFieldLabel": "Repair",
+  "@filterRepairFieldLabel": {
+    "description": "Field label above filter-sheet's Repair chip group."
+  },
+  "filterFurnitureWithOptionLabel": "With furniture",
+  "@filterFurnitureWithOptionLabel": {
+    "description": "Chip option label in filter-sheet's Furniture field (filter_options.dart's filterFurnitureOptions) — also this field's SCREENS.md-stated default. Lowercase \"furniture\" is byte-exact from the source string."
+  },
+  "filterFurnitureWithoutOptionLabel": "Without Furniture",
+  "@filterFurnitureWithoutOptionLabel": {
+    "description": "Chip option label in filter-sheet's Furniture field. Capitalised \"Furniture\" (unlike filterFurnitureWithOptionLabel's lowercase) is byte-exact from the source string, not a typo to fix."
+  },
+  "filterRepairNotRepairedOptionLabel": "Not repaired",
+  "@filterRepairNotRepairedOptionLabel": {
+    "description": "Chip option label in filter-sheet's Repair field (filter_options.dart's filterRepairOptions) — also this field's SCREENS.md-stated default."
+  },
+  "filterRepairNormalOptionLabel": "Normal",
+  "@filterRepairNormalOptionLabel": {
+    "description": "Chip option label in filter-sheet's Repair field."
+  },
+  "filterRepairGoodOptionLabel": "Good",
+  "@filterRepairGoodOptionLabel": {
+    "description": "Chip option label in filter-sheet's Repair field."
+  },
+  "filterRepairExcellentOptionLabel": "Excellent",
+  "@filterRepairExcellentOptionLabel": {
+    "description": "Chip option label in filter-sheet's Repair field."
+  },
+  "filterPriceMinFieldLabel": "Min price",
+  "@filterPriceMinFieldLabel": {
+    "description": "Field label above filter-sheet's minimum-price chip group over the fixed price ladder (filter_price_section.dart)."
+  },
+  "filterPriceMaxFieldLabel": "Max price",
+  "@filterPriceMaxFieldLabel": {
+    "description": "Field label above filter-sheet's maximum-price chip group over the fixed price ladder."
+  },
+  "filterRoomsFieldLabel": "Rooms",
+  "@filterRoomsFieldLabel": {
+    "description": "Field label above filter-sheet's Rooms chip group (filter_rooms_section.dart), values 1-6."
+  },
+  "filterSortFieldLabel": "Sort",
+  "@filterSortFieldLabel": {
+    "description": "Field label above filter-sheet's CRM-only Sort chip group (filter_sort_status_section.dart) — appended only when the sheet is opened via showCrmFilterSheet."
+  },
+  "filterStatusFieldLabel": "Status",
+  "@filterStatusFieldLabel": {
+    "description": "Field label above filter-sheet's CRM-only Status chip group — same CRM-only seam as filterSortFieldLabel."
+  },
+  "filterSortNewestOptionLabel": "Newest",
+  "@filterSortNewestOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Sort field (filter_options.dart's filterCrmSortOptions) — also this field's default."
+  },
+  "filterSortHighestPriceOptionLabel": "Highest price",
+  "@filterSortHighestPriceOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Sort field."
+  },
+  "filterSortLowestPriceOptionLabel": "Lowest price",
+  "@filterSortLowestPriceOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Sort field."
+  },
+  "filterStatusActiveOptionLabel": "Active",
+  "@filterStatusActiveOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Status field (filter_options.dart's filterCrmStatusOptions)."
+  },
+  "filterStatusSoldOptionLabel": "Sold",
+  "@filterStatusSoldOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Status field."
+  },
+  "filterStatusDraftOptionLabel": "Draft",
+  "@filterStatusDraftOptionLabel": {
+    "description": "Chip option label in filter-sheet's CRM-only Status field."
+  },
+  "filterStoreyFieldLabel": "Storey",
+  "@filterStoreyFieldLabel": {
+    "description": "Field label above filter-sheet's Storey number input (filter_storey_section.dart)."
+  },
+  "listingDescriptionSectionTitle": "Description",
+  "@listingDescriptionSectionTitle": {
+    "description": "Section heading on listing-detail (SCREENS.md §3.7) above the ad's free-text description."
+  },
+  "listingAdditionalInfoSectionTitle": "Additional Information",
+  "@listingAdditionalInfoSectionTitle": {
+    "description": "Section heading on listing-detail above the dynamic key/value chip list built from Ad.optionList."
+  },
+  "listingSizesSectionTitle": "Sizes",
+  "@listingSizesSectionTitle": {
+    "description": "Section heading on listing-detail above the Area/Rooms/Floor definition-list rows."
+  },
+  "listingNearbyPlacesSectionTitle": "Nearby Places",
+  "@listingNearbyPlacesSectionTitle": {
+    "description": "Section heading on listing-detail above the dynamic chip list built from Ad.nearPlacesList."
+  },
+  "listingLocationSectionTitle": "Location",
+  "@listingLocationSectionTitle": {
+    "description": "Section heading on listing-detail above the map preview (or the honest no-pin state)."
+  },
+  "listingNotFoundMessage": "This listing is no longer available.\nIt may have been sold or removed.",
+  "@listingNotFoundMessage": {
+    "description": "Terminal error message on listing-detail when the ad fetch resolves 404 (sold/removed listing). Distinct from listingLoadErrorMessage because \"try again\" is bad advice here; no Retry action is offered alongside it."
+  },
+  "listingLoadErrorMessage": "Couldn't load this listing.",
+  "@listingLoadErrorMessage": {
+    "description": "Terminal error message on listing-detail when the ad fetch fails for any reason other than 404 (network/server error). Paired with sharedRetryLabel."
+  },
+  "listingAgentUnavailableLabel": "Agent details unavailable",
+  "@listingAgentUnavailableLabel": {
+    "description": "Row title shown in place of the agent block on listing-detail when the agent fetch resolves null (deleted agent, a coworker id the agents endpoint refuses, or no network) — the agent block degrades on its own without taking the listing down."
+  },
+  "listingAgentStatsLine": "{adsCount, plural, one{Agent · {adsCount} listing · {dealsClosedCount} closed} other{Agent · {adsCount} listings · {dealsClosedCount} closed}}",
+  "@listingAgentStatsLine": {
+    "description": "Subtitle line under the agent's name in listing-detail's agent block: \"Agent\" role label, all-time ads-created count (pluralized on that count — the only part of this line that inflects), and deals-closed count (never pluralized in English, a fixed \"N closed\" tag rather than a noun-agreeing phrase — see the translation note on this key for how uz/ru render the fixed 'closed' word).",
+    "placeholders": {
+      "adsCount": {
+        "type": "int"
+      },
+      "dealsClosedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "listingAgentCallSemanticsLabel": "Call {fullName}",
+  "@listingAgentCallSemanticsLabel": {
+    "description": "Semantics label on the phone-call icon button in listing-detail's agent block. {fullName} is the agent's name, passed through untranslated (a proper noun).",
+    "placeholders": {
+      "fullName": {
+        "type": "String",
+        "example": "Javlon Rustamov"
+      }
+    }
+  },
+  "listingSubmitApplicationButtonLabel": "Submit an application",
+  "@listingSubmitApplicationButtonLabel": {
+    "description": "Primary full-width CTA on listing-detail's floating bottom bar (SCREENS.md §3.7) — opens contact-sheet pre-filled with the listing."
+  },
+  "listingFavouriteUpdateErrorMessage": "Couldn't update favourites",
+  "@listingFavouriteUpdateErrorMessage": {
+    "description": "Snackbar on listing-detail's \"Save the Place\" button when toggling the favourite fails (ApiException)."
+  },
+  "listingSaveThePlaceButtonLabel": "Save the Place",
+  "@listingSaveThePlaceButtonLabel": {
+    "description": "Label on listing-detail's secondary full-width button (SCREENS.md §3.7) when this listing is not yet saved — toggles to listingSavedButtonLabel once saved."
+  },
+  "listingSavedButtonLabel": "Saved",
+  "@listingSavedButtonLabel": {
+    "description": "Label on listing-detail's secondary full-width button once this listing has been saved — the toggled state of listingSaveThePlaceButtonLabel."
+  },
+  "listingNavBackSemanticsLabel": "Back",
+  "@listingNavBackSemanticsLabel": {
+    "description": "Semantics label on the round glass back button floating over listing-detail's hero photo."
+  },
+  "listingNavShareSemanticsLabel": "Share",
+  "@listingNavShareSemanticsLabel": {
+    "description": "Semantics label on the round glass share button floating over listing-detail's hero photo — opens the native OS share sheet."
+  },
+  "listingLinkCopiedToastMessage": "Link copied for sharing",
+  "@listingLinkCopiedToastMessage": {
+    "description": "Toast on listing-detail's share button when the OS share sheet was dismissed without a target and the app falls back to copying the listing's public link."
+  },
+  "listingNoLocationMessage": "No location provided for this listing.",
+  "@listingNoLocationMessage": {
+    "description": "Honest-gap message inside listing-detail's Location section when the ad carries no coordinates — this section renders even with no data, unlike the other optional sections."
+  },
+  "listingAskingPriceLabel": "Asking price",
+  "@listingAskingPriceLabel": {
+    "description": "Small label above the price figure in listing-detail's price-footer section (the one place price-per-m² also appears)."
+  },
+  "listingSizesAreaLabel": "Area",
+  "@listingSizesAreaLabel": {
+    "description": "Row label in listing-detail's Sizes section for the floor area figure (e.g. \"65 m²\")."
+  },
+  "listingSizesRoomsLabel": "Rooms",
+  "@listingSizesRoomsLabel": {
+    "description": "Row label in listing-detail's Sizes section for the room count figure."
+  },
+  "listingSizesFloorLabel": "Floor",
+  "@listingSizesFloorLabel": {
+    "description": "Row label in listing-detail's Sizes section for the \"{storey} / {floors}\" figure."
+  },
+  "listingSizesTypeLabel": "Type",
+  "@listingSizesTypeLabel": {
+    "description": "Row label in listing-detail's Sizes section for the property type (Residential/Nonresidential) — this section's own closing row, riding along with the size rows rather than always shown."
+  },
+  "listingTourSectionTitle": "3D Tour",
+  "@listingTourSectionTitle": {
+    "description": "Both: (1) the section heading on listing-detail above the 3D-tour banner, and (2) the nav-bar title on Tour3dViewScreen (the full-screen webview it pushes to) — same two words, same concept, in the same feature, so the key is shared rather than duplicated."
+  },
+  "listingTourViewSemanticsLabel": "View 3D Tour",
+  "@listingTourViewSemanticsLabel": {
+    "description": "Semantics label on listing-detail's tappable 3D-tour banner."
+  },
+  "listingTourBannerLabel": "Live 3D Tour",
+  "@listingTourBannerLabel": {
+    "description": "Visible row title inside listing-detail's tappable 3D-tour banner (SCREENS.md §7's own wording)."
+  },
+  "listingTourInvalidLinkMessage": "This listing's 3D tour link isn't valid.",
+  "@listingTourInvalidLinkMessage": {
+    "description": "Terminal error message on Tour3dViewScreen when the ad's tour3dLink fails this screen's own scheme/host validation (not http/https, or unparsable). No Retry is offered alongside it — retrying a scheme that will never be valid isn't an honest offer."
+  },
+  "listingTourLoadErrorMessage": "Couldn't load the 3D tour.",
+  "@listingTourLoadErrorMessage": {
+    "description": "Terminal error message on Tour3dViewScreen when the (validated, well-formed) tour URL's main frame fails to load. Paired with sharedRetryLabel."
+  },
+  "listingTypeResidentialLabel": "Residential",
+  "@listingTypeResidentialLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.type == residential."
+  },
+  "listingTypeNonresidentialLabel": "Nonresidential",
+  "@listingTypeNonresidentialLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.type == nonresidential."
+  },
+  "listingCategorySaleLabel": "Sale",
+  "@listingCategorySaleLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.category == sale — see GLOSSARY.md's \"sale\" entry."
+  },
+  "listingCategoryRentLabel": "Rent",
+  "@listingCategoryRentLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.category == rent — see GLOSSARY.md's \"rent\" entry."
+  },
+  "listingRepairmentNotRepairedLabel": "Not repaired",
+  "@listingRepairmentNotRepairedLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.repairment == notRepaired."
+  },
+  "listingRepairmentNormalLabel": "Normal",
+  "@listingRepairmentNormalLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.repairment == normal."
+  },
+  "listingRepairmentGoodLabel": "Good",
+  "@listingRepairmentGoodLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.repairment == good."
+  },
+  "listingRepairmentExcellentLabel": "Excellent",
+  "@listingRepairmentExcellentLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.repairment == excellent."
+  },
+  "listingFurnitureWithLabel": "With furniture",
+  "@listingFurnitureWithLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.furniture == withFurniture. The lowercase \"furniture\" is the spec's own inconsistent capitalization, reproduced deliberately — see listingFurnitureWithoutLabel."
+  },
+  "listingFurnitureWithoutLabel": "Without Furniture",
+  "@listingFurnitureWithoutLabel": {
+    "description": "Info-tag label on listing-detail (SCREENS.md §3.7) for Ad.furniture == withoutFurniture. Capital \"Furniture\" is SCREENS.md's own inconsistent capitalization (§3.7 writes exactly \"With furniture\"/\"Without Furniture\") and is reproduced character for character rather than silently tidied, so three implementations agree."
+  },
+  "listingRoomsCount": "{count, plural, one{{count} room} other{{count} rooms}}",
+  "@listingRoomsCount": {
+    "description": "Room count shown on a compact listing surface — currently map-view's pin-tap preview card (SCREENS.md §3.6's own un-pluralized \"{rooms} room\" spec wording; the ICU plural block is what actually makes it grammatical for a count other than 1, which the spec's literal wording doesn't handle). Named generically (listing-prefixed, not map-prefixed) since a room count belongs conceptually to a listing and other screens may need the same rendering later.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "galleryEmptyStateMessage": "No photos available for this listing.",
+  "@galleryEmptyStateMessage": {
+    "description": "Centred message on photo-gallery (SCREENS.md §3.8) when the listing has no photos/video to show at all."
+  },
+  "galleryVideoUnsupportedMessage": "Video preview isn't available in the gallery yet.",
+  "@galleryVideoUnsupportedMessage": {
+    "description": "Message on a photo-gallery slide when that slide's media is a video — playback isn't implemented in this build (no video-player package installed), so this is an honest gap notice, not a load failure."
+  },
+  "galleryUnsupportedMediaMessage": "This media type can't be previewed.",
+  "@galleryUnsupportedMediaMessage": {
+    "description": "Message on a photo-gallery slide for a media type that is neither a photo nor a recognized video (the AdMediaType.unknown fallback)."
+  },
+  "galleryPositionSemanticsLabel": "Gallery position {current} of {total}",
+  "@galleryPositionSemanticsLabel": {
+    "description": "Semantics label on photo-gallery's page-dot row, read by a screen reader instead of the (visual-only) dots themselves. {current}/{total} are 1-indexed positions, not a pluralizing count — no noun in this string inflects on them.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "galleryThumbnailSemanticsLabel": "Photo {index} of {total}",
+  "@galleryThumbnailSemanticsLabel": {
+    "description": "Semantics label on each tile of photo-gallery's bottom thumbnail strip. {index}/{total} are 1-indexed positions, not a pluralizing count.",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "galleryCloseTooltip": "Close gallery",
+  "@galleryCloseTooltip": {
+    "description": "Tooltip (and accessible name) on photo-gallery's dismiss \"X\" button, top-left (SCREENS.md §3.8)."
+  },
+  "galleryCounterSemanticsLabel": "Photo {label}",
+  "@galleryCounterSemanticsLabel": {
+    "description": "Semantics label on photo-gallery's top-right \"{n}/{total}\" counter chip. {label} is that already-formatted \"n/total\" string (GalleryFormatters.pageCounter) passed through untranslated — see this feature's report for why the bare digit/slash counter itself is not localized.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "2/5"
+      }
+    }
+  },
+  "mapNavBackSemanticsLabel": "Back",
+  "@mapNavBackSemanticsLabel": {
+    "description": "Semantics label on map-view's round glass back button, top-left (SCREENS.md §3.6) — returns to listing-search."
+  },
+  "mapTitleLabel": "Map",
+  "@mapTitleLabel": {
+    "description": "Header pill text on map-view (SCREENS.md §3.6: \"Header 'Map'\")."
+  },
+  "mapShowListSemanticsLabel": "Show list",
+  "@mapShowListSemanticsLabel": {
+    "description": "Semantics label on map-view's list-icon toggle button, top-right (SCREENS.md §3.6) — same destination as the back button, both reaching for the same \"back to the list\" journey."
+  },
+  "mapPinnedAllCountLabel": "{count} on the map",
+  "@mapPinnedAllCountLabel": {
+    "description": "Footer chip on map-view when every search result could be plotted (pinned count == total count). No noun inflects here — it's a fixed \"on the map\" tag after a bare number, not a counted noun phrase.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapPinnedPartialCountLabel": "{pinned} of {total} on the map",
+  "@mapPinnedPartialCountLabel": {
+    "description": "Footer chip on map-view when some search results lack coordinates and could not be plotted (pinned count < total count) — the honest \"n of m\" form, e.g. \"6 of 8 on the map\".",
+    "placeholders": {
+      "pinned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mapFiltersButtonLabel": "Filters",
+  "@mapFiltersButtonLabel": {
+    "description": "Floating button label on map-view (SCREENS.md §3.6) — opens filter-sheet."
+  },
+  "mapNoLocationResultsMessage": "None of these listings have a saved location.",
+  "@mapNoLocationResultsMessage": {
+    "description": "Centred card message on map-view when the search returned results but none carried coordinates to plot — distinct from mapNoResultsMessage (the search itself returned nothing)."
+  },
+  "mapNoResultsMessage": "No listings match your search.",
+  "@mapNoResultsMessage": {
+    "description": "Centred card message on map-view when the search returned no results at all — distinct from mapNoLocationResultsMessage (results exist but none have coordinates)."
+  },
+  "mapClusterSemanticsLabel": "{count, plural, one{{count} listing here, tap to zoom in} other{{count} listings here, tap to zoom in}}",
+  "@mapClusterSemanticsLabel": {
+    "description": "Semantics label on a map-view cluster badge (overlapping pins merged by flutter_map_marker_cluster) — names the count and the tap action for a screen reader.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapPinSemanticsLabel": "{title}, {price}",
+  "@mapPinSemanticsLabel": {
+    "description": "Semantics label on a single (non-clustered) map-view pin — the listing's title and formatted price, both data rather than UI wording, passed through untranslated; only the comma-separated structure is this string's own.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Bright 3-room apartment in Chilonzor"
+      },
+      "price": {
+        "type": "String",
+        "example": "$ 78,000"
+      }
+    }
+  },
+  "savedListingsNavBackSemanticsLabel": "Back",
+  "@savedListingsNavBackSemanticsLabel": {
+    "description": "Semantics label on saved-listings' back button (SCREENS.md §3.17)."
+  },
+  "savedListingsScreenTitle": "Saved Listings",
+  "@savedListingsScreenTitle": {
+    "description": "Header title on saved-listings (SCREENS.md §3.17)."
+  },
+  "savedListingsSignInPromptMessage": "Sign in to see your saved listings.",
+  "@savedListingsSignInPromptMessage": {
+    "description": "Message on saved-listings' sign-in prompt, shown when a signed-out session deep-links into this screen — SCREENS.md defines no string for this exact case, so this is written to match the app's voice rather than quoted from §3.17 (see saved_listings_screen.dart's doc comment)."
+  },
+  "savedListingsSignInButtonLabel": "Sign In",
+  "@savedListingsSignInButtonLabel": {
+    "description": "Button on saved-listings' sign-in prompt — pushes the login screen."
+  },
+  "savedListingsLoadErrorMessage": "Couldn't load your saved listings",
+  "@savedListingsLoadErrorMessage": {
+    "description": "Error message on saved-listings when fetching the saved-ads list fails. Paired with sharedRetryLabel."
+  },
+  "savedListingsEmptyStateMessage": "You haven't saved any listings yet.",
+  "@savedListingsEmptyStateMessage": {
+    "description": "Empty-state message on saved-listings when the signed-in user has saved nothing — SCREENS.md §3.17's own copy, quoted verbatim."
+  },
+  "sharedConfirmDialogCancelLabel": "Cancel",
+  "@sharedConfirmDialogCancelLabel": {
+    "description": "Cancel button shared by the three AlertDialog.adaptive confirms in shared/widgets/: delete-confirm (SCREENS.md §38), discard-changes-confirm (§5), and sign-out-confirm (Logout). Same role in all three — dismiss without taking the destructive action — so one key serves all three call sites."
+  },
+  "sharedDeleteConfirmTitle": "Delete {subject}?",
+  "@sharedDeleteConfirmTitle": {
+    "description": "Title of the shared delete-confirm alert (SCREENS.md §38: 'Delete listing?' / 'Delete lead?' / 'Delete coworker?'), built from {subject}. The caller passes {subject} as a noun already localized to the app's current language (e.g. the listing/lead/coworker word from GLOSSARY.md) — this template only supplies the surrounding question, since the composing widget (shared/widgets/delete_confirm.dart) itself has no way to know which flow called it.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "listing"
+      }
+    }
+  },
+  "sharedDeleteConfirmBody": "This action cannot be undone.",
+  "@sharedDeleteConfirmBody": {
+    "description": "Body text under the title on the shared delete-confirm alert (SCREENS.md §38) — the same sentence regardless of what is being deleted."
+  },
+  "sharedDeleteConfirmDeleteLabel": "Delete",
+  "@sharedDeleteConfirmDeleteLabel": {
+    "description": "Destructive (red) confirm button on the shared delete-confirm alert. Same word as a verb/action, not a noun."
+  },
+  "sharedDiscardChangesTitle": "Discard changes?",
+  "@sharedDiscardChangesTitle": {
+    "description": "Title of the shared discard-changes alert (SCREENS.md §5) shown before dismissing a form with unsaved state (create/edit-listing, edit-profile, create-lead, add-coworker, coworker-detail)."
+  },
+  "sharedDiscardChangesBody": "You have unsaved changes. If you leave now, they won't be saved.",
+  "@sharedDiscardChangesBody": {
+    "description": "Body text under the title on the shared discard-changes alert."
+  },
+  "sharedDiscardChangesDiscardLabel": "Discard",
+  "@sharedDiscardChangesDiscardLabel": {
+    "description": "Destructive (red) confirm button on the shared discard-changes alert — proceeds without saving."
+  },
+  "sharedSignOutTitle": "Log out?",
+  "@sharedSignOutTitle": {
+    "description": "Title of the shared sign-out confirm alert (shared/widgets/sign_out_confirm.dart), used by profile-buyer's and profile-agent's Logout rows."
+  },
+  "sharedSignOutBody": "You'll need to sign in again to access your account.",
+  "@sharedSignOutBody": {
+    "description": "Body text under the title on the shared sign-out confirm alert."
+  },
+  "sharedSignOutConfirmLabel": "Logout",
+  "@sharedSignOutConfirmLabel": {
+    "description": "Destructive (red) confirm button on the shared sign-out confirm alert. Same word as a verb/action, not a noun."
+  },
+  "sharedNoReviewsYetLabel": "No reviews yet",
+  "@sharedNoReviewsYetLabel": {
+    "description": "Shown by RatingStars (shared/widgets/rating_stars.dart) in place of the star row/count whenever an agent's rating average is null (a SQL aggregate over zero reviews) — never a zero-star row, see that file's own doc comment for why null and 0.0 are different facts."
+  },
+  "sharedRatingLabel": "Review: {rating}/5 ({count})",
+  "@sharedRatingLabel": {
+    "description": "The star row's trailing label on RatingStars (shared/widgets/rating_stars.dart), quoting SCREENS.md §3.9's 'Review: {rating}/5' plus a parenthesized review count. {rating} arrives pre-formatted to one decimal place (rating.toStringAsFixed(1), the server's own aggregate precision) rather than a locale-aware number placeholder, matching settingsAboutRowSubtitle's precedent for a client-formatted numeric string. {count} does not drive any word choice in this string (no accompanying noun like \"reviews\"), so it is a plain int placeholder, not an ICU plural.",
+    "placeholders": {
+      "rating": {
+        "type": "String",
+        "example": "4.5"
+      },
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "sharedStatusUnknownLabel": "Unknown",
+  "@sharedStatusUnknownLabel": {
+    "description": "Fallback StatusPill label (shared/widgets/status_pill.dart) shown when an AdStage/LeadStatus/PublishStatus value from the server is not one this build recognizes yet. Reused across all three status vocabularies rather than three separate keys, since the role — \"this build doesn't know what to call it\" — is identical in all three."
+  },
+  "sharedAdStageActiveLabel": "Active",
+  "@sharedAdStageActiveLabel": {
+    "description": "AdStagePill label (shared/widgets/status_pill.dart) for a published, currently-live listing."
+  },
+  "sharedAdStageSoldLabel": "Sold",
+  "@sharedAdStageSoldLabel": {
+    "description": "AdStagePill label (shared/widgets/status_pill.dart) for a listing marked sold."
+  },
+  "sharedAdStageDraftLabel": "Draft",
+  "@sharedAdStageDraftLabel": {
+    "description": "AdStagePill label (shared/widgets/status_pill.dart) for a listing not yet published to any channel."
+  },
+  "sharedLeadStatusNewLabel": "New",
+  "@sharedLeadStatusNewLabel": {
+    "description": "LeadStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §30's Kanban column for a lead not yet worked."
+  },
+  "sharedLeadStatusCouldNotConnectLabel": "Could Not Connect",
+  "@sharedLeadStatusCouldNotConnectLabel": {
+    "description": "LeadStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §30's exact display string — note the title case, distinct from console's own relabeled 'Could not connect'."
+  },
+  "sharedLeadStatusNeedToCallBackLabel": "Need To Call Back",
+  "@sharedLeadStatusNeedToCallBackLabel": {
+    "description": "LeadStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §30's exact display string (title case)."
+  },
+  "sharedLeadStatusRejectedLabel": "Rejected",
+  "@sharedLeadStatusRejectedLabel": {
+    "description": "LeadStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §30's Kanban column for a lead that declined."
+  },
+  "sharedLeadStatusAcceptedLabel": "Accepted",
+  "@sharedLeadStatusAcceptedLabel": {
+    "description": "LeadStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §30's Kanban column for a lead that converted."
+  },
+  "sharedPublishStatusPendingLabel": "Not published",
+  "@sharedPublishStatusPendingLabel": {
+    "description": "PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status for a listing not yet sent to that channel."
+  },
+  "sharedPublishStatusAwaitingReviewLabel": "Awaiting review",
+  "@sharedPublishStatusAwaitingReviewLabel": {
+    "description": "PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status while a draft awaits review before going live."
+  },
+  "sharedPublishStatusPublishedLabel": "Published",
+  "@sharedPublishStatusPublishedLabel": {
+    "description": "PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status once a listing is live on that channel."
+  },
+  "sharedPublishStatusFailedLabel": "Failed",
+  "@sharedPublishStatusFailedLabel": {
+    "description": "PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status when publishing to that channel failed."
+  },
+  "sharedGenericErrorMessage": "Something went wrong.",
+  "@sharedGenericErrorMessage": {
+    "description": "Fallback error-toast message (shared/widgets/toast.dart's LaCasaToast._defaultErrorMessage) shown when LaCasaToast.run's action throws something other than an ApiException (which instead shows that exception's own server-authored message verbatim, never wrapped in an ARB lookup — see lib/l10n/README.md's ApiErrorBody.message rule)."
+  },
+  "sharedShowPasswordLabel": "Show password",
+  "@sharedShowPasswordLabel": {
+    "description": "Semantics label on VisibilityToggle (shared/widgets/visibility_toggle.dart) when the password field is currently obscured — tapping it will reveal the text."
+  },
+  "sharedHidePasswordLabel": "Hide password",
+  "@sharedHidePasswordLabel": {
+    "description": "Semantics label on VisibilityToggle (shared/widgets/visibility_toggle.dart) when the password field is currently visible — tapping it will re-obscure the text."
+  },
+  "sharedChangePhotoLabel": "Change photo",
+  "@sharedChangePhotoLabel": {
+    "description": "Default semantics label on AvatarUploadControl (shared/widgets/avatar_upload_control.dart) and the title of the camera/gallery sheet it opens — used by edit-profile, coworker-detail and add-coworker's avatar controls."
+  },
+  "sharedMediaSourceCloseLabel": "Close",
+  "@sharedMediaSourceCloseLabel": {
+    "description": "Semantics label on the close (X) icon in the camera/gallery choice sheet (shared/widgets/media_source_sheet.dart)."
+  },
+  "sharedMediaSourceCameraLabel": "Camera",
+  "@sharedMediaSourceCameraLabel": {
+    "description": "Row label in the camera/gallery choice sheet (shared/widgets/media_source_sheet.dart) for picking a photo from the device camera."
+  },
+  "sharedMediaSourceGalleryLabel": "Choose from library",
+  "@sharedMediaSourceGalleryLabel": {
+    "description": "Row label in the camera/gallery choice sheet (shared/widgets/media_source_sheet.dart) for picking a photo from the device's photo library."
+  },
+  "sharedNavRowBackLabel": "Back",
+  "@sharedNavRowBackLabel": {
+    "description": "Semantics label (screen-reader only, no visible text) on the back arrow of the shared NavRow header (shared/widgets/nav_row.dart), used by every Work-tab screen's header. Distinct from settingsNavBackLabel, which is Settings' own separate back button."
+  },
+  "sharedNavRowCloseLabel": "Close",
+  "@sharedNavRowCloseLabel": {
+    "description": "Semantics label (screen-reader only, no visible text) on the close (X) icon of the shared NavRow header (shared/widgets/nav_row.dart) — the 'close' layout used by Create Listing's first step."
+  },
+  "sharedDialFallbackToastMessage": "Couldn't open the dialer — phone number copied: {phone}",
+  "@sharedDialFallbackToastMessage": {
+    "description": "Success toast shown by dialOrCopyPhone (shared/widgets/dial_or_copy.dart) when no dialer answered the tel: intent, so the number was copied to the clipboard instead. {phone} is the raw phone number, not translatable data.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "+998901234567"
+      }
+    }
+  },
+  "sharedFavouriteUpdateFailedMessage": "Couldn't update favourites",
+  "@sharedFavouriteUpdateFailedMessage": {
+    "description": "Snackbar shown by FavouriteButton (shared/widgets/favourite_button.dart) when toggling a listing's favourite state fails with an ApiException."
+  },
+  "sharedLoadMoreFailedLabel": "Couldn't load more — Retry",
+  "@sharedLoadMoreFailedLabel": {
+    "description": "Tappable retry label on LoadMoreFooter (shared/widgets/load_more_footer.dart) — the trailing sentinel row on a server-paged infinite-scroll list (search, my-listings, agents' review list) when the next page fails to load."
+  },
+  "sharedRetryLabel": "Retry",
+  "@sharedRetryLabel": {
+    "description": "Tappable retry label inside RailRetryCard (shared/widgets/list_states.dart) — a compact, scoped failure card for a secondary/scoped list section."
+  },
+  "sharedListingCardSaleBadgeLabel": "Sale",
+  "@sharedListingCardSaleBadgeLabel": {
+    "description": "Category badge overlaid on a listing photo in FullListingCard (shared/widgets/full_listing_card.dart) when the ad's category is 'sale' — see GLOSSARY.md's \"sale\" entry for the term rendering."
+  },
+  "sharedListingCardRentBadgeLabel": "Rent",
+  "@sharedListingCardRentBadgeLabel": {
+    "description": "Category badge overlaid on a listing photo in FullListingCard (shared/widgets/full_listing_card.dart) when the ad's category is 'rent' — see GLOSSARY.md's \"rent\" entry for the term rendering."
+  },
+  "sharedRoomsCount": "{count, plural, one{{count} room} other{{count} rooms}}",
+  "@sharedRoomsCount": {
+    "description": "Room count as rendered by Formatters.rooms/statLine (shared/formatters/formatters.dart) whenever a BuildContext/AppLocalizations is available (FullListingCard, CompactListingCard) — SCREENS.md's own '{rooms} room' template pluralized ('1 room' / '3 rooms'), same divergence from the spec's literal singular-only text that the original unlocalized helper already made (see that method's doc comment). Same shape as listingRoomsCount (map-view's own instance of this identical problem) but kept as a separate key since the two are extracted by different agents/prefixes and formatting is applied at a different call site; Formatters.rooms/statLine keep an unlocalized fallback path for the many call sites elsewhere in the app that do not yet pass a BuildContext through — see this run's report for the cross-group signature-change constraint.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "navTabHomeLabel": "Home",
+  "@navTabHomeLabel": {
+    "description": "Bottom tab bar label/semantics label for the Home branch (lib/navigation/shell/glass_tab_bar.dart), always visible."
+  },
+  "navTabSearchLabel": "Search",
+  "@navTabSearchLabel": {
+    "description": "Bottom tab bar label/semantics label for the Search branch (lib/navigation/shell/glass_tab_bar.dart), always visible."
+  },
+  "navTabWorkLabel": "Work",
+  "@navTabWorkLabel": {
+    "description": "Bottom tab bar label/semantics label for the Work branch (lib/navigation/shell/glass_tab_bar.dart), visible only for agent/coworker sessions."
+  },
+  "navTabAgentsLabel": "Agents",
+  "@navTabAgentsLabel": {
+    "description": "Bottom tab bar label/semantics label for the Agents branch (lib/navigation/shell/glass_tab_bar.dart), always visible."
+  },
+  "navTabProfileLabel": "Profile",
+  "@navTabProfileLabel": {
+    "description": "Bottom tab bar label/semantics label for the Profile branch (lib/navigation/shell/glass_tab_bar.dart), always visible."
+  },
+  "permissionsHeaderTitle": "Allow La Casa to…",
+  "@permissionsHeaderTitle": {
+    "description": "Header on the permissions-primer screen (SCREENS.md §3.2), quoted verbatim including its ellipsis character."
+  },
+  "permissionsCameraRowTitle": "Camera & Photos",
+  "@permissionsCameraRowTitle": {
+    "description": "Row title on the permissions-primer screen (SCREENS.md §3.2) for the camera/photo-library permission."
+  },
+  "permissionsCameraRowBody": "To add photos to your listings and profile avatar",
+  "@permissionsCameraRowBody": {
+    "description": "Row body text on the permissions-primer screen (SCREENS.md §3.2) explaining why the camera/photo-library permission is being asked for."
+  },
+  "permissionsNotificationsRowTitle": "Notifications",
+  "@permissionsNotificationsRowTitle": {
+    "description": "Row title on the permissions-primer screen (SCREENS.md §3.2) for the notifications permission."
+  },
+  "permissionsNotificationsRowBody": "To alert you about new leads and publish status.",
+  "@permissionsNotificationsRowBody": {
+    "description": "Row body text on the permissions-primer screen (SCREENS.md §3.2) explaining why the notifications permission is being asked for."
+  },
+  "permissionsNotNowButtonLabel": "Not now",
+  "@permissionsNotNowButtonLabel": {
+    "description": "Secondary footer button on the permissions-primer screen (SCREENS.md §3.2) — dismisses without asking for anything."
+  },
+  "permissionsContinueButtonLabel": "Continue",
+  "@permissionsContinueButtonLabel": {
+    "description": "Primary footer button on the permissions-primer screen (SCREENS.md §3.2) — returns to the screen that triggered this one."
+  },
+  "permissionsAllowButtonLabel": "Allow",
+  "@permissionsAllowButtonLabel": {
+    "description": "Per-row button on the permissions-primer screen (SCREENS.md §3.2) that raises the real OS permission prompt, shown before either row has been asked about yet."
+  },
+  "permissionsAllowedStatusLabel": "Allowed",
+  "@permissionsAllowedStatusLabel": {
+    "description": "Per-row status line on the permissions-primer screen once a permission was granted in full (PermissionOutcome.granted)."
+  },
+  "permissionsLimitedStatusLabel": "Allowed — limited to selected photos. Tap to choose more.",
+  "@permissionsLimitedStatusLabel": {
+    "description": "Per-row status line on the permissions-primer screen for iOS's limited-photo-access grant (PermissionOutcome.limited). Tapping opens system settings, the only lever available to widen the grant."
+  },
+  "permissionsDeniedStatusLabel": "Not allowed — you can change this in system settings",
+  "@permissionsDeniedStatusLabel": {
+    "description": "Per-row status line on the permissions-primer screen when a permission was denied but the OS can still raise another prompt later (PermissionOutcome.denied)."
+  },
+  "permissionsPermanentlyDeniedStatusLabel": "Not allowed — tap to open system settings",
+  "@permissionsPermanentlyDeniedStatusLabel": {
+    "description": "Per-row status line on the permissions-primer screen when the OS will not raise another in-app prompt at all (PermissionOutcome.permanentlyDenied) — Settings is the only path left, distinct from the plain-denied wording above."
+  },
+  "permissionsUnavailableStatusLabel": "Not available in this build yet",
+  "@permissionsUnavailableStatusLabel": {
+    "description": "Per-row status line on the permissions-primer screen when this build has no backend to ask at all (PermissionOutcome.unavailable, e.g. Notifications with no push infrastructure wired up)."
+  },
+  "onboardingSkipButtonLabel": "Skip",
+  "@onboardingSkipButtonLabel": {
+    "description": "Top-right button on every onboarding slide (SCREENS.md §3.1) — exits the carousel and marks it seen."
+  },
+  "onboardingNextButtonLabel": "Next",
+  "@onboardingNextButtonLabel": {
+    "description": "Primary button on the first two onboarding slides (SCREENS.md §3.1 names a button only on the final slide; the earlier slides carry this one so a user who never tries a swipe is not stranded — see onboarding_screen.dart's doc comment)."
+  },
+  "onboardingGetStartedButtonLabel": "Get Started",
+  "@onboardingGetStartedButtonLabel": {
+    "description": "Primary button on the final onboarding slide only (SCREENS.md §3.1) — exits the carousel and marks it seen."
+  },
+  "onboardingSlideOneTitle": "Manage every listing in one place",
+  "@onboardingSlideOneTitle": {
+    "description": "Title of onboarding slide 1 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "onboardingSlideOneBody": "Keep all your listings organized and easy to access, all in one app.",
+  "@onboardingSlideOneBody": {
+    "description": "Body text of onboarding slide 1 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "onboardingSlideTwoTitle": "Share to every channel at once",
+  "@onboardingSlideTwoTitle": {
+    "description": "Title of onboarding slide 2 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "onboardingSlideTwoBody": "Publish to Instagram, Telegram and more without leaving the app.",
+  "@onboardingSlideTwoBody": {
+    "description": "Body text of onboarding slide 2 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "onboardingSlideThreeTitle": "Track leads from first contact to close",
+  "@onboardingSlideThreeTitle": {
+    "description": "Title of onboarding slide 3 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "onboardingSlideThreeBody": "Sort and follow up on every inquiry so nothing slips through.",
+  "@onboardingSlideThreeBody": {
+    "description": "Body text of onboarding slide 3 of 3 (SCREENS.md §3.1, quoted verbatim)."
+  },
+  "listingEditorCreateNavTitle": "Add New Post",
+  "@listingEditorCreateNavTitle": {
+    "description": "NavRow title on create-listing (SCREENS.md §26)."
+  },
+  "listingEditorEditNavTitle": "Update New Post",
+  "@listingEditorEditNavTitle": {
+    "description": "NavRow title on edit-listing (SCREENS.md §27)."
+  },
+  "listingEditorPublishStatusNavTitle": "Publish Status",
+  "@listingEditorPublishStatusNavTitle": {
+    "description": "NavRow title on publish-status (SCREENS.md §29)."
+  },
+  "listingEditorWizardBackLabel": "Back",
+  "@listingEditorWizardBackLabel": {
+    "description": "Back button label in create-listing's step footer (ListingWizardFooter) — null/hidden on step 1."
+  },
+  "listingEditorWizardNextLabel": "Next",
+  "@listingEditorWizardNextLabel": {
+    "description": "Primary footer button label on create-listing's steps 1-3 (advances to the next step)."
+  },
+  "listingEditorWizardCreateLabel": "Create",
+  "@listingEditorWizardCreateLabel": {
+    "description": "Primary footer button label on create-listing's step 4 (submits the whole form)."
+  },
+  "listingEditorStepBasicsLabel": "Basics",
+  "@listingEditorStepBasicsLabel": {
+    "description": "Step-indicator dot label on create-listing, step 1 of 4 (SCREENS.md §26)."
+  },
+  "listingEditorStepDetailsLabel": "Details",
+  "@listingEditorStepDetailsLabel": {
+    "description": "Step-indicator dot label on create-listing, step 2 of 4."
+  },
+  "listingEditorStepPhotosLabel": "Photos",
+  "@listingEditorStepPhotosLabel": {
+    "description": "Step-indicator dot label on create-listing, step 3 of 4."
+  },
+  "listingEditorStepPublishLabel": "Publish",
+  "@listingEditorStepPublishLabel": {
+    "description": "Step-indicator dot label on create-listing, step 4 of 4."
+  },
+  "listingEditorCreatePublishNoticeMessage": "Publishing is available once this listing is created — tap Create, then use the per-channel buttons on the listing's own edit screen.",
+  "@listingEditorCreatePublishNoticeMessage": {
+    "description": "Body text of create-listing's Step 4 stand-in notice — an honest explainer for why the real per-channel publish buttons aren't shown yet (the ad doesn't exist server-side until Create is tapped)."
+  },
+  "listingEditorPendingUploadsMessage": "Please wait for photos/video to finish uploading.",
+  "@listingEditorPendingUploadsMessage": {
+    "description": "Error toast shown by create-listing's Create and edit-listing's Save when a picked photo/video is still mid-upload and has no URL yet to submit."
+  },
+  "listingEditorCreatePendingLabel": "Creating",
+  "@listingEditorCreatePendingLabel": {
+    "description": "Transient pending-toast label while create-listing's Create request is in flight."
+  },
+  "listingEditorCreateSuccessMessage": "Successfully created",
+  "@listingEditorCreateSuccessMessage": {
+    "description": "Success toast after create-listing's Create request resolves."
+  },
+  "listingEditorUpdatePendingLabel": "Updating",
+  "@listingEditorUpdatePendingLabel": {
+    "description": "Transient pending-toast label while edit-listing's Save request is in flight."
+  },
+  "listingEditorUpdateSuccessMessage": "Successfully updated",
+  "@listingEditorUpdateSuccessMessage": {
+    "description": "Success toast after edit-listing's Save request resolves."
+  },
+  "listingEditorDeletePendingLabel": "Deleting",
+  "@listingEditorDeletePendingLabel": {
+    "description": "Transient pending-toast label while edit-listing's Delete request is in flight."
+  },
+  "listingEditorDeleteSuccessMessage": "Listing deleted",
+  "@listingEditorDeleteSuccessMessage": {
+    "description": "Success toast after edit-listing's Delete request resolves."
+  },
+  "listingEditorGenericErrorMessage": "Something went wrong.",
+  "@listingEditorGenericErrorMessage": {
+    "description": "Fallback error toast/message reused across listing_editor (create-listing's Create, edit-listing's Save/Delete, publish-channels-sheet, publish-status) whenever a failure isn't a recognized ApiErrorException/NetworkException."
+  },
+  "listingEditorNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@listingEditorNetworkErrorMessage": {
+    "description": "Fallback error message reused across listing_editor (publish-channels-sheet, publish-status) specifically for a NetworkException."
+  },
+  "listingEditorLoadErrorMessage": "Couldn't load this listing.",
+  "@listingEditorLoadErrorMessage": {
+    "description": "Full-width error-state message on edit-listing when the prefill fetch (GET /ads/:id) fails."
+  },
+  "listingEditorDeleteConfirmSubject": "listing",
+  "@listingEditorDeleteConfirmSubject": {
+    "description": "The noun edit-listing passes as shared/widgets/delete_confirm.dart's `subject` argument, which that shared widget interpolates into its own sharedDeleteConfirmTitle (\"Delete {subject}?\") — delete_confirm.dart requires the caller to already have a localized noun in hand (see that file's doc comment), so this is that noun for the listing/ad domain object (GLOSSARY.md's \"listing / ad\" entry)."
+  },
+  "listingEditorTitleFieldLabel": "Title",
+  "@listingEditorTitleFieldLabel": {
+    "description": "Field label on create-listing/edit-listing's Basics step, the listing's title text field (SCREENS.md §26)."
+  },
+  "listingEditorCityFieldLabel": "City",
+  "@listingEditorCityFieldLabel": {
+    "description": "Field label on the Basics step for the City text field."
+  },
+  "listingEditorDistrictFieldLabel": "District",
+  "@listingEditorDistrictFieldLabel": {
+    "description": "Field label on the Basics step for the District text field (disabled until City has a value)."
+  },
+  "listingEditorDistrictDisabledHint": "Pick a city first",
+  "@listingEditorDistrictDisabledHint": {
+    "description": "Hint text shown inside the District field on the Basics step while it is disabled because City is still empty."
+  },
+  "listingEditorAddressFieldLabel": "Address",
+  "@listingEditorAddressFieldLabel": {
+    "description": "Field label on the Basics step for the Address text field."
+  },
+  "listingEditorReferenceFieldLabel": "Reference",
+  "@listingEditorReferenceFieldLabel": {
+    "description": "Field label on the Basics step for the Reference text field."
+  },
+  "listingEditorReferenceHint": "Orientation / landmark",
+  "@listingEditorReferenceHint": {
+    "description": "Hint text inside the Reference field on the Basics step."
+  },
+  "listingEditorTypeFieldLabel": "Type",
+  "@listingEditorTypeFieldLabel": {
+    "description": "Chip-group field label on the Details step for the Type (Residential/Nonresidential) selector."
+  },
+  "listingEditorCategoryFieldLabel": "Category",
+  "@listingEditorCategoryFieldLabel": {
+    "description": "Chip-group field label on the Details step for the Category (Rent/Sale) selector."
+  },
+  "listingEditorRepairFieldLabel": "Repair",
+  "@listingEditorRepairFieldLabel": {
+    "description": "Chip-group field label on the Details step for the Repair-condition selector."
+  },
+  "listingEditorFurnitureFieldLabel": "Furniture",
+  "@listingEditorFurnitureFieldLabel": {
+    "description": "Chip-group field label on the Details step for the Furniture selector."
+  },
+  "listingEditorPriceTypeFieldLabel": "Price type",
+  "@listingEditorPriceTypeFieldLabel": {
+    "description": "Chip-group field label on the Details step for the currency (so'm/y.e) selector."
+  },
+  "listingEditorStatusFieldLabel": "Status",
+  "@listingEditorStatusFieldLabel": {
+    "description": "Chip-group field label on the Details step for the ad Status (Active/Sold/Draft) selector."
+  },
+  "listingEditorRoomsFieldLabel": "Rooms",
+  "@listingEditorRoomsFieldLabel": {
+    "description": "Field label on the Details step for the Rooms number field."
+  },
+  "listingEditorAreaFieldLabel": "Area",
+  "@listingEditorAreaFieldLabel": {
+    "description": "Field label on the Details step for the Area number field."
+  },
+  "listingEditorAreaUnitSuffix": "m²",
+  "@listingEditorAreaUnitSuffix": {
+    "description": "Unit suffix shown inside the Area field on the Details step. A metric unit symbol — likely unchanged across en/uz/ru, but extracted like any other user-visible string rather than assumed; flagged in parts/editor.json for translator confirmation."
+  },
+  "listingEditorStoreyFieldLabel": "Storey",
+  "@listingEditorStoreyFieldLabel": {
+    "description": "Field label on the Details step for the unit's own floor number field."
+  },
+  "listingEditorFloorsFieldLabel": "Floors",
+  "@listingEditorFloorsFieldLabel": {
+    "description": "Field label on the Details step for the building's total-floors number field."
+  },
+  "listingEditorHashtagsFieldLabel": "Hashtags",
+  "@listingEditorHashtagsFieldLabel": {
+    "description": "Field label on create-listing's Details step for the Hashtags text field (edit-listing omits this field per §27)."
+  },
+  "listingEditorHashtagsHint": "#new #2024",
+  "@listingEditorHashtagsHint": {
+    "description": "Example hint text inside the Hashtags field — sample hashtag text, not a sentence; flagged in parts/editor.json since hashtags conventionally stay in Latin script regardless of app language."
+  },
+  "listingEditorPriceFieldLabel": "Price",
+  "@listingEditorPriceFieldLabel": {
+    "description": "Field label on the Details step for the Price number field."
+  },
+  "listingEditorDescriptionFieldLabel": "Description",
+  "@listingEditorDescriptionFieldLabel": {
+    "description": "Field label on the Details step for the required Description text field."
+  },
+  "listingEditorTypeResidentialOption": "Residential",
+  "@listingEditorTypeResidentialOption": {
+    "description": "Chip option label in the Details step's Type field."
+  },
+  "listingEditorTypeNonresidentialOption": "Nonresidential",
+  "@listingEditorTypeNonresidentialOption": {
+    "description": "Chip option label in the Details step's Type field."
+  },
+  "listingEditorCategoryRentOption": "Rent",
+  "@listingEditorCategoryRentOption": {
+    "description": "Chip option label in the Details step's Category field — see GLOSSARY.md's \"rent\" entry."
+  },
+  "listingEditorCategorySaleOption": "Sale",
+  "@listingEditorCategorySaleOption": {
+    "description": "Chip option label in the Details step's Category field — see GLOSSARY.md's \"sale\" entry."
+  },
+  "listingEditorRepairNotRepairedOption": "Not repaired",
+  "@listingEditorRepairNotRepairedOption": {
+    "description": "Chip option label in the Details step's Repair field — also this field's default."
+  },
+  "listingEditorRepairNormalOption": "Normal",
+  "@listingEditorRepairNormalOption": {
+    "description": "Chip option label in the Details step's Repair field."
+  },
+  "listingEditorRepairGoodOption": "Good",
+  "@listingEditorRepairGoodOption": {
+    "description": "Chip option label in the Details step's Repair field."
+  },
+  "listingEditorRepairExcellentOption": "Excellent",
+  "@listingEditorRepairExcellentOption": {
+    "description": "Chip option label in the Details step's Repair field."
+  },
+  "listingEditorFurnitureWithOption": "With furniture",
+  "@listingEditorFurnitureWithOption": {
+    "description": "Chip option label in the Details step's Furniture field — also this field's default. Lowercase \"furniture\" is byte-exact from the source string."
+  },
+  "listingEditorFurnitureWithoutOption": "Without Furniture",
+  "@listingEditorFurnitureWithoutOption": {
+    "description": "Chip option label in the Details step's Furniture field. Capitalised \"Furniture\" (unlike listingEditorFurnitureWithOption's lowercase) is byte-exact from the source string, not a typo to fix."
+  },
+  "listingEditorPriceTypeUzsOption": "so'm",
+  "@listingEditorPriceTypeUzsOption": {
+    "description": "Chip option label in the Details step's Price-type field, and the currency suffix shown in the live price preview beneath the Price field, for CurrencyCode.uzs. A currency name — flagged in parts/editor.json for translator confirmation on whether it should ever change form across languages."
+  },
+  "listingEditorPriceTypeUsdOption": "y.e",
+  "@listingEditorPriceTypeUsdOption": {
+    "description": "Chip option label in the Details step's Price-type field, and the currency suffix in the live price preview, for CurrencyCode.usd. Same translator-confirmation flag as listingEditorPriceTypeUzsOption."
+  },
+  "listingEditorStageActiveOption": "Active",
+  "@listingEditorStageActiveOption": {
+    "description": "Chip option label in the Details step's Status field — also this field's default."
+  },
+  "listingEditorStageSoldOption": "Sold",
+  "@listingEditorStageSoldOption": {
+    "description": "Chip option label in the Details step's Status field."
+  },
+  "listingEditorStageDraftOption": "Draft",
+  "@listingEditorStageDraftOption": {
+    "description": "Chip option label in the Details step's Status field."
+  },
+  "listingEditorPricePreviewPlaceholder": "Enter a price to see a preview.",
+  "@listingEditorPricePreviewPlaceholder": {
+    "description": "Placeholder line under the Price field on the Details step, shown while the field is empty/unparsable."
+  },
+  "listingEditorPricePreviewText": "{amount} {currency}",
+  "@listingEditorPricePreviewText": {
+    "description": "Live price preview under the Price field on the Details step once a number has been entered, e.g. \"78,000 so'm\". {amount} is the already-grouped-thousands numeral (Formatters.groupedNumber) and {currency} is the localized currency suffix (listingEditorPriceTypeUzsOption/listingEditorPriceTypeUsdOption) — both pre-formatted data passed in as placeholders rather than concatenated in Dart, so a language needing a different amount/currency order could still reorder this template.",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "78,000"
+      },
+      "currency": {
+        "type": "String",
+        "example": "so'm"
+      }
+    }
+  },
+  "listingEditorNearbyPlacesLabel": "Nearby Places",
+  "@listingEditorNearbyPlacesLabel": {
+    "description": "Field label on the Details step above the Nearby Places dynamic chip list."
+  },
+  "listingEditorNearbyPlacesHint": "e.g. Chilonzor metro station (7 min walk)",
+  "@listingEditorNearbyPlacesHint": {
+    "description": "Hint text inside the Nearby Places free-text input."
+  },
+  "listingEditorNearbyPlacesAddButtonLabel": "Add",
+  "@listingEditorNearbyPlacesAddButtonLabel": {
+    "description": "Button label that appends the typed value as a new Nearby Places chip."
+  },
+  "listingEditorAdditionalInfoLabel": "Additional Info",
+  "@listingEditorAdditionalInfoLabel": {
+    "description": "Field label on the Details step above the Additional Info dynamic key/value rows."
+  },
+  "listingEditorAdditionalInfoAddButtonLabel": "Add",
+  "@listingEditorAdditionalInfoAddButtonLabel": {
+    "description": "Button label that appends a new blank Additional Info row."
+  },
+  "listingEditorAdditionalInfoKeyHint": "Key",
+  "@listingEditorAdditionalInfoKeyHint": {
+    "description": "Hint text inside an Additional Info row's key text field."
+  },
+  "listingEditorAdditionalInfoValueHint": "Value",
+  "@listingEditorAdditionalInfoValueHint": {
+    "description": "Hint text inside an Additional Info row's value text field."
+  },
+  "listingEditorNoExistingPhotosMessage": "No photos on this listing yet.",
+  "@listingEditorNoExistingPhotosMessage": {
+    "description": "Message shown in edit-listing's Existing Photos grid when the ad has no photos yet."
+  },
+  "listingEditorExistingPhotosLabel": "Existing Photos",
+  "@listingEditorExistingPhotosLabel": {
+    "description": "Field label on edit-listing above the Existing Photos grid (SCREENS.md §27)."
+  },
+  "listingEditorAddPhotosLabel": "Add Photos",
+  "@listingEditorAddPhotosLabel": {
+    "description": "Field label on edit-listing above the new-upload photo/video picker, distinct from the Existing Photos grid above it."
+  },
+  "listingEditorAddPhotosButtonLabel": "Add photos",
+  "@listingEditorAddPhotosButtonLabel": {
+    "description": "Both the semantics label and the visible label on the dashed \"add photos\" tap target in the Photos step's picker (create-listing Step 3 and edit-listing's new-upload picker)."
+  },
+  "listingEditorAddVideoButtonLabel": "Add video",
+  "@listingEditorAddVideoButtonLabel": {
+    "description": "Both the semantics label and the visible label on the dashed \"add video\" tap target in the Photos step's picker."
+  },
+  "listingEditorMediaLimitsHint": "Up to 5 images (5MB each). An optional single video up to 70MB.",
+  "@listingEditorMediaLimitsHint": {
+    "description": "Caption under the Photos step's photo tiles stating the size/count limits (SCREENS.md §26)."
+  },
+  "listingEditorAddPhotoSheetTitle": "Add photo",
+  "@listingEditorAddPhotoSheetTitle": {
+    "description": "Title of the camera-vs-gallery source-picker sheet opened by the Photos step's \"add photo\" tap target."
+  },
+  "listingEditorAddVideoSheetTitle": "Add video",
+  "@listingEditorAddVideoSheetTitle": {
+    "description": "Title of the camera-vs-gallery source-picker sheet opened by the Photos step's \"add video\" tap target."
+  },
+  "listingEditorVideoFallbackFileName": "Video",
+  "@listingEditorVideoFallbackFileName": {
+    "description": "Fallback label shown for a picked video tile on the Photos step when the picker returned no file name."
+  },
+  "listingEditorUploadFailedFallbackMessage": "Couldn't upload. Please try again.",
+  "@listingEditorUploadFailedFallbackMessage": {
+    "description": "Fallback status text on a failed video-upload tile in the Photos step, used only when the upload's own errorMessage is null."
+  },
+  "listingEditorUploadedStatusLabel": "Uploaded",
+  "@listingEditorUploadedStatusLabel": {
+    "description": "Status text on a video tile in the Photos step once its upload has finished successfully."
+  },
+  "listingEditorUploadingProgressLabel": "Uploading… {percent}%",
+  "@listingEditorUploadingProgressLabel": {
+    "description": "Status text on a video tile in the Photos step while its upload is in progress. {percent} is a plain 0-100 integer, not a countable noun, so this is a bare placeholder rather than an ICU plural.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "listingEditorPublishSectionLabel": "Publish",
+  "@listingEditorPublishSectionLabel": {
+    "description": "Field label above the per-channel publish buttons (create-listing's Step 4 notice sits below this same label; edit-listing shows the real buttons under it)."
+  },
+  "listingEditorChannelInstagramLabel": "Instagram",
+  "@listingEditorChannelInstagramLabel": {
+    "description": "Channel name, reused as: the publish-button label on the Publish section, the section heading on publish-channels-sheet, and one of publish-status's per-channel row titles."
+  },
+  "listingEditorChannelTelegramLabel": "Telegram",
+  "@listingEditorChannelTelegramLabel": {
+    "description": "Channel name, reused the same way as listingEditorChannelInstagramLabel."
+  },
+  "listingEditorChannelYoutubeLabel": "YouTube",
+  "@listingEditorChannelYoutubeLabel": {
+    "description": "Channel name, reused as: the (visibly-disabled) publish-button label on the Publish section, and one of publish-status's per-channel row titles."
+  },
+  "listingEditorChannelOlxLabel": "OLX",
+  "@listingEditorChannelOlxLabel": {
+    "description": "Channel name, reused as: the (visibly-disabled) publish-button label on the Publish section, the always-disabled row on publish-channels-sheet, and one of publish-status's per-channel row titles."
+  },
+  "listingEditorChannelRealtingLabel": "Realting",
+  "@listingEditorChannelRealtingLabel": {
+    "description": "Channel name shown as one of publish-status's per-channel row titles — Realting never appears as a publish button (no ad-authoring UI targets it), only as a status row."
+  },
+  "listingEditorChannelUnknownLabel": "Unknown channel",
+  "@listingEditorChannelUnknownLabel": {
+    "description": "Fallback channel-name row title on publish-status for a Channel value this build doesn't otherwise recognize."
+  },
+  "listingEditorYoutubeUnavailableHint": "Beta — not available in this build.",
+  "@listingEditorYoutubeUnavailableHint": {
+    "description": "Hint line under the visibly-disabled YouTube button on the Publish section."
+  },
+  "listingEditorOlxUnavailableHint": "OLX cross-posting is only available from the desktop app (requires a browser extension).",
+  "@listingEditorOlxUnavailableHint": {
+    "description": "SCREENS.md §5's fixed OLX hint — quoted verbatim and reused across the Publish section's OLX button, publish-channels-sheet's always-disabled OLX row, and publish-status's grayed OLX row."
+  },
+  "listingEditorPublishStatusLinkLabel": "Publish Status",
+  "@listingEditorPublishStatusLinkLabel": {
+    "description": "Trailing link label on edit-listing's Publish section (SCREENS.md §27) that pushes publish-status."
+  },
+  "listingEditorPublishChannelsSheetTitle": "Select the channels you want to publish to!",
+  "@listingEditorPublishChannelsSheetTitle": {
+    "description": "Header title on publish-channels-sheet (SCREENS.md §28)."
+  },
+  "listingEditorInstagramLoadErrorMessage": "Couldn't load connected Instagram accounts.",
+  "@listingEditorInstagramLoadErrorMessage": {
+    "description": "Inline error message on publish-channels-sheet's Instagram section when the connected-accounts fetch fails. Paired with sharedRetryLabel."
+  },
+  "listingEditorNoInstagramAccountMessage": "No Instagram account is connected. You can connect one in Settings, or draft the post yourself.",
+  "@listingEditorNoInstagramAccountMessage": {
+    "description": "Message on publish-channels-sheet's Instagram section when the caller has no connected Instagram account at all."
+  },
+  "listingEditorNoTelegramChannelMessage": "No Telegram channel is connected.",
+  "@listingEditorNoTelegramChannelMessage": {
+    "description": "Message on publish-channels-sheet's Telegram section when the caller has no connected Telegram chat."
+  },
+  "listingEditorTelegramChannelRowLabel": "Telegram channel #{chatId}",
+  "@listingEditorTelegramChannelRowLabel": {
+    "description": "Row label for one connected Telegram chat on publish-channels-sheet. Telegram chats carry no title/avatar on this build's wire data (ruling 7.10), so the raw chat id is the honest label — {chatId} is a bare numeric id, not a countable noun.",
+    "placeholders": {
+      "chatId": {
+        "type": "int"
+      }
+    }
+  },
+  "listingEditorCancelButtonLabel": "Cancel",
+  "@listingEditorCancelButtonLabel": {
+    "description": "Footer button label on publish-channels-sheet that dismisses it without publishing."
+  },
+  "listingEditorPublishButtonLabel": "Publish",
+  "@listingEditorPublishButtonLabel": {
+    "description": "Footer button label on publish-channels-sheet that fans out the selected Instagram/Telegram publish calls."
+  },
+  "listingEditorInstagramPublishFailedMessage": "Instagram publish failed for {usernames}",
+  "@listingEditorInstagramPublishFailedMessage": {
+    "description": "Error toast on publish-channels-sheet when at least one selected Instagram target failed to publish. {usernames} is a comma-and-space-joined list of usernames (or raw ids when a username isn't known), already assembled in Dart before being passed in — this string only supplies the surrounding sentence.",
+    "placeholders": {
+      "usernames": {
+        "type": "String",
+        "example": "lacasa.realty, another.account"
+      }
+    }
+  },
+  "listingEditorInstagramPublishSuccessMessage": "Instagram post published!",
+  "@listingEditorInstagramPublishSuccessMessage": {
+    "description": "Success toast on publish-channels-sheet when every selected Instagram target published successfully — SCREENS.md §28 quotes this verbatim."
+  },
+  "listingEditorTelegramPublishFailedMessage": "Telegram publish failed for {chatIds}",
+  "@listingEditorTelegramPublishFailedMessage": {
+    "description": "Error toast on publish-channels-sheet when at least one selected Telegram target failed to publish and the server gave no more specific message. {chatIds} is a comma-and-space-joined list of raw chat ids, already assembled in Dart. Not spec'd text — publish_channels_sheet.dart's own doc comment documents this as an extrapolation of Instagram's spec'd pattern.",
+    "placeholders": {
+      "chatIds": {
+        "type": "String",
+        "example": "111, 222"
+      }
+    }
+  },
+  "listingEditorTelegramPublishSuccessMessage": "Telegram post published!",
+  "@listingEditorTelegramPublishSuccessMessage": {
+    "description": "Success toast on publish-channels-sheet when every selected Telegram target published successfully — same documented extrapolation as listingEditorTelegramPublishFailedMessage."
+  },
+  "listingEditorPublishStatusLoadErrorMessage": "Couldn't load publish status.",
+  "@listingEditorPublishStatusLoadErrorMessage": {
+    "description": "Full-width error-state message on publish-status when the status fetch fails. Paired with sharedRetryLabel."
+  },
+  "listingEditorOlxNotAvailableLabel": "Not available on mobile",
+  "@listingEditorOlxNotAvailableLabel": {
+    "description": "Trailing status text on publish-status's grayed OLX row, in place of a status pill."
+  },
+  "listingEditorLastAttemptLabel": "Last attempt: {date}",
+  "@listingEditorLastAttemptLabel": {
+    "description": "Row detail on publish-status showing when a channel was last attempted. {date} is already formatted by Formatters.date before being passed in.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "Aug 9, 2026"
+      }
+    }
+  },
+  "listingEditorViewPostLinkLabel": "View Post",
+  "@listingEditorViewPostLinkLabel": {
+    "description": "Link label on a PUBLISHED channel row on publish-status when an external URL exists — copies the link to the clipboard (no url_launcher in this build)."
+  },
+  "listingEditorPostLinkCopiedMessage": "Post link copied to clipboard.",
+  "@listingEditorPostLinkCopiedMessage": {
+    "description": "Toast shown after tapping listingEditorViewPostLinkLabel."
+  },
+  "listingEditorYoutubeNonRetryableReason": "YouTube has no server-side publish call to retry — the browser performs the upload itself under your own Google session. Upload again and report the result.",
+  "@listingEditorYoutubeNonRetryableReason": {
+    "description": "Explanatory caption under publish-status's disabled Retry pill for a FAILED YouTube row — quoted verbatim from the live server's NON_RETRYABLE_REASONS."
+  },
+  "listingEditorOlxNonRetryableReason": "OLX posting happens through the browser extension with a human reviewing and clicking Publish. Retry the cross-post from the extension instead.",
+  "@listingEditorOlxNonRetryableReason": {
+    "description": "Explanatory caption under publish-status's disabled Retry pill for a FAILED OLX row — quoted verbatim from the live server's NON_RETRYABLE_REASONS."
+  },
+  "listingEditorRealtingNonRetryableReason": "Realting listings sync through a scheduled feed, not a per-ad publish call. There is nothing here to retry.",
+  "@listingEditorRealtingNonRetryableReason": {
+    "description": "Explanatory caption under publish-status's disabled Retry pill for a FAILED Realting row — quoted verbatim from the live server's NON_RETRYABLE_REASONS."
+  },
+  "listingEditorUnknownChannelReason": "Unknown publish channel.",
+  "@listingEditorUnknownChannelReason": {
+    "description": "Explanatory caption fallback for a FAILED row on a Channel value this build doesn't otherwise recognize."
+  },
+  "listingEditorRetrySuccessMessage": "{channel} publish retried successfully.",
+  "@listingEditorRetrySuccessMessage": {
+    "description": "Success toast on publish-status after a Telegram/Instagram Retry succeeds. {channel} is the already-localized channel name (listingEditorChannelInstagramLabel/listingEditorChannelTelegramLabel) passed in as data. Not spec'd text — publish_status_screen.dart's own doc comment documents this as an extrapolation of publish-channels-sheet's \"{channel} post published!\" pattern.",
+    "placeholders": {
+      "channel": {
+        "type": "String",
+        "example": "Telegram"
+      }
+    }
+  },
+  "listingEditorSaveButtonLabel": "Save",
+  "@listingEditorSaveButtonLabel": {
+    "description": "Primary submit button label on edit-listing's form (SCREENS.md §27 — a real submit from any point, unlike create-listing's stepwise Next/Create)."
+  },
+  "listingEditorDeleteButtonLabel": "Delete",
+  "@listingEditorDeleteButtonLabel": {
+    "description": "Destructive Delete button label on edit-listing's form, hidden for a coworker session."
+  },
+  "listingEditorTitleRequiredError": "Title is required",
+  "@listingEditorTitleRequiredError": {
+    "description": "Inline validation error under the Title field on create-listing/edit-listing, quoted verbatim from SCREENS.md §26."
+  },
+  "listingEditorCityRequiredError": "City is required",
+  "@listingEditorCityRequiredError": {
+    "description": "Inline validation error under the City field — same §26 quoting as listingEditorTitleRequiredError."
+  },
+  "listingEditorDistrictRequiredError": "District is required",
+  "@listingEditorDistrictRequiredError": {
+    "description": "Inline validation error under the District field — same §26 quoting as listingEditorTitleRequiredError."
+  },
+  "listingEditorAddressRequiredError": "Address is required",
+  "@listingEditorAddressRequiredError": {
+    "description": "Inline validation error under the Address field — same §26 quoting as listingEditorTitleRequiredError."
+  },
+  "listingEditorReferenceRequiredError": "Reference is required",
+  "@listingEditorReferenceRequiredError": {
+    "description": "Inline validation error under the Reference field — same §26 quoting as listingEditorTitleRequiredError."
+  },
+  "listingEditorDescriptionRequiredError": "Description is required",
+  "@listingEditorDescriptionRequiredError": {
+    "description": "Inline validation error under the Description field on the Details step — same §26 quoting as listingEditorTitleRequiredError."
+  },
+  "myListingsNavTitle": "My Ads",
+  "@myListingsNavTitle": {
+    "description": "Header title on my-listings (SCREENS.md §25)."
+  },
+  "myListingsFilterButtonLabel": "Filter",
+  "@myListingsFilterButtonLabel": {
+    "description": "Toolbar button label on my-listings that opens the CRM variant of filter-sheet."
+  },
+  "myListingsCreateButtonSemanticsLabel": "Create New Post",
+  "@myListingsCreateButtonSemanticsLabel": {
+    "description": "Semantics label on my-listings toolbar's \"+\" button, which pushes create-listing."
+  },
+  "myListingsLoadErrorMessage": "Couldn't load your ads.",
+  "@myListingsLoadErrorMessage": {
+    "description": "Full-width error-state message on my-listings' row list when the paged fetch fails. Paired with sharedRetryLabel."
+  },
+  "myListingsEmptyStateMessage": "Ads not found.",
+  "@myListingsEmptyStateMessage": {
+    "description": "Empty-state message on my-listings when the fetch succeeds with zero ads — SCREENS.md §25's own copy, quoted verbatim."
+  },
+  "myListingsEditButtonSemanticsLabel": "Edit",
+  "@myListingsEditButtonSemanticsLabel": {
+    "description": "Semantics label on each my-listings row's edit icon, which pushes edit-listing for that ad."
+  },
+  "agentsDirectoryScreenTitle": "Agents",
+  "@agentsDirectoryScreenTitle": {
+    "description": "Nav-bar title on the Agents directory screen (SCREENS.md §3.9)."
+  },
+  "agentsDirectoryLoadErrorMessage": "Couldn't load agents",
+  "@agentsDirectoryLoadErrorMessage": {
+    "description": "Full-width error-state message on Agents directory when the list fails to load."
+  },
+  "agentsDirectoryEmptyMessage": "No agents found.",
+  "@agentsDirectoryEmptyMessage": {
+    "description": "Full-width empty-state message on Agents directory when the list loads with zero agents (SCREENS.md §3.9, quoted verbatim)."
+  },
+  "agentsCardAdsCountLabel": "Ads: {count}",
+  "@agentsCardAdsCountLabel": {
+    "description": "SCREENS.md §3.9's \"Ads: {adsCount}\" chip on an Agent directory card — quoted verbatim; the count is intentionally not pluralized (matches the file's own doc comment), it's a fixed label followed by a numeral.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentsProfileNavBackLabel": "Back",
+  "@agentsProfileNavBackLabel": {
+    "description": "Semantics label (screen-reader only, no visible text) on the agent-profile screen's back button."
+  },
+  "agentsProfileScreenTitle": "Agent Information",
+  "@agentsProfileScreenTitle": {
+    "description": "Nav-bar title on the agent-profile screen (SCREENS.md §3.10)."
+  },
+  "agentsProfileLoadErrorMessage": "Couldn't load this agent",
+  "@agentsProfileLoadErrorMessage": {
+    "description": "Full-width error-state message on agent-profile when a transport failure (not a 404) prevents loading."
+  },
+  "agentsProfileNotFoundMessage": "This agent is no longer available.",
+  "@agentsProfileNotFoundMessage": {
+    "description": "Full-width state message on agent-profile when the agent id 404s (a deleted account, or a coworker id GET /agents/:id refuses by design)."
+  },
+  "agentsProfileGoBackLabel": "Go back",
+  "@agentsProfileGoBackLabel": {
+    "description": "Action-button label on agent-profile's not-found state, navigating back to the agents directory."
+  },
+  "agentsInfoFullNameLabel": "Full name:",
+  "@agentsInfoFullNameLabel": {
+    "description": "Field label in the agent-profile identity block (SCREENS.md §3.10, quoted with its own casing and trailing colon)."
+  },
+  "agentsInfoEmailLabel": "E-mail:",
+  "@agentsInfoEmailLabel": {
+    "description": "Field label in the agent-profile identity block (SCREENS.md §3.10, quoted with its own hyphenated casing and trailing colon)."
+  },
+  "agentsInfoPhoneLabel": "Phone:",
+  "@agentsInfoPhoneLabel": {
+    "description": "Field label in the agent-profile identity block (SCREENS.md §3.10, quoted with its own casing and trailing colon)."
+  },
+  "agentsInfoAddressLabel": "Address:",
+  "@agentsInfoAddressLabel": {
+    "description": "Field label in the agent-profile identity block for the agent's address, shown only when set."
+  },
+  "agentsInfoCallButtonLabel": "Call",
+  "@agentsInfoCallButtonLabel": {
+    "description": "Action-button label in the agent-profile identity block that dials the agent's phone number."
+  },
+  "agentsInfoMessageButtonLabel": "Message",
+  "@agentsInfoMessageButtonLabel": {
+    "description": "Action-button label in the agent-profile identity block that opens contact-sheet pre-filled for this agent."
+  },
+  "agentsAdsGridLoadErrorMessage": "Couldn't load this agent's listings",
+  "@agentsAdsGridLoadErrorMessage": {
+    "description": "Scoped error message on agent-profile's Ads List grid when it fails to load (the identity block above stays intact — see this file's doc comment)."
+  },
+  "agentsAdsGridEmptyMessage": "No listings found.",
+  "@agentsAdsGridEmptyMessage": {
+    "description": "Empty-state message on agent-profile's Ads List grid (SCREENS.md §3.10, quoted verbatim, matches list_states.dart's app-wide wording)."
+  },
+  "agentsAdsGridHeading": "Ads List",
+  "@agentsAdsGridHeading": {
+    "description": "Heading above agent-profile's Ads List grid, shown while the count is not yet known (loading/error)."
+  },
+  "agentsAdsGridHeadingWithCount": "Ads List ({count})",
+  "@agentsAdsGridHeadingWithCount": {
+    "description": "Heading above agent-profile's Ads List grid once the count of loaded active listings is known — a heading with a parenthetical count, not an inflecting noun phrase, so a plain placeholder rather than an ICU plural (same idiom as agentsCardAdsCountLabel / reviewsSectionHeading).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsRatingRequiredError": "Please choose a rating.",
+  "@reviewsRatingRequiredError": {
+    "description": "Inline form error in the review sheet when Submit is tapped with no star selected."
+  },
+  "reviewsUpdateSuccessToast": "Review updated.",
+  "@reviewsUpdateSuccessToast": {
+    "description": "Success toast after editing an existing agent review in the review sheet."
+  },
+  "reviewsPostSuccessToast": "Review posted.",
+  "@reviewsPostSuccessToast": {
+    "description": "Success toast after posting a new agent review in the review sheet."
+  },
+  "reviewsDeleteSuccessToast": "Review deleted.",
+  "@reviewsDeleteSuccessToast": {
+    "description": "Success toast after deleting the signed-in caller's own agent review."
+  },
+  "reviewsSelfReviewForbiddenError": "You can't review yourself.",
+  "@reviewsSelfReviewForbiddenError": {
+    "description": "Inline error banner in the review sheet when the server's forbidden (403) self-review check fires on submit."
+  },
+  "reviewsAgentNotFoundError": "This agent is no longer available.",
+  "@reviewsAgentNotFoundError": {
+    "description": "Inline error banner in the review sheet when the agent record 404s while submitting a review. Distinct key from agentsProfileNotFoundMessage even though the English text coincides — different screen, different role (inline form error vs. full-width screen state)."
+  },
+  "reviewsSaveGenericErrorMessage": "Couldn't save your review right now. Please try again.",
+  "@reviewsSaveGenericErrorMessage": {
+    "description": "Fallback error in the review sheet for any submit/delete failure not covered by a more specific message (an unrecognized ApiErrorCode, or the sheet's own final fallback return)."
+  },
+  "reviewsNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@reviewsNetworkErrorMessage": {
+    "description": "Fallback message in the review sheet when submit/delete fails with no server response (NetworkException)."
+  },
+  "reviewsSheetEditTitle": "Edit Your Review",
+  "@reviewsSheetEditTitle": {
+    "description": "Title of the review sheet when the signed-in caller already has a review on this agent (upsert path)."
+  },
+  "reviewsSheetLeaveTitle": "Leave a Review",
+  "@reviewsSheetLeaveTitle": {
+    "description": "Title of the review sheet when the signed-in caller has no existing review on this agent."
+  },
+  "reviewsSheetCloseLabel": "Close",
+  "@reviewsSheetCloseLabel": {
+    "description": "Semantics label on the review sheet's close 'X' button."
+  },
+  "reviewsSheetPromptMessage": "Share your experience working with {agentName}.",
+  "@reviewsSheetPromptMessage": {
+    "description": "Subtitle under the review sheet's title, naming the agent being reviewed.",
+    "placeholders": {
+      "agentName": {
+        "type": "String",
+        "example": "Javlon Rustamov"
+      }
+    }
+  },
+  "reviewsSheetCommentLabel": "COMMENT (OPTIONAL)",
+  "@reviewsSheetCommentLabel": {
+    "description": "All-caps field label above the review sheet's comment textarea — a literal all-caps string in source, not a `.toUpperCase()` call."
+  },
+  "reviewsSheetCommentHint": "What was it like working with this agent?",
+  "@reviewsSheetCommentHint": {
+    "description": "Hint text inside the review sheet's empty comment textarea."
+  },
+  "reviewsSheetUpdateButtonLabel": "Update review",
+  "@reviewsSheetUpdateButtonLabel": {
+    "description": "Submit-button label in the review sheet when editing an existing review."
+  },
+  "reviewsSheetPostButtonLabel": "Post review",
+  "@reviewsSheetPostButtonLabel": {
+    "description": "Submit-button label in the review sheet when posting a new review."
+  },
+  "reviewsSheetDeletingLabel": "Deleting…",
+  "@reviewsSheetDeletingLabel": {
+    "description": "Transient label on the review sheet's delete link while the delete request is in flight."
+  },
+  "reviewsSheetDeleteButtonLabel": "Delete review",
+  "@reviewsSheetDeleteButtonLabel": {
+    "description": "Tappable text link in the review sheet that deletes the signed-in caller's existing review, shown only when one exists."
+  },
+  "reviewsSectionHeading": "Reviews ({count})",
+  "@reviewsSectionHeading": {
+    "description": "Heading above agent-profile's reviews list, counting agent.ratingCount — a heading with a parenthetical count, not an inflecting noun phrase, so a plain placeholder rather than an ICU plural (same idiom as agentsAdsGridHeadingWithCount).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsSectionLoadErrorMessage": "Couldn't load this agent's reviews",
+  "@reviewsSectionLoadErrorMessage": {
+    "description": "Scoped error message on agent-profile's reviews section when the reviews page fails to load."
+  },
+  "reviewsSectionEmptyMessage": "No reviews yet.",
+  "@reviewsSectionEmptyMessage": {
+    "description": "Empty-state message on agent-profile's reviews section when the agent has zero reviews."
+  },
+  "reviewsSectionSignInPromptMessage": "Sign in to leave a review.",
+  "@reviewsSectionSignInPromptMessage": {
+    "description": "Call-to-action message on agent-profile's reviews section for a signed-out visitor."
+  },
+  "reviewsSectionSignInButtonLabel": "Sign In",
+  "@reviewsSectionSignInButtonLabel": {
+    "description": "Pill button on agent-profile's reviews section, signed-out state, pushing the login screen."
+  },
+  "reviewsSectionSelfProfileMessage": "You can't review your own profile.",
+  "@reviewsSectionSelfProfileMessage": {
+    "description": "Explanatory line on agent-profile's reviews section when the signed-in caller is viewing their own agent profile — no button, just an explanation."
+  },
+  "reviewsSectionLeaveButtonLabel": "Leave a review",
+  "@reviewsSectionLeaveButtonLabel": {
+    "description": "Pill button on agent-profile's reviews section for a signed-in caller with no review of their own loaded yet."
+  },
+  "reviewsSectionEditButtonLabel": "Edit your review",
+  "@reviewsSectionEditButtonLabel": {
+    "description": "Pill button on agent-profile's reviews section for a signed-in caller whose own review was found among the loaded pages."
+  },
+  "reviewsSectionLoadMoreLabel": "Show more reviews",
+  "@reviewsSectionLoadMoreLabel": {
+    "description": "Tappable text link at the bottom of agent-profile's reviews list that loads the next page."
+  },
+  "profileAgentScreenTitle": "Profile",
+  "@profileAgentScreenTitle": {
+    "description": "Nav-bar title on profile-agent, the Profile tab's body for a signed-in agent/coworker (SCREENS.md §3.16)."
+  },
+  "profileAgentAccountGroupLabel": "Account",
+  "@profileAgentAccountGroupLabel": {
+    "description": "Group-label heading on profile-agent above the Edit Profile/Connected Accounts/Settings/Messages/Language rows."
+  },
+  "profileAgentEditProfileRowTitle": "Edit Profile",
+  "@profileAgentEditProfileRowTitle": {
+    "description": "Row title on profile-agent that pushes edit-profile."
+  },
+  "profileAgentConnectedAccountsRowTitle": "Connected Accounts",
+  "@profileAgentConnectedAccountsRowTitle": {
+    "description": "Agent-only row title on profile-agent (SCREENS.md §3.16's own \"(agent only)\" annotation), pushes the Connected Accounts screen."
+  },
+  "profileAgentSettingsRowTitle": "Settings",
+  "@profileAgentSettingsRowTitle": {
+    "description": "Row title on profile-agent that pushes the settings screen."
+  },
+  "profileAgentMessagesRowTitle": "Messages",
+  "@profileAgentMessagesRowTitle": {
+    "description": "Row title on profile-agent that pushes a not-yet-registered Messages route."
+  },
+  "profileAgentLanguageRowTitle": "Language",
+  "@profileAgentLanguageRowTitle": {
+    "description": "Row title on profile-agent that opens the language-sheet bottom sheet."
+  },
+  "profileAgentSessionGroupLabel": "Session",
+  "@profileAgentSessionGroupLabel": {
+    "description": "Group-label heading on profile-agent above the Logout row."
+  },
+  "profileAgentLogoutRowTitle": "Logout",
+  "@profileAgentLogoutRowTitle": {
+    "description": "Destructive (red) row title on profile-agent; signs the user out after a confirm dialog."
+  },
+  "profileBuyerScreenTitle": "Profile",
+  "@profileBuyerScreenTitle": {
+    "description": "Nav-bar title on profile-buyer, the Profile tab's body for a signed-in buyer (SCREENS.md §3.15)."
+  },
+  "profileBuyerAccountGroupLabel": "Account",
+  "@profileBuyerAccountGroupLabel": {
+    "description": "Group-label heading on profile-buyer above the Saved Listings/Update Profile/Language/Register-as-Agent rows."
+  },
+  "profileBuyerSavedListingsRowTitle": "Saved Listings",
+  "@profileBuyerSavedListingsRowTitle": {
+    "description": "Row title on profile-buyer that pushes the saved-listings screen."
+  },
+  "profileBuyerUpdateProfileRowTitle": "Update Profile",
+  "@profileBuyerUpdateProfileRowTitle": {
+    "description": "Row title on profile-buyer that pushes edit-profile."
+  },
+  "profileBuyerLanguageRowTitle": "Language",
+  "@profileBuyerLanguageRowTitle": {
+    "description": "Row title on profile-buyer that opens the language-sheet bottom sheet."
+  },
+  "profileBuyerRegisterAsAgentRowTitle": "Register as Agent",
+  "@profileBuyerRegisterAsAgentRowTitle": {
+    "description": "Row title on profile-buyer that opens the external \"Register as Agent\" Google Form in a browser."
+  },
+  "profileBuyerSessionGroupLabel": "Session",
+  "@profileBuyerSessionGroupLabel": {
+    "description": "Group-label heading on profile-buyer above the Logout row."
+  },
+  "profileBuyerLogoutRowTitle": "Logout",
+  "@profileBuyerLogoutRowTitle": {
+    "description": "Destructive (red) row title on profile-buyer; signs the user out after a confirm dialog."
+  },
+  "profileBuyerRegisterLinkCopiedToast": "Couldn't open your browser — Registration form link copied instead. Paste it into your browser to apply.",
+  "@profileBuyerRegisterLinkCopiedToast": {
+    "description": "Success toast on profile-buyer's Register-as-Agent row when no browser could open the external form link, so the link was copied to the clipboard instead."
+  },
+  "profileSignedOutScreenTitle": "Profile",
+  "@profileSignedOutScreenTitle": {
+    "description": "Nav-bar title on profile-signed-out, the Profile tab's body when no session is active (SCREENS.md §3.14)."
+  },
+  "profileSignedOutPreferencesGroupLabel": "Preferences",
+  "@profileSignedOutPreferencesGroupLabel": {
+    "description": "Group-label heading on profile-signed-out above the Language/Contact Us rows — deliberately not translated as \"Settings\" (profileAgentSettingsRowTitle/profileAgentSettingsRowTitle's own word) since the two are different concepts on different screens in this app."
+  },
+  "profileSignedOutLanguageRowTitle": "Language",
+  "@profileSignedOutLanguageRowTitle": {
+    "description": "Row title on profile-signed-out that opens the language-sheet bottom sheet."
+  },
+  "profileSignedOutContactUsRowTitle": "Contact Us",
+  "@profileSignedOutContactUsRowTitle": {
+    "description": "Row title on profile-signed-out that opens the contact-sheet bottom sheet."
+  },
+  "profileSignedOutPromptMessage": "Sign in to save listings, message agents, and manage your business.",
+  "@profileSignedOutPromptMessage": {
+    "description": "Heading sentence on profile-signed-out's sign-in prompt card, quoted from SCREENS.md §3.14 exactly."
+  },
+  "profileSignedOutSignInButtonLabel": "Sign In",
+  "@profileSignedOutSignInButtonLabel": {
+    "description": "Filled CTA button on profile-signed-out's sign-in prompt card, pushing the login screen."
+  },
+  "profileSignedOutSignUpButtonLabel": "Sign Up",
+  "@profileSignedOutSignUpButtonLabel": {
+    "description": "Outlined CTA button on profile-signed-out's sign-in prompt card, pushing the register screen."
+  },
+  "authLoginRequiredFieldsError": "Required fields are not filled",
+  "@authLoginRequiredFieldsError": {
+    "description": "Form-level error banner on login when Email/Password is submitted empty, client-side before any request."
+  },
+  "authLoginSuccessToast": "User successfully logged in.",
+  "@authLoginSuccessToast": {
+    "description": "Snackbar shown after a successful sign-in on login, right after navigating to home-feed."
+  },
+  "authLoginInvalidCredentialsError": "Invalid email or password",
+  "@authLoginInvalidCredentialsError": {
+    "description": "Form-level error banner on login for ApiErrorCode.invalidCredentials (401) — SCREENS.md §3.12's fixed copy, regardless of the server's own message text."
+  },
+  "authLoginNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@authLoginNetworkErrorMessage": {
+    "description": "Form-level error banner on login when sign-in fails with no server response (NetworkException)."
+  },
+  "authLoginGenericErrorMessage": "Something went wrong",
+  "@authLoginGenericErrorMessage": {
+    "description": "Form-level error banner on login's last-resort fallback, for an exception type not otherwise handled."
+  },
+  "authLoginWelcomeHeading": "Welcome back",
+  "@authLoginWelcomeHeading": {
+    "description": "Large display heading on the login screen, under the hero icon."
+  },
+  "authLoginEmailFieldLabel": "Email",
+  "@authLoginEmailFieldLabel": {
+    "description": "Field label on the login screen's email input (SCREENS.md §3.12, quoted)."
+  },
+  "authLoginPasswordFieldLabel": "Password",
+  "@authLoginPasswordFieldLabel": {
+    "description": "Field label on the login screen's password input (SCREENS.md §3.12, quoted)."
+  },
+  "authLoginSubmitButtonLabel": "Sign in",
+  "@authLoginSubmitButtonLabel": {
+    "description": "Submit-button label on the login screen (SCREENS.md §3.12, quoted)."
+  },
+  "authLoginFooterLinkText": "Don't you have an account?",
+  "@authLoginFooterLinkText": {
+    "description": "The entire tappable footer link on login that pushes register — SCREENS.md §3.12's exact phrase, with no separate \"Sign up\" word appended (see AuthFooterLink's own doc comment for why)."
+  },
+  "authRegisterHeading": "Create your account",
+  "@authRegisterHeading": {
+    "description": "Large display heading on the register screen, under the hero icon."
+  },
+  "authRegisterAccountTypeLabel": "I'm signing up as",
+  "@authRegisterAccountTypeLabel": {
+    "description": "All-caps section label above the Buyer/Realtor pick cards on register (SCREENS.md §3.13, quoted) — the widget applies .toUpperCase() to this value at the call site, so the ARB value stays mixed-case, matching the original Dart literal."
+  },
+  "authRegisterBuyerCardTitle": "Buyer",
+  "@authRegisterBuyerCardTitle": {
+    "description": "Title on register's \"Buyer\" account-type pick card (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterBuyerCardSubtitle": "Browse and save homes",
+  "@authRegisterBuyerCardSubtitle": {
+    "description": "Subtitle on register's \"Buyer\" account-type pick card — non-spec judgment-call copy (see this screen's doc comment)."
+  },
+  "authRegisterRealtorCardTitle": "Realtor",
+  "@authRegisterRealtorCardTitle": {
+    "description": "Title on register's \"Realtor\" account-type pick card (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterRealtorCardSubtitle": "Post listings, work leads",
+  "@authRegisterRealtorCardSubtitle": {
+    "description": "Subtitle on register's \"Realtor\" account-type pick card — non-spec judgment-call copy (see this screen's doc comment)."
+  },
+  "authRegisterFullNameFieldLabel": "Full name",
+  "@authRegisterFullNameFieldLabel": {
+    "description": "Field label on register's full-name input (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterPhoneFieldLabel": "Phone number",
+  "@authRegisterPhoneFieldLabel": {
+    "description": "Field label on register's phone input (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterEmailFieldLabel": "Email",
+  "@authRegisterEmailFieldLabel": {
+    "description": "Field label on register's email input (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterPasswordFieldLabel": "Password",
+  "@authRegisterPasswordFieldLabel": {
+    "description": "Field label on register's password input (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterPasswordHint": "At least 6 characters",
+  "@authRegisterPasswordHint": {
+    "description": "Hint text inside register's empty password field, describing the server's minimum length."
+  },
+  "authRegisterRealtorTypeLabel": "Realtor type",
+  "@authRegisterRealtorTypeLabel": {
+    "description": "All-caps section label above register's Solo agent/Agency chips (SCREENS.md §3.13, quoted) — .toUpperCase() applied at the call site, ARB value stays mixed-case."
+  },
+  "authRegisterSoloAgentChipLabel": "Solo agent",
+  "@authRegisterSoloAgentChipLabel": {
+    "description": "Chip label on register for the solo-realtor kind (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterAgencyChipLabel": "Agency",
+  "@authRegisterAgencyChipLabel": {
+    "description": "Chip label on register for the agency-realtor kind (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterSoloAgentHint": "You work under your own name. Your workspace opens on Statistics with your own listings and leads; Coworkers stays hidden until you switch to an agency.",
+  "@authRegisterSoloAgentHint": {
+    "description": "Explanatory hint shown under register's Solo agent chip when selected — this screen's own judgment-call wording, close to but not copied verbatim from SCREENS.md's unquoted prose (see this screen's doc comment)."
+  },
+  "authRegisterAgencyNameFieldLabel": "Agency name",
+  "@authRegisterAgencyNameFieldLabel": {
+    "description": "Field label on register's agency-name input, shown only for the Agency realtor kind (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterAgencyNameHelperText": "Shown on the team's listings in place of the agent's own name.",
+  "@authRegisterAgencyNameHelperText": {
+    "description": "Quiet caption under register's Agency name field, no error connotation."
+  },
+  "authRegisterOfficePhoneFieldLabel": "Office phone",
+  "@authRegisterOfficePhoneFieldLabel": {
+    "description": "Field label on register's optional office-phone input, shown only for the Agency realtor kind (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterTeamSizeLabel": "Team size",
+  "@authRegisterTeamSizeLabel": {
+    "description": "All-caps section label above register's team-size chip row, shown only for the Agency realtor kind (SCREENS.md §3.13, quoted) — .toUpperCase() applied at the call site, ARB value stays mixed-case."
+  },
+  "authRegisterTeamSizeJustMeLabel": "Just me for now",
+  "@authRegisterTeamSizeJustMeLabel": {
+    "description": "Team-size chip option on register for TeamSize.justMe — copied from apps/web/src/routes/register/register.jsx's TEAM_SIZE_LABELS (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterTeamSizeTwoToFiveLabel": "2–5",
+  "@authRegisterTeamSizeTwoToFiveLabel": {
+    "description": "Team-size chip option on register for TeamSize.twoToFive — copied from apps/web/src/routes/register/register.jsx's TEAM_SIZE_LABELS. Uses an en dash (–), not a hyphen."
+  },
+  "authRegisterTeamSizeSixToFifteenLabel": "6–15",
+  "@authRegisterTeamSizeSixToFifteenLabel": {
+    "description": "Team-size chip option on register for TeamSize.sixToFifteen — copied from apps/web/src/routes/register/register.jsx's TEAM_SIZE_LABELS. Uses an en dash (–), not a hyphen."
+  },
+  "authRegisterTeamSizeSixteenPlusLabel": "16+",
+  "@authRegisterTeamSizeSixteenPlusLabel": {
+    "description": "Team-size chip option on register for TeamSize.sixteenPlus — copied from apps/web/src/routes/register/register.jsx's TEAM_SIZE_LABELS."
+  },
+  "authRegisterAgencyOwnerHint": "You sign up as the agency owner: invite coworkers, assign leads to them, and see the whole team's statistics. Coworkers see only what you assign.",
+  "@authRegisterAgencyOwnerHint": {
+    "description": "Explanatory hint shown under register's team-size chips when the Agency realtor kind is selected — this screen's own judgment-call wording (see this screen's doc comment)."
+  },
+  "authRegisterVerificationCalloutMessage": "Realtor accounts are verified before the Work tab unlocks. We'll call the number above — usually within one business day.",
+  "@authRegisterVerificationCalloutMessage": {
+    "description": "Informational callout shown on register for either realtor kind (SCREENS.md §3.13: \"Either realtor choice carries the note…\", quoted)."
+  },
+  "authRegisterRequiredFieldsError": "Required fields are not filled",
+  "@authRegisterRequiredFieldsError": {
+    "description": "Form-level error banner on register when a required field is submitted empty, client-side before any request."
+  },
+  "authRegisterInvalidPhoneError": "Invalid phone number format",
+  "@authRegisterInvalidPhoneError": {
+    "description": "Form-level error banner on register for a malformed phone or office-phone number (Formatters.isValidUzPhone), client-side before any request. One key, reused for both fields since the check and message are identical."
+  },
+  "authRegisterRealtorSuccessToast": "Account created. We'll verify your realtor profile shortly.",
+  "@authRegisterRealtorSuccessToast": {
+    "description": "Snackbar shown after a successful realtor sign-up on register, right after navigating to home-feed."
+  },
+  "authRegisterBuyerSuccessToast": "User successfully created.",
+  "@authRegisterBuyerSuccessToast": {
+    "description": "Snackbar shown after a successful buyer sign-up on register, right after navigating to home-feed."
+  },
+  "authRegisterNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@authRegisterNetworkErrorMessage": {
+    "description": "Form-level error banner on register when sign-up fails with no server response (NetworkException)."
+  },
+  "authRegisterGenericErrorMessage": "Something went wrong",
+  "@authRegisterGenericErrorMessage": {
+    "description": "Form-level error banner on register's last-resort fallback, for an exception type not otherwise handled."
+  },
+  "authRegisterRealtorSubmitButtonLabel": "Create realtor account",
+  "@authRegisterRealtorSubmitButtonLabel": {
+    "description": "Submit-button label on register when signing up as a realtor (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterBuyerSubmitButtonLabel": "Sign up",
+  "@authRegisterBuyerSubmitButtonLabel": {
+    "description": "Submit-button label on register when signing up as a buyer (SCREENS.md §3.13, quoted)."
+  },
+  "authRegisterFooterLinkText": "Already have an account? Sign in",
+  "@authRegisterFooterLinkText": {
+    "description": "Footer link on register that pushes login — a deliberate non-spec addition (§3.13 names no reciprocal link back to login); see this screen's doc comment for why."
+  },
+  "authVisibilityToggleShowLabel": "Show password",
+  "@authVisibilityToggleShowLabel": {
+    "description": "Semantics label on AuthField's password-visibility toggle icon when the password is currently obscured (shared by login and register)."
+  },
+  "authVisibilityToggleHideLabel": "Hide password",
+  "@authVisibilityToggleHideLabel": {
+    "description": "Semantics label on AuthField's password-visibility toggle icon when the password is currently visible (shared by login and register)."
+  },
+  "authCloseButtonLabel": "Close",
+  "@authCloseButtonLabel": {
+    "description": "Semantics label on AuthCloseButton, the top-right 'X' dismiss control shared by login and register."
+  },
+  "editProfileScreenTitle": "Edit Profile",
+  "@editProfileScreenTitle": {
+    "description": "Nav-bar title on edit-profile (SCREENS.md §3.18)."
+  },
+  "editProfileDiscardDialogTitle": "Discard changes?",
+  "@editProfileDiscardDialogTitle": {
+    "description": "Title of edit-profile's discard-confirmation alert, shown when leaving the form with unsaved changes."
+  },
+  "editProfileDiscardDialogCancelButtonLabel": "Cancel",
+  "@editProfileDiscardDialogCancelButtonLabel": {
+    "description": "Button in edit-profile's discard-confirmation alert that keeps editing (dismisses the alert without leaving)."
+  },
+  "editProfileDiscardDialogConfirmButtonLabel": "Discard",
+  "@editProfileDiscardDialogConfirmButtonLabel": {
+    "description": "Button in edit-profile's discard-confirmation alert that leaves the form, losing unsaved changes."
+  },
+  "editProfileAvatarUploadingToast": "Please wait for the photo to finish uploading.",
+  "@editProfileAvatarUploadingToast": {
+    "description": "Error toast on edit-profile when Save is tapped while an avatar photo is still mid-upload."
+  },
+  "editProfileUpdateSuccessToast": "Profile successfully updated!",
+  "@editProfileUpdateSuccessToast": {
+    "description": "Snackbar shown after a successful profile save on edit-profile."
+  },
+  "editProfileUpdateErrorToast": "Error updating profile: {message}",
+  "@editProfileUpdateErrorToast": {
+    "description": "Snackbar shown after a failed profile save on edit-profile. {message} carries the server's own error text verbatim (ApiErrorException.message) or one of this screen's own client-authored fallback strings (editProfileNetworkErrorMessage / editProfileGenericErrorMessage) — {message} itself is never re-translated, only this template's own \"Error updating profile:\" wording is.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Email is already registered"
+      }
+    }
+  },
+  "editProfileNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@editProfileNetworkErrorMessage": {
+    "description": "Client-authored fallback fed into editProfileUpdateErrorToast's {message} when a profile save fails with no server response (NetworkException)."
+  },
+  "editProfileGenericErrorMessage": "Something went wrong",
+  "@editProfileGenericErrorMessage": {
+    "description": "Client-authored fallback fed into editProfileUpdateErrorToast's {message} for an exception type not otherwise handled."
+  },
+  "editProfileSignedOutMessage": "Sign in to edit your profile.",
+  "@editProfileSignedOutMessage": {
+    "description": "Full-width state message on edit-profile for the (unreachable in normal use, but possible via a deep link) signed-out case."
+  },
+  "editProfileSignedOutGoBackLabel": "Go back",
+  "@editProfileSignedOutGoBackLabel": {
+    "description": "Action-button label on edit-profile's signed-out state."
+  },
+  "editProfileFullNameFieldLabel": "Full name",
+  "@editProfileFullNameFieldLabel": {
+    "description": "Field label on edit-profile's full-name input (SCREENS.md §3.18, quoted)."
+  },
+  "editProfileFullNameRequiredError": "First name is required",
+  "@editProfileFullNameRequiredError": {
+    "description": "Inline error under edit-profile's full-name field when submitted empty — quoted verbatim from SCREENS.md §3.18, which mismatches its own \"Full name\" field label with this \"First name\" error text; that mismatch is the spec's own inconsistency, preserved rather than corrected (see this screen's doc comment)."
+  },
+  "editProfilePhoneFieldLabel": "Phone",
+  "@editProfilePhoneFieldLabel": {
+    "description": "Field label on edit-profile's phone input."
+  },
+  "editProfilePhoneInvalidError": "Invalid Uzbekistan phone number",
+  "@editProfilePhoneInvalidError": {
+    "description": "Inline error under edit-profile's phone field when the value fails Formatters.isValidUzPhone (covers both empty and wrong-shape, per SCREENS.md's single message for both)."
+  },
+  "editProfileEmailFieldLabel": "Email",
+  "@editProfileEmailFieldLabel": {
+    "description": "Field label on edit-profile's email input."
+  },
+  "editProfileEmailRequiredError": "Email is required",
+  "@editProfileEmailRequiredError": {
+    "description": "Inline error under edit-profile's email field when submitted empty (a presence check only — malformed-but-non-empty is left to the server)."
+  },
+  "editProfilePasswordFieldLabel": "Password",
+  "@editProfilePasswordFieldLabel": {
+    "description": "Field label on edit-profile's optional password input."
+  },
+  "editProfilePasswordHint": "Leave blank to keep your current password",
+  "@editProfilePasswordHint": {
+    "description": "Hint text inside edit-profile's empty password field."
+  },
+  "editProfilePasswordLengthError": "Password must be at least 6 characters",
+  "@editProfilePasswordLengthError": {
+    "description": "Inline error under edit-profile's password field when a non-empty value is shorter than 6 characters."
+  },
+  "editProfileCancelButtonLabel": "Cancel",
+  "@editProfileCancelButtonLabel": {
+    "description": "Secondary form button on edit-profile that triggers the same cancel/discard-check flow as the header back arrow."
+  },
+  "editProfileSaveButtonLabel": "Save",
+  "@editProfileSaveButtonLabel": {
+    "description": "Primary form button on edit-profile that submits the profile update."
+  },
+  "contactRequiredFieldsError": "Required fields are not filled",
+  "@contactRequiredFieldsError": {
+    "description": "Form-level error line under contact-sheet's fields when Full name/Phone is submitted empty (SCREENS.md §3.11, quoted), client-side before any request."
+  },
+  "contactInvalidPhoneError": "Invalid phone number format",
+  "@contactInvalidPhoneError": {
+    "description": "Form-level error line under contact-sheet's fields for a malformed phone (SCREENS.md §3.11, quoted), client-side before any request."
+  },
+  "contactSendSuccessToast": "Message sent successfully.",
+  "@contactSendSuccessToast": {
+    "description": "Snackbar shown after contact-sheet successfully submits a message (SCREENS.md §3.11, quoted)."
+  },
+  "contactRateLimitedError": "Too many messages just now. Please try again in a minute.",
+  "@contactRateLimitedError": {
+    "description": "Form-level error line under contact-sheet's fields for ApiErrorCode.rateLimited (this endpoint is IP rate-limited at 5/minute)."
+  },
+  "contactUnconfiguredError": "The contact form isn't available right now. Please call the agent directly.",
+  "@contactUnconfiguredError": {
+    "description": "Form-level error line under contact-sheet's fields for ApiErrorCode.contactUnconfigured — nobody is configured to receive the message, so retrying cannot help."
+  },
+  "contactGenericErrorMessage": "Couldn't send your message right now. Please try again.",
+  "@contactGenericErrorMessage": {
+    "description": "Form-level error line under contact-sheet's fields for ApiErrorCode.contactRelayFailed or any other unrecognized error code."
+  },
+  "contactNetworkErrorMessage": "No connection. Check your network and try again.",
+  "@contactNetworkErrorMessage": {
+    "description": "Form-level error line under contact-sheet's fields when submission fails with no server response (NetworkException)."
+  },
+  "contactSheetTitle": "Contact Us",
+  "@contactSheetTitle": {
+    "description": "Title of contact-sheet (SCREENS.md §3.11, quoted)."
+  },
+  "contactSheetCloseLabel": "Close",
+  "@contactSheetCloseLabel": {
+    "description": "Semantics label on contact-sheet's close 'X' button."
+  },
+  "contactSheetSubtitle": "We welcome all your concerns, issues, and suggestions. Feel free to get in touch with us at your most convenient time.",
+  "@contactSheetSubtitle": {
+    "description": "Subtitle under contact-sheet's title (SCREENS.md §3.11, quoted)."
+  },
+  "contactFullNameFieldLabel": "Full name",
+  "@contactFullNameFieldLabel": {
+    "description": "Field label on contact-sheet's full-name input (SCREENS.md §3.11, quoted)."
+  },
+  "contactPhoneFieldLabel": "Phone",
+  "@contactPhoneFieldLabel": {
+    "description": "Field label on contact-sheet's phone input (SCREENS.md §3.11, quoted)."
+  },
+  "contactMessageFieldLabel": "Message",
+  "@contactMessageFieldLabel": {
+    "description": "Field label on contact-sheet's message textarea (SCREENS.md §3.11, quoted)."
+  },
+  "contactSendButtonLabel": "Send message",
+  "@contactSendButtonLabel": {
+    "description": "Submit-button label on contact-sheet (SCREENS.md §3.11, quoted)."
+  },
+  "reviewsRatingInputStarLabel": "{count, plural, one{{count} star} other{{count} stars}}",
+  "@reviewsRatingInputStarLabel": {
+    "description": "Semantics label on each of RatingInput's five star buttons in the review sheet — 'N star'/'N stars' where N is that button's 1-based position, distinct from RatingStars' own read-only display which this widget deliberately does not share (see this file's doc comment).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "leadsListScreenTitle": "Leads",
+  "@leadsListScreenTitle": {
+    "description": "Nav-bar title on the leads-list screen (SCREENS.md §30)."
+  },
+  "leadsKanbanScreenTitle": "Kanban",
+  "@leadsKanbanScreenTitle": {
+    "description": "Nav-bar title on the leads-kanban screen (SCREENS.md §31)."
+  },
+  "leadsToggleViewKanbanLabel": "View as Kanban",
+  "@leadsToggleViewKanbanLabel": {
+    "description": "Semantics label on leads-list's nav-row view-toggle icon button; switches to the Kanban view."
+  },
+  "leadsToggleViewListLabel": "View as list",
+  "@leadsToggleViewListLabel": {
+    "description": "Semantics label on leads-kanban's nav-row view-toggle icon button; switches back to the list view."
+  },
+  "leadsAddNewLeadLabel": "Add new lead",
+  "@leadsAddNewLeadLabel": {
+    "description": "Semantics label on the \"+\" add-lead circular button shared by leads-list's and leads-kanban's nav rows (leads_nav_actions.dart)."
+  },
+  "leadsEmptyMessage": "No leads yet.",
+  "@leadsEmptyMessage": {
+    "description": "Empty-state message on leads-list/leads-kanban when the caller's lead list is empty."
+  },
+  "leadsLoadErrorMessage": "Couldn't load your leads.",
+  "@leadsLoadErrorMessage": {
+    "description": "Error message on leads-list/leads-kanban when the initial lead fetch fails. Paired with sharedRetryLabel."
+  },
+  "leadsEmptyColumnMessage": "No leads in this stage yet.",
+  "@leadsEmptyColumnMessage": {
+    "description": "Empty-state message inside a single Kanban column (kanban_column.dart) that has no leads."
+  },
+  "leadsCardMoveFailedMessage": "Couldn't move — try again.",
+  "@leadsCardMoveFailedMessage": {
+    "description": "Failure note shown on a Kanban card (kanban_card.dart) whose most recent move attempt failed — apps/console's own copy, replicated verbatim per WORK_TAB_CONTRACT.md ruling 7.5."
+  },
+  "leadsCreateScreenTitle": "Create Lead",
+  "@leadsCreateScreenTitle": {
+    "description": "Nav-bar title on the create-lead screen (SCREENS.md §33)."
+  },
+  "leadsFieldFullNameLabel": "Full name",
+  "@leadsFieldFullNameLabel": {
+    "description": "Label on the Full name field, shared by create-lead and lead-detail's forms (lead_form_controls.dart's LeadTextField)."
+  },
+  "leadsFieldPhoneLabel": "Phone",
+  "@leadsFieldPhoneLabel": {
+    "description": "Label on the Phone field, shared by create-lead and lead-detail's forms."
+  },
+  "leadsFieldEmailLabel": "Email",
+  "@leadsFieldEmailLabel": {
+    "description": "Label on the Email field, shared by create-lead and lead-detail's forms."
+  },
+  "leadsFieldBudgetLabel": "Budget",
+  "@leadsFieldBudgetLabel": {
+    "description": "Label on the Budget field, shared by create-lead and lead-detail's forms."
+  },
+  "leadsFieldCommitLabel": "Commit",
+  "@leadsFieldCommitLabel": {
+    "description": "Label on the Commit (free-text notes) field, shared by create-lead and lead-detail's forms."
+  },
+  "leadsFieldSourceLabel": "Source",
+  "@leadsFieldSourceLabel": {
+    "description": "Label on the Source field, shared by create-lead and lead-detail's forms."
+  },
+  "leadsCreateCommitHint": "What is this lead looking for?",
+  "@leadsCreateCommitHint": {
+    "description": "Hint text inside create-lead's Commit field before anything has been typed."
+  },
+  "leadsCreateFullNameRequiredError": "First name is required",
+  "@leadsCreateFullNameRequiredError": {
+    "description": "Validation error under create-lead's Full name field when left empty — SCREENS.md §33's own quoted copy says \"First name\" even though the field label reads \"Full name\"; this mismatch is preserved rather than silently corrected (see create_lead_screen.dart's doc comment)."
+  },
+  "leadsCreatePhoneRequiredError": "Phone number is required",
+  "@leadsCreatePhoneRequiredError": {
+    "description": "Validation error under create-lead's Phone field when left empty."
+  },
+  "leadsPhoneInvalidError": "Invalid Uzbekistan phone number",
+  "@leadsPhoneInvalidError": {
+    "description": "Validation error under the Phone field (both create-lead and lead-detail) when the value doesn't match the UZ phone pattern."
+  },
+  "leadsDetailFullNameRequiredError": "Full name is required",
+  "@leadsDetailFullNameRequiredError": {
+    "description": "Validation error under lead-detail's Full name field when left empty — distinct wording from create-lead's own leadsCreateFullNameRequiredError; both are preserved verbatim rather than unified (see lead_detail_sheet.dart's doc comment)."
+  },
+  "leadsBudgetInvalidError": "Enter a valid number",
+  "@leadsBudgetInvalidError": {
+    "description": "Validation error under lead-detail's Budget field when the typed value isn't a parseable number."
+  },
+  "leadsStatusFieldLabel": "STATUS",
+  "@leadsStatusFieldLabel": {
+    "description": "Section label above the lead-status chip group on create-lead/lead-detail (lead_form_controls.dart's LeadStatusField) — already uppercase in source, not run through a text-transform."
+  },
+  "leadsCallTimeLabel": "CALL TIME",
+  "@leadsCallTimeLabel": {
+    "description": "Default label on the call-time select field (lead_form_controls.dart's LeadDateTimeField), used by both kanban-move-sheet and lead-detail's conditional call-time row — already uppercase in source."
+  },
+  "leadsSelectDateLabel": "Select date",
+  "@leadsSelectDateLabel": {
+    "description": "Placeholder text on the call-time field before a date/time has been chosen."
+  },
+  "leadsCoworkerFieldLabel": "COWORKER",
+  "@leadsCoworkerFieldLabel": {
+    "description": "Section label above the read-only Coworker field on create-lead/lead-detail (lead_form_controls.dart's LeadCoworkerField) — already uppercase in source."
+  },
+  "leadsCoworkerUnavailableNote": "Assigning a coworker isn't available in this build yet.",
+  "@leadsCoworkerUnavailableNote": {
+    "description": "Caption under the read-only Coworker field explaining why nothing typed there can be saved — see LeadCoworkerField's doc comment for the underlying wire-shape reason."
+  },
+  "leadsCancelButtonLabel": "Cancel",
+  "@leadsCancelButtonLabel": {
+    "description": "Cancel button label, shared by create-lead, lead-detail and kanban-move-sheet's own bespoke buttons (distinct widget from the sharedConfirmDialogCancelLabel used inside AlertDialog.adaptive confirms)."
+  },
+  "leadsSaveButtonLabel": "Save",
+  "@leadsSaveButtonLabel": {
+    "description": "Save button label, shared by create-lead, lead-detail and kanban-move-sheet."
+  },
+  "leadsCreatedToastMessage": "Lead successfully created!",
+  "@leadsCreatedToastMessage": {
+    "description": "Success toast after create-lead's Save completes."
+  },
+  "leadsCreateErrorToastMessage": "Error creating lead: {message}",
+  "@leadsCreateErrorToastMessage": {
+    "description": "Error toast after a failed create-lead Save. {message} is the already-resolved failure description (leadsNoConnectionMessage/sharedGenericErrorMessage, or the server's own ApiErrorBody.message passed through verbatim — see lib/l10n/README.md's rule on never wrapping that field).",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "leadsUpdatedToastMessage": "Lead successfully updated!",
+  "@leadsUpdatedToastMessage": {
+    "description": "Success toast after lead-detail's Save completes."
+  },
+  "leadsUpdateErrorToastMessage": "Error updating lead: {message}",
+  "@leadsUpdateErrorToastMessage": {
+    "description": "Error toast after a failed lead-detail Save — same {message} shape as leadsCreateErrorToastMessage.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "leadsDeletedToastMessage": "Lead successfully deleted!",
+  "@leadsDeletedToastMessage": {
+    "description": "Success toast after lead-detail's Delete completes."
+  },
+  "leadsDeleteErrorToastMessage": "Error deleting lead: {message}",
+  "@leadsDeleteErrorToastMessage": {
+    "description": "Error toast after a failed lead-detail Delete — same {message} shape as leadsCreateErrorToastMessage.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "leadsNoConnectionMessage": "No connection. Check your network and try again.",
+  "@leadsNoConnectionMessage": {
+    "description": "Fallback failure description used in every lead create/update/delete toast when the request never reached the server (NetworkException)."
+  },
+  "leadsSubjectNoun": "lead",
+  "@leadsSubjectNoun": {
+    "description": "The already-localized noun passed as confirmDelete's {subject} (shared/widgets/delete_confirm.dart) when deleting a lead from lead-detail — see that function's own doc comment for why the caller must supply an already-translated word. See GLOSSARY.md's \"lead\" entry for the term rendering."
+  },
+  "leadsDetailCloseLabel": "Close",
+  "@leadsDetailCloseLabel": {
+    "description": "Semantics label on lead-detail's close (\"X\") icon button, top-right of the sheet."
+  },
+  "leadsDetailLoadErrorMessage": "Couldn't load this lead.",
+  "@leadsDetailLoadErrorMessage": {
+    "description": "Error message shown inside lead-detail's sheet when the single-lead fetch fails."
+  },
+  "leadsDeleteLeadButtonLabel": "Delete lead",
+  "@leadsDeleteLeadButtonLabel": {
+    "description": "Destructive text button at the foot of lead-detail (agent-only — hidden for a coworker session)."
+  },
+  "leadsCommitMinLengthError": "At least {min} characters.",
+  "@leadsCommitMinLengthError": {
+    "description": "Validation hint under kanban-move-sheet's Commit textarea while its length is below the minimum. {min} is the fixed minimum-length constant (10, SCREENS.md §34).",
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "leadsCallbackSheetTitle": "Enter the next call-back time",
+  "@leadsCallbackSheetTitle": {
+    "description": "Title on kanban-move-sheet when the move destination is Need To Call Back."
+  },
+  "leadsConversationSheetTitle": "Write briefly about the conversation",
+  "@leadsConversationSheetTitle": {
+    "description": "Title on kanban-move-sheet when the move destination is Rejected or Accepted."
+  },
+  "leadsConversationHint": "What did you discuss?",
+  "@leadsConversationHint": {
+    "description": "Hint text inside kanban-move-sheet's Commit textarea (the Rejected/Accepted note field)."
+  },
+  "leadsMoveToSheetTitle": "Move to…",
+  "@leadsMoveToSheetTitle": {
+    "description": "Title on leads-kanban's long-press \"Move to…\" action sheet listing the other four columns."
+  },
+  "coworkersListScreenTitle": "Coworkers",
+  "@coworkersListScreenTitle": {
+    "description": "Nav-bar title on the coworkers-list screen (SCREENS.md §35)."
+  },
+  "coworkersLoadErrorMessage": "Couldn't load your coworkers",
+  "@coworkersLoadErrorMessage": {
+    "description": "Error message on coworkers-list when the roster fetch fails. No trailing period — byte-exact from the source string. Paired with sharedRetryLabel."
+  },
+  "coworkersEmptyMessage": "No coworkers yet.",
+  "@coworkersEmptyMessage": {
+    "description": "Empty-state message on coworkers-list when the roster is empty."
+  },
+  "coworkersAddNewButtonLabel": "+ Add new coworker",
+  "@coworkersAddNewButtonLabel": {
+    "description": "Full-width button label on coworkers-list (SCREENS.md §35's own quoted copy, including the leading \"+\"); hidden for a solo agent or a coworker session that would 403 creating one."
+  },
+  "coworkersListingsCount": "{count, plural, one{{count} listing} other{{count} listings}}",
+  "@coworkersListingsCount": {
+    "description": "Ads-created count shown on a coworkers-list row's trailing label and coworker-detail's activity summary line — real data from CoworkerSummary.adsCreatedCount.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coworkersCreateScreenTitle": "Create coworker",
+  "@coworkersCreateScreenTitle": {
+    "description": "Nav-bar title on the add-coworker screen (SCREENS.md §37)."
+  },
+  "coworkersUploadWaitMessage": "Please wait for the photo to finish uploading.",
+  "@coworkersUploadWaitMessage": {
+    "description": "Error toast on add-coworker/coworker-detail when Save is tapped while an avatar photo is still mid-upload."
+  },
+  "coworkersUploadingToastLabel": "Uploading",
+  "@coworkersUploadingToastLabel": {
+    "description": "Pending-toast label shown while add-coworker's Save (the POST /coworkers call) is in flight — SCREENS.md §37's own quoted copy."
+  },
+  "coworkersCreatedToastMessage": "Coworker successfully created",
+  "@coworkersCreatedToastMessage": {
+    "description": "Success toast after add-coworker's Save completes. No trailing punctuation — byte-exact from the source string."
+  },
+  "coworkersCreateErrorToastMessage": "Error creating coworker: {message}",
+  "@coworkersCreateErrorToastMessage": {
+    "description": "Error toast after a failed add-coworker Save. {message} is the already-resolved failure description.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "coworkersNoConnectionMessage": "No connection. Check your network and try again.",
+  "@coworkersNoConnectionMessage": {
+    "description": "Fallback failure description used in every coworker create/update/delete toast when the request never reached the server (NetworkException)."
+  },
+  "coworkersGenericErrorMessage": "Something went wrong",
+  "@coworkersGenericErrorMessage": {
+    "description": "Fallback failure description used in every coworker create/update/delete toast for an unrecognized error. No trailing period — byte-exact from the source string, distinct from sharedGenericErrorMessage's own trailing period (that key is used instead where the source string does have one)."
+  },
+  "coworkersSignInPromptMessage": "Sign in to manage your team.",
+  "@coworkersSignInPromptMessage": {
+    "description": "Blocked-state message on add-coworker when reached by a signed-out session."
+  },
+  "coworkersSignInActionLabel": "Sign In",
+  "@coworkersSignInActionLabel": {
+    "description": "Action-button label on add-coworker's signed-out blocked state; pushes the login screen."
+  },
+  "coworkersAgentOnlyMessage": "Only agents can add coworkers.",
+  "@coworkersAgentOnlyMessage": {
+    "description": "Blocked-state message on add-coworker when reached by a non-agent (coworker) session."
+  },
+  "coworkersGoBackLabel": "Go back",
+  "@coworkersGoBackLabel": {
+    "description": "Action-button label on add-coworker's/coworker-detail's blocked states; returns to coworkers-list."
+  },
+  "coworkersSoloAgentMessage": "Solo agents don't have a team. Switch to an agency account to add coworkers.",
+  "@coworkersSoloAgentMessage": {
+    "description": "Blocked-state message on add-coworker when reached by a solo agent — the API's own literal copy (apps/api/src/routes/coworkers.js's solo_realtor error message), shown pre-emptively rather than only after a submit round-trip."
+  },
+  "coworkersAddPhotoLabel": "Add photo",
+  "@coworkersAddPhotoLabel": {
+    "description": "Semantics label on add-coworker's avatar upload control."
+  },
+  "coworkersChangePhotoLabel": "Change photo",
+  "@coworkersChangePhotoLabel": {
+    "description": "Semantics label on coworker-detail's avatar upload control (agent-managed sessions only)."
+  },
+  "coworkersFieldFullNameLabel": "Full name",
+  "@coworkersFieldFullNameLabel": {
+    "description": "Label on the Full name field, shared by add-coworker and coworker-detail's forms."
+  },
+  "coworkersFieldPhoneLabel": "Phone",
+  "@coworkersFieldPhoneLabel": {
+    "description": "Label on the Phone field, shared by add-coworker and coworker-detail's forms."
+  },
+  "coworkersFieldEmailLabel": "Email",
+  "@coworkersFieldEmailLabel": {
+    "description": "Label on the Email field, shared by add-coworker and coworker-detail's forms."
+  },
+  "coworkersFieldPasswordLabel": "Password",
+  "@coworkersFieldPasswordLabel": {
+    "description": "Label on the Password field, shared by add-coworker and coworker-detail's forms."
+  },
+  "coworkersPasswordHint": "At least 6 characters",
+  "@coworkersPasswordHint": {
+    "description": "Hint text inside add-coworker's Password field."
+  },
+  "coworkersPasswordHintKeepCurrent": "Leave blank to keep the current password",
+  "@coworkersPasswordHintKeepCurrent": {
+    "description": "Hint text inside coworker-detail's Password field, where the password is optional on edit."
+  },
+  "coworkersFullNameRequiredError": "Full Name is required",
+  "@coworkersFullNameRequiredError": {
+    "description": "Validation error under the Full name field (both add-coworker and coworker-detail) when left empty — SCREENS.md §37's own capitalisation (\"Full Name\", capital N) is preserved verbatim."
+  },
+  "coworkersPhoneRequiredError": "Phone number is required",
+  "@coworkersPhoneRequiredError": {
+    "description": "Validation error under add-coworker's Phone field when left empty — two distinct messages exist there (this one plus coworkersPhoneInvalidError), unlike coworker-detail's single combined message (see coworker_detail_screen.dart's doc comment)."
+  },
+  "coworkersPhoneInvalidError": "Invalid Uzbekistan phone number",
+  "@coworkersPhoneInvalidError": {
+    "description": "Validation error under the Phone field — add-coworker's \"wrong shape\" message, and coworker-detail's single combined empty-or-wrong-shape message."
+  },
+  "coworkersEmailRequiredError": "Email is required",
+  "@coworkersEmailRequiredError": {
+    "description": "Validation error under the Email field (both add-coworker and coworker-detail) when left empty."
+  },
+  "coworkersPasswordRequiredError": "Password is required",
+  "@coworkersPasswordRequiredError": {
+    "description": "Validation error under add-coworker's Password field when left empty (password is required at create time, unlike coworker-detail's optional-on-edit field)."
+  },
+  "coworkersPasswordTooShortError": "Password must be at least 6 characters",
+  "@coworkersPasswordTooShortError": {
+    "description": "Validation error under the Password field (both add-coworker and coworker-detail) when a non-empty value is shorter than 6 characters."
+  },
+  "coworkersCancelButtonLabel": "Cancel",
+  "@coworkersCancelButtonLabel": {
+    "description": "Cancel button label, shared by add-coworker and coworker-detail's own bespoke buttons."
+  },
+  "coworkersSaveButtonLabel": "Save",
+  "@coworkersSaveButtonLabel": {
+    "description": "Save button label, shared by add-coworker and coworker-detail."
+  },
+  "coworkersDeleteButtonLabel": "Delete",
+  "@coworkersDeleteButtonLabel": {
+    "description": "Destructive Delete button label at the foot of coworker-detail (agent-managed sessions only)."
+  },
+  "coworkersSubjectNoun": "coworker",
+  "@coworkersSubjectNoun": {
+    "description": "The already-localized noun passed as confirmDelete's {subject} (shared/widgets/delete_confirm.dart) when deleting from coworker-detail — see that function's own doc comment for why the caller must supply an already-translated word. See GLOSSARY.md's \"coworker\" entry for the term rendering."
+  },
+  "coworkersDetailScreenTitle": "Update coworker",
+  "@coworkersDetailScreenTitle": {
+    "description": "Nav-bar title on the coworker-detail screen (SCREENS.md §36)."
+  },
+  "coworkersNotFoundMessage": "This coworker is no longer available.",
+  "@coworkersNotFoundMessage": {
+    "description": "Terminal error message on coworker-detail when the id resolves 404 — permanent, no Retry offered alongside it."
+  },
+  "coworkersDetailLoadErrorMessage": "Couldn't load this coworker",
+  "@coworkersDetailLoadErrorMessage": {
+    "description": "Error message on coworker-detail when the fetch fails for a transient (non-404) reason. Paired with sharedRetryLabel."
+  },
+  "coworkersUpdatedToastMessage": "Coworker successfully updated!",
+  "@coworkersUpdatedToastMessage": {
+    "description": "Success toast after coworker-detail's Save completes."
+  },
+  "coworkersUpdateErrorToastMessage": "Error updating coworker: {message}",
+  "@coworkersUpdateErrorToastMessage": {
+    "description": "Error toast after a failed coworker-detail Save.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "coworkersDeletedToastMessage": "Coworker successfully deleted!",
+  "@coworkersDeletedToastMessage": {
+    "description": "Success toast after coworker-detail's Delete completes."
+  },
+  "coworkersDeleteErrorToastMessage": "Error deleting coworker: {message}",
+  "@coworkersDeleteErrorToastMessage": {
+    "description": "Error toast after a failed coworker-detail Delete.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "coworkersReadOnlyNoteMessage": "Only agents can edit or delete coworkers.",
+  "@coworkersReadOnlyNoteMessage": {
+    "description": "Caption on coworker-detail replacing Save/Delete for a coworker session viewing a sibling (read-only)."
+  },
+  "coworkersActivitySummaryLine": "{listings} · Active {active}",
+  "@coworkersActivitySummaryLine": {
+    "description": "Read-only summary line on coworker-detail, above the form fields: an already-formatted listings-count phrase (coworkersListingsCount, or \"—\"/\"…\" when the figure can't be determined yet/at all) and an already-formatted relative-activity phrase (or the same dash/ellipsis fallback).",
+    "placeholders": {
+      "listings": {
+        "type": "String",
+        "example": "12 listings"
+      },
+      "active": {
+        "type": "String",
+        "example": "2 days ago"
+      }
+    }
+  },
+  "coworkersActivityJustNow": "Just now",
+  "@coworkersActivityJustNow": {
+    "description": "coworker_metrics.dart's coworkerActivityLabel: relative-time label for an activity timestamp under a minute old."
+  },
+  "coworkersActivityMinutesAgo": "{count, plural, other{{count} min ago}}",
+  "@coworkersActivityMinutesAgo": {
+    "description": "coworkerActivityLabel's relative-time label for an activity timestamp under an hour old. \"min\" is an invariant abbreviation in the source English (never inflects with count), so only the \"other\" category is defined here.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coworkersActivityHoursAgo": "{count, plural, other{{count} h ago}}",
+  "@coworkersActivityHoursAgo": {
+    "description": "coworkerActivityLabel's relative-time label for an activity timestamp under a day old. \"h\" is an invariant abbreviation, same reasoning as coworkersActivityMinutesAgo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coworkersActivityYesterday": "Yesterday",
+  "@coworkersActivityYesterday": {
+    "description": "coworkerActivityLabel's relative-time label for an activity timestamp exactly one calendar day old."
+  },
+  "coworkersActivityDaysAgo": "{count, plural, other{{count} days ago}}",
+  "@coworkersActivityDaysAgo": {
+    "description": "coworkerActivityLabel's relative-time label for an activity timestamp two or more days old (one day old renders coworkersActivityYesterday instead, so this branch is never actually reached with count == 1 — only \"other\" is defined, matching the source's own unconditional \"days\" plural).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardScreenHeaderTitle": "Statistics",
+  "@dashboardScreenHeaderTitle": {
+    "description": "Header title on the dashboard screen (SCREENS.md §24), the agent Work tab's root."
+  },
+  "dashboardNotificationsSemanticsLabel": "Notifications",
+  "@dashboardNotificationsSemanticsLabel": {
+    "description": "Semantics label on dashboard's header bell icon button; pushes the notifications screen."
+  },
+  "dashboardCoworkerStatisticsSectionTitle": "Coworker statistics",
+  "@dashboardCoworkerStatisticsSectionTitle": {
+    "description": "Section-header title above the Coworker statistics bar-chart-and-list section on dashboard."
+  },
+  "dashboardWorkspaceGroupLabel": "Workspace",
+  "@dashboardWorkspaceGroupLabel": {
+    "description": "Group-label heading above dashboard's three Workspace quick-nav rows (My Ads/Leads/Coworkers)."
+  },
+  "dashboardAdsStatisticsTitle": "Ads statistics",
+  "@dashboardAdsStatisticsTitle": {
+    "description": "Panel-header title on dashboard's \"Ads statistics\" area chart."
+  },
+  "dashboardAdsStatisticsLoadErrorMessage": "Couldn't load ad statistics",
+  "@dashboardAdsStatisticsLoadErrorMessage": {
+    "description": "Retry-card message inside the Ads statistics panel when the series fetch fails."
+  },
+  "dashboardNoDataForRangeMessage": "No data for this range.",
+  "@dashboardNoDataForRangeMessage": {
+    "description": "Message inside the Ads statistics panel when the series fetch succeeds but returns zero buckets for the selected range."
+  },
+  "dashboardLegendCreated": "Created",
+  "@dashboardLegendCreated": {
+    "description": "Legend-dot label under the Ads statistics chart for the \"Created\" series."
+  },
+  "dashboardLegendSold": "Sold",
+  "@dashboardLegendSold": {
+    "description": "Legend-dot label under the Ads statistics chart for the \"Sold\" series."
+  },
+  "dashboardCaptionHour": "Hour {hour}",
+  "@dashboardCaptionHour": {
+    "description": "Ads statistics panel's date-range caption for a single hour-granularity bucket. {hour} is an already-formatted \"HH:00\" string, passed through untranslated (a formatted time, not UI wording).",
+    "placeholders": {
+      "hour": {
+        "type": "String",
+        "example": "14:00"
+      }
+    }
+  },
+  "dashboardCaptionHoursRange": "Hours {start}–{end}",
+  "@dashboardCaptionHoursRange": {
+    "description": "Ads statistics panel's date-range caption for a multi-bucket hour-granularity series. {start}/{end} are already-formatted \"HH:00\" strings.",
+    "placeholders": {
+      "start": {
+        "type": "String",
+        "example": "09:00"
+      },
+      "end": {
+        "type": "String",
+        "example": "17:00"
+      }
+    }
+  },
+  "dashboardCaptionDay": "Day {day}",
+  "@dashboardCaptionDay": {
+    "description": "Ads statistics panel's date-range caption for a single day-granularity bucket that stays within the current calendar month. {day} is a bare day-of-month number, not a pluralizing count.",
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardCaptionDaysRange": "Days {start}–{end}",
+  "@dashboardCaptionDaysRange": {
+    "description": "Ads statistics panel's date-range caption for a multi-bucket day-granularity series that stays within one calendar month. {start}/{end} are bare day-of-month numbers.",
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardCoworkerStatisticsLoadErrorMessage": "Couldn't load coworker statistics",
+  "@dashboardCoworkerStatisticsLoadErrorMessage": {
+    "description": "Retry-card message inside the Coworker statistics section when its fetch fails."
+  },
+  "dashboardNoCoworkersMessage": "No coworkers yet.",
+  "@dashboardNoCoworkersMessage": {
+    "description": "Empty-state message inside the Coworker statistics section when the caller has no coworkers."
+  },
+  "dashboardLegendAdsCount": "Ads count",
+  "@dashboardLegendAdsCount": {
+    "description": "Legend-dot label under the Coworker statistics bar chart for the \"Ads count\" series."
+  },
+  "dashboardLegendLeadCount": "Lead count",
+  "@dashboardLegendLeadCount": {
+    "description": "Legend-dot label under the Coworker statistics bar chart for the \"Lead count\" series."
+  },
+  "dashboardLegendSaleCount": "Sale count",
+  "@dashboardLegendSaleCount": {
+    "description": "Legend-dot label under the Coworker statistics bar chart for the \"Sale count\" series."
+  },
+  "dashboardHeaderCoworkers": "COWORKERS",
+  "@dashboardHeaderCoworkers": {
+    "description": "Column-header label above the Coworker statistics list (already uppercase in source, not run through a text-transform)."
+  },
+  "dashboardHeaderAds": "ADS",
+  "@dashboardHeaderAds": {
+    "description": "Column-header label above the Coworker statistics list's Ads figures — already uppercase in source."
+  },
+  "dashboardHeaderLeads": "LEADS",
+  "@dashboardHeaderLeads": {
+    "description": "Column-header label above the Coworker statistics list's Leads figures — already uppercase in source."
+  },
+  "dashboardHeaderSales": "SALES",
+  "@dashboardHeaderSales": {
+    "description": "Column-header label above the Coworker statistics list's Sales figures — already uppercase in source."
+  },
+  "dashboardTileAdsCreatedLabel": "Ads created",
+  "@dashboardTileAdsCreatedLabel": {
+    "description": "Label on dashboard's 2×2 stat-tile grid, first tile."
+  },
+  "dashboardTileAdsSoldLabel": "Ads sold",
+  "@dashboardTileAdsSoldLabel": {
+    "description": "Label on dashboard's 2×2 stat-tile grid, second tile."
+  },
+  "dashboardTileActiveLeadsLabel": "Active leads",
+  "@dashboardTileActiveLeadsLabel": {
+    "description": "Label on dashboard's 2×2 stat-tile grid, third tile."
+  },
+  "dashboardTileCoworkersLabel": "Coworkers",
+  "@dashboardTileCoworkersLabel": {
+    "description": "Label on dashboard's 2×2 stat-tile grid, fourth tile (tappable — pushes coworkers-list)."
+  },
+  "dashboardTileTapToManageSubtitle": "tap to manage",
+  "@dashboardTileTapToManageSubtitle": {
+    "description": "Subtitle on dashboard's Coworkers stat tile, hinting that the tile is tappable."
+  },
+  "dashboardRangeSubtitleAll": "all time",
+  "@dashboardRangeSubtitleAll": {
+    "description": "Subtitle text on the Ads created/Ads sold stat tiles when the All time-range filter is selected."
+  },
+  "dashboardRangeSubtitleThisMonth": "this month",
+  "@dashboardRangeSubtitleThisMonth": {
+    "description": "Subtitle text on the Ads created/Ads sold stat tiles when the This month time-range filter is selected."
+  },
+  "dashboardRangeSubtitleThisWeek": "this week",
+  "@dashboardRangeSubtitleThisWeek": {
+    "description": "Subtitle text on the Ads created/Ads sold stat tiles when the This week time-range filter is selected."
+  },
+  "dashboardRangeSubtitleToday": "today",
+  "@dashboardRangeSubtitleToday": {
+    "description": "Subtitle text on the Ads created/Ads sold stat tiles when the Today time-range filter is selected."
+  },
+  "dashboardCallbackSubtitle": "{count, plural, one{{count} needs a call back} other{{count} need a call back}}",
+  "@dashboardCallbackSubtitle": {
+    "description": "Subtitle on dashboard's Active leads stat tile: how many leads are due (or overdue) a callback today, with subject-verb agreement on the count (\"1 needs\"/\"N need\") — this dual form already existed in the pre-extraction Dart, unlike dashboardWorkspaceLeadsSubtitle's identical concept, which is now routed through this same message (see dashboard_workspace_links.dart).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardFilterLabelAll": "All",
+  "@dashboardFilterLabelAll": {
+    "description": "Chip label on dashboard's time-range selector for StatisticsFilter.all."
+  },
+  "dashboardFilterLabelThisMonth": "This month",
+  "@dashboardFilterLabelThisMonth": {
+    "description": "Chip label on dashboard's time-range selector for StatisticsFilter.thisMonth — also the default-selected filter."
+  },
+  "dashboardFilterLabelThisWeek": "This week",
+  "@dashboardFilterLabelThisWeek": {
+    "description": "Chip label on dashboard's time-range selector for StatisticsFilter.thisWeek."
+  },
+  "dashboardFilterLabelToday": "Today",
+  "@dashboardFilterLabelToday": {
+    "description": "Chip label on dashboard's time-range selector for StatisticsFilter.today."
+  },
+  "dashboardWorkspaceMyAdsRowTitle": "My Ads",
+  "@dashboardWorkspaceMyAdsRowTitle": {
+    "description": "Row title on dashboard's Workspace quick-nav list, first row; pushes my-listings."
+  },
+  "dashboardWorkspaceLeadsRowTitle": "Leads",
+  "@dashboardWorkspaceLeadsRowTitle": {
+    "description": "Row title on dashboard's Workspace quick-nav list, second row; pushes leads-list."
+  },
+  "dashboardWorkspaceCoworkersRowTitle": "Coworkers",
+  "@dashboardWorkspaceCoworkersRowTitle": {
+    "description": "Row title on dashboard's Workspace quick-nav list, third row; pushes coworkers-list."
+  },
+  "dashboardWorkspaceMyAdsSubtitle": "{listings} listings · {drafts} drafts",
+  "@dashboardWorkspaceMyAdsSubtitle": {
+    "description": "Subtitle on dashboard's \"My Ads\" Workspace row: total listing count and how many are drafts. The pre-existing Dart interpolation this replaces always renders both nouns plural regardless of count (dashboard_screen_test.dart's own fixture pins '4 listings · 1 drafts', not '1 draft') — unlike homeAgentAdsCount's identical-looking bug, this one is preserved byte-identical rather than fixed with an ICU plural, since an existing test already froze the unconditional-plural wording; flagged in this run's report rather than silently changed.",
+    "placeholders": {
+      "listings": {
+        "type": "int"
+      },
+      "drafts": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardWorkspaceLeadsSubtitle": "{active} active · {dueToday} need a call back",
+  "@dashboardWorkspaceLeadsSubtitle": {
+    "description": "Subtitle on dashboard's \"Leads\" Workspace row: total active-lead count and how many need a callback today. Deliberately **not** routed through dashboardCallbackSubtitle's singular/plural verb agreement (\"1 needs\"/\"N need\") even though the two concepts are otherwise identical — the pre-extraction Dart here always rendered the plural verb \"need\" regardless of count (dashboard_screen_test.dart's own fixture pins '3 active · 1 need a call back', not '1 needs'), unlike dashboardCallbackSubtitle's stat tile which already had the dual form. Preserved byte-identical rather than \"fixed\", per lib/l10n/README.md's rule to move strings, not silently improve them — flagged in this run's report rather than corrected here.",
+    "placeholders": {
+      "active": {
+        "type": "int"
+      },
+      "dueToday": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardWorkspaceCoworkersSubtitle": "{count, plural, one{{count} person} other{{count} people}}",
+  "@dashboardWorkspaceCoworkersSubtitle": {
+    "description": "Subtitle on dashboard's \"Coworkers\" Workspace row: total coworker count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsScreenTitle": "Notifications",
+  "@notificationsScreenTitle": {
+    "description": "Nav-bar title on the notifications screen (SCREENS.md §22)."
+  },
+  "notificationsLoadErrorMessage": "Couldn't load your notifications.",
+  "@notificationsLoadErrorMessage": {
+    "description": "Error message on notifications when the feed fetch fails. Paired with sharedRetryLabel."
+  },
+  "notificationsEmptyMessage": "No notifications yet.",
+  "@notificationsEmptyMessage": {
+    "description": "Empty-state message on notifications when the feed is empty."
+  },
+  "notificationsUnreadSemanticsLabel": "{title}, unread",
+  "@notificationsUnreadSemanticsLabel": {
+    "description": "Semantics label on an unread notification row (notification_row.dart). {title} is the notification's own already-authored title text (server/fixture content, not app UI copy), passed through untranslated — only the \", unread\" suffix is this app's own wording.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationsRelativeJustNow": "Just now",
+  "@notificationsRelativeJustNow": {
+    "description": "live_notifications_repository.dart's _relativeTime: relative-time label for a notification under a minute old. Mirrors coworkersActivityJustNow's identical copy in a different feature (both format the same kind of relative timestamp independently)."
+  },
+  "notificationsRelativeMinutesAgo": "{count, plural, other{{count} min ago}}",
+  "@notificationsRelativeMinutesAgo": {
+    "description": "_relativeTime's relative-time label for a notification under an hour old — same invariant-abbreviation reasoning as coworkersActivityMinutesAgo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsRelativeHoursAgo": "{count, plural, other{{count} h ago}}",
+  "@notificationsRelativeHoursAgo": {
+    "description": "_relativeTime's relative-time label for a notification under a day old — same invariant-abbreviation reasoning as coworkersActivityHoursAgo.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsRelativeYesterday": "Yesterday",
+  "@notificationsRelativeYesterday": {
+    "description": "_relativeTime's relative-time label for a notification exactly one calendar day old."
+  },
+  "notificationsRelativeDaysAgo": "{count, plural, other{{count} days ago}}",
+  "@notificationsRelativeDaysAgo": {
+    "description": "_relativeTime's relative-time label for a notification two or more days old — same \"other\"-only reasoning as coworkersActivityDaysAgo (the day==1 case renders notificationsRelativeYesterday instead, so this branch never actually receives count == 1).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "messagesScreenTitle": "Messages",
+  "@messagesScreenTitle": {
+    "description": "Nav-bar title on the messages screen (SCREENS.md §23)."
+  },
+  "messagesComingSoonBanner": "Messaging is coming soon. For now, contact leads by phone.",
+  "@messagesComingSoonBanner": {
+    "description": "The entire content of the messages screen, a permanent placeholder banner — SCREENS.md §23's own quoted copy, verbatim (messaging is intentionally never implemented in this build)."
+  },
+  "connectedAccountsScreenTitle": "Connected Accounts",
+  "@connectedAccountsScreenTitle": {
+    "description": "Nav-bar title on the connected-accounts screen (SCREENS.md §21)."
+  },
+  "connectedAccountsInstagramToggleTitle": "Create Instagram post",
+  "@connectedAccountsInstagramToggleTitle": {
+    "description": "Title text beside connected-accounts' read-only Instagram status switch."
+  },
+  "connectedAccountsTelegramToggleTitle": "Create Telegram post",
+  "@connectedAccountsTelegramToggleTitle": {
+    "description": "Title text beside connected-accounts' read-only Telegram status switch."
+  },
+  "connectedAccountsYoutubeToggleTitle": "Create Youtube post",
+  "@connectedAccountsYoutubeToggleTitle": {
+    "description": "Title text beside connected-accounts' read-only YouTube status switch."
+  },
+  "connectedAccountsInstagramLoadErrorMessage": "Couldn't load your Instagram accounts.",
+  "@connectedAccountsInstagramLoadErrorMessage": {
+    "description": "Retry-card message on connected-accounts' Instagram section when the account-list fetch fails."
+  },
+  "connectedAccountsAvatarFallbackName": "Instagram",
+  "@connectedAccountsAvatarFallbackName": {
+    "description": "Fallback name fed to AgentAvatar for an Instagram account card whose username is unavailable — the product name itself, not translated word-for-word but included for consistent extraction."
+  },
+  "connectedAccountsDisconnectingToastLabel": "Disconnecting",
+  "@connectedAccountsDisconnectingToastLabel": {
+    "description": "Pending-toast label while an Instagram account's Disconnect action is in flight."
+  },
+  "connectedAccountsDisconnectedToastMessage": "Instagram account disconnected.",
+  "@connectedAccountsDisconnectedToastMessage": {
+    "description": "Success toast after an Instagram account's Disconnect action completes."
+  },
+  "connectedAccountsFallbackAccountName": "Instagram account",
+  "@connectedAccountsFallbackAccountName": {
+    "description": "Fallback noun used in connectedAccountsDisconnectSemanticsLabel when the account has no username to name it by."
+  },
+  "connectedAccountsDisconnectSemanticsLabel": "Disconnect {name}",
+  "@connectedAccountsDisconnectSemanticsLabel": {
+    "description": "Semantics label on an Instagram account card's Disconnect button. {name} is either the account's own @username (data, untranslated) or connectedAccountsFallbackAccountName's text.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "lacasa.javlon"
+      }
+    }
+  },
+  "connectedAccountsDisconnectButtonLabel": "Disconnect",
+  "@connectedAccountsDisconnectButtonLabel": {
+    "description": "Visible button text on an Instagram account card's Disconnect button."
+  },
+  "connectedAccountsPostsStatLabel": "Posts {count}",
+  "@connectedAccountsPostsStatLabel": {
+    "description": "Optional stat chip on an Instagram account card — the label word never inflects with {count} (a fixed \"Posts N\" tag, not a counted-noun phrase).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectedAccountsFollowersStatLabel": "Followers {count}",
+  "@connectedAccountsFollowersStatLabel": {
+    "description": "Optional stat chip on an Instagram account card — same fixed-label shape as connectedAccountsPostsStatLabel.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectedAccountsFollowingStatLabel": "Following {count}",
+  "@connectedAccountsFollowingStatLabel": {
+    "description": "Optional stat chip on an Instagram account card — same fixed-label shape as connectedAccountsPostsStatLabel.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectedAccountsConnectButtonLabel": "Connect Instagram",
+  "@connectedAccountsConnectButtonLabel": {
+    "description": "Both the visible text and the semantics label on connected-accounts' full-width Connect Instagram button."
+  },
+  "connectedAccountsOpeningBrowserToastMessage": "Opening Instagram sign-in in your browser.",
+  "@connectedAccountsOpeningBrowserToastMessage": {
+    "description": "Success toast after Connect Instagram successfully hands the OAuth URL to the device's browser. Deliberately does not claim the connection itself completed — see instagram_accounts_section.dart's doc comment for why §21's original \"connected!\" copy isn't reachable in this build."
+  },
+  "connectedAccountsLinkCopiedToastMessage": "Couldn't open your browser — Instagram sign-in link copied instead. Paste it into your browser to connect.",
+  "@connectedAccountsLinkCopiedToastMessage": {
+    "description": "Success toast (clipboard fallback) after Connect Instagram when no browser could be launched on this device — the OAuth URL was copied instead."
+  },
+  "connectedAccountsConnectionFailedToastMessage": "Instagram connection failed — please try again.",
+  "@connectedAccountsConnectionFailedToastMessage": {
+    "description": "Error toast when Connect Instagram fails outright (couldn't even fetch the sign-in link) — SCREENS.md §21's spec copy verbatim, reused for the closest real failure this OAuth-by-browser flow has."
+  },
+  "connectedAccountsTelegramChannelsConnected": "{count, plural, one{{count} channel connected} other{{count} channels connected}}",
+  "@connectedAccountsTelegramChannelsConnected": {
+    "description": "Row text on connected-accounts' Telegram section when at least one channel is connected — count comes from AuthUser.tgChatIds.length.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "connectedAccountsTelegramNoChannelsMessage": "No Telegram channels connected",
+  "@connectedAccountsTelegramNoChannelsMessage": {
+    "description": "Row text on connected-accounts' Telegram section when tgChatIds is empty — a distinct literal, not the zero-case of connectedAccountsTelegramChannelsConnected's plural."
+  },
+  "connectedAccountsYoutubeAddAccountLabel": "Add account",
+  "@connectedAccountsYoutubeAddAccountLabel": {
+    "description": "Label on connected-accounts' permanently-disabled YouTube \"Add account\" button."
+  },
+  "connectedAccountsYoutubeSignOutLabel": "Sign out",
+  "@connectedAccountsYoutubeSignOutLabel": {
+    "description": "Label on connected-accounts' permanently-disabled YouTube \"Sign out\" button."
+  },
+  "connectedAccountsUnavailableSemanticsSuffix": "{label} (unavailable in this build)",
+  "@connectedAccountsUnavailableSemanticsSuffix": {
+    "description": "Semantics label on each disabled YouTube button — wraps the button's own visible label (connectedAccountsYoutubeAddAccountLabel/connectedAccountsYoutubeSignOutLabel) with a reason it can't be tapped.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Add account"
+      }
+    }
+  },
+  "connectedAccountsYoutubeBetaNoteMessage": "Beta — not available in this build.",
+  "@connectedAccountsYoutubeBetaNoteMessage": {
+    "description": "Caption under connected-accounts' YouTube section explaining why its controls are disabled."
+  },
+  "connectedAccountsConnectedStatusLabel": "Connected",
+  "@connectedAccountsConnectedStatusLabel": {
+    "description": "Semantics label on a read-only channel-status switch (Instagram/Telegram/YouTube) when it reads on/connected."
+  },
+  "connectedAccountsNotConnectedStatusLabel": "Not connected",
+  "@connectedAccountsNotConnectedStatusLabel": {
+    "description": "Semantics label on a read-only channel-status switch when it reads off/not connected."
+  },
+  "leadsCommitFieldUppercaseLabel": "COMMIT",
+  "@leadsCommitFieldUppercaseLabel": {
+    "description": "Section label above kanban-move-sheet Commit textarea (the Rejected/Accepted note field) — already uppercase in source, a different widget from the leadsFieldCommitLabel title-case label used on create-lead/lead-detail forms."
+  },
+  "languageSheetTitle": "Language",
+  "@languageSheetTitle": {
+    "description": "Sheet title on language-sheet (SCREENS.md §3.20) — quoted character for character by the spec. Distinct from settingsLanguageRowTitle/profileAgentLanguageRowTitle/profileBuyerLanguageRowTitle/profileSignedOutLanguageRowTitle, which are the nav rows that open this sheet, not the sheet's own header."
+  },
+  "languageSheetCloseLabel": "Close",
+  "@languageSheetCloseLabel": {
+    "description": "Semantics label on language-sheet's dismiss 'X' — same per-sheet-owned pattern as contactSheetCloseLabel/reviewsSheetCloseLabel/leadsDetailCloseLabel, not the shared component keys (sharedMediaSourceCloseLabel/sharedNavRowCloseLabel)."
+  }
+}

@@ -2,28 +2,34 @@
 /// than one merged "screen state" provider (build contract §6:
 /// "independent providers per independently-failable section"):
 ///
-/// - [appliedMyListingsFiltersProvider] / [myListingsSortProvider] — the
-///   real `GET /my/ads` query params (`AdFilters`/`AdSort`) the results
-///   are currently fetched against. Changing either re-fetches.
-/// - [myListingsStatusProvider] — the CRM filter-sheet's Status field.
-///   **Not** a server param (`AgentAdsResource.myList` has no `stage`
-///   filter — see `data/my_listings_repository.dart`'s doc comment), so
-///   changing it never re-fetches; it only narrows
-///   [displayedMyListingsProvider]'s already-fetched list, client-side.
-/// - [myListingsResultsProvider] — the one network/fixture fetch, re-run
-///   whenever [appliedMyListingsFiltersProvider]/[myListingsSortProvider]
-///   change.
+/// - [appliedMyListingsFiltersProvider] / [myListingsSortProvider] /
+///   [myListingsStatusProvider] — the real `GET /my/ads` query params
+///   (`AdFilters`/[AdSort]→[adSortToAdListSort]/`AdStage?`) the results are
+///   currently fetched against. Changing any of the three re-fetches —
+///   **`stage` included**, now that `AgentAdsResource.myListPage` takes a
+///   real `stage` param server-side (unlike before, see
+///   `data/my_listings_repository.dart`'s doc comment). [myListingsSortProvider]
+///   stays typed as [AdSort] (3 values) rather than the wider [AdListSort]
+///   (6 values) purely because it's shared state with the CRM filter
+///   sheet's own Sort control, which this feature doesn't own and can't
+///   widen in place (`features/filter/widgets/filter_sheet.dart`) —
+///   [adSortToAdListSort] is where that narrower vocabulary becomes the
+///   real wire param.
+/// - [myListingsResultsProvider] — the one real fetch loop: its `build()`
+///   gets page one, and its `loadMore()` method fetches the next page with
+///   the previous response's `nextCursor`, appending onto what's already
+///   loaded. Re-runs `build()` (discarding whatever was loaded and starting
+///   over at page one) whenever filters/sort/status change, since those are
+///   a genuinely new query, not a continuation of the old one.
 /// - [myListingsCoworkersProvider] — the Author column's coworker roster,
 ///   fetched independently so a coworkers-endpoint failure degrades the
 ///   Author cell alone (see [resolveAdAuthorName]) rather than blanking
 ///   the whole ads list.
-/// - [displayedMyListingsProvider] — [myListingsResultsProvider]'s data
-///   with [myListingsStatusProvider]'s filter applied, client-side, on
-///   every rebuild. This is the one widgets should actually watch to
-///   render the results list.
-/// - [myListingsVisibleCountProvider] — the client-side paging window
-///   behind SCREENS.md §25's "Infinite scroll" (build contract §7.7: no
-///   server-side pagination exists to drive a real one).
+///
+/// There is deliberately no more "displayed vs. fetched" split, and no more
+/// client-side paging window — both were built around the old
+/// no-server-pagination gap (build contract §7.7), which is closed; see
+/// `README.md`'s Known gaps for the before/after.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,7 +60,21 @@ final myListingsSortProvider = NotifierProvider<MyListingsSortNotifier, AdSort>(
   MyListingsSortNotifier.new,
 );
 
-/// See this file's doc comment — local-only, never triggers a re-fetch.
+/// [AgentAdsResource.myList]'s narrower legacy sort vocabulary (3 values) →
+/// [AdListSort]'s full one (6 values), the type [AgentAdsResource.myListPage]
+/// actually takes. `AdSort.highestPrice`/`.lowestPrice` and
+/// `AdListSort.priceDesc`/`.priceAsc` are the same wire concept under two
+/// names (`docs/04-api-spec.md`: "the legacy wire values highestPrice/
+/// lowestPrice \[are\] aliases for priceDesc/priceAsc") — this is a rename,
+/// not a behavior change.
+AdListSort adSortToAdListSort(AdSort sort) => switch (sort) {
+  AdSort.newest => AdListSort.newest,
+  AdSort.highestPrice => AdListSort.priceDesc,
+  AdSort.lowestPrice => AdListSort.priceAsc,
+};
+
+/// See this file's doc comment — a real `GET /my/ads` `stage` param now,
+/// not a client-only narrowing.
 class MyListingsStatusNotifier extends Notifier<AdStage?> {
   @override
   AdStage? build() => null;
@@ -95,21 +115,128 @@ final activeMyListingsFilterCountProvider = Provider<int>((ref) {
   return activeMyListingsFilterCount(filters, status);
 });
 
-class MyListingsResultsNotifier extends AsyncNotifier<List<Ad>> {
+/// The number of ads requested per real `GET /my/ads` page — both the
+/// first `build()` fetch and every subsequent [MyListingsResultsNotifier
+/// .loadMore] call send this as `limit`. 10 keeps SCREENS.md §25's
+/// infinite-scroll feel on a short list without a huge over-fetch; the
+/// server itself defaults to 20 and caps at 100; nothing about that default
+/// requires this client to match it.
+const int myListingsPageSize = 10;
+
+/// [myListingsResultsProvider]'s value — the ads loaded so far (across
+/// however many pages [loadMore] has fetched) plus the cursor for the next
+/// one. [nextCursor] `null` means the last page has already been reached;
+/// [isLoadingMore] gates [loadMore] against firing twice for the same page
+/// (e.g. two scroll-listener ticks in the same frame).
+class MyListingsPageState {
+  const MyListingsPageState({
+    required this.ads,
+    required this.nextCursor,
+    this.isLoadingMore = false,
+    this.loadMoreFailed = false,
+  });
+
+  final List<Ad> ads;
+  final String? nextCursor;
+  final bool isLoadingMore;
+
+  /// Mirrors `search_providers.dart`'s `SearchResultsPage.loadMoreFailed` —
+  /// this screen's scroll listener (`my_listings_screen.dart`'s `_onScroll`)
+  /// is invisible the same way search's is, so a load-more failure needs a
+  /// visible "this failed" row (`LoadMoreFooter`), not just a silently
+  /// re-appearing spinner slot with no explanation. Cleared back to `false`
+  /// the moment a subsequent [loadMore] call actually starts, same as
+  /// [isLoadingMore].
+  final bool loadMoreFailed;
+
+  bool get hasMore => nextCursor != null;
+
+  MyListingsPageState copyWith({
+    List<Ad>? ads,
+    String? nextCursor,
+    bool clearNextCursor = false,
+    bool? isLoadingMore,
+    bool? loadMoreFailed,
+  }) {
+    return MyListingsPageState(
+      ads: ads ?? this.ads,
+      nextCursor: clearNextCursor ? null : (nextCursor ?? this.nextCursor),
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
+    );
+  }
+}
+
+class MyListingsResultsNotifier extends AsyncNotifier<MyListingsPageState> {
   @override
-  Future<List<Ad>> build() {
-    // Watching (not reading) filters/sort is what makes the CRM filter
-    // sheet's "Apply Filters" re-trigger this fetch automatically.
+  Future<MyListingsPageState> build() async {
+    // Watching (not reading) filters/sort/status is what makes the CRM
+    // filter sheet's "Apply Filters" re-trigger this fetch automatically —
+    // and, since `build()` re-running always starts a fresh
+    // `MyListingsPageState` at page one, it's also what resets any partial
+    // "loaded more" progress from a previous filter selection.
     final filters = ref.watch(appliedMyListingsFiltersProvider);
     final sort = ref.watch(myListingsSortProvider);
-    return ref
+    final status = ref.watch(myListingsStatusProvider);
+    final page = await ref
         .read(myListingsRepositoryProvider)
-        .fetchMyAds(filters: filters, sort: sort);
+        .fetchMyAdsPage(
+          filters: filters,
+          sort: adSortToAdListSort(sort),
+          stage: status,
+          limit: myListingsPageSize,
+        );
+    return MyListingsPageState(ads: page.items, nextCursor: page.nextCursor);
+  }
+
+  /// Fetches the next page (using the current [MyListingsPageState
+  /// .nextCursor]) and appends it. A no-op if there's no current data, no
+  /// next page, or a fetch is already in flight — called from the screen's
+  /// scroll listener, which can fire more than once before the first
+  /// request resolves.
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || !current.hasMore || current.isLoadingMore) return;
+
+    state = AsyncData(
+      current.copyWith(isLoadingMore: true, loadMoreFailed: false),
+    );
+    try {
+      final page = await ref
+          .read(myListingsRepositoryProvider)
+          .fetchMyAdsPage(
+            filters: ref.read(appliedMyListingsFiltersProvider),
+            sort: adSortToAdListSort(ref.read(myListingsSortProvider)),
+            stage: ref.read(myListingsStatusProvider),
+            limit: myListingsPageSize,
+            cursor: current.nextCursor,
+          );
+      state = AsyncData(
+        MyListingsPageState(
+          ads: [...current.ads, ...page.items],
+          nextCursor: page.nextCursor,
+        ),
+      );
+    } catch (_) {
+      // A load-more failure degrades to "stop spinning, keep what's already
+      // on screen" rather than blanking the whole list the way a first-page
+      // failure does — the list the user was already looking at is still
+      // good data. `nextCursor` is left as-is, so scrolling back down tries
+      // again rather than silently giving up on "more" forever.
+      // `loadMoreFailed` — unlike the old degrade this replaces — makes that
+      // failure visible via `LoadMoreFooter`'s tappable "Couldn't load more
+      // — Retry" row, not a spinner slot that quietly stops appearing with
+      // no explanation (this screen's scroll listener has no other way to
+      // tell the user anything went wrong at all).
+      state = AsyncData(
+        current.copyWith(isLoadingMore: false, loadMoreFailed: true),
+      );
+    }
   }
 }
 
 final myListingsResultsProvider =
-    AsyncNotifierProvider<MyListingsResultsNotifier, List<Ad>>(
+    AsyncNotifierProvider<MyListingsResultsNotifier, MyListingsPageState>(
       MyListingsResultsNotifier.new,
     );
 
@@ -124,21 +251,6 @@ final myListingsCoworkersProvider =
     AsyncNotifierProvider<MyListingsCoworkersNotifier, List<Coworker>>(
       MyListingsCoworkersNotifier.new,
     );
-
-/// [myListingsResultsProvider]'s data, client-side status-filtered by
-/// [myListingsStatusProvider] (there is no server-side status filter, see
-/// this file's doc comment). Loading and error states pass through from
-/// [myListingsResultsProvider] unchanged; only the `data` case is
-/// transformed.
-final displayedMyListingsProvider = Provider<AsyncValue<List<Ad>>>((ref) {
-  final results = ref.watch(myListingsResultsProvider);
-  final status = ref.watch(myListingsStatusProvider);
-
-  return results.whenData((ads) {
-    if (status == null) return ads;
-    return ads.where((ad) => ad.stage == status).toList();
-  });
-});
 
 /// Resolves the row-level "Author" text (SCREENS.md §25). Mirrors
 /// `apps/console/src/screens/myAds/deriveMyAds.ts#resolveAdAuthor` field
@@ -174,30 +286,3 @@ String? resolveAdAuthorName(
   }
   return currentUser?.fullName;
 }
-
-/// Client-side paging window over [displayedMyListingsProvider]'s already
-/// fully-fetched list — see `data/my_listings_repository.dart`'s doc
-/// comment (build contract §7.7) for why "infinite scroll" here can only
-/// ever reveal more of a list already sitting in memory, never drive a
-/// real paginated fetch loop.
-const int myListingsPageSize = 10;
-
-class MyListingsVisibleCountNotifier extends Notifier<int> {
-  @override
-  int build() => myListingsPageSize;
-
-  /// Called when the list scrolls near its bottom and more of the
-  /// already-fetched list can be revealed.
-  void showMore() => state += myListingsPageSize;
-
-  /// Called whenever filters/sort/status change (a new "view" of the
-  /// list) so a shorter result set never leaves this stuck above its own
-  /// length, and a longer one starts back at one page rather than
-  /// revealing everything at once.
-  void reset() => state = myListingsPageSize;
-}
-
-final myListingsVisibleCountProvider =
-    NotifierProvider<MyListingsVisibleCountNotifier, int>(
-      MyListingsVisibleCountNotifier.new,
-    );

@@ -31,6 +31,7 @@ class FakeListingEditorRepository implements ListingEditorRepository {
   Object? publishStatusError;
   Object? publishInstagramError;
   Object? publishTelegramError;
+  Object? retryPublishError;
 
   int publishStatusCalls = 0;
 
@@ -40,6 +41,10 @@ class FakeListingEditorRepository implements ListingEditorRepository {
   int deleteCalls = 0;
   int publishInstagramCalls = 0;
   int publishTelegramCalls = 0;
+  int retryPublishCalls = 0;
+
+  String? lastRetryPublishAdId;
+  Channel? lastRetryPublishChannel;
 
   AdWriteInput? lastCreateInput;
   String? lastUpdateId;
@@ -169,6 +174,28 @@ class FakeListingEditorRepository implements ListingEditorRepository {
             mediaOrMessageId: telegramResultsOk ? 'message-$t' : null,
             error: telegramResultsOk ? null : 'boom',
           ),
+      ],
+    );
+  }
+
+  @override
+  Future<PublishAttemptResponse> retryPublish({
+    required String adId,
+    required Channel channel,
+  }) async {
+    retryPublishCalls++;
+    lastRetryPublishAdId = adId;
+    lastRetryPublishChannel = channel;
+    if (retryPublishError != null) return Future.error(retryPublishError!);
+    return PublishAttemptResponse(
+      publication: _publication(adId, channel),
+      results: [
+        PublishAttemptResult(
+          target: adId,
+          ok: true,
+          mediaOrMessageId: 'retry-$adId',
+          error: null,
+        ),
       ],
     );
   }

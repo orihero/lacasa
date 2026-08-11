@@ -17,6 +17,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/saved_listings_providers.dart';
@@ -31,6 +32,7 @@ class SavedListingsGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedListingsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return RefreshIndicator(
       onRefresh: () => ref.refresh(savedListingsProvider.future),
@@ -39,17 +41,17 @@ class SavedListingsGrid extends ConsumerWidget {
         error: (error, stackTrace) => _ScrollableState(
           child: FullWidthState(
             icon: Icons.cloud_off_rounded,
-            message: "Couldn't load your saved listings",
-            actionLabel: 'Retry',
+            message: l10n.savedListingsLoadErrorMessage,
+            actionLabel: l10n.sharedRetryLabel,
             onAction: () => ref.invalidate(savedListingsProvider),
           ),
         ),
         data: (list) {
           if (list.isEmpty) {
-            return const _ScrollableState(
+            return _ScrollableState(
               child: FullWidthState(
                 icon: Icons.favorite_border_rounded,
-                message: "You haven't saved any listings yet.",
+                message: l10n.savedListingsEmptyStateMessage,
               ),
             );
           }

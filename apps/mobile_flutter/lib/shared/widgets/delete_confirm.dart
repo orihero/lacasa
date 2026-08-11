@@ -18,29 +18,38 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 /// Shows the delete-confirm alert titled `"Delete $subject?"` and reports
 /// whether the user chose **"Delete"**. Never performs the deletion itself
 /// — callers own the actual `DELETE` request and its own toast, matching
 /// [confirmSignOut]'s split (see that file).
+///
+/// **[subject] must already be localized by the caller** (e.g. the
+/// listing/lead/coworker word from `lib/l10n/GLOSSARY.md`) — this function
+/// only supplies the surrounding sentence via [AppLocalizations]
+/// .sharedDeleteConfirmTitle's `{subject}` placeholder, since it has no way
+/// to know from a bare noun which flow (listing/lead/coworker, or a future
+/// caller) is asking.
 Future<bool> confirmDelete(BuildContext context, {required String subject}) async {
+  final l10n = AppLocalizations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog.adaptive(
-      title: Text('Delete $subject?'),
-      content: const Text('This action cannot be undone.'),
+      title: Text(l10n.sharedDeleteConfirmTitle(subject)),
+      content: Text(l10n.sharedDeleteConfirmBody),
       actions: [
         TextButton(
           key: const ValueKey('deleteConfirmCancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.sharedConfirmDialogCancelLabel),
         ),
         TextButton(
           key: const ValueKey('deleteConfirmDelete'),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(
-            'Delete',
+            l10n.sharedDeleteConfirmDeleteLabel,
             style: TextStyle(color: AppStatusColors.errorText),
           ),
         ),

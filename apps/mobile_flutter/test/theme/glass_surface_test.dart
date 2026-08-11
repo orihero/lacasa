@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 import 'package:liquid_glass_easy/liquid_glass_easy.dart';
 
@@ -14,6 +15,8 @@ Future<void> _pump(
 }) {
   return tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: theme,
       home: Scaffold(
         body: Center(

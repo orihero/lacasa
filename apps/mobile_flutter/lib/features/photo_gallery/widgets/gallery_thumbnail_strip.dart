@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../data/gallery_item.dart';
 
@@ -57,7 +58,10 @@ class GalleryThumbnailStrip extends StatelessWidget {
             return Semantics(
               button: true,
               selected: active,
-              label: 'Photo ${i + 1} of ${items.length}',
+              label: AppLocalizations.of(context).galleryThumbnailSemanticsLabel(
+                i + 1,
+                items.length,
+              ),
               child: GestureDetector(
                 onTap: () => onSelect(i),
                 child: AnimatedContainer(

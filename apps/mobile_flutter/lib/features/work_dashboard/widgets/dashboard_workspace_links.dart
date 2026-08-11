@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../state/dashboard_providers.dart';
@@ -24,19 +25,22 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
     final adsAsync = ref.watch(dashboardAdsProvider);
     final leadsAsync = ref.watch(dashboardLeadsProvider);
     final coworkersAsync = ref.watch(dashboardCoworkersProvider);
+    final l10n = AppLocalizations.of(context);
 
     final adsSubtitle = adsAsync.whenOrNull(
       data: (ads) {
         final drafts = ads.where((a) => a.stage == AdStage.draft).length;
-        return '${ads.length} listings · $drafts drafts';
+        return l10n.dashboardWorkspaceMyAdsSubtitle(ads.length, drafts);
       },
     );
     final leadsSubtitle = leadsAsync.whenOrNull(
-      data: (leads) =>
-          '${leads.length} active · ${countCallbacksDueToday(leads)} need a call back',
+      data: (leads) => l10n.dashboardWorkspaceLeadsSubtitle(
+        leads.length,
+        countCallbacksDueToday(leads),
+      ),
     );
     final coworkersSubtitle = coworkersAsync.whenOrNull(
-      data: (list) => '${list.length} ${list.length == 1 ? 'person' : 'people'}',
+      data: (list) => l10n.dashboardWorkspaceCoworkersSubtitle(list.length),
     );
 
     return Column(
@@ -44,7 +48,7 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
         ListRow(
           key: const ValueKey('workspaceLink-myAds'),
           icon: Icons.image_outlined,
-          title: 'My Ads',
+          title: l10n.dashboardWorkspaceMyAdsRowTitle,
           subtitle: adsSubtitle,
           onTap: () => context.push(RoutePaths.workMyListings),
         ),
@@ -52,7 +56,7 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
         ListRow(
           key: const ValueKey('workspaceLink-leads'),
           icon: Icons.filter_alt_outlined,
-          title: 'Leads',
+          title: l10n.dashboardWorkspaceLeadsRowTitle,
           subtitle: leadsSubtitle,
           onTap: () => context.push(RoutePaths.workLeads),
         ),
@@ -60,7 +64,7 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
         ListRow(
           key: const ValueKey('workspaceLink-coworkers'),
           icon: Icons.groups_outlined,
-          title: 'Coworkers',
+          title: l10n.dashboardWorkspaceCoworkersRowTitle,
           subtitle: coworkersSubtitle,
           onTap: () => context.push(RoutePaths.workCoworkers),
         ),

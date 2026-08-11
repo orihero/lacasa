@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/agents/agents.dart';
 import 'package:lacasa_mobile/features/agents/state/agents_repository_provider.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
@@ -37,6 +38,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: const AgentsDirectoryScreen(),
         ),
@@ -184,6 +187,8 @@ void main() {
             ),
           ],
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const AgentsDirectoryScreen(),
           ),

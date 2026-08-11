@@ -33,6 +33,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -93,7 +94,7 @@ class _EditButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Edit',
+      label: AppLocalizations.of(context).myListingsEditButtonSemanticsLabel,
       child: GestureDetector(
         key: ValueKey('myListingEdit-$adId'),
         behavior: HitTestBehavior.opaque,

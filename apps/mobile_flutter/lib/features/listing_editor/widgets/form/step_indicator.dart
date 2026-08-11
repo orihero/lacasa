@@ -5,13 +5,18 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../theme/theme.dart';
 
-const List<String> kListingWizardStepLabels = [
-  'Basics',
-  'Details',
-  'Photos',
-  'Publish',
+/// The 4 step labels in order — was a top-level `const List<String>` before
+/// localization; now a function of [AppLocalizations] since the labels are
+/// no longer compile-time constants (see [ListingWizardStepIndicator.build]
+/// for the one call site).
+List<String> listingWizardStepLabels(AppLocalizations l10n) => [
+  l10n.listingEditorStepBasicsLabel,
+  l10n.listingEditorStepDetailsLabel,
+  l10n.listingEditorStepPhotosLabel,
+  l10n.listingEditorStepPublishLabel,
 ];
 
 class ListingWizardStepIndicator extends StatelessWidget {
@@ -23,6 +28,7 @@ class ListingWizardStepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final labels = listingWizardStepLabels(AppLocalizations.of(context));
 
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -31,7 +37,7 @@ class ListingWizardStepIndicator extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (var i = 0; i < kListingWizardStepLabels.length; i++) ...[
+          for (var i = 0; i < labels.length; i++) ...[
             if (i != 0)
               Expanded(
                 child: Container(
@@ -44,7 +50,7 @@ class ListingWizardStepIndicator extends StatelessWidget {
             _StepDot(
               key: ValueKey('wizardStep-dot-$i'),
               index: i,
-              label: kListingWizardStepLabels[i],
+              label: labels[i],
               isDone: i < currentStep,
               isActive: i == currentStep,
             ),

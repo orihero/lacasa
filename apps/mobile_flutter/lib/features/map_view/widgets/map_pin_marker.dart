@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -45,7 +46,9 @@ class MapPinMarker extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '${ad.title}, ${Formatters.price(ad)}',
+      label: AppLocalizations.of(
+        context,
+      ).mapPinSemanticsLabel(ad.title, Formatters.price(ad)),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

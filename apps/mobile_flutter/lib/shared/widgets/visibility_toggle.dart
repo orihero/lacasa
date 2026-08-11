@@ -14,6 +14,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 class VisibilityToggle extends StatelessWidget {
@@ -26,9 +27,10 @@ class VisibilityToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
 
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      label: obscured ? 'Show password' : 'Hide password',
+      label: obscured ? l10n.sharedShowPasswordLabel : l10n.sharedHidePasswordLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 import 'listing_form_fields.dart';
@@ -26,13 +27,14 @@ class AdditionalInfoField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Additional Info'),
+        FieldLabel(l10n.listingEditorAdditionalInfoLabel),
         for (var i = 0; i < rows.length; i++) ...[
           _Row(
             key: ValueKey('additionalInfo-row-${rows[i].id}'),
@@ -59,7 +61,10 @@ class AdditionalInfoField extends StatelessWidget {
               color: colors.sunk,
               borderRadius: BorderRadius.circular(AppRadii.control),
             ),
-            child: Text('Add', style: type.rowTitle.copyWith(color: colors.ink)),
+            child: Text(
+              l10n.listingEditorAdditionalInfoAddButtonLabel,
+              style: type.rowTitle.copyWith(color: colors.ink),
+            ),
           ),
         ),
       ],
@@ -68,7 +73,12 @@ class AdditionalInfoField extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({super.key, required this.row, required this.onChanged, required this.onDelete});
+  const _Row({
+    super.key,
+    required this.row,
+    required this.onChanged,
+    required this.onDelete,
+  });
 
   final AdditionalInfoRow row;
   final VoidCallback onChanged;
@@ -76,13 +86,15 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
           child: _cell(
             context,
-            hintText: 'Key',
+            hintText: l10n.listingEditorAdditionalInfoKeyHint,
             initialText: row.key,
             onChanged: (v) {
               row.key = v;
@@ -94,7 +106,7 @@ class _Row extends StatelessWidget {
         Expanded(
           child: _cell(
             context,
-            hintText: 'Value',
+            hintText: l10n.listingEditorAdditionalInfoValueHint,
             initialText: row.value,
             onChanged: (v) {
               row.value = v;
@@ -107,7 +119,11 @@ class _Row extends StatelessWidget {
           onTap: onDelete,
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),
-            child: Icon(Icons.delete_outline_rounded, size: 18, color: AppStatusColors.errorText),
+            child: Icon(
+              Icons.delete_outline_rounded,
+              size: 18,
+              color: AppStatusColors.errorText,
+            ),
           ),
         ),
       ],
@@ -126,7 +142,10 @@ class _Row extends StatelessWidget {
     return GlassSurface(
       variant: GlassVariant.flatForm,
       borderRadius: BorderRadius.circular(AppRadii.control),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: 4,
+      ),
       child: TextFormField(
         initialValue: initialText,
         onChanged: onChanged,

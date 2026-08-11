@@ -15,10 +15,13 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/agents/agents.dart';
 import 'package:lacasa_mobile/features/agents/state/agents_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
+import '../../shared/support/fake_link_launcher.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/agent_test_data.dart';
 import 'support/fake_agents_repository.dart';
 
@@ -47,6 +50,15 @@ void main() {
     required FakeAgentsRepository repository,
     String agentId = 'agent-a',
     bool withBackStack = true,
+    // Left null (real `UrlLauncherLinkLauncher`) for every test that never
+    // taps Call — the plugin is never invoked so there's nothing to mock.
+    // The one test that *does* tap Call must pass a `FakeLinkLauncher`
+    // explicitly: with no platform-channel mock registered, awaiting the
+    // real `url_launcher.canLaunchUrl` never resolves in a widget test
+    // (confirmed by isolated repro — it hangs rather than throwing
+    // `MissingPluginException`), so `dialOrCopyPhone`'s fallback would never
+    // fire and `pumpAndSettle` would time out.
+    LinkLauncher? linkLauncher,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -55,6 +67,8 @@ void main() {
         favouriteAdIdsRepositoryProvider.overrideWithValue(
           FakeFavouriteAdIdsRepository(),
         ),
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
       ],
     );
     addTearDown(container.dispose);
@@ -88,6 +102,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -165,6 +181,10 @@ void main() {
             phoneNumber: '+998901234567',
           ),
         ),
+        // `result: false` — nothing on this "device" answers the `tel:`
+        // intent, which is what steers `dialOrCopyPhone` onto its
+        // copy-and-say-so fallback below.
+        linkLauncher: FakeLinkLauncher(result: false),
       );
 
       await tester.tap(find.text('Call'));
@@ -172,9 +192,12 @@ void main() {
 
       // The documented stand-in for a `tel:` intent — see
       // `agent_info_block.dart`'s doc comment on why it copies rather than
-      // dials.
+      // dials, and `dial_or_copy.dart`'s on the toast wording. It names
+      // *why* it copied rather than just announcing the copy.
       expect(
-        find.text('Phone number copied: +998901234567'),
+        find.text(
+          "Couldn't open the dialer — phone number copied: +998901234567",
+        ),
         findsOneWidget,
       );
     });
@@ -413,6 +436,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const AgentProfileScreen(agentId: 'agent-a'),
           ),

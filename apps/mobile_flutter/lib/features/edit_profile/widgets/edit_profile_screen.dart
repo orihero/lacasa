@@ -34,24 +34,17 @@
 /// format check would have caught it, which is a deliberate reading of
 /// "implement it as written," not an oversight.
 ///
-/// **The avatar control cannot open a picker in this build.** SCREENS.md
-/// says tapping it opens a native picker and triggers `permissions-primer`
-/// if ungranted; there is no `image_picker` dependency here (this task may
-/// not add one) and `features/permissions/data/permission_gateway.dart`'s
-/// [UnavailablePermissionGateway] is the documented reason nothing behind a
-/// real OS permission works yet. Rather than push `permissions-primer` —
-/// which exists to explain *why an OS prompt is about to appear* and would
-/// dead-end here with no prompt to show and no picker waiting on the other
-/// side of "Continue" — the avatar tap goes straight through the same
-/// [PermissionGateway] seam that screen uses, gets back
-/// [PermissionOutcome.unavailable] (the only outcome this build can ever
-/// produce), and says so plainly: a caption under the avatar always reads
-/// "Photo upload isn't available in this build yet," and the tap surfaces
-/// the identical sentence as a toast so a user who taps expecting something
-/// to happen gets an honest answer rather than silence. When photo upload
-/// gets a real implementation (this file's avatar section, plus a real
-/// [PermissionGateway] and an upload endpoint), this is the one place that
-/// changes.
+/// **The avatar control is a real picker.** SCREENS.md says tapping it
+/// opens a native picker and triggers `permissions-primer` if ungranted —
+/// [AvatarUploadControl] (`shared/widgets/avatar_upload_control.dart`) is
+/// that picker: `image_picker` raises its own OS permission prompt, so this
+/// screen does **not** also go through `PermissionGateway`
+/// (`features/permissions/`) — a second, app-level prompt on top of the
+/// plugin's own would be a worse experience, and that gateway exists for
+/// `permissions-primer`'s own explanatory surface, not for a control that
+/// already has a real picker behind it. A denied permission, a cancelled
+/// pick, an over-size file, and a failed upload each surface distinctly —
+/// see [AvatarUploadControl]'s own doc comment.
 ///
 /// **Discard confirmation** (SCREENS.md §5's "Modals with unsaved form
 /// state ... show a discard-confirmation alert" — `edit-profile` is named
@@ -72,18 +65,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../auth/state/auth_repository_provider.dart';
-import '../../permissions/permissions.dart';
-
-/// The one sentence this build can honestly say about the avatar control —
-/// see this file's doc comment. Shared by the always-visible caption and
-/// the tap-triggered toast so the two never drift apart.
-const String _avatarUnavailableMessage =
-    "Photo upload isn't available in this build yet.";
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key, this.branchPrefix = RoutePaths.profile});
@@ -109,8 +96,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _email;
   final TextEditingController _password = TextEditingController();
 
+  /// Seeded from [_initialUser.avatar]; reassigned once
+  /// [AvatarUploadControl.onUploaded] fires. `null` renders the initials
+  /// fallback, same as an unset avatar always has.
+  String? _avatarUrl;
+
   bool _obscurePassword = true;
   bool _submitting = false;
+
+  /// Tracks [AvatarUploadControl.onUploadStateChanged] — see that widget's
+  /// own doc comment for the race this closes. Checked in [_submit] so a
+  /// Save tapped before a pick finishes uploading is refused rather than
+  /// silently going out on the stale [_avatarUrl].
+  bool _avatarUploading = false;
 
   String? _fullNameError;
   String? _phoneError;
@@ -124,6 +122,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _fullName = TextEditingController(text: _initialUser?.fullName ?? '');
     _phone = TextEditingController(text: _initialUser?.phoneNumber ?? '');
     _email = TextEditingController(text: _initialUser?.email ?? '');
+    _avatarUrl = _initialUser?.avatar;
   }
 
   @override
@@ -145,12 +144,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return _fullName.text.trim() != user.fullName ||
         _phone.text.trim() != (user.phoneNumber ?? '') ||
         _email.text.trim() != user.email ||
-        _password.text.isNotEmpty;
+        _password.text.isNotEmpty ||
+        _avatarUrl != user.avatar;
   }
 
   Future<bool> _confirmDiscard() async {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     final discard = await showDialog<bool>(
       context: context,
@@ -160,21 +161,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           borderRadius: BorderRadius.circular(AppRadii.cardLg),
         ),
         title: Text(
-          'Discard changes?',
+          l10n.editProfileDiscardDialogTitle,
           style: type.alertTitle.copyWith(color: colors.ink),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: Text(
-              'Cancel',
+              l10n.editProfileDiscardDialogCancelButtonLabel,
               style: type.label.copyWith(color: colors.ink2),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(
-              'Discard',
+              l10n.editProfileDiscardDialogConfirmButtonLabel,
               style: type.label.copyWith(color: AppStatusColors.errorText),
             ),
           ),
@@ -203,41 +204,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  Future<void> _requestAvatarChange() async {
-    // Always resolves to `unavailable` in this build — see the file doc
-    // comment. Routed through the real gateway seam (rather than a literal
-    // `unavailable` short-circuit here) so the day a real
-    // `PermissionGateway` is wired up, this call starts doing something
-    // without this screen changing at all.
-    await ref.read(permissionGatewayProvider).request(AppPermission.cameraAndPhotos);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text(_avatarUnavailableMessage)),
-    );
-  }
-
   /// Validates every field (not just the first that fails) so a user
   /// fixing one mistake doesn't get surprised by a second one the next time
   /// they tap Save. Returns whether the form is submittable.
-  bool _validate() {
+  bool _validate(AppLocalizations l10n) {
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
 
     setState(() {
-      _fullNameError = fullName.isEmpty ? 'First name is required' : null;
+      _fullNameError = fullName.isEmpty
+          ? l10n.editProfileFullNameRequiredError
+          : null;
       // The spec gives phone exactly one message for both "empty" and
       // "wrong shape" — Formatters.isValidUzPhone('') is false anyway, so
       // this is one check, not two.
       _phoneError = Formatters.isValidUzPhone(phone)
           ? null
-          : 'Invalid Uzbekistan phone number';
-      _emailError = email.isEmpty ? 'Email is required' : null;
+          : l10n.editProfilePhoneInvalidError;
+      _emailError = email.isEmpty ? l10n.editProfileEmailRequiredError : null;
       // Only validated when the user is actually changing it — an empty
       // password field means "leave it alone," not "six characters short."
       _passwordError = password.isNotEmpty && password.length < 6
-          ? 'Password must be at least 6 characters'
+          ? l10n.editProfilePasswordLengthError
           : null;
     });
 
@@ -249,7 +239,21 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _submit() async {
     if (_submitting) return;
-    if (!_validate()) return;
+
+    // Captured once, up front — this method crosses an `await`, and every
+    // later use is after a `mounted` re-check, so the lookup is done while
+    // `context` is unambiguously still attached (same reasoning
+    // `login_screen.dart`'s `_submit` documents for its own `l10n`).
+    final l10n = AppLocalizations.of(context);
+    if (!_validate(l10n)) return;
+    // A photo mid-upload has no settled URL yet — see
+    // `AvatarUploadControl`'s doc comment and `listing_form_fields.dart`'s
+    // `hasPendingUploads`, whose "block Save with a message" precedent this
+    // mirrors rather than awaiting the upload inline.
+    if (_avatarUploading) {
+      LaCasaToast.showError(context, l10n.editProfileAvatarUploadingToast);
+      return;
+    }
 
     final user = _initialUser;
     if (user == null) return;
@@ -268,6 +272,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             fullName: fullName != user.fullName ? fullName : null,
             phoneNumber: phone != (user.phoneNumber ?? '') ? phone : null,
             email: email != user.email ? email : null,
+            avatar: _avatarUrl != user.avatar ? _avatarUrl : null,
             password: password.isEmpty ? null : password,
           );
       // Refreshes the session so `profile-buyer`/`profile-agent` (and
@@ -278,13 +283,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
       _leave();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile successfully updated!')),
+        SnackBar(content: Text(l10n.editProfileUpdateSuccessToast)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating profile: ${_messageFor(e)}')),
+        SnackBar(
+          content: Text(
+            l10n.editProfileUpdateErrorToast(_messageFor(l10n, e)),
+          ),
+        ),
       );
     }
   }
@@ -295,13 +304,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   /// issue's zod message, an `unauthorized` session having gone stale
   /// mid-edit. Only a transport failure with no server response at all
   /// gets copy invented here, matching `contact_sheet.dart`'s identical
-  /// call.
-  static String _messageFor(ApiException e) {
+  /// call. Takes [AppLocalizations] as a parameter rather than a
+  /// `BuildContext` — see `agent_review_sheet.dart`'s identically-shaped
+  /// `_messageFor` for why.
+  static String _messageFor(AppLocalizations l10n, ApiException e) {
     if (e is ApiErrorException) return e.message;
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.editProfileNetworkErrorMessage;
     }
-    return 'Something went wrong';
+    return l10n.editProfileGenericErrorMessage;
   }
 
   @override
@@ -322,7 +333,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              NavRow(title: 'Edit Profile', onBack: _handleCancel),
+              NavRow(
+                title: AppLocalizations.of(context).editProfileScreenTitle,
+                onBack: _handleCancel,
+              ),
               Expanded(
                 child: user == null
                     ? _SignedOutState(onGoBack: _leave)
@@ -340,8 +354,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         emailError: _emailError,
                         passwordError: _passwordError,
                         onFieldChanged: () => setState(() {}),
-                        avatarUrl: user.avatar,
-                        onAvatarTap: _requestAvatarChange,
+                        avatarUrl: _avatarUrl,
+                        onAvatarUploaded: (url) => setState(() => _avatarUrl = url),
+                        onAvatarError: (message) => LaCasaToast.showError(context, message),
+                        onAvatarUploadStateChanged: (busy) =>
+                            setState(() => _avatarUploading = busy),
                         submitting: _submitting,
                         onCancel: _handleCancel,
                         onSave: _submit,
@@ -371,8 +388,8 @@ class _SignedOutState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
       child: FullWidthState(
         icon: Icons.lock_outline_rounded,
-        message: 'Sign in to edit your profile.',
-        actionLabel: 'Go back',
+        message: AppLocalizations.of(context).editProfileSignedOutMessage,
+        actionLabel: AppLocalizations.of(context).editProfileSignedOutGoBackLabel,
         onAction: onGoBack,
       ),
     );
@@ -393,7 +410,9 @@ class _FormBody extends StatelessWidget {
     required this.passwordError,
     required this.onFieldChanged,
     required this.avatarUrl,
-    required this.onAvatarTap,
+    required this.onAvatarUploaded,
+    required this.onAvatarError,
+    required this.onAvatarUploadStateChanged,
     required this.submitting,
     required this.onCancel,
     required this.onSave,
@@ -417,7 +436,9 @@ class _FormBody extends StatelessWidget {
   final VoidCallback onFieldChanged;
 
   final String? avatarUrl;
-  final VoidCallback onAvatarTap;
+  final ValueChanged<String> onAvatarUploaded;
+  final ValueChanged<String> onAvatarError;
+  final ValueChanged<bool> onAvatarUploadStateChanged;
 
   final bool submitting;
   final VoidCallback onCancel;
@@ -438,15 +459,17 @@ class _FormBody extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: _AvatarUploader(
+              child: AvatarUploadControl(
                 avatarUrl: avatarUrl,
                 fullName: fullName.text,
-                onTap: onAvatarTap,
+                onUploaded: onAvatarUploaded,
+                onError: onAvatarError,
+                onUploadStateChanged: onAvatarUploadStateChanged,
               ),
             ),
             const SizedBox(height: AppSpacing.section),
             LabelledFormField(
-              label: 'Full name',
+              label: AppLocalizations.of(context).editProfileFullNameFieldLabel,
               controller: fullName,
               errorText: fullNameError,
               textInputAction: TextInputAction.next,
@@ -455,7 +478,7 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Phone',
+              label: AppLocalizations.of(context).editProfilePhoneFieldLabel,
               controller: phone,
               errorText: phoneError,
               hintText: '+998901234567',
@@ -468,7 +491,7 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Email',
+              label: AppLocalizations.of(context).editProfileEmailFieldLabel,
               controller: email,
               errorText: emailError,
               keyboardType: TextInputType.emailAddress,
@@ -477,10 +500,10 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Password',
+              label: AppLocalizations.of(context).editProfilePasswordFieldLabel,
               controller: password,
               errorText: passwordError,
-              hintText: 'Leave blank to keep your current password',
+              hintText: AppLocalizations.of(context).editProfilePasswordHint,
               obscureText: obscurePassword,
               textInputAction: TextInputAction.done,
               onChanged: onFieldChanged,
@@ -493,12 +516,15 @@ class _FormBody extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _SecondaryButton(label: 'Cancel', onTap: onCancel),
+                  child: _SecondaryButton(
+                    label: AppLocalizations.of(context).editProfileCancelButtonLabel,
+                    onTap: onCancel,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.base),
                 Expanded(
                   child: _PrimaryButton(
-                    label: 'Save',
+                    label: AppLocalizations.of(context).editProfileSaveButtonLabel,
                     submitting: submitting,
                     onTap: onSave,
                   ),
@@ -508,71 +534,6 @@ class _FormBody extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AvatarUploader extends StatelessWidget {
-  const _AvatarUploader({
-    required this.avatarUrl,
-    required this.fullName,
-    required this.onTap,
-  });
-
-  final String? avatarUrl;
-  final String fullName;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-
-    return Column(
-      children: [
-        Semantics(
-          button: true,
-          label: 'Change photo — $_avatarUnavailableMessage',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AgentAvatar(avatarUrl: avatarUrl, fullName: fullName, size: 84),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.sunk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: colors.screen, width: 2),
-                    ),
-                    // Muted, not accent-colored: this badge cannot start a
-                    // real upload in this build, and an accent-colored
-                    // control implies otherwise — see the file doc comment.
-                    child: Icon(
-                      Icons.photo_camera_outlined,
-                      size: 14,
-                      color: colors.faint,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          _avatarUnavailableMessage,
-          textAlign: TextAlign.center,
-          style: type.bodySmall.copyWith(color: colors.faint),
-        ),
-      ],
     );
   }
 }

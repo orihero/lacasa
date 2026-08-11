@@ -26,6 +26,28 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- image_picker: photographing a listing/coworker-avatar subject, or
+	     recording a walkthrough video for a listing. -->
+	<key>NSCameraUsageDescription</key>
+	<string>La Casa uses your camera to photograph a property for a listing you are creating, or to update your profile photo.</string>
+	<!-- image_picker: choosing existing photos/video from the library for the
+	     same listing-photo and avatar flows, without shooting new ones. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>La Casa accesses your photo library so you can choose existing photos or a video for a listing, or set your profile photo.</string>
+	<!-- Camera-recorded video captures audio; without this the OS silently
+	     drops the microphone track rather than prompting, so a listing's
+	     walkthrough video would come out silent with no explanation. Not
+	     needed for still photos, only for image_picker's video capture. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>La Casa uses your microphone to record audio for a walkthrough video you add to a listing.</string>
+	<!-- url_launcher's canLaunchUrl returns false for every scheme not
+	     listed here on iOS 9+, silently failing the "call agent" and every
+	     external listing/OAuth/form link. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>https</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

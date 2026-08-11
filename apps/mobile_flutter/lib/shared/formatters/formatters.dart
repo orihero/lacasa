@@ -10,6 +10,7 @@
 library;
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 
 abstract final class Formatters {
   /// The grouped-integer body of a price, with no `$` and no `/month`
@@ -104,8 +105,25 @@ abstract final class Formatters {
   /// `3 rooms` / `1 room`, or `null` when the ad states no room count —
   /// `null` rather than `0 rooms`, so a caller can omit the segment
   /// entirely instead of asserting something the wire never said.
-  static String? rooms(int? rooms) {
+  ///
+  /// **[l10n], and why it's optional.** This is the single most-called
+  /// pluralized string in the app (every listing card's spec line, several
+  /// screens' Sizes sections) — call sites span all six feature groups this
+  /// codebase was built in, most of which don't have a [BuildContext] to
+  /// hand at the point they call this. Threading a *required*
+  /// [AppLocalizations] through would mean changing this method's signature
+  /// and every one of those call sites in the same change, across features
+  /// this pass does not own. So [l10n] is optional: pass it (from
+  /// `AppLocalizations.of(context)`) wherever a context is available — see
+  /// [FullListingCard]/[CompactListingCard] — for a correctly localized,
+  /// ICU-pluralized result (`AppLocalizations.sharedRoomsCount`); omit it
+  /// and this falls back to the original English-only concatenation, which
+  /// callers not yet passing a context still get byte-identically. Every
+  /// caller migrating to pass [l10n] closes this gap one feature at a time
+  /// without a single flag-day rewrite across six ownership boundaries.
+  static String? rooms(int? rooms, {AppLocalizations? l10n}) {
     if (rooms == null) return null;
+    if (l10n != null) return l10n.sharedRoomsCount(rooms);
     return '$rooms room${rooms == 1 ? '' : 's'}';
   }
 
@@ -127,10 +145,12 @@ abstract final class Formatters {
   /// `3 rooms · 65 m² · 4/9`. Whichever parts the ad doesn't state are
   /// dropped, separators included, so a sparse ad never renders a dangling
   /// `·`. Pass [includeFloor] as `false` for the compact card, which has no
-  /// room for it (see `CompactListingCard`'s own doc comment).
-  static String statLine(Ad ad, {bool includeFloor = true}) {
+  /// room for it (see `CompactListingCard`'s own doc comment). [l10n] is
+  /// forwarded to [rooms] unchanged — see that method's doc comment for why
+  /// it's optional.
+  static String statLine(Ad ad, {bool includeFloor = true, AppLocalizations? l10n}) {
     return [
-      rooms(ad.rooms),
+      rooms(ad.rooms, l10n: l10n),
       area(ad.area),
       if (includeFloor) floor(ad.storey, ad.floors),
     ].whereType<String>().join(' · ');

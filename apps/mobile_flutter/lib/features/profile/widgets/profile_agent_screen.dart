@@ -21,12 +21,10 @@
 /// coworkers-can't-manage-channels rule this app inherits throughout (the
 /// same gate `map_view`/`work` branches apply elsewhere).
 ///
-/// **Phone is a clipboard-copy stand-in for the `tel:` link** §3.16 asks
-/// for, exactly the pattern `agent_info_block.dart`'s Call button and
-/// `listing_detail_nav.dart`'s Share button already establish: no
-/// `url_launcher` dependency in this app, so a real `tel:` intent can't be
-/// fired, and a button that silently did nothing would be worse than one
-/// that hands you the number to dial yourself.
+/// **Phone dials via [LinkLauncher.dial]** — §3.16's `tel:` link, now real.
+/// When there's no dialer on the device (or the OS declines to launch it),
+/// it falls back to copying the number instead, with the toast saying so
+/// honestly rather than pretending the tap did nothing.
 ///
 /// **Two rows have no route yet** — "Connected Accounts" and "Messages".
 /// `route_paths.dart` already has `RoutePaths.profileEdit`/`profileSaved`/
@@ -52,11 +50,11 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -95,7 +93,7 @@ class ProfileAgentScreen extends ConsumerWidget {
                 0,
               ),
               child: Text(
-                'Profile',
+                AppLocalizations.of(context).profileAgentScreenTitle,
                 style: type.navTitle.copyWith(color: colors.ink),
               ),
             ),
@@ -114,17 +112,23 @@ class ProfileAgentScreen extends ConsumerWidget {
                     roleRaw: session.role?.name,
                   ),
                   const SizedBox(height: AppSpacing.section),
-                  const ListRowGroupLabel('Account'),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(context).profileAgentAccountGroupLabel,
+                  ),
                   ListRow(
                     icon: Icons.edit_outlined,
-                    title: 'Edit Profile',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileAgentEditProfileRowTitle,
                     onTap: () => context.push(RoutePaths.profileEdit),
                   ),
                   if (isAgent) ...[
                     const SizedBox(height: AppSpacing.base),
                     ListRow(
                       icon: Icons.link_rounded,
-                      title: 'Connected Accounts',
+                      title: AppLocalizations.of(
+                        context,
+                      ).profileAgentConnectedAccountsRowTitle,
                       // Not yet in RoutePaths — see this file's doc comment.
                       onTap: () => context.push('/profile/connected-accounts'),
                     ),
@@ -132,27 +136,37 @@ class ProfileAgentScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.settings_outlined,
-                    title: 'Settings',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileAgentSettingsRowTitle,
                     onTap: () => context.push(RoutePaths.profileSettings),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.chat_bubble_outline_rounded,
-                    title: 'Messages',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileAgentMessagesRowTitle,
                     // Not yet in RoutePaths — see this file's doc comment.
                     onTap: () => context.push('/profile/messages'),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.translate_rounded,
-                    title: 'Language',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileAgentLanguageRowTitle,
                     onTap: () => showLanguageSheet(context),
                   ),
                   const SizedBox(height: AppSpacing.section),
-                  const ListRowGroupLabel('Session'),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(context).profileAgentSessionGroupLabel,
+                  ),
                   ListRow(
                     icon: Icons.logout_rounded,
-                    title: 'Logout',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileAgentLogoutRowTitle,
                     danger: true,
                     trailingIcon: null,
                     onTap: () => confirmAndSignOut(context, ref),
@@ -171,7 +185,7 @@ class ProfileAgentScreen extends ConsumerWidget {
 /// doesn't list email in the identity block (unlike §3.15's buyer card), so
 /// none is shown here — not an omission, the spec's own field list is
 /// shorter for this variant.
-class _AgentIdentityCard extends StatelessWidget {
+class _AgentIdentityCard extends ConsumerWidget {
   const _AgentIdentityCard({required this.user, required this.roleRaw});
 
   final AuthUser? user;
@@ -183,7 +197,7 @@ class _AgentIdentityCard extends StatelessWidget {
   final String? roleRaw;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final fullName = user?.fullName;
@@ -224,7 +238,7 @@ class _AgentIdentityCard extends StatelessWidget {
                 if (hasPhone)
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => _copyPhone(context, phone),
+                    onTap: () => dialOrCopyPhone(context, ref, phone),
                     child: Text(
                       phone,
                       style: type.bodySmall.copyWith(
@@ -246,13 +260,6 @@ class _AgentIdentityCard extends StatelessWidget {
     );
   }
 
-  Future<void> _copyPhone(BuildContext context, String phone) async {
-    await Clipboard.setData(ClipboardData(text: phone));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Phone number copied: $phone')));
-  }
 }
 
 /// `.st st--acc` — the raw-string role pill. Deliberately not capitalized or

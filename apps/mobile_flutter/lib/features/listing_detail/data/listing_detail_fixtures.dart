@@ -349,6 +349,9 @@ Map<String, dynamic> _agent({
   required String phoneNumber,
   required int adsCount,
   required int dealsClosedCount,
+  String? address,
+  double? ratingAverage,
+  int ratingCount = 0,
 }) {
   return {
     'id': id,
@@ -358,6 +361,9 @@ Map<String, dynamic> _agent({
     'avatar': null,
     'adsCount': adsCount,
     'dealsClosedCount': dealsClosedCount,
+    'address': address,
+    'ratingAverage': ratingAverage,
+    'ratingCount': ratingCount,
   };
 }
 
@@ -373,6 +379,13 @@ final List<AgentDetail> listingDetailFixtureAgents =
         phoneNumber: '+998901112233',
         adsCount: 24,
         dealsClosedCount: 9,
+        // Kept in sync with `agents/data/agents_fixtures.dart`'s own
+        // seed for this agent — a user who opens `agent-javlon` from
+        // `listing-detail` and again from `agents-directory` should read
+        // the same address and rating either way.
+        address: '12 Amir Temur Street, Tashkent',
+        ratingAverage: 4.5,
+        ratingCount: 2,
       ),
       _agent(
         id: 'agent-shahnoza',
@@ -380,6 +393,10 @@ final List<AgentDetail> listingDetailFixtureAgents =
         phoneNumber: '+998902223344',
         adsCount: 18,
         dealsClosedCount: 6,
+        // No address on file — the honest-absence case this block must
+        // render too, matching `agents_fixtures.dart`'s own choice.
+        ratingAverage: 5.0,
+        ratingCount: 1,
       ),
       _agent(
         id: 'agent-otabek',
@@ -387,6 +404,8 @@ final List<AgentDetail> listingDetailFixtureAgents =
         phoneNumber: '+998903334455',
         adsCount: 31,
         dealsClosedCount: 14,
+        address: '45 Mustaqillik Avenue, Tashkent',
+        // No reviews yet — ratingAverage stays null (the default), never 0.
       ),
       _agent(
         id: 'agent-sardor',

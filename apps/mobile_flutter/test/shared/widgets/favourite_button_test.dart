@@ -15,6 +15,7 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/fake_favourite_ad_ids_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<ProviderContainer> pump(
@@ -37,6 +38,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Scaffold(
             body: FavouriteButton(

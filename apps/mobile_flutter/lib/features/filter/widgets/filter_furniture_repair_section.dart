@@ -9,6 +9,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
 
@@ -28,21 +29,23 @@ class FilterFurnitureRepairSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Furniture'),
+        FieldLabel(l10n.filterFurnitureFieldLabel),
         ChoiceChipGroup<Furniture>(
           keyPrefix: 'filterFurniture',
-          options: filterFurnitureOptions,
+          options: filterFurnitureOptions(l10n),
           selected: furniture,
           onChanged: onFurnitureChanged,
         ),
         const SizedBox(height: 14),
-        const FieldLabel('Repair'),
+        FieldLabel(l10n.filterRepairFieldLabel),
         ChoiceChipGroup<Repairment>(
           keyPrefix: 'filterRepair',
-          options: filterRepairOptions,
+          options: filterRepairOptions(l10n),
           selected: repairment,
           onChanged: onRepairmentChanged,
         ),

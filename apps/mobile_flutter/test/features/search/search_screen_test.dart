@@ -29,6 +29,7 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/fake_recent_searches_repository.dart';
 import 'support/fake_search_repository.dart';
 import 'support/search_test_ads.dart';
@@ -72,7 +73,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.light(), home: const SearchScreen()),
+        child: MaterialApp(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), home: const SearchScreen()),
       ),
     );
     await tester.pumpAndSettle();
@@ -135,11 +136,33 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
     return container;
+  }
+
+  /// City is no longer a free-text field on `filter-sheet` — it's a
+  /// tap-to-pick cascade sourced from `GET /regions`
+  /// (`filter_city_district_section.dart`, `filter_option_picker_sheet.dart`).
+  /// Drives one full pick end to end: taps the `_PickerField` (opening
+  /// `showFilterOptionPicker`'s nested modal sheet), then taps the matching
+  /// `filterOption-<value>` row inside it. Same shape as
+  /// `filter_sheet_buyer_test.dart`'s own `selectPickerOption` — reused here
+  /// rather than reinvented, per that file's doc comment on why City moved
+  /// off `TextField`. This screen's default (non-live) `filterRepositoryProvider`
+  /// / `regionsRepositoryProvider` wiring already serves
+  /// `filter_regions_fixtures.dart`'s bundled single region ('Tashkent') with
+  /// no override needed here, same as `filter_sheet_buyer_test.dart`.
+  Future<void> selectCity(WidgetTester tester, String value) async {
+    final field = find.byKey(const ValueKey('filterField-city'));
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
+    await tester.tap(field);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('filterOption-$value')));
+    await tester.pumpAndSettle();
   }
 
   group('search bar — debounce and query behaviour', () {
@@ -447,6 +470,8 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               theme: AppTheme.light(),
               home: const SearchScreen(),
             ),
@@ -494,7 +519,7 @@ void main() {
     });
   });
 
-  group('sort control — client-side sort search_providers.dart documents', () {
+  group('sort control — server-side sort (search_providers.dart documents)', () {
     late FakeSearchRepository repo;
 
     setUp(() {
@@ -593,7 +618,18 @@ void main() {
       final highestChip = find.byKey(const ValueKey('sortChip-highestPrice'));
       await tester.ensureVisible(highestChip);
       await tester.tap(highestChip);
-      await tester.pump(); // a single frame, not pumpAndSettle/a wait
+      // Two bare frames — not a `pumpAndSettle`, and deliberately not a
+      // `Duration` wait of any length. Sort is server-side now (unlike the
+      // client-side re-filter this test used to cover), so tapping a chip
+      // still triggers a real, awaited `fetchPage` call; the first `pump`
+      // reflects the tap itself (`searchSortProvider` changing state), the
+      // second lets that already-in-flight (undelayed, in the fake) fetch's
+      // `Future` resolve. What this test actually proves — "no debounce" —
+      // is that neither pump carries a wait duration: contrast with the
+      // search-query debounce test above, which must advance the clock by a
+      // full 300ms before its own re-fetch is even sent.
+      await tester.pump();
+      await tester.pump();
 
       expect(visibleOrder(tester), ['ad-expensive', 'ad-mid', 'ad-cheap']);
     });
@@ -613,14 +649,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('filtersButton')));
         await tester.pumpAndSettle();
 
-        await tester.enterText(
-          find.descendant(
-            of: find.byKey(const ValueKey('filterField-city')),
-            matching: find.byType(TextField),
-          ),
-          'Chilonzor',
-        );
-        await tester.pumpAndSettle();
+        await selectCity(tester, 'Tashkent');
 
         await tester.tap(find.byKey(const ValueKey('filterSheet-apply')));
         await tester.pumpAndSettle();
@@ -630,7 +659,7 @@ void main() {
         // seeds them whenever the incoming value was null (see
         // `filter_sheet.dart#_seedDefaults`).
         expect(repo.fetchCallCount, 2);
-        expect(repo.lastFilters?.city, 'Chilonzor');
+        expect(repo.lastFilters?.city, 'Tashkent');
         expect(repo.lastFilters?.furniture, Furniture.withFurniture);
         expect(repo.lastFilters?.repairment, Repairment.notRepaired);
 
@@ -648,28 +677,24 @@ void main() {
 
         await tester.tap(find.byKey(const ValueKey('filtersButton')));
         await tester.pumpAndSettle();
-        await tester.enterText(
-          find.descendant(
-            of: find.byKey(const ValueKey('filterField-city')),
-            matching: find.byType(TextField),
-          ),
-          'Chilonzor',
-        );
-        await tester.pumpAndSettle();
+        await selectCity(tester, 'Tashkent');
         await tester.tap(find.byKey(const ValueKey('filterSheet-apply')));
         await tester.pumpAndSettle();
 
-        // Re-open: the City field should come back pre-filled.
+        // Re-open: the City field should come back pre-filled — the
+        // `_PickerField`'s own display text, not a `TextField` controller,
+        // since City no longer holds free text (see `selectCity`'s doc
+        // comment above).
         await tester.tap(find.byKey(const ValueKey('filtersButton')));
         await tester.pumpAndSettle();
 
-        final cityField = tester.widget<TextField>(
+        expect(
           find.descendant(
             of: find.byKey(const ValueKey('filterField-city')),
-            matching: find.byType(TextField),
+            matching: find.text('Tashkent'),
           ),
+          findsOneWidget,
         );
-        expect(cityField.controller!.text, 'Chilonzor');
       },
     );
 

@@ -15,6 +15,7 @@
 library;
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 
 /// One parsed row of `Ad.optionList` — SCREENS.md's "dynamic key/value chip
@@ -27,42 +28,54 @@ abstract final class ListingDetailFormatters {
   /// `null` for [AdType.unknown], i.e. a type this build doesn't recognize
   /// — showing the raw wire string would leak an enum value into the UI,
   /// and inventing a label would be worse.
-  static String? typeLabel(AdType type) => switch (type) {
-    AdType.residential => 'Residential',
-    AdType.nonresidential => 'Nonresidential',
-    AdType.unknown => null,
-  };
+  ///
+  /// Takes [AppLocalizations] rather than a [BuildContext]: this is a pure
+  /// function called from other pure code (`_rows` in
+  /// `listing_sizes_section.dart`) as well as from widget `build` methods,
+  /// and passing the already-resolved localizations object is the narrower
+  /// dependency of the two — callers that do have a `BuildContext` just
+  /// pass `AppLocalizations.of(context)`.
+  static String? typeLabel(AppLocalizations l10n, AdType type) =>
+      switch (type) {
+        AdType.residential => l10n.listingTypeResidentialLabel,
+        AdType.nonresidential => l10n.listingTypeNonresidentialLabel,
+        AdType.unknown => null,
+      };
 
   /// **Category** — "Sale"/"Rent".
-  static String? categoryLabel(AdCategory category) => switch (category) {
-    AdCategory.sale => 'Sale',
-    AdCategory.rent => 'Rent',
-    AdCategory.unknown => null,
-  };
+  static String? categoryLabel(AppLocalizations l10n, AdCategory category) =>
+      switch (category) {
+        AdCategory.sale => l10n.listingCategorySaleLabel,
+        AdCategory.rent => l10n.listingCategoryRentLabel,
+        AdCategory.unknown => null,
+      };
 
   /// **Repair** — "Not repaired"/"Normal"/"Good"/"Excellent". `null` both
   /// when the key was absent from the wire (a genuinely unstated repair
   /// state, `Ad.repairment == null`) and for [Repairment.unknown]; the tag
   /// is dropped either way.
-  static String? repairmentLabel(Repairment? repairment) =>
-      switch (repairment) {
-        Repairment.notRepaired => 'Not repaired',
-        Repairment.normal => 'Normal',
-        Repairment.good => 'Good',
-        Repairment.excellent => 'Excellent',
-        Repairment.unknown || null => null,
-      };
+  static String? repairmentLabel(
+    AppLocalizations l10n,
+    Repairment? repairment,
+  ) => switch (repairment) {
+    Repairment.notRepaired => l10n.listingRepairmentNotRepairedLabel,
+    Repairment.normal => l10n.listingRepairmentNormalLabel,
+    Repairment.good => l10n.listingRepairmentGoodLabel,
+    Repairment.excellent => l10n.listingRepairmentExcellentLabel,
+    Repairment.unknown || null => null,
+  };
 
   /// **Furniture** — "With furniture"/"Without Furniture". The
   /// inconsistent capitalization is SCREENS.md's own (§3.7 writes exactly
   /// "With furniture"/"Without Furniture") and is reproduced rather than
   /// silently tidied, since the spec is the binding copy source for all
   /// three implementations and they must agree character for character.
-  static String? furnitureLabel(Furniture? furniture) => switch (furniture) {
-    Furniture.withFurniture => 'With furniture',
-    Furniture.withoutFurniture => 'Without Furniture',
-    Furniture.unknown || null => null,
-  };
+  static String? furnitureLabel(AppLocalizations l10n, Furniture? furniture) =>
+      switch (furniture) {
+        Furniture.withFurniture => l10n.listingFurnitureWithLabel,
+        Furniture.withoutFurniture => l10n.listingFurnitureWithoutLabel,
+        Furniture.unknown || null => null,
+      };
 
   /// Parses `Ad.optionList` into the Additional Information rows.
   ///

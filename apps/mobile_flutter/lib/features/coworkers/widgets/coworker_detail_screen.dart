@@ -45,6 +45,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -66,8 +67,7 @@ class CoworkerDetailScreen extends ConsumerWidget {
     final canManage =
         ref.watch(authSessionProvider.select((s) => s.role)) ==
         UserRole.agent;
-    final adsAsync = ref.watch(coworkerAdsProvider);
-    final activityAsync = ref.watch(coworkerActivityProvider);
+    final summariesAsync = ref.watch(coworkerSummariesProvider);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -75,7 +75,10 @@ class CoworkerDetailScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'Update coworker', onBack: () => _leave(context)),
+            NavRow(
+              title: AppLocalizations.of(context).coworkersDetailScreenTitle,
+              onBack: () => _leave(context),
+            ),
             Expanded(
               child: coworker.when(
                 loading: () => const _FormSkeleton(),
@@ -84,8 +87,7 @@ class CoworkerDetailScreen extends ConsumerWidget {
                 data: (coworker) => _CoworkerForm(
                   coworker: coworker,
                   canManage: canManage,
-                  adsAsync: adsAsync,
-                  activityAsync: activityAsync,
+                  summariesAsync: summariesAsync,
                 ),
               ),
             ),
@@ -118,22 +120,23 @@ class _ErrorState extends ConsumerWidget {
     final notFound =
         error is ApiErrorException &&
         (error as ApiErrorException).code == ApiErrorCode.notFound;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
       child: notFound
           ? FullWidthState(
               icon: Icons.person_off_outlined,
-              message: 'This coworker is no longer available.',
-              actionLabel: 'Go back',
+              message: l10n.coworkersNotFoundMessage,
+              actionLabel: l10n.coworkersGoBackLabel,
               onAction: () => context.canPop()
                   ? context.pop()
                   : context.go(RoutePaths.workCoworkers),
             )
           : FullWidthState(
               icon: Icons.cloud_off_rounded,
-              message: "Couldn't load this coworker",
-              actionLabel: 'Retry',
+              message: l10n.coworkersDetailLoadErrorMessage,
+              actionLabel: l10n.sharedRetryLabel,
               onAction: () =>
                   ref.invalidate(coworkerDetailProvider(coworkerId)),
             ),
@@ -173,21 +176,17 @@ class _CoworkerForm extends ConsumerStatefulWidget {
   const _CoworkerForm({
     required this.coworker,
     required this.canManage,
-    required this.adsAsync,
-    required this.activityAsync,
+    required this.summariesAsync,
   });
 
   final Coworker coworker;
   final bool canManage;
 
-  /// Backs [coworkerListingsCount] — see `coworkers_repository.dart`'s doc
-  /// comment and WORK_TAB_CONTRACT.md ruling 7.6. Independent of the
-  /// coworker fetch itself, so a failed ads/activity fetch degrades only
-  /// this read-only summary line, never the editable form beneath it.
-  final AsyncValue<List<Ad>> adsAsync;
-
-  /// Backs [coworkerLastActiveAt].
-  final AsyncValue<List<ActivityEvent>> activityAsync;
+  /// Backs [summaryFor] — see `coworkers_repository.dart`'s doc comment and
+  /// WORK_TAB_CONTRACT.md ruling 7.6. Independent of the coworker fetch
+  /// itself, so a failed summary fetch degrades only this read-only summary
+  /// line, never the editable form beneath it.
+  final AsyncValue<List<CoworkerSummary>> summariesAsync;
 
   @override
   ConsumerState<_CoworkerForm> createState() => _CoworkerFormState();
@@ -199,9 +198,21 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
   late final TextEditingController _email;
   final TextEditingController _password = TextEditingController();
 
+  /// Seeded from `widget.coworker.avatar`; reassigned once
+  /// [AvatarUploadControl.onUploaded] fires — see that widget's own doc
+  /// comment for the real pick/upload flow behind it.
+  String? _avatarUrl;
+
   bool _obscurePassword = true;
   bool _submitting = false;
   bool _deleting = false;
+
+  /// See `AvatarUploadControl.onUploadStateChanged`'s doc comment — checked
+  /// in [_submit] so a Save tapped before a pick finishes uploading is
+  /// refused rather than saving the stale `_avatarUrl`. Only ever set when
+  /// `widget.canManage` (the only case an [AvatarUploadControl] is even
+  /// rendered below — see `build`).
+  bool _avatarUploading = false;
 
   String? _fullNameError;
   String? _phoneError;
@@ -214,6 +225,7 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
     _fullName = TextEditingController(text: widget.coworker.fullName);
     _phone = TextEditingController(text: widget.coworker.phoneNumber ?? '');
     _email = TextEditingController(text: widget.coworker.email);
+    _avatarUrl = widget.coworker.avatar;
   }
 
   @override
@@ -229,7 +241,8 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
       _fullName.text.trim() != widget.coworker.fullName ||
       _phone.text.trim() != (widget.coworker.phoneNumber ?? '') ||
       _email.text.trim() != widget.coworker.email ||
-      _password.text.isNotEmpty;
+      _password.text.isNotEmpty ||
+      _avatarUrl != widget.coworker.avatar;
 
   Future<void> _handleCancel() async {
     if (_hasChanges) {
@@ -249,21 +262,22 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
 
     setState(() {
-      _fullNameError = fullName.isEmpty ? 'Full Name is required' : null;
+      _fullNameError = fullName.isEmpty ? l10n.coworkersFullNameRequiredError : null;
       // §36 quotes one combined message for phone — see this file's doc
       // comment.
       _phoneError = Formatters.isValidUzPhone(phone)
           ? null
-          : 'Invalid Uzbekistan phone number';
-      _emailError = email.isEmpty ? 'Email is required' : null;
+          : l10n.coworkersPhoneInvalidError;
+      _emailError = email.isEmpty ? l10n.coworkersEmailRequiredError : null;
       _passwordError = password.isNotEmpty && password.length < 6
-          ? 'Password must be at least 6 characters'
+          ? l10n.coworkersPasswordTooShortError
           : null;
     });
 
@@ -276,6 +290,14 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
   Future<void> _submit() async {
     if (_submitting || _deleting) return;
     if (!_validate()) return;
+    // A photo mid-upload has no settled URL yet — see
+    // `AvatarUploadControl`'s doc comment and `listing_form_fields.dart`'s
+    // `hasPendingUploads`, whose "block Save with a message" precedent this
+    // mirrors rather than awaiting the upload inline.
+    if (_avatarUploading) {
+      LaCasaToast.showError(context, AppLocalizations.of(context).coworkersUploadWaitMessage);
+      return;
+    }
 
     final coworker = widget.coworker;
     final fullName = _fullName.text.trim();
@@ -297,6 +319,7 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                 ? OptionalField(phone)
                 : null,
             email: email != coworker.email ? OptionalField(email) : null,
+            avatar: _avatarUrl != coworker.avatar ? OptionalField(_avatarUrl) : null,
             password: password.isEmpty ? null : OptionalField(password),
           );
       ref.invalidate(coworkersListProvider);
@@ -306,18 +329,24 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, 'Coworker successfully updated!');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersUpdatedToastMessage);
       _leave();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      LaCasaToast.showError(context, 'Error updating coworker: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).coworkersUpdateErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
   Future<void> _delete() async {
     if (_submitting || _deleting) return;
-    final confirmed = await confirmDelete(context, subject: 'coworker');
+    final confirmed = await confirmDelete(
+      context,
+      subject: AppLocalizations.of(context).coworkersSubjectNoun,
+    );
     if (!confirmed || !mounted) return;
 
     setState(() => _deleting = true);
@@ -327,25 +356,30 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, 'Coworker successfully deleted!');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersDeletedToastMessage);
       _leave();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _deleting = false);
-      LaCasaToast.showError(context, 'Error deleting coworker: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).coworkersDeleteErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
-  static String _messageFor(ApiException e) {
+  static String _messageFor(BuildContext context, ApiException e) {
     if (e is ApiErrorException) return e.message;
+    final l10n = AppLocalizations.of(context);
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.coworkersNoConnectionMessage;
     }
-    return 'Something went wrong';
+    return l10n.coworkersGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: !_hasChanges,
       onPopInvokedWithResult: (didPop, result) async {
@@ -366,22 +400,34 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Center(
-                child: _AvatarUploader(
-                  avatarUrl: widget.coworker.avatar,
-                  fullName: _fullName.text,
-                ),
+                // Only a managing (AGENT) session can ever persist a new
+                // avatar (Save is hidden below for anyone else) — offering
+                // a real upload control that can never be saved would let a
+                // coworker spend a real upload on a picture that just gets
+                // discarded, so a read-only session gets a plain, non-tappable
+                // avatar instead.
+                child: widget.canManage
+                    ? AvatarUploadControl(
+                        avatarUrl: _avatarUrl,
+                        fullName: _fullName.text,
+                        semanticsLabel: l10n.coworkersChangePhotoLabel,
+                        onUploaded: (url) => setState(() => _avatarUrl = url),
+                        onError: (message) => LaCasaToast.showError(context, message),
+                        onUploadStateChanged: (busy) =>
+                            setState(() => _avatarUploading = busy),
+                      )
+                    : AgentAvatar(avatarUrl: _avatarUrl, fullName: _fullName.text, size: 84),
               ),
               const SizedBox(height: AppSpacing.base),
               Center(
                 child: _ActivitySummary(
                   coworkerId: widget.coworker.id,
-                  adsAsync: widget.adsAsync,
-                  activityAsync: widget.activityAsync,
+                  summariesAsync: widget.summariesAsync,
                 ),
               ),
               const SizedBox(height: AppSpacing.section),
               LabelledFormField(
-                label: 'Full name',
+                label: l10n.coworkersFieldFullNameLabel,
                 controller: _fullName,
                 errorText: _fullNameError,
                 textInputAction: TextInputAction.next,
@@ -390,7 +436,7 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LabelledFormField(
-                label: 'Phone',
+                label: l10n.coworkersFieldPhoneLabel,
                 controller: _phone,
                 errorText: _phoneError,
                 hintText: '+998901234567',
@@ -403,7 +449,7 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LabelledFormField(
-                label: 'Email',
+                label: l10n.coworkersFieldEmailLabel,
                 controller: _email,
                 errorText: _emailError,
                 keyboardType: TextInputType.emailAddress,
@@ -412,10 +458,10 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LabelledFormField(
-                label: 'Password',
+                label: l10n.coworkersFieldPasswordLabel,
                 controller: _password,
                 errorText: _passwordError,
-                hintText: 'Leave blank to keep the current password',
+                hintText: l10n.coworkersPasswordHintKeepCurrent,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
                 onChanged: () => setState(() {}),
@@ -431,14 +477,14 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                   children: [
                     Expanded(
                       child: _SecondaryButton(
-                        label: 'Cancel',
+                        label: l10n.coworkersCancelButtonLabel,
                         onTap: _handleCancel,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.base),
                     Expanded(
                       child: _PrimaryButton(
-                        label: 'Save',
+                        label: l10n.coworkersSaveButtonLabel,
                         submitting: _submitting,
                         onTap: _submit,
                       ),
@@ -448,10 +494,10 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                 const SizedBox(height: AppSpacing.base),
                 _DeleteButton(deleting: _deleting, onTap: _delete),
               ] else ...[
-                _SecondaryButton(label: 'Cancel', onTap: _handleCancel),
+                _SecondaryButton(label: l10n.coworkersCancelButtonLabel, onTap: _handleCancel),
                 const SizedBox(height: AppSpacing.base),
                 _ReadOnlyNote(
-                  message: 'Only agents can edit or delete coworkers.',
+                  message: l10n.coworkersReadOnlyNoteMessage,
                 ),
               ],
             ],
@@ -464,50 +510,47 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
 
 /// "{N} listings · Active {relative time}" — a read-only summary line, not
 /// part of §36's form fields (that section names none), added on top of the
-/// spec's literal field set to actually surface the two figures
-/// WORK_TAB_CONTRACT.md ruling 7.6 asks screens to derive rather than
-/// leaving `coworkerLastActiveAt` (`coworker_metrics.dart`) dead code with
-/// no caller anywhere in this cluster. Renders "—" for a figure that could
-/// not be determined (loading/error/no data), never a fabricated number —
-/// same rule `coworkers_list_screen.dart`'s row trailing follows.
+/// spec's literal field set to actually surface the figures
+/// WORK_TAB_CONTRACT.md ruling 7.6 asks screens to show. Both numbers now
+/// come from the one server-folded [CoworkerSummary] row
+/// (`GET /statistics/coworkers/summary`) instead of two separately-folded
+/// lists. Renders "—" for a figure that could not be determined
+/// (loading/error/no data), never a fabricated number — same rule
+/// `coworkers_list_screen.dart`'s row trailing follows.
 class _ActivitySummary extends StatelessWidget {
   const _ActivitySummary({
     required this.coworkerId,
-    required this.adsAsync,
-    required this.activityAsync,
+    required this.summariesAsync,
   });
 
   final String coworkerId;
-  final AsyncValue<List<Ad>> adsAsync;
-  final AsyncValue<List<ActivityEvent>> activityAsync;
+  final AsyncValue<List<CoworkerSummary>> summariesAsync;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
-    final listingsLabel = adsAsync.when(
-      data: (ads) {
-        final count = coworkerListingsCount(coworkerId, ads);
-        return '$count listing${count == 1 ? '' : 's'}';
+    // One `.when` for the whole line, not two, so a loading/error state
+    // can't accidentally mix with `AsyncValue.value`'s "last known data"
+    // behaviour (which can stay non-null across a subsequent error) — the
+    // two halves of this line always agree on which state they're in.
+    final text = summariesAsync.when(
+      data: (summaries) {
+        final summary = summaryFor(coworkerId, summaries);
+        if (summary == null) return l10n.coworkersActivitySummaryLine('—', '—');
+        final count = summary.adsCreatedCount;
+        final listingsLabel = l10n.coworkersListingsCount(count);
+        final latest = summary.lastActiveAt;
+        final activeLabel = latest == null ? '—' : coworkerActivityLabel(l10n, latest);
+        return l10n.coworkersActivitySummaryLine(listingsLabel, activeLabel);
       },
-      loading: () => '…',
-      error: (error, stackTrace) => '—',
+      loading: () => l10n.coworkersActivitySummaryLine('…', '…'),
+      error: (error, stackTrace) => l10n.coworkersActivitySummaryLine('—', '—'),
     );
 
-    final activeLabel = activityAsync.when(
-      data: (events) {
-        final latest = coworkerLastActiveAt(coworkerId, events);
-        return latest == null ? '—' : coworkerActivityLabel(latest);
-      },
-      loading: () => '…',
-      error: (error, stackTrace) => '—',
-    );
-
-    return Text(
-      '$listingsLabel · Active $activeLabel',
-      style: type.bodySmall.copyWith(color: colors.muted),
-    );
+    return Text(text, style: type.bodySmall.copyWith(color: colors.muted));
   }
 }
 
@@ -529,59 +572,6 @@ class _ReadOnlyNote extends StatelessWidget {
         Flexible(
           child: Text(message, style: type.caption.copyWith(color: colors.faint)),
         ),
-      ],
-    );
-  }
-}
-
-class _AvatarUploader extends StatelessWidget {
-  const _AvatarUploader({required this.avatarUrl, required this.fullName});
-
-  final String? avatarUrl;
-  final String fullName;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-
-    return Column(
-      children: [
-        Semantics(
-          button: true,
-          label: 'Change photo — $kMediaUploadUnavailableMessage',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () =>
-                showMediaUploadUnavailableToast(context, label: 'Avatar upload'),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AgentAvatar(avatarUrl: avatarUrl, fullName: fullName, size: 84),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.sunk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: colors.screen, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.photo_camera_outlined,
-                      size: 14,
-                      color: colors.faint,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const MediaUploadUnavailableNotice(label: 'Avatar upload'),
       ],
     );
   }
@@ -714,7 +704,7 @@ class _DeleteButton extends StatelessWidget {
                     ),
                   )
                 : Text(
-                    'Delete',
+                    AppLocalizations.of(context).coworkersDeleteButtonLabel,
                     style: type.rowTitle.copyWith(
                       color: AppStatusColors.errorText,
                     ),

@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../formatters/listing_detail_formatters.dart';
@@ -25,21 +26,36 @@ class ListingSizesSection extends StatelessWidget {
 
   /// Null when the ad states none of area/rooms/floor — hand straight to
   /// [ListingDetailSection.child] to drop the heading with it.
-  static Widget? buildOrNull(Ad ad) {
-    final rows = _rows(ad);
+  ///
+  /// Takes [AppLocalizations] as a parameter (rather than a [BuildContext])
+  /// because it is called from `listing_detail_screen.dart`'s `build`,
+  /// which already has one to pass — see `_rows`'s own doc comment for why
+  /// this static helper layer threads the resolved object rather than the
+  /// context itself.
+  static Widget? buildOrNull(AppLocalizations l10n, Ad ad) {
+    final rows = _rows(l10n, ad);
     if (rows.isEmpty) return null;
     return ListingSizesSection(ad: ad);
   }
 
-  static List<({String label, String value})> _rows(Ad ad) {
+  /// Takes [AppLocalizations] rather than [BuildContext]: this static
+  /// helper is called both from [buildOrNull] (no widget tree, so no
+  /// context to read) and from [build] below, and threading the already-
+  /// resolved localizations object through both call sites is the smaller
+  /// surface — [build] just passes `AppLocalizations.of(context)`.
+  static List<({String label, String value})> _rows(
+    AppLocalizations l10n,
+    Ad ad,
+  ) {
     final area = Formatters.area(ad.area);
     final rooms = Formatters.rooms(ad.rooms);
     final floor = Formatters.floor(ad.storey, ad.floors);
     final sizeRows = <({String label, String value})>[
-      if (area != null) (label: 'Area', value: area),
-      if (rooms != null) (label: 'Rooms', value: rooms),
+      if (area != null) (label: l10n.listingSizesAreaLabel, value: area),
+      if (rooms != null) (label: l10n.listingSizesRoomsLabel, value: rooms),
       // The mockup renders this one spaced — "4 / 9", not "4/9".
-      if (floor != null) (label: 'Floor', value: floor.replaceAll('/', ' / ')),
+      if (floor != null)
+        (label: l10n.listingSizesFloorLabel, value: floor.replaceAll('/', ' / ')),
     ];
 
     // Type is the mockup's own closing row of this pane and reads naturally
@@ -54,13 +70,16 @@ class ListingSizesSection extends StatelessWidget {
     // value is already an Info tag above.
     if (sizeRows.isEmpty) return const [];
 
-    final type = ListingDetailFormatters.typeLabel(ad.type);
-    return [...sizeRows, if (type != null) (label: 'Type', value: type)];
+    final type = ListingDetailFormatters.typeLabel(l10n, ad.type);
+    return [
+      ...sizeRows,
+      if (type != null) (label: l10n.listingSizesTypeLabel, value: type),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final rows = _rows(ad);
+    final rows = _rows(AppLocalizations.of(context), ad);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

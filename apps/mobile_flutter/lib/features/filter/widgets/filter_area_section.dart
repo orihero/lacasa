@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import 'filter_text_field.dart';
@@ -24,6 +25,8 @@ class FilterAreaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -31,7 +34,7 @@ class FilterAreaSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FieldLabel('Min. total area'),
+              FieldLabel(l10n.filterAreaMinFieldLabel),
               FilterTextField(
                 key: const ValueKey('filterField-areaMin'),
                 controller: areaMinController,
@@ -48,7 +51,7 @@ class FilterAreaSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FieldLabel('Max total area'),
+              FieldLabel(l10n.filterAreaMaxFieldLabel),
               FilterTextField(
                 key: const ValueKey('filterField-areaMax'),
                 controller: areaMaxController,

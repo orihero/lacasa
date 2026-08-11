@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../theme/theme.dart';
 
 class ListingWizardFooter extends StatelessWidget {
@@ -47,7 +48,10 @@ class ListingWizardFooter extends StatelessWidget {
                     color: colors.sunk,
                     borderRadius: BorderRadius.circular(AppRadii.pillButton),
                   ),
-                  child: Text('Back', style: type.rowTitle.copyWith(color: colors.ink2)),
+                  child: Text(
+                    AppLocalizations.of(context).listingEditorWizardBackLabel,
+                    style: type.rowTitle.copyWith(color: colors.ink2),
+                  ),
                 ),
               ),
             ),
@@ -84,7 +88,10 @@ class ListingWizardFooter extends StatelessWidget {
                             valueColor: AlwaysStoppedAnimation(Colors.white),
                           ),
                         )
-                      : Text(primaryLabel, style: type.rowTitle.copyWith(color: Colors.white)),
+                      : Text(
+                          primaryLabel,
+                          style: type.rowTitle.copyWith(color: Colors.white),
+                        ),
                 ),
               ),
             ),

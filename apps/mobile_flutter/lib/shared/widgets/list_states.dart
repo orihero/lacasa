@@ -26,6 +26,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 /// A pulsing placeholder box standing in for a photo/line of text while a
@@ -139,7 +140,7 @@ class RailRetryCard extends StatelessWidget {
           GestureDetector(
             onTap: onRetry,
             child: Text(
-              'Retry',
+              AppLocalizations.of(context).sharedRetryLabel,
               style: type.label.copyWith(color: AppAccent.color),
             ),
           ),

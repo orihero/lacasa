@@ -10,9 +10,10 @@
 /// - **Create** exists only on the final step (Step 4) and submits the
 ///   whole collected form in one `POST /ads` call.
 ///
-/// **Step 3 Photos has no working picker** (contract ruling 5.2) — see
-/// `form/photos_step.dart`'s own doc comment; this step is honest about
-/// that rather than drawing a picker that does nothing.
+/// **Step 3 Photos is a real picker** — see `form/photos_step.dart`'s own
+/// doc comment for the pick/upload/attach flow. [_submit] blocks (with a
+/// toast, landing back on step 3) rather than submit while a photo/video is
+/// still mid-upload — see its own comment.
 ///
 /// **Discard confirmation** (§5's unsaved-form-dismissal rule, `
 /// create-listing` named explicitly): the header close "X" and the system
@@ -25,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -41,7 +43,8 @@ class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
 
   @override
-  ConsumerState<CreateListingScreen> createState() => _CreateListingScreenState();
+  ConsumerState<CreateListingScreen> createState() =>
+      _CreateListingScreenState();
 }
 
 class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
@@ -61,13 +64,14 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   }
 
   void _next() {
+    final l10n = AppLocalizations.of(context);
     if (_step == 0) {
-      if (!_fields.validateBasics()) {
+      if (!_fields.validateBasics(l10n)) {
         setState(() {});
         return;
       }
     } else if (_step == 1) {
-      if (!_fields.validateDescription()) {
+      if (!_fields.validateDescription(l10n)) {
         setState(() {});
         return;
       }
@@ -101,22 +105,33 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   Future<void> _submit() async {
     if (_submitting) return;
+    final l10n = AppLocalizations.of(context);
     // Re-validate everything (not just the two required-field steps) so a
     // user who somehow reached step 4 without ever tripping Next's checks
     // (e.g. a restored/hot-reloaded state) can't submit an invalid ad.
-    if (!_fields.validateAll()) {
+    if (!_fields.validateAll(l10n)) {
       setState(() {
         // Land back on whichever step actually failed, so the errors are
         // visible rather than sitting on a step already scrolled past.
-        _step = (_fields.titleError ??
-                _fields.cityError ??
-                _fields.districtError ??
-                _fields.addressError ??
-                _fields.referenceError) !=
-            null
+        _step =
+            (_fields.titleError ??
+                    _fields.cityError ??
+                    _fields.districtError ??
+                    _fields.addressError ??
+                    _fields.referenceError) !=
+                null
             ? 0
             : 1;
       });
+      return;
+    }
+    // A photo/video still mid-upload has no URL yet to put on `photos[]` —
+    // submitting now would silently create the ad without it rather than
+    // waiting the extra few seconds, which this app's honesty rule treats
+    // as worse than a blocking message.
+    if (_fields.hasPendingUploads) {
+      setState(() => _step = 2);
+      LaCasaToast.showError(context, l10n.listingEditorPendingUploadsMessage);
       return;
     }
 
@@ -126,10 +141,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         context: context,
         action: () => ref
             .read(listingEditorRepositoryProvider)
-            .create(_fields.toWriteInput(includeHashtags: true)),
-        pending: 'Creating',
-        success: 'Successfully created',
-        errorMessage: (_) => 'Something went wrong.',
+            .create(
+              _fields.toWriteInput(
+                includeHashtags: true,
+                photos: _fields.uploadedMediaUrls,
+              ),
+            ),
+        pending: l10n.listingEditorCreatePendingLabel,
+        success: l10n.listingEditorCreateSuccessMessage,
+        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
       );
       // Dashboard owns an independent copy of the caller's full ad list
       // (`dashboardAdsProvider`) and stays mounted for the whole Work-tab
@@ -146,6 +166,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
 
     return PopScope(
@@ -162,14 +183,16 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               NavRow(
-                title: 'Add New Post',
+                title: l10n.listingEditorCreateNavTitle,
                 onClose: _handleClose,
                 closeKey: const ValueKey('createListing-close'),
               ),
               ListingWizardStepIndicator(currentStep: _step),
               Expanded(
                 child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    overscroll: false,
+                  ),
                   child: SingleChildScrollView(
                     key: ValueKey('createListing-step-$_step'),
                     padding: const EdgeInsets.symmetric(
@@ -177,9 +200,18 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                       vertical: AppSpacing.base,
                     ),
                     child: switch (_step) {
-                      0 => BasicsStep(fields: _fields, onChanged: _onFieldChanged),
-                      1 => DetailsStep(fields: _fields, onChanged: _onFieldChanged),
-                      2 => const PhotosStep(),
+                      0 => BasicsStep(
+                        fields: _fields,
+                        onChanged: _onFieldChanged,
+                      ),
+                      1 => DetailsStep(
+                        fields: _fields,
+                        onChanged: _onFieldChanged,
+                      ),
+                      2 => PhotosStep(
+                        fields: _fields,
+                        onChanged: _onFieldChanged,
+                      ),
                       _ => const _PublishStepNotice(),
                     },
                   ),
@@ -187,7 +219,9 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
               ),
               ListingWizardFooter(
                 onBack: _step == 0 ? null : _back,
-                primaryLabel: _step == 3 ? 'Create' : 'Next',
+                primaryLabel: _step == 3
+                    ? l10n.listingEditorWizardCreateLabel
+                    : l10n.listingEditorWizardNextLabel,
                 submitting: _submitting,
                 onPrimary: _step == 3 ? _submit : _next,
               ),
@@ -219,13 +253,10 @@ class _PublishStepNotice extends StatelessWidget {
         Icon(Icons.campaign_outlined, size: 26, color: colors.faint),
         const SizedBox(height: AppSpacing.base),
         Text(
-          "Publishing is available once this listing is created — tap "
-          "Create, then use the per-channel buttons on the listing's own "
-          'edit screen.',
+          AppLocalizations.of(context).listingEditorCreatePublishNoticeMessage,
           style: type.body.copyWith(color: colors.ink2),
         ),
       ],
     );
   }
 }
-

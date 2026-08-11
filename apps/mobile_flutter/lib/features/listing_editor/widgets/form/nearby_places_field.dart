@@ -16,6 +16,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 
@@ -57,13 +58,14 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Nearby Places'),
+        FieldLabel(l10n.listingEditorNearbyPlacesLabel),
         if (widget.places.isNotEmpty) ...[
           Wrap(
             spacing: AppSpacing.sm,
@@ -85,7 +87,10 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
               child: GlassSurface(
                 variant: GlassVariant.flatForm,
                 borderRadius: BorderRadius.circular(AppRadii.control),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: 4,
+                ),
                 child: TextField(
                   key: const ValueKey('nearbyPlace-input'),
                   controller: _controller,
@@ -94,7 +99,7 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
                   decoration: InputDecoration(
                     isDense: true,
                     border: InputBorder.none,
-                    hintText: 'e.g. Chilonzor metro station (7 min walk)',
+                    hintText: l10n.listingEditorNearbyPlacesHint,
                     hintStyle: type.body.copyWith(color: colors.faint),
                   ),
                 ),
@@ -112,7 +117,10 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
                   color: colors.sunk,
                   borderRadius: BorderRadius.circular(AppRadii.control),
                 ),
-                child: Text('Add', style: type.rowTitle.copyWith(color: colors.ink)),
+                child: Text(
+                  l10n.listingEditorNearbyPlacesAddButtonLabel,
+                  style: type.rowTitle.copyWith(color: colors.ink),
+                ),
               ),
             ),
           ],
@@ -123,7 +131,11 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
 }
 
 class _RemovableChip extends StatelessWidget {
-  const _RemovableChip({super.key, required this.label, required this.onRemove});
+  const _RemovableChip({
+    super.key,
+    required this.label,
+    required this.onRemove,
+  });
 
   final String label;
   final VoidCallback onRemove;
@@ -136,7 +148,12 @@ class _RemovableChip extends StatelessWidget {
     return GlassSurface(
       variant: GlassVariant.onSurface,
       borderRadius: AppRadii.pill,
-      padding: const EdgeInsets.only(left: 14, right: AppSpacing.sm, top: 8, bottom: 8),
+      padding: const EdgeInsets.only(
+        left: 14,
+        right: AppSpacing.sm,
+        top: 8,
+        bottom: 8,
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

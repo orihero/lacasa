@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/search_providers.dart';
@@ -36,12 +37,14 @@ class RecentSearchesRow extends ConsumerWidget {
       data: (queries) {
         if (queries.isEmpty) return const SizedBox.shrink();
 
+        final l10n = AppLocalizations.of(context);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SectionHeader(
-              title: 'Recent Searches',
-              linkLabel: 'Clear',
+              title: l10n.searchRecentSearchesSectionTitle,
+              linkLabel: l10n.searchRecentSearchesClearLabel,
               onLink: () => ref.read(recentSearchesProvider.notifier).clear(),
             ),
             const SizedBox(height: AppSpacing.sm),

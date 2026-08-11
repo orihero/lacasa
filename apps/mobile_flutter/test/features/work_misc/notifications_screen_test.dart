@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/work_misc/state/notifications_repository_provider.dart';
 import 'package:lacasa_mobile/features/work_misc/work_misc.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
@@ -33,6 +34,7 @@ void main() {
     WidgetTester tester, {
     required FakeNotificationsRepository repository,
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -80,7 +82,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -158,6 +160,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const NotificationsScreen(),
           ),
@@ -331,6 +335,35 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpScreen(
+            tester,
+            repository: FakeNotificationsRepository(
+              notifications: workNotificationsFixture,
+            ),
+            locale: locale,
+          );
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

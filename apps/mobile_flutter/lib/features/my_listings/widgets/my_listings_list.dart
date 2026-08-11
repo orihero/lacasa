@@ -3,16 +3,24 @@
 /// state: **"Ads not found."** (verbatim — SCREENS.md's own override of the
 /// generic shared-widget empty copy, build contract §4.2).
 ///
-/// "Infinite scroll" is [myListingsVisibleCountProvider]'s client-side
-/// paging window over the complete, already-fetched result set — see
-/// `data/my_listings_repository.dart`'s doc comment (build contract §7.7)
-/// for why there is no paginated fetch loop to drive instead.
+/// "Infinite scroll" is a real paginated fetch loop —
+/// [myListingsResultsProvider]'s [MyListingsPageState.hasMore] drives the
+/// trailing loading-sentinel row below, and `my_listings_screen.dart`'s
+/// scroll listener is what actually calls
+/// [MyListingsResultsNotifier.loadMore] to fetch the next page (see
+/// `state/my_listings_providers.dart`'s doc comment). That sentinel is the
+/// shared `LoadMoreFooter` (`lib/shared/widgets/load_more_footer.dart`,
+/// promoted out of `features/search`'s identical row) — a spinner normally,
+/// a tappable "Couldn't load more — Retry" once [MyListingsPageState
+/// .loadMoreFailed] is set, since a scroll-triggered fetch failure has no
+/// other way to tell the user anything went wrong.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -33,7 +41,8 @@ class MyListingsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final results = ref.watch(displayedMyListingsProvider);
+    final l10n = AppLocalizations.of(context);
+    final results = ref.watch(myListingsResultsProvider);
     // Independent of `results` on purpose (build contract §6): a
     // coworkers-roster failure only degrades the Author cell (falls back
     // to an em dash below), it must never blank the ads list itself.
@@ -60,31 +69,27 @@ class MyListingsList extends ConsumerWidget {
         children: [
           FullWidthState(
             icon: Icons.error_outline_rounded,
-            message: "Couldn't load your ads.",
-            actionLabel: 'Retry',
+            message: l10n.myListingsLoadErrorMessage,
+            actionLabel: l10n.sharedRetryLabel,
             onAction: () => ref.invalidate(myListingsResultsProvider),
           ),
         ],
       ),
-      data: (ads) {
+      data: (pageState) {
+        final ads = pageState.ads;
         if (ads.isEmpty) {
           return ListView(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenGutter,
             ),
-            children: const [
+            children: [
               FullWidthState(
                 icon: Icons.home_work_outlined,
-                message: 'Ads not found.',
+                message: l10n.myListingsEmptyStateMessage,
               ),
             ],
           );
         }
-
-        final visibleCount = ref
-            .watch(myListingsVisibleCountProvider)
-            .clamp(0, ads.length);
-        final hasMore = visibleCount < ads.length;
 
         return ListView.separated(
           key: const ValueKey('myListingsListView'),
@@ -93,19 +98,29 @@ class MyListingsList extends ConsumerWidget {
             horizontal: AppSpacing.screenGutter,
             vertical: AppSpacing.base,
           ),
-          itemCount: visibleCount + (hasMore ? 1 : 0),
+          // `hasMore` (not `isLoadingMore`) drives whether the sentinel row
+          // exists at all — unlike search, this row is always present while
+          // there's a next page, so it doubles as the near-bottom scroll
+          // trigger itself; `hasMore` stays true through a load-more
+          // failure (`nextCursor` is left unchanged, see
+          // `MyListingsResultsNotifier.loadMore`'s catch block), so the
+          // sentinel doesn't disappear when `LoadMoreFooter` below switches
+          // it from a spinner to a "Couldn't load more — Retry" row.
+          itemCount: ads.length + (pageState.hasMore ? 1 : 0),
           separatorBuilder: (context, index) =>
               const SizedBox(height: AppSpacing.base),
           itemBuilder: (context, index) {
-            if (index >= visibleCount) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.base),
-                child: Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+            if (index >= ads.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppSpacing.base,
+                ),
+                child: LoadMoreFooter(
+                  failed: pageState.loadMoreFailed,
+                  onRetry: () =>
+                      ref.read(myListingsResultsProvider.notifier).loadMore(),
+                  retryKey: const ValueKey('myListingsLoadMoreRetry'),
+                  spinnerKey: const ValueKey('myListingsLoadMoreSpinner'),
                 ),
               );
             }

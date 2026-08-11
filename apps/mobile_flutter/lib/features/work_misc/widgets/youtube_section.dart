@@ -10,6 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import 'channel_toggle_row.dart';
 
@@ -20,29 +21,30 @@ class YoutubeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const ChannelToggleRow(
-          key: ValueKey('connectedAccountsYoutubeToggle'),
-          title: 'Create Youtube post',
+        ChannelToggleRow(
+          key: const ValueKey('connectedAccountsYoutubeToggle'),
+          title: l10n.connectedAccountsYoutubeToggleTitle,
           on: false,
         ),
         const SizedBox(height: AppSpacing.base),
         Row(
           children: [
             Expanded(
-              child: const _DisabledButton(
-                key: ValueKey('connectedAccountsYoutubeAdd'),
-                label: 'Add account',
+              child: _DisabledButton(
+                key: const ValueKey('connectedAccountsYoutubeAdd'),
+                label: l10n.connectedAccountsYoutubeAddAccountLabel,
               ),
             ),
             const SizedBox(width: AppSpacing.base),
             Expanded(
-              child: const _DisabledButton(
-                key: ValueKey('connectedAccountsYoutubeSignOut'),
-                label: 'Sign out',
+              child: _DisabledButton(
+                key: const ValueKey('connectedAccountsYoutubeSignOut'),
+                label: l10n.connectedAccountsYoutubeSignOutLabel,
               ),
             ),
           ],
@@ -55,7 +57,7 @@ class YoutubeSection extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Flexible(
               child: Text(
-                'Beta — not available in this build.',
+                l10n.connectedAccountsYoutubeBetaNoteMessage,
                 style: type.caption.copyWith(color: colors.faint),
               ),
             ),
@@ -78,7 +80,7 @@ class _DisabledButton extends StatelessWidget {
 
     return Semantics(
       enabled: false,
-      label: '$label (unavailable in this build)',
+      label: AppLocalizations.of(context).connectedAccountsUnavailableSemanticsSuffix(label),
       child: Container(
         height: 44,
         alignment: Alignment.center,

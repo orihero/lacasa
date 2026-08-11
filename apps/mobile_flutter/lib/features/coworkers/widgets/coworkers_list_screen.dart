@@ -4,11 +4,11 @@
 /// **Row content is exactly §35's four fields** (avatar, full name, ads
 /// count, phone) — no "last active"/"deals closed" here, since §35's row
 /// spec never asks for either (unlike `apps/console`'s own richer table).
-/// Ads count is real, derived client-side from `coworkerAdsProvider` per
-/// WORK_TAB_CONTRACT.md ruling 7.6 (`coworker_metrics.dart`'s
-/// [coworkerListingsCount]) — independent of the roster fetch itself, so a
-/// failed ads fetch degrades only that one figure (an em dash) rather than
-/// blanking the whole list.
+/// Ads count is real, from `coworkerSummariesProvider`'s server-folded
+/// `CoworkerSummary.adsCreatedCount` (`GET /statistics/coworkers/summary`,
+/// per WORK_TAB_CONTRACT.md ruling 7.6) — independent of the roster fetch
+/// itself, so a failed summary fetch degrades only that one figure (an em
+/// dash) rather than blanking the whole list.
 ///
 /// **"+ Add new coworker" is hidden, not disabled, for a session that would
 /// 403 on `POST /coworkers`.** WORK_TAB_CONTRACT.md is explicit: "check
@@ -28,6 +28,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -54,7 +55,10 @@ class CoworkersListScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'Coworkers', onBack: () => _pop(context)),
+            NavRow(
+              title: AppLocalizations.of(context).coworkersListScreenTitle,
+              onBack: () => _pop(context),
+            ),
             if (canManage)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -120,7 +124,7 @@ class _AddCoworkerButton extends StatelessWidget {
             ],
           ),
           child: Text(
-            '+ Add new coworker',
+            AppLocalizations.of(context).coworkersAddNewButtonLabel,
             style: type.rowTitle.copyWith(color: Colors.white),
           ),
         ),
@@ -135,6 +139,7 @@ class _CoworkersBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final coworkersAsync = ref.watch(coworkersListProvider);
+    final l10n = AppLocalizations.of(context);
 
     return coworkersAsync.when(
       loading: () => const _ListSkeleton(),
@@ -142,23 +147,23 @@ class _CoworkersBody extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
         child: FullWidthState(
           icon: Icons.cloud_off_rounded,
-          message: "Couldn't load your coworkers",
-          actionLabel: 'Retry',
+          message: l10n.coworkersLoadErrorMessage,
+          actionLabel: l10n.sharedRetryLabel,
           onAction: () => ref.invalidate(coworkersListProvider),
         ),
       ),
       data: (coworkers) {
         if (coworkers.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
             child: FullWidthState(
               icon: Icons.groups_outlined,
-              message: 'No coworkers yet.',
+              message: l10n.coworkersEmptyMessage,
             ),
           );
         }
 
-        final adsAsync = ref.watch(coworkerAdsProvider);
+        final summariesAsync = ref.watch(coworkerSummariesProvider);
 
         return ScrollConfiguration(
           behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
@@ -176,7 +181,7 @@ class _CoworkersBody extends ConsumerWidget {
               final coworker = coworkers[index];
               return _CoworkerRow(
                 coworker: coworker,
-                adsAsync: adsAsync,
+                summariesAsync: summariesAsync,
                 onTap: () =>
                     context.push('${RoutePaths.workCoworkers}/${coworker.id}'),
               );
@@ -191,23 +196,29 @@ class _CoworkersBody extends ConsumerWidget {
 class _CoworkerRow extends StatelessWidget {
   const _CoworkerRow({
     required this.coworker,
-    required this.adsAsync,
+    required this.summariesAsync,
     required this.onTap,
   });
 
   final Coworker coworker;
-  final AsyncValue<List<Ad>> adsAsync;
+  final AsyncValue<List<CoworkerSummary>> summariesAsync;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
-    final countLabel = adsAsync.when(
-      data: (ads) {
-        final count = coworkerListingsCount(coworker.id, ads);
-        return '$count listing${count == 1 ? '' : 's'}';
+    final countLabel = summariesAsync.when(
+      data: (summaries) {
+        final summary = summaryFor(coworker.id, summaries);
+        // A missing row (shouldn't happen — the endpoint always returns one
+        // per coworker) gets the same em dash as a fetch error, not a
+        // fabricated "0 listings".
+        if (summary == null) return '—';
+        final count = summary.adsCreatedCount;
+        return l10n.coworkersListingsCount(count);
       },
       loading: () => '…',
       // An em dash, not "0 listings" — the count genuinely couldn't be

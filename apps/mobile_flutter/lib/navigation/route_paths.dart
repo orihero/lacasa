@@ -120,4 +120,11 @@ abstract final class RoutePaths {
   // No-chrome full-screen pages — also on the root navigator.
   static const photoGallery = '/photo-gallery';
   static const mapView = '/map-view';
+
+  // `listing-detail`'s 3D Tour section (§7) pushes here — its own
+  // root-navigator route rather than a mode flag on `photoGallery`,
+  // because it renders a live [WebViewWidget], not a photo/video item
+  // `gallery_item.dart#resolveGalleryItems` could ever produce. See
+  // `tour3d_view_screen.dart`.
+  static const tour3dView = '/tour-3d-view';
 }

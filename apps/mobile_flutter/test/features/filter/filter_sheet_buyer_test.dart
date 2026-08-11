@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/filter/filter.dart';
 import 'package:lacasa_mobile/features/filter/state/filter_repository_provider.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import 'support/fake_filter_repository.dart';
@@ -29,6 +30,8 @@ void main() {
     return UncontrolledProviderScope(
       container: container,
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: Scaffold(
           body: Builder(
@@ -42,13 +45,14 @@ void main() {
     );
   }
 
+  /// Still used for Storey, the one remaining free-text numeric field on
+  /// this sheet — City/District moved to tap-to-pick and no longer need a
+  /// `TextField` finder (see [pickerFieldEnabled]/[selectPickerOption]
+  /// below).
   Finder textFieldIn(String key) => find.descendant(
     of: find.byKey(ValueKey(key)),
     matching: find.byType(TextField),
   );
-
-  Future<TextField> readTextField(WidgetTester tester, String key) async =>
-      tester.widget<TextField>(textFieldIn(key));
 
   /// The sheet's own `SingleChildScrollView` builds every field eagerly (a
   /// plain `Column`, not a lazy list) but most fields sit below the default
@@ -59,6 +63,44 @@ void main() {
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
     await tester.tap(finder);
+    await tester.pumpAndSettle();
+  }
+
+  /// City and District moved off free-text `TextField`s onto a tap-to-pick
+  /// `_PickerField` (`filter_city_district_section.dart`, part of the same
+  /// in-flight feature pass that added the `GET /regions`-backed cascade)
+  /// backed by `showFilterOptionPicker`'s nested bottom sheet — see that
+  /// section's doc comment for why free text was dropped. [pickerFieldEnabled]
+  /// reads the field's `Opacity` wrapper (0.5 when disabled, 1 when enabled)
+  /// rather than a public `enabled` getter, since `_PickerField` is private
+  /// to its own file; that's also the exact signal the field's own build
+  /// method keys its dimming off of, so this can't drift from what the user
+  /// actually sees.
+  Future<bool> pickerFieldEnabled(WidgetTester tester, String key) async {
+    final opacity = tester.widget<Opacity>(
+      find.descendant(
+        of: find.byKey(ValueKey(key)),
+        matching: find.byType(Opacity),
+      ),
+    );
+    return opacity.opacity == 1;
+  }
+
+  /// Drives one full pick end to end: taps the `_PickerField` itself (which
+  /// opens `showFilterOptionPicker`'s modal sheet), then taps the matching
+  /// `filterOption-<value>` row inside it — or `filterOption-any` when
+  /// [value] is `null`, the sheet's own convention for its leading "Any …"
+  /// row (see `filter_option_picker_sheet.dart`).
+  Future<void> selectPickerOption(
+    WidgetTester tester,
+    String fieldKey,
+    String? value,
+  ) async {
+    await tapVisible(tester, find.byKey(ValueKey(fieldKey)));
+    final optionKey = value == null
+        ? 'filterOption-any'
+        : 'filterOption-$value';
+    await tester.tap(find.byKey(ValueKey(optionKey)));
     await tester.pumpAndSettle();
   }
 
@@ -123,10 +165,10 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      expect((await readTextField(tester, 'filterField-district')).enabled, isFalse);
+      expect(await pickerFieldEnabled(tester, 'filterField-district'), isFalse);
     });
 
-    testWidgets('typing a City enables District', (tester) async {
+    testWidgets('picking a City enables District', (tester) async {
       final container = ProviderContainer(
         overrides: [
           filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
@@ -145,14 +187,13 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(textFieldIn('filterField-city'), 'Tashkent');
-      await tester.pumpAndSettle();
+      await selectPickerOption(tester, 'filterField-city', 'Tashkent');
 
-      expect((await readTextField(tester, 'filterField-district')).enabled, isTrue);
+      expect(await pickerFieldEnabled(tester, 'filterField-district'), isTrue);
     });
 
     testWidgets(
-      'clearing City disables District again and drops its value',
+      'clearing City (picking "Any") disables District again and drops its value',
       (tester) async {
         AdFilters? result;
         final container = ProviderContainer(
@@ -170,18 +211,14 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
 
-        await tester.enterText(textFieldIn('filterField-city'), 'Tashkent');
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          textFieldIn('filterField-district'),
-          'Chilonzor',
-        );
-        await tester.pumpAndSettle();
+        await selectPickerOption(tester, 'filterField-city', 'Tashkent');
+        await selectPickerOption(tester, 'filterField-district', 'Chilonzor');
 
-        await tester.enterText(textFieldIn('filterField-city'), '');
-        await tester.pumpAndSettle();
+        // "Any city" is the picker's own spelling of "clear" — see
+        // `selectPickerOption`'s doc comment.
+        await selectPickerOption(tester, 'filterField-city', null);
 
-        expect((await readTextField(tester, 'filterField-district')).enabled, isFalse);
+        expect(await pickerFieldEnabled(tester, 'filterField-district'), isFalse);
 
         await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
 
@@ -335,18 +372,33 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
 
-        await tester.enterText(textFieldIn('filterField-city'), 'Tashkent');
-        await tester.pumpAndSettle();
+        await selectPickerOption(tester, 'filterField-city', 'Tashkent');
         await tapVisible(
           tester,
           find.byKey(ValueKey('filterCategory-${AdCategory.sale}')),
         );
 
-        expect((await readTextField(tester, 'filterField-city')).controller!.text, 'Tashkent');
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('filterField-city')),
+            matching: find.text('Tashkent'),
+          ),
+          findsOneWidget,
+        );
 
         await tapVisible(tester, find.byKey(const ValueKey('filterSheet-reset')));
 
-        expect((await readTextField(tester, 'filterField-city')).controller!.text, '');
+        // Reset drops back to the picker's own "Any city" placeholder — the
+        // City field never held free text to begin with (see
+        // `selectPickerOption`'s doc comment), so there's no empty string
+        // to assert against anymore.
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('filterField-city')),
+            matching: find.text('Any city'),
+          ),
+          findsOneWidget,
+        );
         // Reset recounts immediately (no debounce wait needed to observe it).
         expect(repo.lastFilters?.city, isNull);
         expect(repo.lastFilters?.category, isNull);
@@ -382,13 +434,8 @@ void main() {
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
 
-        await tester.enterText(textFieldIn('filterField-city'), 'Tashkent');
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          textFieldIn('filterField-district'),
-          'Chilonzor',
-        );
-        await tester.pumpAndSettle();
+        await selectPickerOption(tester, 'filterField-city', 'Tashkent');
+        await selectPickerOption(tester, 'filterField-district', 'Chilonzor');
 
         await tapVisible(tester, find.byKey(const ValueKey('filterRooms-3')));
         await tapVisible(

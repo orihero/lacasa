@@ -1,4 +1,36 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Camera capture for listing/avatar photos (image_picker). Optional
+         hardware, not required: the app's camera use is one option alongside
+         gallery pick, so this must not gate installability on devices with
+         no camera (some tablets, Chromebooks) the way an unpaired CAMERA
+         permission implicitly does on Google Play. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Android 13+ (API 33) split media permissions, replacing READ_EXTERNAL_STORAGE
+         for picking existing photos/videos (image_picker). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
+    <!-- Android 14+ (API 34) partial-photo-access companion permission.
+         permission_handler_android's PermissionManager checks this
+         (Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) via
+         ContextCompat.checkSelfPermission to detect the "select photos"
+         limited-access grant and report PermissionStatus.limited. An
+         undeclared permission can never be granted, so without this entry
+         that check is permanently denied and `limited` can never be
+         reported on the one platform it exists for — see
+         `lib/features/permissions/data/permission_gateway.dart`. No
+         minSdkVersion attribute: the permission itself doesn't exist before
+         API 34, so declaring it unconditionally is the same pattern the
+         plugin's own example manifest uses, and it is inert on older OSes. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
+    <!-- Legacy fallback for API 32 and below only; superseded by the READ_MEDIA_*
+         permissions above on 33+, so it must not be requested there. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <!-- dio's HTTP calls (already implied by other manifest-less networking, but
+         made explicit since this is the first time this app declares permissions
+         at all). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="lacasa_mobile"
         android:name="${applicationName}"
@@ -40,6 +72,22 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ (API 30) package visibility: without these, url_launcher's
+             canLaunchUrl returns false for every scheme below and every
+             tel:/https: launch (call dialer, listing external links, OAuth,
+             share-sheet "copy link" probe) silently no-ops. No `mailto`
+             entry: nothing in `lib/` builds a `mailto:` Uri (the contact
+             form posts to the API directly, not through a mail client) —
+             see `lib/shared/platform/link_launcher.dart`'s doc comment. Add
+             it back only alongside the code that would actually use it. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

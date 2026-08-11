@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -44,7 +45,7 @@ class ProfileSignedOutScreen extends StatelessWidget {
                 0,
               ),
               child: Text(
-                'Profile',
+                AppLocalizations.of(context).profileSignedOutScreenTitle,
                 style: type.navTitle.copyWith(color: colors.ink),
               ),
             ),
@@ -60,16 +61,24 @@ class ProfileSignedOutScreen extends StatelessWidget {
                 children: [
                   const _SignInPromptCard(),
                   const SizedBox(height: AppSpacing.section),
-                  const ListRowGroupLabel('Preferences'),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(
+                      context,
+                    ).profileSignedOutPreferencesGroupLabel,
+                  ),
                   ListRow(
                     icon: Icons.translate_rounded,
-                    title: 'Language',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileSignedOutLanguageRowTitle,
                     onTap: () => showLanguageSheet(context),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
                     icon: Icons.chat_bubble_outline_rounded,
-                    title: 'Contact Us',
+                    title: AppLocalizations.of(
+                      context,
+                    ).profileSignedOutContactUsRowTitle,
                     onTap: () => showContactSheet(context),
                   ),
                 ],
@@ -123,8 +132,7 @@ class _SignInPromptCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.base),
           Text(
-            'Sign in to save listings, message agents, and manage your '
-            'business.',
+            AppLocalizations.of(context).profileSignedOutPromptMessage,
             textAlign: TextAlign.center,
             style: type.pickSubtitle.copyWith(color: colors.ink),
           ),
@@ -133,7 +141,7 @@ class _SignInPromptCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _PromptButton(
-                  label: 'Sign In',
+                  label: AppLocalizations.of(context).profileSignedOutSignInButtonLabel,
                   filled: true,
                   onTap: () => context.push(RoutePaths.login),
                 ),
@@ -141,7 +149,7 @@ class _SignInPromptCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.base),
               Expanded(
                 child: _PromptButton(
-                  label: 'Sign Up',
+                  label: AppLocalizations.of(context).profileSignedOutSignUpButtonLabel,
                   filled: false,
                   onTap: () => context.push(RoutePaths.register),
                 ),

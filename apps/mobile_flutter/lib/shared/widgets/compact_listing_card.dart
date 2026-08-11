@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 import '../formatters/formatters.dart';
 import 'favourite_button.dart';
@@ -86,7 +87,7 @@ class CompactListingCard extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            _specLine(ad),
+            _specLine(ad, context),
             style: type.specMeta.copyWith(color: colors.muted),
           ),
           const SizedBox(height: 3),
@@ -110,6 +111,11 @@ class CompactListingCard extends StatelessWidget {
 
   // See `FullListingCard._specLine` — same promotion to
   // `Formatters.statLine`, with `includeFloor: false` preserving this
-  // card's own no-storey/floors rule.
-  String _specLine(Ad ad) => Formatters.statLine(ad, includeFloor: false);
+  // card's own no-storey/floors rule, and the same AppLocalizations thread
+  // for a correctly pluralized room count.
+  String _specLine(Ad ad, BuildContext context) => Formatters.statLine(
+    ad,
+    includeFloor: false,
+    l10n: AppLocalizations.of(context),
+  );
 }

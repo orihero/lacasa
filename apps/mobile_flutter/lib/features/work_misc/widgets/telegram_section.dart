@@ -19,6 +19,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../theme/theme.dart';
 import 'channel_toggle_row.dart';
@@ -33,13 +34,14 @@ class TelegramSection extends ConsumerWidget {
     final chatCount = ref.watch(
       authSessionProvider.select((s) => s.user?.tgChatIds.length ?? 0),
     );
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ChannelToggleRow(
           key: const ValueKey('connectedAccountsTelegramToggle'),
-          title: 'Create Telegram post',
+          title: l10n.connectedAccountsTelegramToggleTitle,
           on: chatCount > 0,
         ),
         const SizedBox(height: AppSpacing.base),
@@ -67,8 +69,8 @@ class TelegramSection extends ConsumerWidget {
                 child: Text(
                   key: const ValueKey('connectedAccountsTelegramCount'),
                   chatCount > 0
-                      ? '$chatCount channel${chatCount == 1 ? '' : 's'} connected'
-                      : 'No Telegram channels connected',
+                      ? l10n.connectedAccountsTelegramChannelsConnected(chatCount)
+                      : l10n.connectedAccountsTelegramNoChannelsMessage,
                   style: type.rowTitle.copyWith(color: colors.ink),
                 ),
               ),

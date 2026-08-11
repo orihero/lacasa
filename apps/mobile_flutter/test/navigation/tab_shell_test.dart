@@ -11,6 +11,7 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/home/home.dart';
 import 'package:lacasa_mobile/features/listing_detail/listing_detail.dart';
 import 'package:lacasa_mobile/features/search/search.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
@@ -28,6 +29,8 @@ void main() {
       UncontrolledProviderScope(
         container: c,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),

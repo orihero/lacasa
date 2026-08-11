@@ -18,6 +18,17 @@
 /// (and honestly smaller-looking) slice than the "this month" headline
 /// figure. This is also why the time-range selector visibly does something
 /// in fixture mode instead of silently ignoring every option but the default.
+///
+/// **`fetchAdsSeries` always plots §4.6's per-day points, regardless of
+/// filter** — [_pointsForFilter] is the same day-slicing [fetchAdsStatistics]
+/// uses for every filter but `thisMonth` (a chart has nothing to plot §4.5's
+/// flat totals against, so that special case doesn't apply here). Each
+/// [WorkDashboardChartPoint.day] (1–12) is mapped onto a synthetic calendar
+/// date via [_dateForDay] purely so [AdsSeriesBucket.bucketStart] has
+/// *something* real to hold — day 1 lands on the 1st of a fixed reference
+/// month so the axis labels below (`widgets/ads_statistics_panel.dart`) show
+/// the exact same "1..12" numbers this screen has always shown, not because
+/// any of these dates mean anything.
 library;
 
 import '../../../api/api.dart';
@@ -36,26 +47,57 @@ class FixtureDashboardRepository implements DashboardRepository {
       );
     }
 
-    final List<WorkDashboardChartPoint> points;
+    final points = _pointsForFilter(filter);
+    return AdsStatistics(
+      adsNewCount: points.fold<int>(0, (sum, p) => sum + p.created),
+      adsSoldCount: points.fold<int>(0, (sum, p) => sum + p.sold),
+    );
+  }
+
+  @override
+  Future<AdsSeries> fetchAdsSeries(StatisticsFilter filter) async {
+    final buckets = _pointsForFilter(filter)
+        .map(
+          (p) => AdsSeriesBucket(
+            bucketStart: _dateForDay(p.day),
+            adCreatedCount: p.created,
+            adSoldCount: p.sold,
+          ),
+        )
+        .toList(growable: false);
+
+    return AdsSeries(
+      granularity: SeriesGranularity.day,
+      from: buckets.first.bucketStart,
+      to: buckets.last.bucketStart,
+      buckets: buckets,
+    );
+  }
+
+  /// Same slice §4.6's 12 points get for every filter but `thisMonth`
+  /// (which [fetchAdsStatistics] special-cases to §4.5's own totals instead
+  /// — see this file's doc comment).
+  List<WorkDashboardChartPoint> _pointsForFilter(StatisticsFilter filter) {
     switch (filter) {
       case StatisticsFilter.today:
-        points = [workDashboardChartFixture.last];
+        return [workDashboardChartFixture.last];
       case StatisticsFilter.thisWeek:
-        points = workDashboardChartFixture.length <= 7
+        return workDashboardChartFixture.length <= 7
             ? workDashboardChartFixture
             : workDashboardChartFixture.sublist(
                 workDashboardChartFixture.length - 7,
               );
       case StatisticsFilter.all:
       case StatisticsFilter.thisMonth:
-        points = workDashboardChartFixture;
+        return workDashboardChartFixture;
     }
-
-    return AdsStatistics(
-      adsNewCount: points.fold<int>(0, (sum, p) => sum + p.created),
-      adsSoldCount: points.fold<int>(0, (sum, p) => sum + p.sold),
-    );
   }
+
+  /// Day 1 of a fixed, arbitrary reference month (chosen only so every
+  /// `day` 1–12 lands in the same calendar month, and therefore renders as
+  /// the bare "1".."12" the fixture chart has always shown — see this
+  /// file's doc comment).
+  static DateTime _dateForDay(int day) => DateTime.utc(2024, 3, day);
 
   @override
   Future<List<ActivityEvent>> fetchCoworkerActivity() async =>

@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -29,7 +30,7 @@ class NotificationRow extends StatelessWidget {
     return Semantics(
       button: true,
       label: notification.unread
-          ? '${notification.title}, unread'
+          ? AppLocalizations.of(context).notificationsUnreadSemanticsLabel(notification.title)
           : notification.title,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

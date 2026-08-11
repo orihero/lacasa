@@ -15,11 +15,14 @@ import 'package:go_router/go_router.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/work_misc/state/connected_accounts_repository_provider.dart';
 import 'package:lacasa_mobile/features/work_misc/work_misc.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_link_launcher.dart';
 import 'support/fake_connected_accounts_repository.dart';
 import 'support/work_misc_test_data.dart';
 
@@ -66,13 +69,17 @@ void main() {
   Future<ProviderContainer> pumpScreen(
     WidgetTester tester, {
     required FakeConnectedAccountsRepository repository,
+    LinkLauncher? linkLauncher,
     List<int> tgChatIds = const [],
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
       overrides: [
         connectedAccountsRepositoryProvider.overrideWithValue(repository),
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
       ],
     );
     addTearDown(container.dispose);
@@ -106,7 +113,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -183,6 +190,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const ConnectedAccountsScreen(),
           ),
@@ -288,23 +297,63 @@ void main() {
     });
 
     testWidgets(
-      'Connect Instagram copies the sign-in link and says so honestly',
+      'Connect Instagram opens the OAuth URL in the external browser, never an in-app WebView',
       (tester) async {
+        // Meta forbids an in-app WebView for OAuth (see the section's own
+        // doc comment) — the compliant path hands the fetched connect URL
+        // to LinkLauncher.open, which the real implementation launches with
+        // LaunchMode.externalApplication.
+        final repo = FakeConnectedAccountsRepository(
+          connectUrl: 'https://instagram.example/oauth?state=abc',
+        );
+        final launcher = FakeLinkLauncher(result: true);
+
         await pumpScreen(
           tester,
-          repository: FakeConnectedAccountsRepository(),
+          repository: repo,
+          linkLauncher: launcher,
         );
 
         await tester.tap(find.text('Connect Instagram'));
         await tester.pumpAndSettle();
 
+        expect(launcher.opened, [
+          Uri.parse('https://instagram.example/oauth?state=abc'),
+        ]);
         expect(
-          find.textContaining('Instagram sign-in link copied'),
+          find.text('Opening Instagram sign-in in your browser.'),
           findsOneWidget,
         );
         // Never the OAuth-return copy §21 specifies — this build has no way
         // to detect the callback completing (see the screen's own doc
         // comment).
+        expect(find.text('Instagram account connected!'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Connect Instagram falls back to copying the link and says so honestly when nothing can open it',
+      (tester) async {
+        // LinkLauncher.open returning false means no browser (or nothing
+        // else) on the device could handle the URL — the old copy-and-toast
+        // behaviour is the fallback, not the primary path anymore.
+        final repo = FakeConnectedAccountsRepository();
+        final launcher = FakeLinkLauncher(result: false);
+
+        await pumpScreen(
+          tester,
+          repository: repo,
+          linkLauncher: launcher,
+        );
+
+        await tester.tap(find.text('Connect Instagram'));
+        await tester.pumpAndSettle();
+
+        expect(launcher.opened, [Uri.parse(repo.connectUrl)]);
+        expect(
+          find.textContaining('Instagram sign-in link copied'),
+          findsOneWidget,
+        );
         expect(find.text('Instagram account connected!'), findsNothing);
       },
     );
@@ -396,6 +445,36 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpScreen(
+            tester,
+            repository: FakeConnectedAccountsRepository(
+              accounts: [instagramAccount()],
+            ),
+            tgChatIds: const [111, 222],
+            locale: locale,
+          );
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

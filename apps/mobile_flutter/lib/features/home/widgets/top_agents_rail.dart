@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -26,6 +27,7 @@ class TopAgentsRail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final l10n = AppLocalizations.of(context);
     final agents = ref.watch(topAgentsProvider);
 
     return agents.when(
@@ -66,7 +68,7 @@ class TopAgentsRail extends ConsumerWidget {
           ),
           child: RailRetryCard(
             width: 230,
-            message: "Couldn't load agents",
+            message: l10n.homeTopAgentsRetryMessage,
             onRetry: () => ref.invalidate(topAgentsProvider),
           ),
         ),
@@ -114,7 +116,7 @@ class TopAgentsRail extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          '${agent.adsCount} ads',
+                          l10n.homeAgentAdsCount(agent.adsCount),
                           overflow: TextOverflow.ellipsis,
                           style: type.micro.copyWith(color: colors.muted),
                         ),
@@ -138,12 +140,14 @@ class _Shell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: 'Top Agents',
-          linkLabel: 'Explore',
+          title: l10n.homeTopAgentsSectionTitle,
+          linkLabel: l10n.homeTopAgentsExploreLinkLabel,
           onLink: () => context.go(RoutePaths.agents),
         ),
         const SizedBox(height: AppSpacing.base),

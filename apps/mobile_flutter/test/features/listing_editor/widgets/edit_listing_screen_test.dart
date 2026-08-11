@@ -15,6 +15,7 @@ import 'package:lacasa_mobile/navigation/route_paths.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/fake_listing_editor_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<
@@ -54,7 +55,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();

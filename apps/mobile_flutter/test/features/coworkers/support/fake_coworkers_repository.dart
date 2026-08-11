@@ -3,9 +3,24 @@
 /// own error hook and call counter, matching
 /// `test/features/agents/support/fake_agents_repository.dart`'s own
 /// reasoning: the whole point of this repository's method split (§6's
-/// "independent providers per independently-failable section") is that an
-/// `ads`/`activity` failure must not take the roster or the form down with
-/// it, and a fake with one shared error flag could not express that at all.
+/// "independent providers per independently-failable section") is that a
+/// [summary] failure must not take the roster or the form down with it, and
+/// a fake with one shared error flag could not express that at all.
+///
+/// **[summary] used to be two methods here** ([ads]/[activity], each with
+/// its own seed list and error hook) that a screen folded by `coworkerId`
+/// itself. `coworkers_repository.dart` collapsed those into the one
+/// server-folded [summary] aggregate (`GET /statistics/coworkers/summary`
+/// now does the fold), so this fake collapses to match — but [seedAds]/
+/// [seedActivity]/[adsError]/[activityError] all survive under their
+/// original names as [summary]'s own raw material and failure hooks rather
+/// than being renamed, since a caller composing this fake still wants to
+/// hand it "these ads" / "these activity events" / "the ads half failed"
+/// exactly as before; only the fold itself moved from two call sites
+/// (`ads()`, `activity()`) into one ([summary]). Either error hook alone is
+/// enough to fail the whole aggregate — matching the real endpoint, which
+/// has no way to fail only its ads half or only its activity half, unlike
+/// the two-method fold this replaced.
 library;
 
 import 'dart:async';
@@ -58,8 +73,7 @@ class FakeCoworkersRepository implements CoworkersRepository {
   int createCallCount = 0;
   int updateCallCount = 0;
   int deleteCallCount = 0;
-  int adsCallCount = 0;
-  int activityCallCount = 0;
+  int summaryCallCount = 0;
 
   /// The arguments the most recent [create] call was made with, for tests
   /// asserting the form actually sent what the user typed.
@@ -187,17 +201,59 @@ class FakeCoworkersRepository implements CoworkersRepository {
     coworkers.removeWhere((c) => c.id == id);
   }
 
+  /// Folds [seedAds]/[seedActivity] into one [CoworkerSummary] row per
+  /// [coworkers] entry — the fake's own version of what
+  /// `GET /statistics/coworkers/summary` computes server-side. Mirrors
+  /// `FixtureCoworkersRepository.summary`'s fold exactly (adsCreatedCount
+  /// from `Ad.coworkerId` matches, adsSoldCount from
+  /// [ActivityEventStage.adSold] events, lastActiveAt as the latest
+  /// [ActivityEvent.createdAt] across *any* stage), with one deliberate
+  /// difference: [leadsCreatedCount] is always `0` here rather than folded
+  /// from a seeded lead list, because nothing in this test group has ever
+  /// needed a controllable lead count and adding an unused seed list/param
+  /// pair would just be dead surface area — see this class's own
+  /// constructor doc comment for the same "only what a test actually
+  /// reaches for" reasoning applied to [seedAds]/[seedActivity].
+  ///
+  /// **A coworker with no matching rows in either seed list still gets a
+  /// row here, every count genuinely `0`** — never omitted, and never
+  /// conflated with the em-dash a caller renders for a fetch that hasn't
+  /// resolved (or has errored) at all. That distinction lives entirely in
+  /// [hold]/[adsError]/[activityError]: a genuinely-empty summary list
+  /// resolves to real zeros, while an unresolved/failed [summary] call is
+  /// what a screen reads as "—" (see `coworkers_list_screen.dart`'s and
+  /// `coworker_detail_screen.dart`'s own `AsyncValue.when` — `loading`/
+  /// `error` render the dash, `data` never fabricates one).
   @override
-  Future<List<Ad>> ads() async {
-    adsCallCount++;
+  Future<List<CoworkerSummary>> summary() async {
+    summaryCallCount++;
+    if (hold != null) await hold!.future;
+    // Either half failing fails the whole aggregate — see this file's own
+    // doc comment for why there is no way to fail only one of these two.
     if (adsError != null) throw adsError!;
-    return seedAds;
-  }
-
-  @override
-  Future<List<ActivityEvent>> activity() async {
-    activityCallCount++;
     if (activityError != null) throw activityError!;
-    return seedActivity;
+
+    return coworkers.map((coworker) {
+      final events = seedActivity.where((e) => e.coworkerId == coworker.id);
+
+      DateTime? lastActive;
+      for (final event in events) {
+        if (lastActive == null || event.createdAt.isAfter(lastActive)) {
+          lastActive = event.createdAt;
+        }
+      }
+
+      return CoworkerSummary(
+        coworkerId: coworker.id,
+        adsCreatedCount: seedAds
+            .where((ad) => ad.coworkerId == coworker.id)
+            .length,
+        adsSoldCount: events
+            .where((e) => e.stage == ActivityEventStage.adSold)
+            .length,
+        leadsCreatedCount: 0,
+        lastActiveAt: lastActive,
+      );
+    }).toList(growable: false);
   }
 }

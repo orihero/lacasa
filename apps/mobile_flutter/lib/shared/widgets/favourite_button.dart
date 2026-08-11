@@ -32,6 +32,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../navigation/auth_session.dart';
 import '../../theme/theme.dart';
 import '../state/favourite_ad_ids_provider.dart';
@@ -86,7 +87,11 @@ class FavouriteButton extends ConsumerWidget {
     } on ApiException {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't update favourites")),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).sharedFavouriteUpdateFailedMessage,
+            ),
+          ),
         );
       }
     }

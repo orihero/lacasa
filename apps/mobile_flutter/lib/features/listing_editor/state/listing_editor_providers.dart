@@ -29,12 +29,10 @@ final editListingAdProvider = FutureProvider.autoDispose.family<Ad, String>((
 });
 
 /// `publish-status`'s (§29) one data source, keyed by ad id.
-final publishStatusProvider = FutureProvider.autoDispose.family<AdPublishStatus, String>((
-  ref,
-  adId,
-) {
-  return ref.read(listingEditorRepositoryProvider).publishStatus(adId);
-});
+final publishStatusProvider = FutureProvider.autoDispose
+    .family<AdPublishStatus, String>((ref, adId) {
+      return ref.read(listingEditorRepositoryProvider).publishStatus(adId);
+    });
 
 /// `publish-channels-sheet`'s (§28) connected-Instagram-accounts list —
 /// not ad-scoped, so a bare `.autoDispose` rather than a family.

@@ -22,6 +22,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 class NavRow extends StatelessWidget {
@@ -69,7 +70,7 @@ class NavRow extends StatelessWidget {
         ? null
         : Semantics(
             button: true,
-            label: 'Back',
+            label: AppLocalizations.of(context).sharedNavRowBackLabel,
             child: GestureDetector(
               key: backKey,
               behavior: HitTestBehavior.opaque,
@@ -86,7 +87,7 @@ class NavRow extends StatelessWidget {
         ? null
         : Semantics(
             button: true,
-            label: 'Close',
+            label: AppLocalizations.of(context).sharedNavRowCloseLabel,
             child: GestureDetector(
               key: closeKey,
               behavior: HitTestBehavior.opaque,

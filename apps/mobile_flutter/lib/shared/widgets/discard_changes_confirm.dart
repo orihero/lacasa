@@ -11,6 +11,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 /// Shows the "Discard changes?" alert and reports whether the user chose
@@ -27,24 +28,23 @@ import '../../theme/theme.dart';
 /// }
 /// ```
 Future<bool> confirmDiscardChanges(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog.adaptive(
-      title: const Text('Discard changes?'),
-      content: const Text(
-        "You have unsaved changes. If you leave now, they won't be saved.",
-      ),
+      title: Text(l10n.sharedDiscardChangesTitle),
+      content: Text(l10n.sharedDiscardChangesBody),
       actions: [
         TextButton(
           key: const ValueKey('discardChangesCancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.sharedConfirmDialogCancelLabel),
         ),
         TextButton(
           key: const ValueKey('discardChangesDiscard'),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(
-            'Discard',
+            l10n.sharedDiscardChangesDiscardLabel,
             style: TextStyle(color: AppStatusColors.errorText),
           ),
         ),

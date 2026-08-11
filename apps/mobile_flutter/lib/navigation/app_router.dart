@@ -510,6 +510,19 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      // `ListingTourSection` is the one screen that pushes here, same
+      // "wrong/missing typed `extra`" guard as `photoGallery` above and for
+      // the same reason — a deep link or restored route stack can reach
+      // this path with nothing at all.
+      GoRoute(
+        path: RoutePaths.tour3dView,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          final args = state.extra;
+          if (args is! Tour3dViewArgs) return _placeholder('3D Tour');
+          return Tour3dViewScreen(args: args);
+        },
+      ),
     ],
   );
 });

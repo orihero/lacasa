@@ -1,26 +1,20 @@
-/// SCREENS.md §3.5's fixed option lists for `filter-sheet`, plus the two
-/// gaps flagged in the build report:
+/// SCREENS.md §3.5's fixed option lists for `filter-sheet`.
 ///
-/// - **City/District**: SCREENS.md calls for a City select sourced from
-///   `regions.json` (`packages/domain/src/data/regions.json`, 14 regions /
-///   203 districts) with District cascaded from it. That file is a
-///   TS/JSON package export, not reachable from this Dart app (no HTTP
-///   endpoint serves it either — `Ad.city`/`Ad.district` are free text
-///   server-side, never validated against it). Hand-copying ~217 rows
-///   into a Dart literal was explicitly ruled out by this task's brief
-///   ("do NOT invent one and do NOT copy 203 districts by hand"), so City
-///   and District are built as free-text fields instead (see
-///   `widgets/filter_city_district_section.dart`) — this is not a design
-///   downgrade so much as it matches what the server itself actually
-///   validates against (nothing; any string). District is disabled until
-///   City is non-empty, preserving the cascade *behavior* SCREENS.md asks
-///   for even without a shared vocabulary backing it.
-/// - **Price ladder**: hardcoded here because there is no endpoint for
-///   it either — matches both SCREENS.md §3.5's own list and
-///   `apps/web/src/components/filter/Filter.jsx`'s `priceList` exactly.
+/// **City/District** used to be free-text fields here — no longer: `GET
+/// /regions` now serves the `@lacasa/domain` region/district vocabulary
+/// over HTTP (`regions_repository.dart`), which is what
+/// `widgets/filter_city_district_section.dart` picks from. Nothing about
+/// that vocabulary is a fixed "option list" the way the fields below are
+/// (it's fetched, cached, and cascades Region → District), so it doesn't
+/// live in this file — see `regions_repository_provider.dart`.
+///
+/// **Price ladder**: hardcoded here because there is no endpoint for
+/// it — matches both SCREENS.md §3.5's own list and
+/// `apps/web/src/components/filter/Filter.jsx`'s `priceList` exactly.
 library;
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/widgets/choice_chip_group.dart';
 
 /// One labeled value for a single-select chip group — an alias for the
@@ -43,32 +37,39 @@ const List<int> filterPriceLadder = [
   500000000,
 ];
 
-const List<FilterOption<AdCategory>> filterCategoryOptions = [
-  FilterOption(AdCategory.rent, 'Rent'),
-  FilterOption(AdCategory.sale, 'Sale'),
+/// Built from [AppLocalizations] rather than a top-level `const` list (the
+/// original shape) since every option label is now a localized lookup,
+/// which requires a [BuildContext] and so cannot be `const` — every call
+/// site already has a `context` (they're all inside a widget's `build`).
+List<FilterOption<AdCategory>> filterCategoryOptions(AppLocalizations l10n) => [
+  FilterOption(AdCategory.rent, l10n.filterCategoryRentOptionLabel),
+  FilterOption(AdCategory.sale, l10n.filterCategorySaleOptionLabel),
 ];
 
-const List<FilterOption<AdType>> filterTypeOptions = [
-  FilterOption(AdType.residential, 'Residential'),
-  FilterOption(AdType.nonresidential, 'Nonresidential'),
+List<FilterOption<AdType>> filterTypeOptions(AppLocalizations l10n) => [
+  FilterOption(AdType.residential, l10n.filterTypeResidentialOptionLabel),
+  FilterOption(AdType.nonresidential, l10n.filterTypeNonresidentialOptionLabel),
 ];
 
 /// SCREENS.md marks `withFurniture` as this field's **default** — see
 /// `widgets/filter_sheet.dart`'s `_seedDefaults` for where that default is
 /// actually applied (on first open / after Reset, never silently
 /// overwriting a previously-applied `null`/"any" choice).
-const List<FilterOption<Furniture>> filterFurnitureOptions = [
-  FilterOption(Furniture.withFurniture, 'With furniture'),
-  FilterOption(Furniture.withoutFurniture, 'Without Furniture'),
+List<FilterOption<Furniture>> filterFurnitureOptions(AppLocalizations l10n) => [
+  FilterOption(Furniture.withFurniture, l10n.filterFurnitureWithOptionLabel),
+  FilterOption(
+    Furniture.withoutFurniture,
+    l10n.filterFurnitureWithoutOptionLabel,
+  ),
 ];
 
 /// SCREENS.md marks `notRepaired` as this field's **default** — same note
 /// as [filterFurnitureOptions].
-const List<FilterOption<Repairment>> filterRepairOptions = [
-  FilterOption(Repairment.notRepaired, 'Not repaired'),
-  FilterOption(Repairment.normal, 'Normal'),
-  FilterOption(Repairment.good, 'Good'),
-  FilterOption(Repairment.excellent, 'Excellent'),
+List<FilterOption<Repairment>> filterRepairOptions(AppLocalizations l10n) => [
+  FilterOption(Repairment.notRepaired, l10n.filterRepairNotRepairedOptionLabel),
+  FilterOption(Repairment.normal, l10n.filterRepairNormalOptionLabel),
+  FilterOption(Repairment.good, l10n.filterRepairGoodOptionLabel),
+  FilterOption(Repairment.excellent, l10n.filterRepairExcellentOptionLabel),
 ];
 
 // ---------------------------------------------------------------------
@@ -84,18 +85,18 @@ const List<FilterOption<Repairment>> filterRepairOptions = [
 /// `SearchSort` does) since `my-listings`'s Sort really is a server
 /// parameter, unlike `listing-search`'s client-only re-sort of an
 /// unsortable public feed.
-const List<FilterOption<AdSort>> filterCrmSortOptions = [
-  FilterOption(AdSort.newest, 'Newest'),
-  FilterOption(AdSort.highestPrice, 'Highest price'),
-  FilterOption(AdSort.lowestPrice, 'Lowest price'),
+List<FilterOption<AdSort>> filterCrmSortOptions(AppLocalizations l10n) => [
+  FilterOption(AdSort.newest, l10n.filterSortNewestOptionLabel),
+  FilterOption(AdSort.highestPrice, l10n.filterSortHighestPriceOptionLabel),
+  FilterOption(AdSort.lowestPrice, l10n.filterSortLowestPriceOptionLabel),
 ];
 
 /// SCREENS.md §3.5's Status field — `AdStage.unknown` deliberately excluded
 /// (never a real, selectable filter value; matches `filterCrmStatusOptions`
 /// having no "any" chip counterpart of its own — the chip group's own
 /// deselect-to-null behavior already covers "All stages").
-const List<FilterOption<AdStage>> filterCrmStatusOptions = [
-  FilterOption(AdStage.active, 'Active'),
-  FilterOption(AdStage.sold, 'Sold'),
-  FilterOption(AdStage.draft, 'Draft'),
+List<FilterOption<AdStage>> filterCrmStatusOptions(AppLocalizations l10n) => [
+  FilterOption(AdStage.active, l10n.filterStatusActiveOptionLabel),
+  FilterOption(AdStage.sold, l10n.filterStatusSoldOptionLabel),
+  FilterOption(AdStage.draft, l10n.filterStatusDraftOptionLabel),
 ];

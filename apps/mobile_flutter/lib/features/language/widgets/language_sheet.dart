@@ -13,15 +13,23 @@
 /// no confirmation step. Row order and radio labels ("En"/"Uz"/"Ru", not
 /// "English"/"Uzbek"/"Russian") are quoted character for character.
 ///
-/// **Read `state/language_provider.dart`'s doc comment before assuming
-/// selecting "Uz" or "Ru" does anything visible** — it currently doesn't.
-/// This sheet is not the place that gap gets closed; it is the place that
-/// tells the user about it, via [_LocalisationNote] below.
+/// **Selecting a row now does exactly what SCREENS.md says: applies
+/// immediately.** `app.dart` watches [languageProvider] and drives
+/// `MaterialApp.locale` from it, so [LanguageNotifier.select]'s synchronous
+/// state update (see that method's doc comment) is visible the same frame
+/// the sheet closes, no restart required — the honest "nothing else moves
+/// yet" disclaimer this file used to print under the radio options
+/// (`_LocalisationNote`, see git history) is gone because it is no longer
+/// true for any string that has been through `flutter gen-l10n` (see
+/// `lib/l10n/README.md`). A screen whose strings have not been extracted
+/// yet simply keeps rendering its hardcoded English, same as any other
+/// not-yet-migrated screen — no per-screen flag needed for that.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../data/app_language.dart';
 import '../state/language_provider.dart';
@@ -46,6 +54,7 @@ class _LanguageSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
     final languageAsync = ref.watch(languageProvider);
     // While the storage read is in flight, or if it fails, the selected row
     // reads as English — the same default `SecureLanguageRepository.load`
@@ -79,13 +88,13 @@ class _LanguageSheet extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Language',
+                    l10n.languageSheetTitle,
                     style: type.sheetTitle.copyWith(color: colors.ink),
                   ),
                 ),
                 Semantics(
                   button: true,
-                  label: 'Close',
+                  label: l10n.languageSheetCloseLabel,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.of(context).pop(),
@@ -115,8 +124,6 @@ class _LanguageSheet extends ConsumerWidget {
               if (language != AppLanguage.values.last)
                 const SizedBox(height: AppSpacing.base),
             ],
-            const SizedBox(height: AppSpacing.lg),
-            _LocalisationNote(),
           ],
         ),
       ),
@@ -221,28 +228,6 @@ class _RadioIndicator extends StatelessWidget {
               ),
             )
           : null,
-    );
-  }
-}
-
-/// The honest line SCREENS.md doesn't specify text for, but this task's
-/// instructions require: the app has no ARB catalogue and no `intl`
-/// delegate wired up (see `state/language_provider.dart`'s doc comment for
-/// the full gap), so selecting "Uz" or "Ru" saves a preference and changes
-/// nothing else visible yet. Short and non-alarming rather than an error —
-/// this is an honest "not built yet", not a failure.
-class _LocalisationNote extends StatelessWidget {
-  const _LocalisationNote();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-
-    return Text(
-      'Your choice is saved, but app text is English-only for now — '
-      'translations are coming in a later update.',
-      style: type.bodySmall.copyWith(color: colors.muted),
     );
   }
 }

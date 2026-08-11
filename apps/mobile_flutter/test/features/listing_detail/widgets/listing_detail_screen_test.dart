@@ -32,6 +32,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 import '../../../shared/support/fake_favourite_ad_ids_repository.dart';
 import '../support/fake_listing_detail_repository.dart';
 import '../support/listing_detail_test_ads.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   /// Pumps the app at `/home/listing/<id>` with [repository] wired in, and
@@ -57,7 +58,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();

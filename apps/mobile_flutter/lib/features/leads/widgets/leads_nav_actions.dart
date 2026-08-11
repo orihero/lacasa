@@ -7,6 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 class LeadsNavActions extends StatelessWidget {
@@ -51,7 +52,7 @@ class LeadsNavActions extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Semantics(
           button: true,
-          label: 'Add new lead',
+          label: AppLocalizations.of(context).leadsAddNewLeadLabel,
           child: GestureDetector(
             key: addKey,
             behavior: HitTestBehavior.opaque,

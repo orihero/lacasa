@@ -6,6 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../theme/theme.dart';
 import 'listing_form_fields.dart';
 import 'listing_text_field.dart';
@@ -18,12 +19,14 @@ class BasicsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListingTextField(
           key: const ValueKey('listingField-title'),
-          label: 'Title',
+          label: l10n.listingEditorTitleFieldLabel,
           required: true,
           controller: fields.title,
           errorText: fields.titleError,
@@ -33,7 +36,7 @@ class BasicsStep extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-city'),
-          label: 'City',
+          label: l10n.listingEditorCityFieldLabel,
           required: true,
           controller: fields.city,
           errorText: fields.cityError,
@@ -42,18 +45,20 @@ class BasicsStep extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-district'),
-          label: 'District',
+          label: l10n.listingEditorDistrictFieldLabel,
           required: true,
           controller: fields.district,
           errorText: fields.districtError,
           enabled: fields.city.text.trim().isNotEmpty,
-          hintText: fields.city.text.trim().isEmpty ? 'Pick a city first' : null,
+          hintText: fields.city.text.trim().isEmpty
+              ? l10n.listingEditorDistrictDisabledHint
+              : null,
           onChanged: onChanged,
         ),
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-address'),
-          label: 'Address',
+          label: l10n.listingEditorAddressFieldLabel,
           required: true,
           controller: fields.address,
           errorText: fields.addressError,
@@ -62,11 +67,11 @@ class BasicsStep extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-reference'),
-          label: 'Reference',
+          label: l10n.listingEditorReferenceFieldLabel,
           required: true,
           controller: fields.reference,
           errorText: fields.referenceError,
-          hintText: 'Orientation / landmark',
+          hintText: l10n.listingEditorReferenceHint,
           onChanged: onChanged,
         ),
       ],

@@ -2,23 +2,18 @@
 /// / "Sold", matching `mockup-e-liquid-glass.html`'s `.panel` (the 12-point
 /// SVG path with `#f5439b`/`#5a5ac8` gradients).
 ///
-/// **Two structurally different renderings, gated on `useLiveWorkDashboardApi`
-/// (`data/dashboard_mode.dart`), per contract ruling 7.1** — `GET
-/// /statistics/ads` returns period totals, never a daily series, so there is
-/// nothing server-backed to bind a 12-point chart to:
-/// - **Fixture mode**: the real 12-point series
-///   (`workDashboardChartFixture`, §4.6) drawn as a hand-painted dual-series
-///   area chart — this is the one case where a 12-point chart is honest,
-///   because the fixture genuinely is a 12-point series. Static: does not
-///   respond to the time-range selector (ruling 7.1's own "static 12-point
-///   chart" instruction).
-/// - **Live mode**: degrades to `apps/console`'s own "Created vs sold"
-///   two-bar period-total comparison (`StatisticsScreen.tsx`'s
-///   `CreatedVsSoldBars`), reusing [adsStatisticsProvider]'s already-fetched
-///   totals — which DOES respond to the time-range selector, since that's
-///   the one figure this endpoint genuinely scopes by period. A caption
-///   says outright why there's no day-by-day line here, matching
-///   `apps/console`'s own `<Flag>` honesty move for the identical gap.
+/// **One rendering path, driven by a real [AdsSeries], in both modes —
+/// contract ruling 7.1 is closed.** `GET /statistics/ads/series` now
+/// returns a real, server-bucketed day/hour series
+/// (`data/dashboard_repository.dart`'s `fetchAdsSeries`), so this file no
+/// longer needs its old fixture-vs-live fork: [_SeriesAreaChart] plots
+/// [adsSeriesProvider]'s data with the same `CustomPainter` this screen has
+/// always used — `apps/console` made the same call not to pull in a
+/// charting library for one screen, and matching it is deliberate — the
+/// only difference between modes is *whose* [AdsSeries] it is (the fixture
+/// repository's own `workDashboardChartFixture`-derived series, or the real
+/// API's). [AdsSeries.granularity] (`hour`/`day`) drives the axis-label
+/// format below rather than assuming every series is daily.
 library;
 
 import 'dart:math' as math;
@@ -27,9 +22,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import '../data/dashboard_mode.dart';
 import '../state/dashboard_providers.dart';
 import 'dashboard_colors.dart';
 
@@ -40,6 +36,8 @@ class AdsStatisticsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final seriesAsync = ref.watch(adsSeriesProvider);
+    final l10n = AppLocalizations.of(context);
 
     return GlassSurface(
       variant: GlassVariant.onSurface,
@@ -52,43 +50,157 @@ class AdsStatisticsPanel extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Ads statistics',
+                  l10n.dashboardAdsStatisticsTitle,
                   overflow: TextOverflow.ellipsis,
                   style: type.panelHeading.copyWith(color: colors.ink),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
+              // Blank while loading/error rather than a stale/guessed
+              // caption — the real range is only known once the series
+              // itself has loaded.
               Text(
-                useLiveWorkDashboardApi ? 'Period totals' : 'Days 1–12',
+                seriesAsync.maybeWhen(
+                  data: (series) => _captionFor(l10n, series),
+                  orElse: () => '',
+                ),
                 style: type.bodySmall.copyWith(color: colors.muted),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.base),
-          if (useLiveWorkDashboardApi)
-            const _LiveCreatedVsSoldChart(key: ValueKey('adsStatisticsLive'))
-          else
-            const _FixtureAreaChart(key: ValueKey('adsStatisticsFixture')),
+          seriesAsync.when(
+            loading: () => const SizedBox(
+              height: 120,
+              child: Center(child: ShimmerBox(width: double.infinity, height: 120)),
+            ),
+            error: (error, stackTrace) => SizedBox(
+              height: 120,
+              child: Center(
+                child: RailRetryCard(
+                  width: 220,
+                  message: l10n.dashboardAdsStatisticsLoadErrorMessage,
+                  onRetry: () => ref.invalidate(adsSeriesProvider),
+                ),
+              ),
+            ),
+            data: (series) => _SeriesAreaChart(
+              key: const ValueKey('adsStatisticsChart'),
+              series: series,
+            ),
+          ),
         ],
       ),
     );
   }
+
+  /// "Days 1–12" for a multi-bucket day-granularity series that stays
+  /// within one calendar month (fixture mode always does, by construction —
+  /// see `fixture_dashboard_repository.dart`'s doc comment; live mode may or
+  /// may not); "Day 12" for a single bucket; falls back to a month/day (or
+  /// hour) range once a series crosses a month boundary or is hourly, so
+  /// the caption never claims a precision the data doesn't have.
+  ///
+  /// The month/day-only fallback (`"{month}/{day}"`) carries no English
+  /// words to localize — a bare numeric date, unlike the "Hour"/"Hours"/
+  /// "Day"/"Days" branches below — so only those four go through
+  /// [AppLocalizations].
+  static String _captionFor(AppLocalizations l10n, AdsSeries series) {
+    final buckets = series.buckets;
+    if (buckets.isEmpty) return '';
+
+    if (series.granularity == SeriesGranularity.hour) {
+      String hourLabel(DateTime dt) => '${dt.hour.toString().padLeft(2, '0')}:00';
+      return buckets.length == 1
+          ? l10n.dashboardCaptionHour(hourLabel(buckets.first.bucketStart))
+          : l10n.dashboardCaptionHoursRange(
+              hourLabel(buckets.first.bucketStart),
+              hourLabel(buckets.last.bucketStart),
+            );
+    }
+
+    final first = buckets.first.bucketStart;
+    final last = buckets.last.bucketStart;
+    final sameMonth = first.year == last.year && first.month == last.month;
+    if (buckets.length == 1) {
+      return sameMonth ? l10n.dashboardCaptionDay(first.day) : '${first.month}/${first.day}';
+    }
+    return sameMonth
+        ? l10n.dashboardCaptionDaysRange(first.day, last.day)
+        : '${first.month}/${first.day}–${last.month}/${last.day}';
+  }
 }
 
 // ---------------------------------------------------------------------
-// Fixture mode — the real 12-point series.
+// The chart itself — one implementation for both fixture and live mode.
 // ---------------------------------------------------------------------
 
-class _FixtureAreaChart extends StatelessWidget {
-  const _FixtureAreaChart({super.key});
+class _SeriesAreaChart extends StatelessWidget {
+  const _SeriesAreaChart({super.key, required this.series});
+
+  final AdsSeries series;
+
+  /// How many axis labels to show at most — the original static fixture
+  /// chart showed 7 of its 12 points ("1,3,5,7,9,11,12"); this keeps the
+  /// same rough density for series of any length instead of crowding every
+  /// bucket's label onto the axis.
+  static const int _maxLabels = 7;
+
+  List<int> _labelIndices(int bucketCount) {
+    if (bucketCount <= _maxLabels) {
+      return List.generate(bucketCount, (i) => i);
+    }
+    final step = (bucketCount - 1) / (_maxLabels - 1);
+    final indices = <int>{};
+    for (var i = 0; i < _maxLabels; i++) {
+      indices.add((i * step).round());
+    }
+    return indices.toList()..sort();
+  }
+
+  String _axisLabel(DateTime bucketStart, bool sameMonth) {
+    if (series.granularity == SeriesGranularity.hour) {
+      return '${bucketStart.hour.toString().padLeft(2, '0')}:00';
+    }
+    // Day granularity: bare day-of-month when every bucket falls in one
+    // month (fixture mode always does; live mode often does) — matches
+    // this chart's original "1,3,5,..." look. Once a series crosses a
+    // month boundary, disambiguate with the month too rather than show two
+    // different days with the same bare number.
+    return sameMonth
+        ? '${bucketStart.day}'
+        : '${bucketStart.month}/${bucketStart.day}';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
-    final created = workDashboardChartFixture.map((p) => p.created).toList();
-    final sold = workDashboardChartFixture.map((p) => p.sold).toList();
+    final buckets = series.buckets;
+    if (buckets.isEmpty) {
+      // A caller-side validation error (see `StatisticsResource.series`'s
+      // doc comment) surfaces through the `error` branch above, not this
+      // one — an empty-but-successful response is a real, if unusual,
+      // outcome (e.g. a range with truly zero activity would still
+      // zero-fill every bucket, so this only fires for a genuinely
+      // bucket-less response) and gets an honest empty state rather than a
+      // blank 120px box.
+      return SizedBox(
+        height: 120,
+        child: Center(
+          child: Text(
+            AppLocalizations.of(context).dashboardNoDataForRangeMessage,
+            style: type.bodySmall.copyWith(color: colors.muted),
+          ),
+        ),
+      );
+    }
+
+    final first = buckets.first.bucketStart;
+    final last = buckets.last.bucketStart;
+    final sameMonth = first.year == last.year && first.month == last.month;
+    final labelIndices = _labelIndices(buckets.length);
 
     return Column(
       children: [
@@ -97,8 +209,8 @@ class _FixtureAreaChart extends StatelessWidget {
           width: double.infinity,
           child: CustomPaint(
             painter: _DualSeriesChartPainter(
-              created: created,
-              sold: sold,
+              created: buckets.map((b) => b.adCreatedCount).toList(),
+              sold: buckets.map((b) => b.adSoldCount).toList(),
               createdColor: AppAccent.color,
               soldColor: kDashboardSoldColor,
               gridColor: colors.line,
@@ -108,10 +220,10 @@ class _FixtureAreaChart extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [1, 3, 5, 7, 9, 11, 12]
+          children: labelIndices
               .map(
-                (day) => Text(
-                  '$day',
+                (i) => Text(
+                  _axisLabel(buckets[i].bucketStart, sameMonth),
                   style: type.micro.copyWith(color: colors.faint),
                 ),
               )
@@ -120,9 +232,15 @@ class _FixtureAreaChart extends StatelessWidget {
         const SizedBox(height: AppSpacing.base),
         Row(
           children: [
-            _LegendDot(color: AppAccent.color, label: 'Created'),
+            _LegendDot(
+              color: AppAccent.color,
+              label: AppLocalizations.of(context).dashboardLegendCreated,
+            ),
             const SizedBox(width: AppSpacing.lg),
-            _LegendDot(color: kDashboardSoldColor, label: 'Sold'),
+            _LegendDot(
+              color: kDashboardSoldColor,
+              label: AppLocalizations.of(context).dashboardLegendSold,
+            ),
           ],
         ),
       ],
@@ -175,7 +293,15 @@ class _DualSeriesChartPainter extends CustomPainter {
     int maxValue,
   ) {
     final n = series.length;
-    if (n < 2) return;
+    if (n == 0) return;
+    if (n == 1) {
+      // A single-bucket series (e.g. the "Today" filter, whose range can
+      // resolve to one bucket) has no line to draw — a dot at the one real
+      // value beats either a blank chart or fabricating a second point.
+      final y = size.height - (series[0] / maxValue) * size.height * 0.9;
+      canvas.drawCircle(Offset(size.width / 2, y), 4, Paint()..color = color);
+      return;
+    }
 
     final dx = size.width / (n - 1);
     Offset pointAt(int i) {
@@ -219,138 +345,6 @@ class _DualSeriesChartPainter extends CustomPainter {
         oldDelegate.sold != sold ||
         oldDelegate.createdColor != createdColor ||
         oldDelegate.soldColor != soldColor;
-  }
-}
-
-// ---------------------------------------------------------------------
-// Live mode — the honest 2-bar period-total comparison.
-// ---------------------------------------------------------------------
-
-class _LiveCreatedVsSoldChart extends ConsumerWidget {
-  const _LiveCreatedVsSoldChart({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final adsStats = ref.watch(adsStatisticsProvider);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'No day-by-day breakdown is available — the API returns one total '
-          'per period, so the bars below are the two real period totals, '
-          'not a daily trend.',
-          style: type.bodySmall.copyWith(color: colors.muted),
-        ),
-        const SizedBox(height: AppSpacing.base),
-        adsStats.when(
-          loading: () => const SizedBox(
-            height: 120,
-            child: Center(child: ShimmerBox(width: 120, height: 60)),
-          ),
-          error: (error, stackTrace) => SizedBox(
-            height: 120,
-            child: Center(
-              child: RailRetryCard(
-                width: 220,
-                message: "Couldn't load ad statistics",
-                onRetry: () => ref.invalidate(adsStatisticsProvider),
-              ),
-            ),
-          ),
-          data: (stats) => _CreatedVsSoldBars(
-            created: stats.adsNewCount,
-            sold: stats.adsSoldCount,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CreatedVsSoldBars extends StatelessWidget {
-  const _CreatedVsSoldBars({required this.created, required this.sold});
-
-  final int created;
-  final int sold;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxValue = math.max(math.max(created, sold), 1);
-    double heightFor(int value) =>
-        math.max((value / maxValue) * 100, value > 0 ? 6 : 2);
-
-    return SizedBox(
-      height: 130,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          _Bar(
-            label: 'Created',
-            value: created,
-            heightPct: heightFor(created),
-            color: AppAccent.color,
-          ),
-          const SizedBox(width: AppSpacing.xxl),
-          _Bar(
-            label: 'Sold',
-            value: sold,
-            heightPct: heightFor(sold),
-            color: kDashboardSoldColor,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar({
-    required this.label,
-    required this.value,
-    required this.heightPct,
-    required this.color,
-  });
-
-  final String label;
-  final int value;
-  final double heightPct;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-
-    return SizedBox(
-      width: 64,
-      height: 110,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Text(
-            '$value',
-            style: type.rowTitle.copyWith(color: colors.ink),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Container(
-            width: double.infinity,
-            height: 70 * (heightPct / 100),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(10),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(label, style: type.micro.copyWith(color: colors.muted)),
-        ],
-      ),
-    );
   }
 }
 

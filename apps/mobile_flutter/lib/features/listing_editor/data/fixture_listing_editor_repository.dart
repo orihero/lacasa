@@ -6,7 +6,11 @@
 /// publishes then checks `publish-status`) gets a coherent answer with zero
 /// network. Publish attempts are recorded the same way, so
 /// `publish-channels-sheet` → `publish-status` is a genuine offline loop,
-/// not two screens that coincidentally both compile.
+/// not two screens that coincidentally both compile. One deterministic
+/// FAILED attempt is seeded at construction (see the constructor body)
+/// specifically so `publish-status`'s Retry action — [retryPublish],
+/// mirroring `apps/api/src/services/publishService.js#retryPublish`'s own
+/// state machine — has something real to act on offline too.
 ///
 /// **What this does NOT do**: this instance's mutations are invisible to
 /// `my_listings`' own `FixtureMyListingsRepository` — each Work feature
@@ -25,7 +29,30 @@ import '../../../shared/shared.dart';
 import 'listing_editor_repository.dart';
 
 class FixtureListingEditorRepository implements ListingEditorRepository {
-  FixtureListingEditorRepository() : _ads = List.of(workAdsFixtures);
+  FixtureListingEditorRepository() : _ads = List.of(workAdsFixtures) {
+    // Seeds one deterministic FAILED attempt so `publish-status`'s Retry
+    // control has something real to exercise offline. Nothing in
+    // `work_seed_data.dart` records a publish failure, and every attempt
+    // [_recordAttempt] itself creates always succeeds — without this seed,
+    // Retry (build contract §7.3, closed) would only ever be reachable in
+    // live mode, failing this build's "must work in both modes" rule.
+    if (_ads.isNotEmpty) {
+      final demoAdId = _ads.first.id;
+      _publishState[demoAdId] = {
+        Channel.instagram: ChannelStatus(
+          channel: Channel.instagram,
+          status: PublishStatus.failed,
+          externalUrl: null,
+          externalId: null,
+          lastAttemptAt: DateTime.now().toUtc().subtract(
+            const Duration(hours: 2),
+          ),
+          errorMessage:
+              'Instagram token expired. Reconnect the account and retry.',
+        ),
+      };
+    }
+  }
 
   final List<Ad> _ads;
   final Map<String, Map<Channel, ChannelStatus>> _publishState = {};
@@ -137,7 +164,8 @@ class FixtureListingEditorRepository implements ListingEditorRepository {
     required List<String> imageUrls,
     List<String>? igUserIds,
   }) async {
-    final targets = igUserIds ?? _instagramAccounts.map((a) => a.igUserId).toList();
+    final targets =
+        igUserIds ?? _instagramAccounts.map((a) => a.igUserId).toList();
     final publication = _recordAttempt(adId, Channel.instagram);
     return PublishAttemptResponse(
       publication: publication,
@@ -174,6 +202,95 @@ class FixtureListingEditorRepository implements ListingEditorRepository {
       ],
     );
   }
+
+  /// Mirrors `apps/api/src/services/publishService.js#retryPublish`'s state
+  /// machine field for field (see that function's own comments for why each
+  /// branch throws what it throws) — the fixture stand-in for
+  /// `POST /publish/ads/:adId/:channel/retry`, so `publish_status_screen
+  /// .dart`'s error-code branching gets genuinely exercised offline too,
+  /// not just against a live server.
+  @override
+  Future<PublishAttemptResponse> retryPublish({
+    required String adId,
+    required Channel channel,
+  }) async {
+    if (channel != Channel.telegram && channel != Channel.instagram) {
+      throw _apiError(
+        400,
+        ApiErrorCode.notRetryable,
+        _nonRetryableReason(channel),
+      );
+    }
+
+    final row = _publishState[adId]?[channel];
+    // No row, or PENDING, means this channel was never attempted -- same
+    // "nothing to retry" case the real endpoint 400s.
+    if (row == null || row.status == PublishStatus.pending) {
+      throw _apiError(
+        400,
+        ApiErrorCode.notFailed,
+        'This channel has not been published yet -- use the normal publish endpoint, not retry.',
+      );
+    }
+    if (row.status == PublishStatus.published) {
+      throw _apiError(
+        409,
+        ApiErrorCode.alreadyPublished,
+        'This ad is already published on this channel; retrying would post it a second time.',
+      );
+    }
+    if (row.status == PublishStatus.draftedAwaitingReview) {
+      throw _apiError(
+        409,
+        ApiErrorCode.awaitingReview,
+        "A human may still be reviewing this draft; the server can't tell whether Publish was already clicked.",
+      );
+    }
+
+    // FAILED is the only status this fixture (like the real server) ever
+    // acts on past this point -- replay it as a fresh, successful attempt.
+    final publication = _recordAttempt(adId, channel);
+    final target = channel == Channel.telegram
+        ? 'fixture-retry-chat'
+        : 'fixture-retry-ig-user';
+    return PublishAttemptResponse(
+      publication: publication,
+      results: [
+        PublishAttemptResult(
+          target: target,
+          ok: true,
+          mediaOrMessageId: 'fixture-retry-${channel.wire}',
+          error: null,
+        ),
+      ],
+    );
+  }
+
+  ApiErrorException _apiError(
+    int statusCode,
+    ApiErrorCode code,
+    String message,
+  ) => ApiErrorException(
+    body: ApiErrorBody(code: code, message: message),
+    statusCode: statusCode,
+  );
+
+  // Verbatim from `NON_RETRYABLE_REASONS` in
+  // `apps/api/src/services/publishService.js` -- same reasons the live
+  // server gives, so fixture mode never invents different copy for the
+  // same situation.
+  String _nonRetryableReason(Channel channel) => switch (channel) {
+    Channel.youtube =>
+      'YouTube has no server-side publish call to retry -- the browser performs the upload itself under your own Google session. Upload again and report the result.',
+    Channel.olx =>
+      'OLX posting happens through the browser extension with a human reviewing and clicking Publish. Retry the cross-post from the extension instead.',
+    Channel.realting =>
+      'Realting listings sync through a scheduled feed, not a per-ad publish call. There is nothing here to retry.',
+    Channel.telegram || Channel.instagram => throw StateError(
+      'retryable channels never reach a non-retryable reason lookup',
+    ),
+    Channel.unknown => 'Unknown publish channel.',
+  };
 
   Publication _recordAttempt(String adId, Channel channel) {
     final now = DateTime.now().toUtc();
@@ -220,7 +337,9 @@ class FixtureListingEditorRepository implements ListingEditorRepository {
       price: w.price?.value ?? base.price,
       priceType: w.priceType?.value ?? base.priceType,
       stage: w.stage?.value ?? base.stage,
-      description: w.description != null ? w.description!.value : base.description,
+      description: w.description != null
+          ? w.description!.value
+          : base.description,
       nearPlacesList: w.nearPlacesList?.value ?? base.nearPlacesList,
       optionList: w.optionList?.value ?? base.optionList,
       active: w.active?.value ?? base.active,

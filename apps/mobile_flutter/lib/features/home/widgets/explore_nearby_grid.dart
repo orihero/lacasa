@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
@@ -98,7 +99,9 @@ class _Shell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Explore Nearby'),
+        SectionHeader(
+          title: AppLocalizations.of(context).homeExploreNearbySectionTitle,
+        ),
         const SizedBox(height: AppSpacing.base),
         Padding(
           padding: const EdgeInsets.symmetric(

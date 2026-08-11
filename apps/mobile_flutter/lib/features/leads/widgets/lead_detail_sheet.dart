@@ -32,6 +32,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -59,14 +60,15 @@ class _LeadDetailSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final leadAsync = ref.watch(leadByIdProvider(leadId));
+    final l10n = AppLocalizations.of(context);
 
     return leadAsync.when(
       loading: () => const _StatusSheet(child: CircularProgressIndicator()),
       error: (error, _) => _StatusSheet(
         child: FullWidthState(
           icon: Icons.error_outline_rounded,
-          message: "Couldn't load this lead.",
-          actionLabel: 'Retry',
+          message: l10n.leadsDetailLoadErrorMessage,
+          actionLabel: l10n.sharedRetryLabel,
           onAction: () => ref.invalidate(leadByIdProvider(leadId)),
         ),
       ),
@@ -173,17 +175,18 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     final budgetText = _budget.text.trim();
     setState(() {
-      _fullNameError = fullName.isEmpty ? 'Full name is required' : null;
+      _fullNameError = fullName.isEmpty ? l10n.leadsDetailFullNameRequiredError : null;
       _phoneError = phone.isEmpty || Formatters.isValidUzPhone(phone)
           ? null
-          : 'Invalid Uzbekistan phone number';
+          : l10n.leadsPhoneInvalidError;
       _budgetError = budgetText.isEmpty || double.tryParse(budgetText) != null
           ? null
-          : 'Enter a valid number';
+          : l10n.leadsBudgetInvalidError;
     });
     return _fullNameError == null && _phoneError == null && _budgetError == null;
   }
@@ -220,17 +223,23 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
       );
       if (!mounted) return;
       Navigator.of(context).pop();
-      LaCasaToast.showSuccess(context, 'Lead successfully updated!');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsUpdatedToastMessage);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      LaCasaToast.showError(context, 'Error updating lead: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).leadsUpdateErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
   Future<void> _delete() async {
     if (_submitting || _deleting) return;
-    final confirmed = await confirmDelete(context, subject: 'lead');
+    final confirmed = await confirmDelete(
+      context,
+      subject: AppLocalizations.of(context).leadsSubjectNoun,
+    );
     if (!confirmed || !mounted) return;
 
     setState(() => _deleting = true);
@@ -238,20 +247,24 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
       await ref.read(leadsProvider.notifier).deleteLead(widget.lead.id);
       if (!mounted) return;
       Navigator.of(context).pop();
-      LaCasaToast.showSuccess(context, 'Lead successfully deleted!');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsDeletedToastMessage);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _deleting = false);
-      LaCasaToast.showError(context, 'Error deleting lead: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).leadsDeleteErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
-  static String _messageFor(ApiException e) {
+  static String _messageFor(BuildContext context, ApiException e) {
     if (e is ApiErrorException) return e.message;
+    final l10n = AppLocalizations.of(context);
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.leadsNoConnectionMessage;
     }
-    return 'Something went wrong.';
+    return l10n.sharedGenericErrorMessage;
   }
 
   Future<void> _pickCallbackDate() async {
@@ -277,6 +290,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
           orElse: () => null,
         );
     final busy = _submitting || _deleting;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -308,7 +322,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                   ),
                   Semantics(
                     button: true,
-                    label: 'Close',
+                    label: l10n.leadsDetailCloseLabel,
                     child: GestureDetector(
                       key: const ValueKey('leadDetail-close'),
                       behavior: HitTestBehavior.opaque,
@@ -320,7 +334,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ),
               const SizedBox(height: AppSpacing.section),
               LeadTextField(
-                label: 'Full name',
+                label: l10n.leadsFieldFullNameLabel,
                 controller: _fullName,
                 errorText: _fullNameError,
                 textInputAction: TextInputAction.next,
@@ -329,7 +343,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
-                label: 'Phone',
+                label: l10n.leadsFieldPhoneLabel,
                 controller: _phone,
                 errorText: _phoneError,
                 hintText: '+998901234567',
@@ -342,7 +356,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
-                label: 'Email',
+                label: l10n.leadsFieldEmailLabel,
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
@@ -350,7 +364,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
-                label: 'Budget',
+                label: l10n.leadsFieldBudgetLabel,
                 controller: _budget,
                 errorText: _budgetError,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -359,7 +373,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ),
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
-                label: 'Commit',
+                label: l10n.leadsFieldCommitLabel,
                 controller: _commit,
                 maxLines: 3,
                 keyboardType: TextInputType.multiline,
@@ -379,7 +393,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
               ],
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
-                label: 'Source',
+                label: l10n.leadsFieldSourceLabel,
                 controller: _source,
                 textInputAction: TextInputAction.done,
                 onChanged: () => setState(() {}),
@@ -394,7 +408,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('leadDetail-cancel'),
-                      label: 'Cancel',
+                      label: l10n.leadsCancelButtonLabel,
                       onTap: busy ? null : () => Navigator.of(context).pop(),
                     ),
                   ),
@@ -402,7 +416,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('leadDetail-save'),
-                      label: 'Save',
+                      label: l10n.leadsSaveButtonLabel,
                       primary: true,
                       submitting: _submitting,
                       onTap: busy ? null : _save,
@@ -428,7 +442,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                               ),
                             )
                           : Text(
-                              'Delete lead',
+                              l10n.leadsDeleteLeadButtonLabel,
                               style: type.label.copyWith(color: AppStatusColors.errorText),
                             ),
                     ),

@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../api/api.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 import 'additional_info_field.dart';
@@ -17,37 +18,55 @@ import 'listing_form_fields.dart';
 import 'listing_text_field.dart';
 import 'nearby_places_field.dart';
 
-const List<ChoiceOption<AdType>> _typeOptions = [
-  ChoiceOption(AdType.residential, 'Residential'),
-  ChoiceOption(AdType.nonresidential, 'Nonresidential'),
+// Every option list below used to be a top-level `const` — a localized
+// label means the list can no longer be built at compile time, so each is
+// now a plain function of [AppLocalizations], called once per `build()`
+// rather than hoisted back to a module-level constant (`ChoiceOption`
+// itself stays a `const`-constructible class; only these lists' constant-
+// ness is what the localized label removes).
+List<ChoiceOption<AdType>> _typeOptions(AppLocalizations l10n) => [
+  ChoiceOption(AdType.residential, l10n.listingEditorTypeResidentialOption),
+  ChoiceOption(
+    AdType.nonresidential,
+    l10n.listingEditorTypeNonresidentialOption,
+  ),
 ];
 
-const List<ChoiceOption<AdCategory>> _categoryOptions = [
-  ChoiceOption(AdCategory.rent, 'Rent'),
-  ChoiceOption(AdCategory.sale, 'Sale'),
+List<ChoiceOption<AdCategory>> _categoryOptions(AppLocalizations l10n) => [
+  ChoiceOption(AdCategory.rent, l10n.listingEditorCategoryRentOption),
+  ChoiceOption(AdCategory.sale, l10n.listingEditorCategorySaleOption),
 ];
 
-const List<ChoiceOption<Repairment>> _repairOptions = [
-  ChoiceOption(Repairment.notRepaired, 'Not repaired'),
-  ChoiceOption(Repairment.normal, 'Normal'),
-  ChoiceOption(Repairment.good, 'Good'),
-  ChoiceOption(Repairment.excellent, 'Excellent'),
+List<ChoiceOption<Repairment>> _repairOptions(AppLocalizations l10n) => [
+  ChoiceOption(
+    Repairment.notRepaired,
+    l10n.listingEditorRepairNotRepairedOption,
+  ),
+  ChoiceOption(Repairment.normal, l10n.listingEditorRepairNormalOption),
+  ChoiceOption(Repairment.good, l10n.listingEditorRepairGoodOption),
+  ChoiceOption(Repairment.excellent, l10n.listingEditorRepairExcellentOption),
 ];
 
-const List<ChoiceOption<Furniture>> _furnitureOptions = [
-  ChoiceOption(Furniture.withFurniture, 'With furniture'),
-  ChoiceOption(Furniture.withoutFurniture, 'Without Furniture'),
+List<ChoiceOption<Furniture>> _furnitureOptions(AppLocalizations l10n) => [
+  ChoiceOption(
+    Furniture.withFurniture,
+    l10n.listingEditorFurnitureWithOption,
+  ),
+  ChoiceOption(
+    Furniture.withoutFurniture,
+    l10n.listingEditorFurnitureWithoutOption,
+  ),
 ];
 
-const List<ChoiceOption<CurrencyCode>> _priceTypeOptions = [
-  ChoiceOption(CurrencyCode.uzs, "so'm"),
-  ChoiceOption(CurrencyCode.usd, 'y.e'),
+List<ChoiceOption<CurrencyCode>> _priceTypeOptions(AppLocalizations l10n) => [
+  ChoiceOption(CurrencyCode.uzs, l10n.listingEditorPriceTypeUzsOption),
+  ChoiceOption(CurrencyCode.usd, l10n.listingEditorPriceTypeUsdOption),
 ];
 
-const List<ChoiceOption<AdStage>> _stageOptions = [
-  ChoiceOption(AdStage.active, 'Active'),
-  ChoiceOption(AdStage.sold, 'Sold'),
-  ChoiceOption(AdStage.draft, 'Draft'),
+List<ChoiceOption<AdStage>> _stageOptions(AppLocalizations l10n) => [
+  ChoiceOption(AdStage.active, l10n.listingEditorStageActiveOption),
+  ChoiceOption(AdStage.sold, l10n.listingEditorStageSoldOption),
+  ChoiceOption(AdStage.draft, l10n.listingEditorStageDraftOption),
 ];
 
 class DetailsStep extends StatelessWidget {
@@ -64,13 +83,15 @@ class DetailsStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ChoiceChipGroup<AdType>(
-          label: 'Type',
+          label: l10n.listingEditorTypeFieldLabel,
           keyPrefix: 'listingType',
-          options: _typeOptions,
+          options: _typeOptions(l10n),
           selected: fields.type,
           allowDeselect: false,
           onChanged: (v) {
@@ -80,9 +101,9 @@ class DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<AdCategory>(
-          label: 'Category',
+          label: l10n.listingEditorCategoryFieldLabel,
           keyPrefix: 'listingCategory',
-          options: _categoryOptions,
+          options: _categoryOptions(l10n),
           selected: fields.category,
           allowDeselect: false,
           onChanged: (v) {
@@ -92,9 +113,9 @@ class DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<Repairment>(
-          label: 'Repair',
+          label: l10n.listingEditorRepairFieldLabel,
           keyPrefix: 'listingRepair',
-          options: _repairOptions,
+          options: _repairOptions(l10n),
           selected: fields.repairment,
           allowDeselect: false,
           onChanged: (v) {
@@ -108,7 +129,7 @@ class DetailsStep extends StatelessWidget {
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-rooms'),
-                label: 'Rooms',
+                label: l10n.listingEditorRoomsFieldLabel,
                 controller: fields.rooms,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -119,11 +140,15 @@ class DetailsStep extends StatelessWidget {
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-area'),
-                label: 'Area',
+                label: l10n.listingEditorAreaFieldLabel,
                 controller: fields.area,
-                suffixText: 'm²',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                suffixText: l10n.listingEditorAreaUnitSuffix,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
                 onChanged: onChanged,
               ),
             ),
@@ -135,7 +160,7 @@ class DetailsStep extends StatelessWidget {
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-storey'),
-                label: 'Storey',
+                label: l10n.listingEditorStoreyFieldLabel,
                 controller: fields.storey,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -146,7 +171,7 @@ class DetailsStep extends StatelessWidget {
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-floors'),
-                label: 'Floors',
+                label: l10n.listingEditorFloorsFieldLabel,
                 controller: fields.floors,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -157,9 +182,9 @@ class DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<Furniture>(
-          label: 'Furniture',
+          label: l10n.listingEditorFurnitureFieldLabel,
           keyPrefix: 'listingFurniture',
-          options: _furnitureOptions,
+          options: _furnitureOptions(l10n),
           selected: fields.furniture,
           allowDeselect: false,
           onChanged: (v) {
@@ -171,28 +196,30 @@ class DetailsStep extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           ListingTextField(
             key: const ValueKey('listingField-hashtags'),
-            label: 'Hashtags',
+            label: l10n.listingEditorHashtagsFieldLabel,
             controller: fields.hashtags,
-            hintText: '#new #2024',
+            hintText: l10n.listingEditorHashtagsHint,
             onChanged: onChanged,
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-price'),
-          label: 'Price',
+          label: l10n.listingEditorPriceFieldLabel,
           controller: fields.price,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+          ],
           onChanged: onChanged,
         ),
         const SizedBox(height: 6),
         _PricePreview(fields: fields),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<CurrencyCode>(
-          label: 'Price type',
+          label: l10n.listingEditorPriceTypeFieldLabel,
           keyPrefix: 'listingPriceType',
-          options: _priceTypeOptions,
+          options: _priceTypeOptions(l10n),
           selected: fields.priceType,
           allowDeselect: false,
           onChanged: (v) {
@@ -202,9 +229,9 @@ class DetailsStep extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<AdStage>(
-          label: 'Status',
+          label: l10n.listingEditorStatusFieldLabel,
           keyPrefix: 'listingStatus',
-          options: _stageOptions,
+          options: _stageOptions(l10n),
           selected: fields.stage,
           allowDeselect: false,
           onChanged: (v) {
@@ -225,7 +252,7 @@ class DetailsStep extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-description'),
-          label: 'Description',
+          label: l10n.listingEditorDescriptionFieldLabel,
           required: true,
           controller: fields.description,
           errorText: fields.descriptionError,
@@ -249,21 +276,29 @@ class _PricePreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final value = double.tryParse(fields.price.text.trim());
 
     if (value == null) {
       return Text(
-        'Enter a price to see a preview.',
+        l10n.listingEditorPricePreviewPlaceholder,
         style: type.bodySmall.copyWith(color: colors.faint),
       );
     }
 
-    final suffix = fields.priceType == CurrencyCode.uzs ? "so'm" : 'y.e';
+    final suffix = fields.priceType == CurrencyCode.uzs
+        ? l10n.listingEditorPriceTypeUzsOption
+        : l10n.listingEditorPriceTypeUsdOption;
     return Text(
-      '${Formatters.groupedNumber(value)} $suffix',
-      style: LaCasaTypography.tabular(type.bodySmall).copyWith(color: colors.ink2),
+      l10n.listingEditorPricePreviewText(
+        Formatters.groupedNumber(value),
+        suffix,
+      ),
+      style: LaCasaTypography.tabular(
+        type.bodySmall,
+      ).copyWith(color: colors.ink2),
     );
   }
 }

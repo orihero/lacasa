@@ -61,9 +61,12 @@ class PublishResource {
       method: 'GET',
       path: '/publish/instagram/accounts',
     );
-    final accounts = (json as Map<String, dynamic>)['accounts'] as List<dynamic>?;
+    final accounts =
+        (json as Map<String, dynamic>)['accounts'] as List<dynamic>?;
     return (accounts ?? const [])
-        .map((e) => ConnectedInstagramAccount.fromJson(e as Map<String, dynamic>))
+        .map(
+          (e) => ConnectedInstagramAccount.fromJson(e as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -74,7 +77,8 @@ class PublishResource {
       method: 'POST',
       path: '/publish/instagram/consent',
     );
-    final value = (json as Map<String, dynamic>)['igAssistConsentAt'] as String?;
+    final value =
+        (json as Map<String, dynamic>)['igAssistConsentAt'] as String?;
     return value == null ? null : DateTime.tryParse(value);
   }
 
@@ -140,6 +144,61 @@ class PublishResource {
     );
   }
 
+  /// `POST /publish/ads/:adId/:channel/retry` — replays a `FAILED`
+  /// direct-publish attempt exactly as originally requested (the same
+  /// caption/photos/target account(s), stashed server-side on the failed
+  /// row when it was first attempted) rather than re-deriving a fresh one
+  /// that could silently differ from what the agent already reviewed. No
+  /// request body — there is nothing for the caller to supply beyond which
+  /// ad/channel to retry.
+  ///
+  /// Only [Channel.telegram]/[Channel.instagram] have a real server-to-
+  /// server call to replay. This method does not pre-validate [channel]
+  /// against that (same "let the server be the judge" convention
+  /// [reportYoutube] documents) — passing anything else 400s `code:
+  /// notRetryable` with a channel-specific reason in the message.
+  ///
+  /// Response shape on success matches the direct-publish endpoints:
+  /// [PublishAttemptResponse]. Throws [ApiErrorException] with one of, each
+  /// a genuinely different thing to tell the user — branch on
+  /// [ApiErrorException.code], never treat this as one generic failure:
+  ///  - `code: unknownChannel` (404) — [channel] isn't a real publish
+  ///    channel at all.
+  ///  - `code: notRetryable` (400) — [channel] is youtube/olx/realting.
+  ///  - `code: forbidden` (403) / `code: adNotFound` (404) — ownership. For
+  ///    a real (non-draft) ad this is the same `Ad.agentId` check every
+  ///    other `/publish/*` route uses; for a still-open `draft-<uuid>` ad
+  ///    id (no `Ad` row to check), ownership instead resolves through the
+  ///    stored publish attempt's own requester.
+  ///  - `code: notFailed` (400) — nothing to retry; use the normal publish
+  ///    endpoint ([publishTelegram]/[publishInstagram]) instead.
+  ///  - `code: alreadyPublished` (409) — retrying would post a second copy.
+  ///  - `code: awaitingReview` (409) — a human may still be mid-review of a
+  ///    drafted attempt; the server can't tell whether Publish was already
+  ///    clicked.
+  ///  - `code: retryUnavailable` (409) — a `FAILED` row that predates retry
+  ///    support and has nothing stored to replay; publish again instead.
+  ///  - `code: retryInProgress` (409) — a concurrent retry for the same
+  ///    (ad, channel) pair already won the race.
+  Future<PublishAttemptResponse> retry({
+    required String adId,
+    required Channel channel,
+  }) async {
+    final json = await _client.request(
+      method: 'POST',
+      path: '/publish/ads/$adId/${_retryChannelSegment(channel)}/retry',
+    );
+    // Only telegram/instagram ever succeed here (see this method's doc
+    // comment), so the target/id key pair only ever needs to distinguish
+    // those two — same targetKey/idKey convention [publishTelegram]/
+    // [publishInstagram] already use for their own results[].
+    return PublishAttemptResponse.fromJson(
+      json as Map<String, dynamic>,
+      targetKey: channel == Channel.telegram ? 'chatId' : 'igUserId',
+      idKey: channel == Channel.telegram ? 'messageId' : 'mediaId',
+    );
+  }
+
   /// `GET /publish/ads/:adId/status` — the `publish-status` screen's one
   /// data source. No ownership check server-side beyond being signed in at
   /// all (any authenticated role, including `"user"`, can read any ad's
@@ -180,3 +239,18 @@ class PublishResource {
     );
   }
 }
+
+/// The retry route's `:channel` path segment is the raw lower-case word
+/// (`telegram`/`instagram`/`youtube`/`olx`/`realting`) —
+/// `apps/api/src/services/publishService.js`'s `RETRYABLE_CHANNELS`/
+/// `NON_RETRYABLE_REASONS` are keyed on exactly this set — NOT
+/// [Channel.wire]'s upper-case Postgres-enum form every other publish
+/// route/model on this client uses.
+String _retryChannelSegment(Channel channel) => switch (channel) {
+  Channel.telegram => 'telegram',
+  Channel.instagram => 'instagram',
+  Channel.youtube => 'youtube',
+  Channel.olx => 'olx',
+  Channel.realting => 'realting',
+  Channel.unknown => 'unknown',
+};

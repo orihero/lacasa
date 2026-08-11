@@ -10,9 +10,18 @@
 /// `features/search/data/fixture_search_repository.dart` uses for the
 /// buyer feed — with one deliberate difference: **no unconditional
 /// `stage: "ACTIVE"` scope**. `GET /my/ads` (unlike the public `GET /ads`)
-/// returns every stage for the caller's own ads, and [workAdsFixtures]
-/// itself already includes `ad-1005` (Sold) and `ad-1007` (Draft) for
-/// exactly that reason (see that fixture list's own doc comment).
+/// returns every stage for the caller's own ads unless [stage] narrows it,
+/// and [workAdsFixtures] itself already includes `ad-1005` (Sold) and
+/// `ad-1007` (Draft) for exactly that reason (see that fixture list's own
+/// doc comment).
+///
+/// **Honest offline paging**: [fetchMyAdsPage]'s `cursor` is this fixture's
+/// own opaque stand-in — the matched-and-sorted list's next start index, as
+/// a string — genuinely sliced by [limit] the same shape the real
+/// `{ items, nextCursor }` envelope takes, not a fake "one big page"
+/// shortcut. It only has to agree with itself (this instance's own
+/// deterministic sort), never with the server's actual keyset cursor
+/// format, since a fixture-mode `cursor` is never sent to a real server.
 library;
 
 import '../../../api/api.dart';
@@ -23,21 +32,40 @@ class FixtureMyListingsRepository implements MyListingsRepository {
   const FixtureMyListingsRepository();
 
   @override
-  Future<List<Ad>> fetchMyAds({
+  Future<AdPage> fetchMyAdsPage({
     AdFilters filters = const AdFilters(),
-    AdSort sort = AdSort.newest,
+    AdListSort sort = AdListSort.newest,
+    AdStage? stage,
+    int? limit,
+    String? cursor,
   }) async {
     final matched = workAdsFixtures
-        .where((ad) => _matches(ad, filters))
+        .where(
+          (ad) => _matches(ad, filters) && (stage == null || ad.stage == stage),
+        )
         .toList();
     matched.sort((a, b) {
       return switch (sort) {
-        AdSort.highestPrice => b.price.compareTo(a.price),
-        AdSort.lowestPrice => a.price.compareTo(b.price),
-        AdSort.newest => b.createdAt.compareTo(a.createdAt),
+        AdListSort.newest => b.createdAt.compareTo(a.createdAt),
+        AdListSort.oldest => a.createdAt.compareTo(b.createdAt),
+        AdListSort.priceAsc => a.price.compareTo(b.price),
+        AdListSort.priceDesc => b.price.compareTo(a.price),
+        AdListSort.areaAsc => (a.area ?? 0).compareTo(b.area ?? 0),
+        AdListSort.areaDesc => (b.area ?? 0).compareTo(a.area ?? 0),
       };
     });
-    return matched;
+
+    final start = cursor == null ? 0 : (int.tryParse(cursor) ?? 0);
+    // A forged/garbled cursor is "start from the top" here too, mirroring
+    // the real server's own stated behavior for one (see [AdPage]'s doc
+    // comment) rather than throwing on it.
+    final safeStart = start < 0 || start > matched.length ? 0 : start;
+    final end = limit == null
+        ? matched.length
+        : (safeStart + limit).clamp(0, matched.length);
+    final items = matched.sublist(safeStart, end);
+    final nextCursor = end < matched.length ? end.toString() : null;
+    return AdPage(items: items, nextCursor: nextCursor);
   }
 
   @override

@@ -24,9 +24,9 @@ class SecureLanguageRepository implements LanguageRepository {
       if (raw == null) return AppLanguage.en;
       return AppLanguage.fromWire(raw);
     } catch (_) {
-      // English is both the app's only actual copy (see
-      // `widgets/language_sheet.dart`'s doc comment) and the enum default,
-      // so a storage hiccup and "never set anything" look identical to the
+      // English is the enum default (and `LanguageNotifier`'s own
+      // loading/error fallback — see that class's doc comment), so a
+      // storage hiccup and "never set anything" look identical to the
       // user — neither is worth surfacing.
       return AppLanguage.en;
     }

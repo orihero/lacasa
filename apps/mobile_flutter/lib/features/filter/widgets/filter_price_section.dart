@@ -17,6 +17,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
 
@@ -46,6 +47,7 @@ class FilterPriceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final options = [
       for (final p in filterPriceLadder) FilterOption(p, groupThousands(p)),
     ];
@@ -53,7 +55,7 @@ class FilterPriceSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Min price'),
+        FieldLabel(l10n.filterPriceMinFieldLabel),
         ChoiceChipGroup<int>(
           keyPrefix: 'filterPriceMin',
           options: options,
@@ -62,7 +64,7 @@ class FilterPriceSection extends StatelessWidget {
           isEnabled: (value) => priceMax == null || value <= priceMax!,
         ),
         const SizedBox(height: 14),
-        const FieldLabel('Max price'),
+        FieldLabel(l10n.filterPriceMaxFieldLabel),
         ChoiceChipGroup<int>(
           keyPrefix: 'filterPriceMax',
           options: options,

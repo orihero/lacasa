@@ -11,12 +11,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/filter/filter.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 void main() {
   Widget openButton(Future<void> Function(BuildContext context) onOpen) {
     return ProviderScope(
       child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: Scaffold(
           body: Builder(

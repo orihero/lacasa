@@ -17,32 +17,89 @@
 /// unique to this screen. Flagged in the build report as a minor visual
 /// compromise, not a functional one.
 ///
-/// "Infinite scroll" is real lazy widget building (`ListView.builder` only
-/// builds items as they scroll into view) over the complete, already-
-/// fetched result set — there is no paginated fetch loop to drive, because
-/// `GET /ads` returns everything in one response (see
-/// `search_repository.dart`). This is one of the two honest options the
-/// build spec allows ("chunked reveal ... or just render the full list");
-/// rendering the full list was chosen for simplicity, since chunked reveal
-/// would need to fabricate a fake "page boundary" over data that has none.
+/// **"Infinite scroll" is a real paged fetch loop now**, not just lazy
+/// widget building over an already-complete list — `GET /ads` gained
+/// opt-in keyset paging (`search_repository.dart`), and
+/// [SearchResultsNotifier.loadMore] extends the current page in place.
+/// This widget triggers it two ways:
+///  - [_onScroll] — the normal case: the list is scrolled within
+///    [_loadMoreThreshold] logical pixels of its end.
+///  - [_maybeTopUpShortPage] — the edge case a pure scroll listener misses:
+///    the current page is short enough that its `ListView` never actually
+///    overflows the viewport (`maxScrollExtent == 0`), so no scroll
+///    notification is ever posted even though a next page exists. Checked
+///    once per frame after layout; [SearchResultsNotifier.loadMore] is its
+///    own re-entrant guard (`SearchResultsPage.isLoadingMore`), so calling
+///    it every frame while a short page sits on screen is harmless.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/search_providers.dart';
 
-class SearchResultsList extends ConsumerWidget {
+class SearchResultsList extends ConsumerStatefulWidget {
   const SearchResultsList({super.key, required this.onTapAd});
 
   final void Function(Ad ad) onTapAd;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final results = ref.watch(displayedSearchResultsProvider);
+  ConsumerState<SearchResultsList> createState() => _SearchResultsListState();
+}
+
+class _SearchResultsListState extends ConsumerState<SearchResultsList> {
+  static const double _loadMoreThreshold = 400;
+
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final metrics = _scrollController.position;
+    if (metrics.maxScrollExtent - metrics.pixels < _loadMoreThreshold) {
+      ref.read(searchResultsProvider.notifier).loadMore();
+    }
+  }
+
+  void _maybeTopUpShortPage(SearchResultsPage page) {
+    // `loadMoreFailed` is the load-bearing guard here: without it, a failed
+    // top-up leaves `nextCursor` unchanged (by design — see
+    // `SearchResultsNotifier.loadMore`'s doc comment), so the very next
+    // frame would see the same "short page, more to fetch" shape and retry
+    // immediately — forever, hammering a failing endpoint every frame
+    // instead of waiting for the user to tap the footer's own Retry (real
+    // bug, caught by a widget test timing out on `pumpAndSettle`).
+    if (page.nextCursor == null || page.isLoadingMore || page.loadMoreFailed) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      if (_scrollController.position.maxScrollExtent <= 0) {
+        ref.read(searchResultsProvider.notifier).loadMore();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final results = ref.watch(searchResultsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return results.when(
       loading: () => ListView.separated(
@@ -64,41 +121,54 @@ class SearchResultsList extends ConsumerWidget {
         children: [
           FullWidthState(
             icon: Icons.error_outline_rounded,
-            message: "Couldn't load listings.",
-            actionLabel: 'Retry',
+            message: l10n.searchResultsRetryMessage,
+            actionLabel: l10n.sharedRetryLabel,
             onAction: () => ref.invalidate(searchResultsProvider),
           ),
         ],
       ),
-      data: (ads) {
-        if (ads.isEmpty) {
+      data: (page) {
+        if (page.items.isEmpty) {
           return ListView(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenGutter,
             ),
-            children: const [
+            children: [
               FullWidthState(
                 icon: Icons.search_off_rounded,
-                message: 'No listings found.',
+                message: l10n.searchResultsEmptyMessage,
               ),
             ],
           );
         }
 
+        _maybeTopUpShortPage(page);
+        final showFooter = page.isLoadingMore || page.loadMoreFailed;
+
         return ListView.separated(
           key: const ValueKey('searchResultsListView'),
+          controller: _scrollController,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.screenGutter,
             vertical: AppSpacing.base,
           ),
-          itemCount: ads.length,
+          itemCount: page.items.length + (showFooter ? 1 : 0),
           separatorBuilder: (context, index) =>
               const SizedBox(height: AppSpacing.lg),
           itemBuilder: (context, index) {
-            final ad = ads[index];
+            if (index >= page.items.length) {
+              return LoadMoreFooter(
+                failed: page.loadMoreFailed,
+                onRetry: () =>
+                    ref.read(searchResultsProvider.notifier).loadMore(),
+                retryKey: const ValueKey('searchLoadMoreRetry'),
+                spinnerKey: const ValueKey('searchLoadMoreSpinner'),
+              );
+            }
+            final ad = page.items[index];
             return Align(
               alignment: Alignment.centerLeft,
-              child: FullListingCard(ad: ad, onTap: () => onTapAd(ad)),
+              child: FullListingCard(ad: ad, onTap: () => widget.onTapAd(ad)),
             );
           },
         );
@@ -106,3 +176,4 @@ class SearchResultsList extends ConsumerWidget {
     );
   }
 }
+

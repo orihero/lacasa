@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../formatters/listing_detail_formatters.dart';
@@ -32,7 +33,7 @@ class ListingPriceFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Asking price',
+            AppLocalizations.of(context).listingAskingPriceLabel,
             style: type.bodySmall.copyWith(color: colors.muted),
           ),
           const SizedBox(height: 1),

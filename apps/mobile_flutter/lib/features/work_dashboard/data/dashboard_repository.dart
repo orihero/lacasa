@@ -3,24 +3,25 @@
 /// [LiveDashboardRepository] (the real [LaCasaApi]) — see `dashboard_mode.dart`
 /// for which one the app wires up by default and how to switch.
 ///
-/// **Why five methods instead of one "dashboard snapshot" call.** The build
+/// **Why six methods instead of one "dashboard snapshot" call.** The build
 /// contract's Riverpod convention (`WORK_TAB_CONTRACT.md` §6) asks for
 /// "independent providers per independently-failable section" — a failing
 /// coworker fetch must not blank the ad stat tiles. A single aggregate method
 /// would force one `AsyncValue` over data that genuinely comes from up to
-/// three different server round trips (`/statistics/ads`, `/leads`,
-/// `/coworkers`); five thin methods let `state/dashboard_providers.dart`
-/// build one `AsyncNotifier` per method instead.
+/// four different server round trips (`/statistics/ads`,
+/// `/statistics/ads/series`, `/leads`, `/coworkers`); six thin methods let
+/// `state/dashboard_providers.dart` build one `AsyncNotifier` per method
+/// instead.
 ///
-/// **No method here returns a bucketed daily series.** `GET /statistics/ads`
-/// only ever returns period totals (contract ruling 7.1) — there is nothing
-/// to name a method after. The fixture-only 12-point series
-/// (`WorkDashboardChartFixture`, `lib/shared/fixtures/work_seed_data.dart`)
-/// has no wire shape at all (see that file's own doc comment), so it is read
-/// directly by `widgets/ads_statistics_panel.dart` from the shared fixtures
-/// export rather than routed through this repository abstraction — the same
-/// judgment call the fixtures file itself documents for
-/// `WorkDashboardChartPoint`.
+/// **[fetchAdsSeries] closes contract ruling 7.1's old gap.** `GET
+/// /statistics/ads` only ever returns period totals — that's still true, and
+/// [fetchAdsStatistics] still backs the stat tiles from it. But `GET
+/// /statistics/ads/series` now exists and returns a real, server-bucketed
+/// day/hour series, so `widgets/ads_statistics_panel.dart` no longer needs to
+/// read `WorkDashboardChartFixture` directly nor degrade live mode to a
+/// 2-bar comparison — both modes plot a real [AdsSeries] through this one
+/// method, [FixtureDashboardRepository] building its [AdsSeries] from the
+/// same `workDashboardChartFixture` seed points it always used.
 library;
 
 import '../../../api/api.dart';
@@ -30,6 +31,13 @@ abstract class DashboardRepository {
   /// totals. The one dashboard figure that genuinely responds to the
   /// time-range selector server-side (ruling 7.1).
   Future<AdsStatistics> fetchAdsStatistics(StatisticsFilter filter);
+
+  /// `GET /statistics/ads/series?filterType=` — the bucketed sibling of
+  /// [fetchAdsStatistics], backing the "Ads statistics" chart
+  /// (`widgets/ads_statistics_panel.dart`) with real per-bucket
+  /// created/sold counts instead of a single pair of totals. See this
+  /// file's own doc comment for why this closes contract ruling 7.1.
+  Future<AdsSeries> fetchAdsSeries(StatisticsFilter filter);
 
   /// `GET /statistics/coworkers`-shaped raw events, always the full
   /// unfiltered history (ruling 7.2 — this endpoint ignores any date range).

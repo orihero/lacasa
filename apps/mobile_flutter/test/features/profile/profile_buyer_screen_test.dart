@@ -15,10 +15,13 @@ import 'package:lacasa_mobile/features/language/language.dart';
 import 'package:lacasa_mobile/features/profile/profile.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_link_launcher.dart';
 import '../auth/support/fake_auth_repository.dart';
 import '../language/support/fake_language_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/profile_test_data.dart';
 
 void main() {
@@ -45,6 +48,7 @@ void main() {
     WidgetTester tester, {
     required AuthUser user,
     FakeAuthRepository? authRepository,
+    LinkLauncher? linkLauncher,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -53,6 +57,13 @@ void main() {
         authRepositoryProvider.overrideWithValue(
           authRepository ?? FakeAuthRepository(),
         ),
+        // Only overridden by the "Register as Agent" tests below — every
+        // other test leaves the real `UrlLauncherLinkLauncher` in place,
+        // which simply fails closed (see its own doc comment) under the
+        // widget-test harness's unmocked plugin channel, so it never
+        // interferes with assertions that don't touch this row.
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
       ],
     );
     addTearDown(container.dispose);
@@ -85,6 +96,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -167,16 +180,47 @@ void main() {
     testWidgets('Register as Agent copies the form link and shows a toast', (
       tester,
     ) async {
-      await pumpScreen(tester, user: buyer);
+      // The row now tries a real external-browser launch first (see
+      // `profile_buyer_screen.dart`'s doc comment) and only falls back to
+      // copy-and-toast when nothing on the device can open the link — a
+      // `FakeLinkLauncher(result: false)` is how this suite forces that
+      // fallback path deterministically, same pattern as
+      // `connected_accounts_screen_test.dart`'s "falls back to copying"
+      // case.
+      final launcher = FakeLinkLauncher(result: false);
+      await pumpScreen(tester, user: buyer, linkLauncher: launcher);
 
       await tester.tap(find.text('Register as Agent'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
+      expect(launcher.opened, [
+        Uri.parse('https://forms.gle/1Kr71PzWjqqCQcVTA'),
+      ]);
       expect(
         find.textContaining('Registration form link copied'),
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'Register as Agent opens the form in the external browser when one is '
+      'available, and never shows the copy toast',
+      (tester) async {
+        final launcher = FakeLinkLauncher(result: true);
+        await pumpScreen(tester, user: buyer, linkLauncher: launcher);
+
+        await tester.tap(find.text('Register as Agent'));
+        await tester.pumpAndSettle();
+
+        expect(launcher.opened, [
+          Uri.parse('https://forms.gle/1Kr71PzWjqqCQcVTA'),
+        ]);
+        expect(
+          find.textContaining('Registration form link copied'),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets('Logout, confirmed, signs out and swaps the header back to the '
         'signed-out prompt row set', (tester) async {

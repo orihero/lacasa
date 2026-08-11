@@ -21,19 +21,25 @@
 /// route stack — exactly the defensive reading `photo_gallery`'s route does
 /// with its own untyped `extra`. It is never preferred over live state.
 ///
-/// ## What it does not do
+/// ## Clustering
 ///
-/// Nothing here clusters overlapping pins. At Tashkent-wide zoom a dense
-/// result set will overlap, and the honest fix is a clustering package, not
-/// a hand-rolled approximation — flagged in the README rather than faked.
+/// Overlapping pins are merged by `flutter_map_marker_cluster` rather than
+/// a hand-rolled density approximation — README.md flagged the honest fix
+/// as "a clustering package, not a hand-rolled approximation" and this is
+/// that package, restyled in this app's tokens via [MapClusterMarker]. A
+/// tap zooms to the cluster's bounds (the package's own default,
+/// `zoomToBoundsOnClick`); a tap on a lone pin still reaches
+/// [MapPinMarker]'s own `onTap` directly — see `markerChildBehavior` below.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/map/map_attribution.dart';
 import '../../../shared/map/map_defaults.dart';
@@ -42,6 +48,7 @@ import '../../../theme/theme.dart';
 import '../../filter/filter.dart';
 import '../../search/state/search_providers.dart';
 import '../data/map_pin.dart';
+import 'map_cluster_marker.dart';
 import 'map_pin_marker.dart';
 import 'map_preview_card.dart';
 
@@ -162,22 +169,46 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
               ),
               children: [
                 ref.watch(mapTileLayerProvider),
-                MarkerLayer(
-                  markers: [
-                    for (final pin in pins)
-                      Marker(
-                        key: ValueKey('mapPin-${pin.ad.id}'),
-                        point: pin.point,
-                        width: MapPinMetrics.width,
-                        height: MapPinMetrics.height,
-                        child: MapPinMarker(
-                          ad: pin.ad,
-                          selected: pin.ad.id == _selectedAdId,
-                          onTap: () =>
-                              setState(() => _selectedAdId = pin.ad.id),
+                MarkerClusterLayerWidget(
+                  options: MarkerClusterLayerOptions(
+                    // The key lives on the child (MapPinMarker), not on the
+                    // Marker itself: the cluster package stamps
+                    // `Marker.key` onto two different internal wrapper
+                    // widgets it builds per pin, so a `find.byKey` in tests
+                    // would match both and `findsOneWidget` would fail.
+                    // Keying the actual visible widget keeps one key, one
+                    // match.
+                    markers: [
+                      for (final pin in pins)
+                        Marker(
+                          point: pin.point,
+                          width: MapPinMetrics.width,
+                          height: MapPinMetrics.height,
+                          child: MapPinMarker(
+                            key: ValueKey('mapPin-${pin.ad.id}'),
+                            ad: pin.ad,
+                            selected: pin.ad.id == _selectedAdId,
+                            onTap: () =>
+                                setState(() => _selectedAdId = pin.ad.id),
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                    // Same padding `cameraFitFor` uses for the initial
+                    // multi-pin fit, so a cluster tap frames its bounds the
+                    // same way the screen frames the whole result set.
+                    padding: const EdgeInsets.all(56),
+                    computeSize: (markers) =>
+                        Size.square(MapClusterMetrics.sizeFor(markers.length)),
+                    // MapPinMarker already carries its own GestureDetector
+                    // (selection has to work the same whether a pin ever
+                    // clusters or not); this stops the package from
+                    // wrapping it in a second, competing one. Cluster taps
+                    // are unaffected — that gesture lives in ClusterWidget,
+                    // one level up, not on markerChildBehavior.
+                    markerChildBehavior: true,
+                    builder: (context, markers) =>
+                        MapClusterMarker(count: markers.length),
+                  ),
                 ),
                 // OSM's licence requires visible attribution — not optional
                 // chrome. Sits above the pins so it is never covered.
@@ -187,7 +218,12 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
           ),
           _MapTopBar(onBack: _close, onShowList: _close),
           if (results.isLoading && ads.isEmpty)
-            const Positioned.fill(child: _MapLoadingVeil()),
+            const Positioned.fill(child: _MapLoadingVeil())
+          else if (pins.isEmpty)
+            // An empty map centred on Tashkent with no pins and no
+            // explanation reads as broken, not as "no matches" — see
+            // README.md's map-view gap note this closes.
+            Positioned.fill(child: _MapEmptyState(hasResults: ads.isNotEmpty)),
           Positioned(
             left: AppSpacing.screenGutter,
             right: AppSpacing.screenGutter,
@@ -232,6 +268,7 @@ class _MapTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Positioned(
       top: AppSpacing.base,
@@ -243,7 +280,7 @@ class _MapTopBar extends StatelessWidget {
           children: [
             _RoundGlassButton(
               icon: Icons.arrow_back_rounded,
-              semanticLabel: 'Back',
+              semanticLabel: l10n.mapNavBackSemanticsLabel,
               onTap: onBack,
             ),
             const SizedBox(width: AppSpacing.base),
@@ -254,14 +291,14 @@ class _MapTopBar extends StatelessWidget {
                 vertical: AppSpacing.md,
               ),
               child: Text(
-                'Map',
+                l10n.mapTitleLabel,
                 style: type.rowTitle.copyWith(color: Colors.white),
               ),
             ),
             const Spacer(),
             _RoundGlassButton(
               icon: Icons.format_list_bulleted_rounded,
-              semanticLabel: 'Show list',
+              semanticLabel: l10n.mapShowListSemanticsLabel,
               onTap: onShowList,
             ),
           ],
@@ -291,6 +328,7 @@ class _MapFooterRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Row(
       children: [
@@ -302,8 +340,8 @@ class _MapFooterRow extends StatelessWidget {
           ),
           child: Text(
             pinnedCount == totalCount
-                ? '$pinnedCount on the map'
-                : '$pinnedCount of $totalCount on the map',
+                ? l10n.mapPinnedAllCountLabel(pinnedCount)
+                : l10n.mapPinnedPartialCountLabel(pinnedCount, totalCount),
             style: type.micro.copyWith(color: Colors.white),
           ),
         ),
@@ -339,7 +377,7 @@ class _MapFooterRow extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Text(
-                    'Filters',
+                    l10n.mapFiltersButtonLabel,
                     style: type.label.copyWith(color: Colors.white),
                   ),
                 ],
@@ -366,6 +404,74 @@ class _MapLoadingVeil extends StatelessWidget {
     return ColoredBox(
       color: colors.screen.withValues(alpha: 0.72),
       child: const Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+/// Shown centred over the map once loading has settled and there is
+/// genuinely nothing to plot — a silent map at the Tashkent default reads as
+/// broken, not as "no matches", and the footer's "0 of N on the map" chip
+/// alone is too easy to miss against a full screen of empty tiles.
+///
+/// Deliberately a small floating card rather than [FullWidthState]: that
+/// widget assumes a scrollable list's own background, and the surface here
+/// is map imagery a plain icon+text pair would be unreadable against.
+class _MapEmptyState extends StatelessWidget {
+  const _MapEmptyState({required this.hasResults});
+
+  /// True when the search returned listings but none carried coordinates;
+  /// false when the search itself returned nothing. "No matches" and
+  /// "matches with no saved location" are different problems and get
+  /// different copy.
+  final bool hasResults;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(AppRadii.cardLg),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  hasResults
+                      ? Icons.location_off_rounded
+                      : Icons.search_off_rounded,
+                  color: colors.faint,
+                  size: 32,
+                ),
+                const SizedBox(height: AppSpacing.base),
+                Text(
+                  hasResults
+                      ? AppLocalizations.of(
+                          context,
+                        ).mapNoLocationResultsMessage
+                      : AppLocalizations.of(context).mapNoResultsMessage,
+                  textAlign: TextAlign.center,
+                  style: type.body.copyWith(color: colors.ink2),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

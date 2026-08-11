@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../data/gallery_item.dart';
 
@@ -168,8 +169,10 @@ class _UnsupportedMediaTile extends StatelessWidget {
             const SizedBox(height: AppSpacing.base),
             Text(
               isVideo
-                  ? "Video preview isn't available in the gallery yet."
-                  : "This media type can't be previewed.",
+                  ? AppLocalizations.of(context).galleryVideoUnsupportedMessage
+                  : AppLocalizations.of(
+                      context,
+                    ).galleryUnsupportedMediaMessage,
               textAlign: TextAlign.center,
               style: type.body.copyWith(color: Colors.white70),
             ),

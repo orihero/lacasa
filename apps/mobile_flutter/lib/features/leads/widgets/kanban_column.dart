@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import 'kanban_card.dart';
@@ -59,7 +60,7 @@ class KanbanColumn extends StatelessWidget {
             child: leads.isEmpty
                 ? Center(
                     child: Text(
-                      'No leads in this stage yet.',
+                      AppLocalizations.of(context).leadsEmptyColumnMessage,
                       style: type.bodySmall.copyWith(color: colors.faint),
                     ),
                   )

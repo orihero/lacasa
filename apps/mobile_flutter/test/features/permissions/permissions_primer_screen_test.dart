@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/features/permissions/permissions.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
@@ -54,6 +55,8 @@ void main() {
             permissionGatewayProvider.overrideWithValue(gateway),
         ],
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -129,13 +132,21 @@ void main() {
     });
 
     testWidgets(
-      'with no permission backend the row says so rather than implying a prompt',
+      'with no permission backend the Notifications row says so rather '
+      'than implying a prompt',
       (tester) async {
-        // The shipped default — see permission_gateway.dart on why no
-        // manifest declarations were added ahead of a feature using them.
+        // The shipped default is `PermissionHandlerGateway`, which is real
+        // for Camera & Photos now that the platform phase added the plugin
+        // and its manifest/Info.plist declarations — tapping that row's
+        // "Allow" would hit the actual `permission_handler` plugin, not the
+        // path this test is about. Notifications stays deliberately
+        // unbacked (`POST_NOTIFICATIONS` isn't declared — see
+        // permission_gateway.dart), so its "Allow" is the one that still
+        // exercises the unavailable state honestly, regardless of the
+        // gateway wired in.
         await pumpPrimer(tester);
 
-        await tester.tap(find.text('Allow').first);
+        await tester.tap(find.text('Allow').at(1));
         await tester.pumpAndSettle();
 
         expect(find.text('Not available in this build yet'), findsOneWidget);

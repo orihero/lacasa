@@ -68,6 +68,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -82,12 +83,14 @@ enum _RealtorKind { solo, agency }
 /// `apps/web/src/routes/register/register.jsx`'s `TEAM_SIZE_LABELS` — see
 /// this file's doc comment. `enums.dart` (owned outside this task) has no
 /// display-label getter of its own, only [TeamSize.wire], so this mapping
-/// lives here rather than being invented a second time elsewhere.
-String _teamSizeLabel(TeamSize size) => switch (size) {
-  TeamSize.justMe => 'Just me for now',
-  TeamSize.twoToFive => '2–5',
-  TeamSize.sixToFifteen => '6–15',
-  TeamSize.sixteenPlus => '16+',
+/// lives here rather than being invented a second time elsewhere. Takes
+/// [AppLocalizations] rather than a `BuildContext` — a pure function fed the
+/// `l10n` its one call site (this screen's `build`) already has in hand.
+String _teamSizeLabel(AppLocalizations l10n, TeamSize size) => switch (size) {
+  TeamSize.justMe => l10n.authRegisterTeamSizeJustMeLabel,
+  TeamSize.twoToFive => l10n.authRegisterTeamSizeTwoToFiveLabel,
+  TeamSize.sixToFifteen => l10n.authRegisterTeamSizeSixToFifteenLabel,
+  TeamSize.sixteenPlus => l10n.authRegisterTeamSizeSixteenPlusLabel,
   TeamSize.unknown => throw StateError('TeamSize.unknown has no label'),
 };
 
@@ -144,7 +147,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   /// Validates every field the way `contact_sheet.dart` does: emptiness
   /// before format, one form-level message for whichever check fails
   /// first — §3.13 gives no per-field copy of its own to split them by.
-  bool _validate() {
+  bool _validate(AppLocalizations l10n) {
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     final email = _email.text.trim();
@@ -158,21 +161,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password.isEmpty ||
         (_isAgency && agencyName.isEmpty)) {
       setState(() {
-        _formError = 'Required fields are not filled';
+        _formError = l10n.authRegisterRequiredFieldsError;
         _emailError = null;
       });
       return false;
     }
     if (!Formatters.isValidUzPhone(phone)) {
       setState(() {
-        _formError = 'Invalid phone number format';
+        _formError = l10n.authRegisterInvalidPhoneError;
         _emailError = null;
       });
       return false;
     }
     if (_isAgency && officePhone.isNotEmpty && !Formatters.isValidUzPhone(officePhone)) {
       setState(() {
-        _formError = 'Invalid phone number format';
+        _formError = l10n.authRegisterInvalidPhoneError;
         _emailError = null;
       });
       return false;
@@ -186,7 +189,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   Future<void> _submit() async {
     if (_submitting) return;
-    if (!_validate()) return;
+
+    // Captured once, up front — this method crosses an `await`, and the
+    // toast fires right after a `context.go`, so the lookup happens while
+    // `context` is unambiguously still attached (same reasoning
+    // `login_screen.dart`'s `_submit` documents for its own `l10n`).
+    final l10n = AppLocalizations.of(context);
+    if (!_validate(l10n)) return;
 
     final isRealtor = _isRealtor;
     final RealtorApplicationInput? realtor = !isRealtor
@@ -219,8 +228,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         SnackBar(
           content: Text(
             isRealtor
-                ? "Account created. We'll verify your realtor profile shortly."
-                : 'User successfully created.',
+                ? l10n.authRegisterRealtorSuccessToast
+                : l10n.authRegisterBuyerSuccessToast,
           ),
         ),
       );
@@ -232,25 +241,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           _emailError = e.message;
           _formError = null;
         } else {
-          _formError = _messageFor(e);
+          _formError = _messageFor(l10n, e);
           _emailError = null;
         }
       });
     }
   }
 
-  static String _messageFor(ApiException e) {
+  /// Takes [AppLocalizations] as a parameter rather than a `BuildContext` —
+  /// see `agent_review_sheet.dart`'s identically-shaped `_messageFor` for why.
+  static String _messageFor(AppLocalizations l10n, ApiException e) {
     if (e is ApiErrorException) return e.message;
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.authRegisterNetworkErrorMessage;
     }
-    return 'Something went wrong';
+    return l10n.authRegisterGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -275,13 +287,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const AuthHeroIcon(icon: Icons.person_outline_rounded),
                   const SizedBox(height: AppSpacing.lg),
                   Text(
-                    'Create your account',
+                    l10n.authRegisterHeading,
                     style: type.displayLead.copyWith(color: colors.ink),
                   ),
                   const SizedBox(height: AppSpacing.section),
 
                   Text(
-                    "I'm signing up as".toUpperCase(),
+                    l10n.authRegisterAccountTypeLabel.toUpperCase(),
                     style: type.label.copyWith(color: colors.muted),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -290,8 +302,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Expanded(
                         child: AuthPickCard(
                           icon: Icons.house_rounded,
-                          title: 'Buyer',
-                          subtitle: 'Browse and save homes',
+                          title: l10n.authRegisterBuyerCardTitle,
+                          subtitle: l10n.authRegisterBuyerCardSubtitle,
                           selected: !_isRealtor,
                           onTap: () =>
                               setState(() => _accountType = _AccountType.buyer),
@@ -301,8 +313,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       Expanded(
                         child: AuthPickCard(
                           icon: Icons.work_outline_rounded,
-                          title: 'Realtor',
-                          subtitle: 'Post listings, work leads',
+                          title: l10n.authRegisterRealtorCardTitle,
+                          subtitle: l10n.authRegisterRealtorCardSubtitle,
                           selected: _isRealtor,
                           onTap: () => setState(
                             () => _accountType = _AccountType.realtor,
@@ -314,14 +326,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   const SizedBox(height: AppSpacing.section),
 
                   AuthField(
-                    label: 'Full name',
+                    label: l10n.authRegisterFullNameFieldLabel,
                     controller: _fullName,
                     keyboardType: TextInputType.name,
                     textInputAction: TextInputAction.next,
                   ),
                   const SizedBox(height: AppSpacing.base),
                   AuthField(
-                    label: 'Phone number',
+                    label: l10n.authRegisterPhoneFieldLabel,
                     controller: _phone,
                     hintText: '+998901234567',
                     keyboardType: TextInputType.phone,
@@ -332,7 +344,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.base),
                   AuthField(
-                    label: 'Email',
+                    label: l10n.authRegisterEmailFieldLabel,
                     controller: _email,
                     errorText: _emailError,
                     keyboardType: TextInputType.emailAddress,
@@ -340,9 +352,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                   const SizedBox(height: AppSpacing.base),
                   AuthField(
-                    label: 'Password',
+                    label: l10n.authRegisterPasswordFieldLabel,
                     controller: _password,
-                    hintText: 'At least 6 characters',
+                    hintText: l10n.authRegisterPasswordHint,
                     obscureText: _obscurePassword,
                     textInputAction: _isRealtor
                         ? TextInputAction.next
@@ -359,22 +371,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   if (_isRealtor) ...[
                     const SizedBox(height: AppSpacing.section),
                     Text(
-                      'Realtor type'.toUpperCase(),
+                      l10n.authRegisterRealtorTypeLabel.toUpperCase(),
                       style: type.label.copyWith(color: colors.muted),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Row(
+                    // `Wrap`, not `Row` — matches the team-size chip row
+                    // below (same file). A bare `Row` fit both chips'
+                    // English labels ("Solo agent"/"Agency") at every
+                    // supported width, but Russian's "Частный
+                    // риелтор"/"Агентство" overflows the 360px-wide layout
+                    // by 16px (found by this run's ru/uz overflow pass —
+                    // see `test/features/auth/widgets/register_screen_test
+                    // .dart`'s "under ru/uz" group); `Wrap` lets the second
+                    // chip drop to its own line instead of clipping.
+                    Wrap(
+                      spacing: AppSpacing.md,
+                      runSpacing: AppSpacing.md,
                       children: [
                         AuthChip(
-                          label: 'Solo agent',
+                          label: l10n.authRegisterSoloAgentChipLabel,
                           selected: !_isAgency,
                           onTap: () => setState(
                             () => _realtorKind = _RealtorKind.solo,
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
                         AuthChip(
-                          label: 'Agency',
+                          label: l10n.authRegisterAgencyChipLabel,
                           selected: _isAgency,
                           onTap: () => setState(
                             () => _realtorKind = _RealtorKind.agency,
@@ -385,19 +407,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     const SizedBox(height: AppSpacing.base),
                     if (!_isAgency)
                       Text(
-                        'You work under your own name. Your workspace '
-                        'opens on Statistics with your own listings and '
-                        'leads; Coworkers stays hidden until you switch to '
-                        'an agency.',
+                        l10n.authRegisterSoloAgentHint,
                         style: type.bodySmall.copyWith(color: colors.muted),
                       )
                     else ...[
                       AuthField(
-                        label: 'Agency name',
+                        label: l10n.authRegisterAgencyNameFieldLabel,
                         controller: _agencyName,
-                        helperText:
-                            "Shown on the team's listings in place of the "
-                            "agent's own name.",
+                        helperText: l10n.authRegisterAgencyNameHelperText,
                         keyboardType: TextInputType.text,
                         textInputAction: TextInputAction.next,
                       ),
@@ -411,7 +428,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         // (required; …) right above, which is rendered bare.
                         // Appending one and not the other was inconsistent
                         // with both the spec and its own sibling.
-                        label: 'Office phone',
+                        label: l10n.authRegisterOfficePhoneFieldLabel,
                         controller: _officePhone,
                         hintText: '+998712001020',
                         keyboardType: TextInputType.phone,
@@ -423,7 +440,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: AppSpacing.base),
                       Text(
-                        'Team size'.toUpperCase(),
+                        l10n.authRegisterTeamSizeLabel.toUpperCase(),
                         style: type.label.copyWith(color: colors.muted),
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -434,7 +451,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           for (final size in TeamSize.values)
                             if (size != TeamSize.unknown)
                               AuthChip(
-                                label: _teamSizeLabel(size),
+                                label: _teamSizeLabel(l10n, size),
                                 selected: _teamSize == size,
                                 onTap: () =>
                                     setState(() => _teamSize = size),
@@ -443,18 +460,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       ),
                       const SizedBox(height: AppSpacing.base),
                       Text(
-                        'You sign up as the agency owner: invite coworkers, '
-                        "assign leads to them, and see the whole team's "
-                        'statistics. Coworkers see only what you assign.',
+                        l10n.authRegisterAgencyOwnerHint,
                         style: type.bodySmall.copyWith(color: colors.muted),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.base),
-                    const AuthCallout(
-                      message:
-                          'Realtor accounts are verified before the Work '
-                          "tab unlocks. We'll call the number above — "
-                          'usually within one business day.',
+                    AuthCallout(
+                      message: l10n.authRegisterVerificationCalloutMessage,
                     ),
                   ],
 
@@ -465,14 +477,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
                   const SizedBox(height: AppSpacing.section),
                   AuthPrimaryButton(
-                    label: _isRealtor ? 'Create realtor account' : 'Sign up',
+                    label: _isRealtor
+                        ? l10n.authRegisterRealtorSubmitButtonLabel
+                        : l10n.authRegisterBuyerSubmitButtonLabel,
                     submitting: _submitting,
                     onTap: _submit,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Center(
                     child: AuthFooterLink(
-                      text: 'Already have an account? Sign in',
+                      text: l10n.authRegisterFooterLinkText,
                       onTap: () => context.push(RoutePaths.login),
                     ),
                   ),

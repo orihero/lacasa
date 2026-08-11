@@ -40,6 +40,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
@@ -120,7 +121,7 @@ class _NavRow extends StatelessWidget {
         children: [
           Semantics(
             button: true,
-            label: 'Back',
+            label: AppLocalizations.of(context).savedListingsNavBackSemanticsLabel,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
@@ -138,7 +139,7 @@ class _NavRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              'Saved Listings',
+              AppLocalizations.of(context).savedListingsScreenTitle,
               overflow: TextOverflow.ellipsis,
               style: type.navTitle.copyWith(color: colors.ink),
             ),
@@ -177,7 +178,7 @@ class _SignedOutState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.base),
             Text(
-              'Sign in to see your saved listings.',
+              AppLocalizations.of(context).savedListingsSignInPromptMessage,
               textAlign: TextAlign.center,
               style: type.body.copyWith(color: colors.ink2),
             ),
@@ -194,7 +195,7 @@ class _SignedOutState extends StatelessWidget {
                   borderRadius: AppRadii.pill,
                 ),
                 child: Text(
-                  'Sign In',
+                  AppLocalizations.of(context).savedListingsSignInButtonLabel,
                   style: type.label.copyWith(color: colors.pillInk),
                 ),
               ),

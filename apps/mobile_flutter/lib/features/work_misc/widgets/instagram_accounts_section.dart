@@ -2,19 +2,28 @@
 /// "Create Instagram post" toggle, one card per connected account (with a
 /// per-card **Disconnect** button), and the **Connect Instagram** button.
 ///
-/// **No in-app WebView, ever** (SCREENS.md §21, contract §5.3). Tapping
-/// Connect fetches the OAuth URL and copies it to the clipboard — the same
-/// clipboard-instead-of-`url_launcher` pattern every other external-link
-/// affordance in this app already uses (`profile_buyer_screen.dart`'s
-/// "Register as Agent" row, `listing_detail_nav.dart`'s share icon). This
-/// means this build **cannot** detect the OAuth callback completing, so
+/// **No in-app WebView, ever** (SCREENS.md §21, contract §5.3: "opens the
+/// OS system browser / Custom Tabs / SFSafariViewController — never an
+/// in-app WebView, per Meta OAuth restrictions"). Tapping Connect fetches
+/// the OAuth URL and hands it to [LinkLauncher.open] with
+/// [UrlLauncherLinkLauncher.open]'s `LaunchMode.externalApplication` — the
+/// compliant choice: it leaves the app entirely for the device's default
+/// browser, which is what satisfies Meta's policy, as opposed to
+/// `webview_flutter` (in this app's `pubspec.yaml` for other screens'
+/// non-OAuth needs) which would render Instagram's login inside our own
+/// process and is exactly what the policy forbids.
+///
+/// This build still **cannot** detect the OAuth callback completing — the
+/// browser is a separate app now, not a webview this screen owns — so
 /// §21's exact "Instagram account connected!" success toast (written for a
-/// build that gets an in-app callback) is not reachable here — the success
-/// copy below is deliberately different and honest about what actually just
-/// happened (a link was copied, not a connection completed). The failure
-/// toast — "Instagram connection failed — please try again." — is spec
-/// copy verbatim, reused for "couldn't even fetch the sign-in link," the
-/// closest real failure this flow has to the spec's OAuth-return failure.
+/// build that gets an in-app callback) is not reachable here. The success
+/// copy below stays honest about what actually just happened (the browser
+/// was opened, not that a connection completed). If nothing on the device
+/// can open the link, this falls back to copying it instead, saying so.
+/// The failure toast — "Instagram connection failed — please try again." —
+/// is spec copy verbatim, reused for "couldn't even fetch the sign-in
+/// link," the closest real failure this flow has to the spec's
+/// OAuth-return failure.
 library;
 
 import 'package:flutter/material.dart';
@@ -22,6 +31,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/platform/link_launcher.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/connected_accounts_providers.dart';
@@ -34,13 +45,14 @@ class InstagramAccountsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(instagramAccountsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ChannelToggleRow(
           key: const ValueKey('connectedAccountsInstagramToggle'),
-          title: 'Create Instagram post',
+          title: l10n.connectedAccountsInstagramToggleTitle,
           on: accountsAsync.value?.isNotEmpty ?? false,
         ),
         const SizedBox(height: AppSpacing.base),
@@ -55,7 +67,7 @@ class InstagramAccountsSection extends ConsumerWidget {
           ),
           error: (error, stackTrace) => RailRetryCard(
             width: double.infinity,
-            message: "Couldn't load your Instagram accounts.",
+            message: l10n.connectedAccountsInstagramLoadErrorMessage,
             onRetry: () => ref.invalidate(instagramAccountsProvider),
           ),
           data: (accounts) => accounts.isEmpty
@@ -98,14 +110,15 @@ class _InstagramAccountCardState
 
   Future<void> _disconnect() async {
     setState(() => _disconnecting = true);
+    final l10n = AppLocalizations.of(context);
     try {
       await LaCasaToast.run(
         context: context,
         action: () => ref
             .read(instagramAccountsProvider.notifier)
             .disconnect(widget.account.igUserId),
-        pending: 'Disconnecting',
-        success: 'Instagram account disconnected.',
+        pending: l10n.connectedAccountsDisconnectingToastLabel,
+        success: l10n.connectedAccountsDisconnectedToastMessage,
       );
     } catch (_) {
       // LaCasaToast.run already showed the error toast; nothing else to do.
@@ -119,6 +132,7 @@ class _InstagramAccountCardState
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final account = widget.account;
+    final l10n = AppLocalizations.of(context);
 
     return GlassSurface(
       variant: GlassVariant.onSurface,
@@ -131,7 +145,7 @@ class _InstagramAccountCardState
             children: [
               AgentAvatar(
                 avatarUrl: account.profilePictureUrl,
-                fullName: account.username ?? 'Instagram',
+                fullName: account.username ?? l10n.connectedAccountsAvatarFallbackName,
                 size: 44,
               ),
               const SizedBox(width: AppSpacing.base),
@@ -157,11 +171,11 @@ class _InstagramAccountCardState
               runSpacing: AppSpacing.xs,
               children: [
                 if (account.mediaCount case final n?)
-                  _StatText('Posts $n'),
+                  _StatText(l10n.connectedAccountsPostsStatLabel(n)),
                 if (account.followersCount case final n?)
-                  _StatText('Followers $n'),
+                  _StatText(l10n.connectedAccountsFollowersStatLabel(n)),
                 if (account.followsCount case final n?)
-                  _StatText('Following $n'),
+                  _StatText(l10n.connectedAccountsFollowingStatLabel(n)),
               ],
             ),
           ],
@@ -170,7 +184,9 @@ class _InstagramAccountCardState
             alignment: Alignment.centerRight,
             child: Semantics(
               button: true,
-              label: 'Disconnect ${account.username ?? 'Instagram account'}',
+              label: l10n.connectedAccountsDisconnectSemanticsLabel(
+                account.username ?? l10n.connectedAccountsFallbackAccountName,
+              ),
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: _disconnecting ? null : _disconnect,
@@ -198,7 +214,7 @@ class _InstagramAccountCardState
                             ),
                           )
                         : Text(
-                            'Disconnect',
+                            l10n.connectedAccountsDisconnectButtonLabel,
                             style: type.label.copyWith(
                               color: AppStatusColors.errorText,
                             ),
@@ -241,22 +257,36 @@ class _ConnectInstagramButtonState
 
   Future<void> _connect() async {
     setState(() => _loading = true);
+    final l10n = AppLocalizations.of(context);
     try {
       final url = await ref
           .read(connectedAccountsRepositoryProvider)
           .instagramConnectUrl();
-      await Clipboard.setData(ClipboardData(text: url));
+      final opened = await ref
+          .read(linkLauncherProvider)
+          .open(Uri.parse(url));
       if (!mounted) return;
-      LaCasaToast.showSuccess(
-        context,
-        'Instagram sign-in link copied — paste it into your browser to '
-        'connect.',
-      );
+      if (opened) {
+        LaCasaToast.showSuccess(
+          context,
+          l10n.connectedAccountsOpeningBrowserToastMessage,
+        );
+      } else {
+        // No browser on this device, or the OS declined the launch — fall
+        // back to the previous copy-and-toast behaviour rather than a tap
+        // that looks like it did nothing.
+        await Clipboard.setData(ClipboardData(text: url));
+        if (!mounted) return;
+        LaCasaToast.showSuccess(
+          context,
+          l10n.connectedAccountsLinkCopiedToastMessage,
+        );
+      }
     } catch (_) {
       if (!mounted) return;
       LaCasaToast.showError(
         context,
-        'Instagram connection failed — please try again.',
+        l10n.connectedAccountsConnectionFailedToastMessage,
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -266,10 +296,11 @@ class _ConnectInstagramButtonState
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final label = AppLocalizations.of(context).connectedAccountsConnectButtonLabel;
 
     return Semantics(
       button: true,
-      label: 'Connect Instagram',
+      label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _loading ? null : _connect,
@@ -301,7 +332,7 @@ class _ConnectInstagramButtonState
                     ),
                   )
                 : Text(
-                    'Connect Instagram',
+                    label,
                     style: type.rowTitle.copyWith(color: Colors.white),
                   ),
           ),

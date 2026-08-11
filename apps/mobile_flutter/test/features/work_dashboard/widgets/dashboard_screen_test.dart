@@ -25,6 +25,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/dashboard_test_data.dart';
 import '../support/fake_dashboard_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<ProviderContainer> pumpDashboard(
@@ -88,7 +89,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -361,18 +362,36 @@ void main() {
       expect(rowValue('cw-2', '1'), findsOneWidget);
     });
 
-    testWidgets('"Sale count" is an honest em dash, never a fabricated number', (
-      tester,
-    ) async {
-      await pumpDashboard(
-        tester,
-        repository: FakeDashboardRepository(coworkers: coworkers, ads: ads),
-      );
+    testWidgets(
+      '"Sale count" is a real number now: a genuine zero renders 0, never '
+      'the honesty em dash',
+      (tester) async {
+        // "Sale count" used to be a permanent em dash (no backing data
+        // existed). It's real now — `coworkerStatRowsProvider` folds the
+        // same `coworkerActivity` stream `adsCount` already reads, filtered
+        // to `ActivityEventStage.adSold` instead of `adCreated` (see
+        // `coworker_statistics_section.dart`'s doc comment). `coworkerActivity`
+        // above gives Sardor (cw-1) exactly one adSold event and Kamola
+        // (cw-2) none, so this one fixture set exercises both halves of the
+        // honesty guarantee at once: a real non-zero count, and a true zero
+        // that must still render "0" rather than fall back to the
+        // fetch-still-pending "—" placeholder.
+        await pumpDashboard(
+          tester,
+          repository: FakeDashboardRepository(
+            coworkers: coworkers,
+            coworkerActivity: coworkerActivity,
+            leads: leads,
+          ),
+        );
 
-      expect(find.text('Sale count — not tracked'), findsOneWidget);
-      // One "—" per coworker row's Sales column.
-      expect(find.text('—'), findsNWidgets(coworkers.length));
-    });
+        expect(rowValue('cw-1', '1'), findsOneWidget);
+        expect(rowValue('cw-2', '0'), findsOneWidget);
+        // The "—" placeholder is reserved for a fetch that hasn't resolved
+        // yet — every fetch here has, so none should be showing.
+        expect(find.text('—'), findsNothing);
+      },
+    );
 
     testWidgets('tapping a coworker row navigates (go) to coworker-detail', (
       tester,

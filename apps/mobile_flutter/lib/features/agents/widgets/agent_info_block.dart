@@ -8,32 +8,43 @@
 /// against this spec and the point of quoting is that they agree; silently
 /// tidying the copy in one of them defeats it.
 ///
-/// **The call button copies the number instead of dialling**, exactly as
-/// `listing_detail_agent_row.dart`'s does and for the same reason: a `tel:`
-/// intent needs `url_launcher`, which this app does not depend on. A button
-/// that silently did nothing would be worse than one that honestly hands
-/// you the number. §3.10 says "call icon → `tel:` link"; this is the
-/// documented stand-in for it, listed in the mobile README's gap section.
+/// **Address and the `"Review: {rating}/5"` star row are this task's
+/// addition** — §3.10's own text doesn't list them (only §3.9's directory
+/// card does), but a profile that carries less identity than the card that
+/// opened it would be a strange asymmetry, so both render here too, in the
+/// same honest-absence shape `agent_card.dart` uses: address only when set,
+/// the rating row always present and reading `RatingStars`' "No reviews
+/// yet" text rather than a zero-star row when [AgentDetail.ratingAverage]
+/// is `null`.
+///
+/// **The call button dials via [dialOrCopyPhone]** — §3.10's "call icon →
+/// `tel:` link", now real. When there's no dialer on the device (or the OS
+/// declines to launch it), it falls back to copying the number instead,
+/// with the toast saying so honestly rather than pretending the tap did
+/// nothing. Shared with `listing-detail`'s agent row and `profile-agent`'s
+/// phone row — three independent copies of this exact logic existed before
+/// the cross-slice integration pass that promoted it to `shared/widgets/`.
 ///
 /// The message button *is* the real thing — it opens `contact-sheet`
 /// pre-filled with the agent's name, which is what §3.10 asks for.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../contact/contact.dart';
 
-class AgentInfoBlock extends StatelessWidget {
+class AgentInfoBlock extends ConsumerWidget {
   const AgentInfoBlock({super.key, required this.agent});
 
   final AgentDetail agent;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final phone = agent.phoneNumber?.trim();
     final hasPhone = phone != null && phone.isNotEmpty;
@@ -55,14 +66,30 @@ class AgentInfoBlock extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _InfoRow(label: 'Full name:', value: agent.fullName),
-                    _InfoRow(label: 'E-mail:', value: agent.email),
+                    _InfoRow(
+                      label: AppLocalizations.of(context).agentsInfoFullNameLabel,
+                      value: agent.fullName,
+                    ),
+                    _InfoRow(
+                      label: AppLocalizations.of(context).agentsInfoEmailLabel,
+                      value: agent.email,
+                    ),
                     // "—" rather than a hidden row: on a screen whose whole
                     // job is contact details, an absent phone is itself the
                     // answer to the question the user came with. That is the
                     // opposite call from `agent_card.dart`'s list row, where
-                    // a missing line just keeps the card tidy.
-                    _InfoRow(label: 'Phone:', value: hasPhone ? phone : '—'),
+                    // a missing line just keeps the card tidy. The dash
+                    // itself is punctuation, not a word, so it isn't routed
+                    // through AppLocalizations.
+                    _InfoRow(
+                      label: AppLocalizations.of(context).agentsInfoPhoneLabel,
+                      value: hasPhone ? phone : '—',
+                    ),
+                    if (agent.address?.trim() case final address? when address.isNotEmpty)
+                      _InfoRow(
+                        label: AppLocalizations.of(context).agentsInfoAddressLabel,
+                        value: address,
+                      ),
                   ],
                 ),
               ),
@@ -74,24 +101,28 @@ class AgentInfoBlock extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+          RatingStars(average: agent.ratingAverage, count: agent.ratingCount),
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: _ActionButton(
                   icon: Icons.phone_rounded,
-                  label: 'Call',
+                  label: AppLocalizations.of(context).agentsInfoCallButtonLabel,
                   // Disabled rather than hidden, so the row's shape is the
                   // same for every agent and "this one has no number" reads
                   // as a fact about them, not a layout variant.
-                  onTap: hasPhone ? () => _copyPhone(context, phone) : null,
+                  onTap: hasPhone
+                      ? () => dialOrCopyPhone(context, ref, phone)
+                      : null,
                 ),
               ),
               const SizedBox(width: AppSpacing.base),
               Expanded(
                 child: _ActionButton(
                   icon: Icons.chat_bubble_outline_rounded,
-                  label: 'Message',
+                  label: AppLocalizations.of(context).agentsInfoMessageButtonLabel,
                   onTap: () => showContactSheet(
                     context,
                     prefill: ContactPrefill.forAgent(
@@ -107,13 +138,6 @@ class AgentInfoBlock extends StatelessWidget {
     );
   }
 
-  Future<void> _copyPhone(BuildContext context, String phone) async {
-    await Clipboard.setData(ClipboardData(text: phone));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Phone number copied: $phone')));
-  }
 }
 
 class _InfoRow extends StatelessWidget {

@@ -23,6 +23,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 enum StatusTone { ok, info, warn, err, mute, accent }
@@ -72,11 +73,12 @@ class AdStagePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, tone) = switch (stage) {
-      AdStage.active => ('Active', StatusTone.ok),
-      AdStage.sold => ('Sold', StatusTone.info),
-      AdStage.draft => ('Draft', StatusTone.warn),
-      AdStage.unknown => ('Unknown', StatusTone.mute),
+      AdStage.active => (l10n.sharedAdStageActiveLabel, StatusTone.ok),
+      AdStage.sold => (l10n.sharedAdStageSoldLabel, StatusTone.info),
+      AdStage.draft => (l10n.sharedAdStageDraftLabel, StatusTone.warn),
+      AdStage.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
     return StatusPill(label: label, tone: tone);
   }
@@ -94,13 +96,20 @@ class LeadStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, tone) = switch (status) {
-      LeadStatus.newLead => ('New', StatusTone.info),
-      LeadStatus.couldNotConnect => ('Could Not Connect', StatusTone.mute),
-      LeadStatus.needToCallBack => ('Need To Call Back', StatusTone.warn),
-      LeadStatus.rejected => ('Rejected', StatusTone.err),
-      LeadStatus.accepted => ('Accepted', StatusTone.ok),
-      LeadStatus.unknown => ('Unknown', StatusTone.mute),
+      LeadStatus.newLead => (l10n.sharedLeadStatusNewLabel, StatusTone.info),
+      LeadStatus.couldNotConnect => (
+        l10n.sharedLeadStatusCouldNotConnectLabel,
+        StatusTone.mute,
+      ),
+      LeadStatus.needToCallBack => (
+        l10n.sharedLeadStatusNeedToCallBackLabel,
+        StatusTone.warn,
+      ),
+      LeadStatus.rejected => (l10n.sharedLeadStatusRejectedLabel, StatusTone.err),
+      LeadStatus.accepted => (l10n.sharedLeadStatusAcceptedLabel, StatusTone.ok),
+      LeadStatus.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
     return StatusPill(label: label, tone: tone);
   }
@@ -116,12 +125,16 @@ class PublishStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final (label, tone) = switch (status) {
-      PublishStatus.pending => ('Not published', StatusTone.mute),
-      PublishStatus.draftedAwaitingReview => ('Awaiting review', StatusTone.warn),
-      PublishStatus.published => ('Published', StatusTone.ok),
-      PublishStatus.failed => ('Failed', StatusTone.err),
-      PublishStatus.unknown => ('Unknown', StatusTone.mute),
+      PublishStatus.pending => (l10n.sharedPublishStatusPendingLabel, StatusTone.mute),
+      PublishStatus.draftedAwaitingReview => (
+        l10n.sharedPublishStatusAwaitingReviewLabel,
+        StatusTone.warn,
+      ),
+      PublishStatus.published => (l10n.sharedPublishStatusPublishedLabel, StatusTone.ok),
+      PublishStatus.failed => (l10n.sharedPublishStatusFailedLabel, StatusTone.err),
+      PublishStatus.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
     return StatusPill(label: label, tone: tone);
   }

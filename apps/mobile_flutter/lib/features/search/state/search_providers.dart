@@ -1,40 +1,36 @@
 /// Riverpod state for `listing-search`. Deliberately several independent
 /// pieces rather than one merged "screen state" — same rationale as
-/// `home_feed_providers.dart` — plus the client-side sort/search
-/// composition `search_repository.dart`'s doc comment describes:
+/// `home_feed_providers.dart`.
 ///
-/// - [appliedSearchFiltersProvider] — the filter set the results are
-///   currently fetched against. Local-only today (no `filter-sheet` screen
-///   exists yet in this build batch — it is a sibling agent's screen,
-///   under construction in parallel; see this file's "filter-sheet
-///   integration seam" note below). Changing it re-fetches.
-/// - [searchResultsProvider] — the one network/fixture fetch, re-run
-///   whenever [appliedSearchFiltersProvider] changes.
-/// - [searchQueryProvider] — the debounced free-text query. Local-only,
-///   never re-fetches (there is no server-side search — see
-///   `search_repository.dart`).
-/// - [searchSortProvider] — the active client-side sort. Local-only, never
-///   re-fetches (there is no server-side sort either).
-/// - [displayedSearchResultsProvider] — [searchResultsProvider]'s data with
-///   [searchQueryProvider]'s substring filter and [searchSortProvider]'s
-///   ordering applied, client-side, on every rebuild. This is the one
-///   widgets should actually watch to render the results list.
+/// - [appliedSearchFiltersProvider] — the structured filter set (city,
+///   category, price range, …) the results are currently fetched against.
+///   Local-only (no server round trip of its own); changing it feeds into
+///   [searchResultsProvider]'s fetch, same as [searchQueryProvider] and
+///   [searchSortProvider] below.
+/// - [searchResultsProvider] — the one paged network/fixture fetch,
+///   re-run from page 1 whenever [appliedSearchFiltersProvider],
+///   [searchQueryProvider], or [searchSortProvider] changes, and extended
+///   in place by [SearchResultsNotifier.loadMore] as the results list
+///   scrolls. This is the one provider widgets should watch to render the
+///   results list.
+/// - [searchQueryProvider] — the debounced free-text query. **Server-side**
+///   as of this run (`GET /ads`'s `?q=`, see `search_repository.dart`) — a
+///   change here re-fetches page 1, it does not just re-filter an
+///   already-fetched page.
+/// - [searchSortProvider] — the active sort. **Server-side** too (`GET
+///   /ads`'s whitelisted `?sort=`) — [SearchSort.toAdListSort] maps this
+///   screen's 3-option UI vocabulary onto the server's wider whitelist
+///   (`AdListSort`), so a value the client never actually offers can never
+///   be sent.
 /// - [recentSearchesProvider] — the persisted "Recent Searches" chip row
 ///   list (`recent_searches_repository.dart`).
 ///
 /// ## filter-sheet integration seam
-/// SCREENS.md §5 (`filter-sheet`) is a different screen in this same build
-/// batch, built by a different agent working in its own feature directory
-/// — this task's hard rules forbid importing it, and it may not exist yet
-/// at all while this file is being written. [appliedSearchFiltersProvider]
-/// is this screen's half of that seam: once `filter-sheet` exists, its
-/// "Apply Filters" button should call
+/// [appliedSearchFiltersProvider] is this screen's half of the seam with
+/// `features/filter`'s `showFilterSheet`: its "Apply Filters" button calls
 /// `ref.read(appliedSearchFiltersProvider.notifier).apply(newFilters)`
-/// (constructing an `AdFilters` from its own form state) and then close
-/// itself — nothing on this side needs to change. Until then this provider
-/// simply always holds `const AdFilters()` (no filters applied), which is
-/// consistent with SCREENS.md §3.3's "View More → listing-search
-/// (unfiltered results already loaded)".
+/// (constructing an `AdFilters` from its own form state) and then closes
+/// itself — nothing on this side needs to change.
 library;
 
 import 'dart:async';
@@ -42,14 +38,17 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import 'recent_searches_repository_provider.dart';
 import 'search_repository_provider.dart';
 
 /// SCREENS.md §3.4's inline Sort control — the same 3 options as
 /// `filter-sheet`'s CRM-variant Sort field (§3.5), wire values quoted
 /// there. `newest` is the default because it matches the server's own
-/// unconditional `createdAt: "desc"` ordering (`adService.js#listAds`) —
-/// selecting it client-side is a no-op re-sort of an already-sorted list.
+/// default `?sort=` resolution (`adService.js#resolveSort` falls back to
+/// `newest` for a missing/unrecognized value) — selecting it is not a
+/// no-op the way it used to be (there is a real server round trip now), it
+/// simply asks for the same ordering the server already defaults to.
 enum SearchSort {
   highestPrice,
   lowestPrice,
@@ -61,10 +60,30 @@ enum SearchSort {
     SearchSort.newest => 'newest',
   };
 
-  String get label => switch (this) {
-    SearchSort.highestPrice => 'Highest price',
-    SearchSort.lowestPrice => 'Lowest price',
-    SearchSort.newest => 'Newest',
+  /// Threaded through [AppLocalizations] rather than being a bare getter
+  /// (the original shape) since this enum lives in a state file with no
+  /// [BuildContext] of its own — see lib/l10n/README.md's "enum-to-label
+  /// extension methods" note. Callers already hold an `AppLocalizations`
+  /// from their own `build(context, ...)`.
+  String label(AppLocalizations l10n) => switch (this) {
+    SearchSort.highestPrice => l10n.searchSortHighestPriceLabel,
+    SearchSort.lowestPrice => l10n.searchSortLowestPriceLabel,
+    SearchSort.newest => l10n.searchSortNewestLabel,
+  };
+
+  /// This screen's 3-option UI vocabulary, mapped onto `GET /ads`'s wider
+  /// `?sort=` whitelist (`AdListSort` — `lib/api/resources/ads_resource.dart`).
+  /// Deliberately a mapping, not a reuse of [wire]/`AdListSort.wireOrNull`
+  /// directly: [wire] still carries the legacy `highestPrice`/`lowestPrice`
+  /// strings apps/web's own history left behind (kept for *this* enum's own
+  /// wire compatibility, documented on [wire] itself), while the canonical
+  /// names below (`priceDesc`/`priceAsc`) are what `AdListSort` actually
+  /// whitelists — see that enum's own doc comment for why both spellings
+  /// exist server-side.
+  AdListSort get toAdListSort => switch (this) {
+    SearchSort.highestPrice => AdListSort.priceDesc,
+    SearchSort.lowestPrice => AdListSort.priceAsc,
+    SearchSort.newest => AdListSort.newest,
   };
 }
 
@@ -85,7 +104,10 @@ final appliedSearchFiltersProvider =
 
 /// The number of non-null fields on [appliedSearchFiltersProvider]'s
 /// current value — the "Filters" toolbar button's badge count (SCREENS.md
-/// §3.4: "badge = active filter count").
+/// §3.4: "badge = active filter count"). Deliberately excludes `q` — the
+/// free-text search box is not "a filter" in SCREENS.md's sense, and has
+/// its own visible affordance (the search field itself) already showing
+/// whether it's active.
 int activeFilterCount(AdFilters filters) {
   var count = 0;
   if (filters.city != null) count++;
@@ -107,26 +129,12 @@ final activeFilterCountProvider = Provider<int>((ref) {
   return activeFilterCount(ref.watch(appliedSearchFiltersProvider));
 });
 
-class SearchResultsNotifier extends AsyncNotifier<List<Ad>> {
-  @override
-  Future<List<Ad>> build() {
-    // Watching (not reading) the applied filters is what makes a
-    // filter-sheet "Apply" re-trigger this fetch automatically once that
-    // screen is wired to appliedSearchFiltersProvider.
-    final filters = ref.watch(appliedSearchFiltersProvider);
-    return ref.read(searchRepositoryProvider).fetchResults(filters: filters);
-  }
-}
-
-final searchResultsProvider =
-    AsyncNotifierProvider<SearchResultsNotifier, List<Ad>>(
-      SearchResultsNotifier.new,
-    );
-
-/// Local-only debounced free-text query — see this file's doc comment for
-/// why the debounce timer lives in the search-bar widget rather than here
-/// (there is no fetch to debounce against; this exists purely so the
-/// results list doesn't re-filter/re-sort on every keystroke).
+/// Local-only debounced free-text query — see `search_bar_row.dart`'s doc
+/// comment for the 300ms debounce this feeds into. `search_providers.dart`
+/// used to note there was no request to debounce against (pure client-side
+/// re-filter); that's no longer true — a committed query now re-fetches
+/// page 1 from the server, which is exactly why debouncing it (rather than
+/// firing a request per keystroke) matters more than it used to.
 class SearchQueryNotifier extends Notifier<String> {
   @override
   String build() => '';
@@ -154,38 +162,136 @@ final searchSortProvider = NotifierProvider<SearchSortNotifier, SearchSort>(
   SearchSortNotifier.new,
 );
 
-/// [searchResultsProvider]'s data, client-side text-filtered by
-/// [searchQueryProvider] (substring match against title/city/district,
-/// case-insensitive — there is no server-side search endpoint, see
-/// `search_repository.dart`) and client-side sorted by
-/// [searchSortProvider] (there is no server-side sort either). Loading and
-/// error states pass through from [searchResultsProvider] unchanged; only
-/// the `data` case is transformed.
-final displayedSearchResultsProvider = Provider<AsyncValue<List<Ad>>>((ref) {
-  final results = ref.watch(searchResultsProvider);
-  final query = ref.watch(searchQueryProvider).toLowerCase();
-  final sort = ref.watch(searchSortProvider);
+/// Builds the [AdFilters] actually sent over the wire: [base] (the applied
+/// structured filters) plus [query] folded into [AdFilters.q]. A blank
+/// query is omitted entirely rather than sent as `q: ''` — both are a
+/// server-side no-op (`AdFilters.q`'s own doc comment), but omitting it
+/// keeps `AdFilters.toQuery()`'s request tidy and matches
+/// `AppliedSearchFiltersNotifier`'s own "unset means absent, not empty"
+/// convention for every other field.
+AdFilters _requestFilters(AdFilters base, String query) {
+  final q = query.trim();
+  if (q.isEmpty) return base;
+  return AdFilters(
+    city: base.city,
+    district: base.district,
+    category: base.category,
+    type: base.type,
+    rooms: base.rooms,
+    repairment: base.repairment,
+    storey: base.storey,
+    furniture: base.furniture,
+    areaMin: base.areaMin,
+    areaMax: base.areaMax,
+    priceMin: base.priceMin,
+    priceMax: base.priceMax,
+    q: q,
+  );
+}
 
-  return results.whenData((ads) {
-    final filtered = query.isEmpty
-        ? ads
-        : ads.where((ad) {
-            return ad.title.toLowerCase().contains(query) ||
-                ad.city.toLowerCase().contains(query) ||
-                ad.district.toLowerCase().contains(query);
-          }).toList();
-
-    final sorted = [...filtered];
-    switch (sort) {
-      case SearchSort.highestPrice:
-        sorted.sort((a, b) => b.price.compareTo(a.price));
-      case SearchSort.lowestPrice:
-        sorted.sort((a, b) => a.price.compareTo(b.price));
-      case SearchSort.newest:
-        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    }
-    return sorted;
+/// [searchResultsProvider]'s state — one already-fetched (and possibly
+/// still-growing) page, plus the "loading more" / "load-more failed" flags
+/// [SearchResultsList] needs to render the infinite-scroll footer. Bundled
+/// into one object, rather than the load-more flags living in their own
+/// providers, so a fresh [SearchResultsNotifier.build] (any applied-filter/
+/// query/sort change) resets everything about the *previous* fetch in one
+/// place — there is no separate piece of load-more state that could
+/// survive a filter change and describe the wrong page.
+class SearchResultsPage {
+  const SearchResultsPage({
+    required this.items,
+    required this.nextCursor,
+    this.isLoadingMore = false,
+    this.loadMoreFailed = false,
   });
+
+  final List<Ad> items;
+  final String? nextCursor;
+  final bool isLoadingMore;
+  final bool loadMoreFailed;
+}
+
+class SearchResultsNotifier extends AsyncNotifier<SearchResultsPage> {
+  @override
+  Future<SearchResultsPage> build() async {
+    final filters = ref.watch(appliedSearchFiltersProvider);
+    final query = ref.watch(searchQueryProvider);
+    final sort = ref.watch(searchSortProvider);
+
+    final page = await ref
+        .read(searchRepositoryProvider)
+        .fetchPage(
+          filters: _requestFilters(filters, query),
+          sort: sort.toAdListSort,
+        );
+    return SearchResultsPage(items: page.items, nextCursor: page.nextCursor);
+  }
+
+  /// Fetches the next page (using the current page's [SearchResultsPage
+  /// .nextCursor]) and appends it. A no-op if there's nothing more, or a
+  /// fetch is already in flight — both make this safe to call repeatedly
+  /// from a scroll listener without its own debounce/guard at the call
+  /// site. A failure leaves the already-loaded items in place and flips
+  /// [SearchResultsPage.loadMoreFailed] so the list can offer a scoped
+  /// retry, rather than losing everything already on screen (same "don't
+  /// blank a partially-successful screen" rule `filter_count_provider.dart`
+  /// follows for its own retry row).
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || current.nextCursor == null) return;
+    if (current.isLoadingMore) return;
+
+    state = AsyncData(
+      SearchResultsPage(
+        items: current.items,
+        nextCursor: current.nextCursor,
+        isLoadingMore: true,
+      ),
+    );
+
+    try {
+      final filters = ref.read(appliedSearchFiltersProvider);
+      final query = ref.read(searchQueryProvider);
+      final sort = ref.read(searchSortProvider);
+      final next = await ref
+          .read(searchRepositoryProvider)
+          .fetchPage(
+            filters: _requestFilters(filters, query),
+            sort: sort.toAdListSort,
+            cursor: current.nextCursor,
+          );
+      state = AsyncData(
+        SearchResultsPage(
+          items: [...current.items, ...next.items],
+          nextCursor: next.nextCursor,
+        ),
+      );
+    } catch (_) {
+      state = AsyncData(
+        SearchResultsPage(
+          items: current.items,
+          nextCursor: current.nextCursor,
+          loadMoreFailed: true,
+        ),
+      );
+    }
+  }
+}
+
+final searchResultsProvider =
+    AsyncNotifierProvider<SearchResultsNotifier, SearchResultsPage>(
+      SearchResultsNotifier.new,
+    );
+
+/// `map-view`'s own feed — it prefers this over its `extra:` payload (see
+/// `map_view_screen.dart`'s doc comment) and wants "whatever's currently on
+/// screen", the same list [SearchResultsList] renders, as a plain
+/// `List<Ad>`. No client-side filter/sort happens here any more — both
+/// already happened server-side inside [searchResultsProvider]'s fetch —
+/// this is purely an unwrap of [SearchResultsPage.items] out of the richer
+/// state [searchResultsProvider] now carries.
+final displayedSearchResultsProvider = Provider<AsyncValue<List<Ad>>>((ref) {
+  return ref.watch(searchResultsProvider).whenData((page) => page.items);
 });
 
 /// Caps how many distinct recent queries are kept, most-recent-first, and

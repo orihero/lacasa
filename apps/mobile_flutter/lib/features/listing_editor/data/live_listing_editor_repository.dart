@@ -59,4 +59,10 @@ class LiveListingEditorRepository implements ListingEditorRepository {
     imageUrls: imageUrls,
     chatIds: chatIds,
   );
+
+  @override
+  Future<PublishAttemptResponse> retryPublish({
+    required String adId,
+    required Channel channel,
+  }) => _api.publish.retry(adId: adId, channel: channel);
 }

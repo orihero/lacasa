@@ -12,6 +12,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 import '../formatters/formatters.dart';
 import 'favourite_button.dart';
@@ -77,7 +78,13 @@ class FullListingCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         child: Text(
-                          isSale ? 'Sale' : 'Rent',
+                          isSale
+                              ? AppLocalizations.of(
+                                  context,
+                                ).sharedListingCardSaleBadgeLabel
+                              : AppLocalizations.of(
+                                  context,
+                                ).sharedListingCardRentBadgeLabel,
                           style: type.caption.copyWith(color: Colors.white),
                         ),
                       ),
@@ -105,7 +112,7 @@ class FullListingCard extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              _specLine(ad),
+              _specLine(ad, context),
               style: type.specMeta.copyWith(color: colors.muted),
             ),
             const SizedBox(height: 3),
@@ -130,6 +137,9 @@ class FullListingCard extends StatelessWidget {
 
   // The spec line's rules moved to `Formatters.statLine` once
   // `listing-detail` needed the identical strings — see that method's doc
-  // comment. Same output as the private helper this replaced.
-  String _specLine(Ad ad) => Formatters.statLine(ad);
+  // comment. Same output as the private helper this replaced. Passes
+  // AppLocalizations through so the room count pluralizes correctly (see
+  // Formatters.rooms's own doc comment for why that parameter is optional).
+  String _specLine(Ad ad, BuildContext context) =>
+      Formatters.statLine(ad, l10n: AppLocalizations.of(context));
 }

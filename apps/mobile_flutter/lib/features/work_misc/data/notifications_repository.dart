@@ -1,15 +1,18 @@
 /// Data-access seam for `notifications` (SCREENS.md §22).
 ///
-/// **Contract ruling 7.11: there is no `notifications` endpoint anywhere in
-/// `apps/api`.** [FixtureNotificationsRepository] renders §4.4's seed data
-/// verbatim, which is the one ruling this contract actually makes. A live
-/// implementation is explicitly optional ("a real design decision beyond
-/// this contract's scope") — [LiveNotificationsRepository] is this
-/// feature's own attempt at one, folding real `GET /leads` + `GET /my/ads`
-/// + `GET /statistics/coworkers` + `GET /coworkers` data into the same
-/// display shape, kept behind its own always-off `*_mode.dart` switch like
-/// every other live repository in this app. See that file's own doc
-/// comment for exactly what it can and can't honestly synthesize.
+/// **Contract ruling 7.11 is now superseded**: it was written when there was
+/// no `notifications` endpoint anywhere in `apps/api`, and ruled that
+/// [FixtureNotificationsRepository] rendering §4.4's seed data verbatim was
+/// the only thing this contract could require, with a live implementation
+/// left "a real design decision beyond this contract's scope." A real `GET
+/// /notifications` now exists (see `apps/api/src/routes/notifications.js`
+/// and `docs/04-api-spec.md`'s Notifications section) — [FixtureNotificationsRepository]
+/// still renders §4.4's seed data verbatim for offline/deterministic use
+/// (widget tests, no-network demo), and [LiveNotificationsRepository] wraps
+/// the real endpoint directly rather than synthesizing it client-side. Kept
+/// behind its own `*_mode.dart` switch like every other repository in this
+/// app. See that file's own doc comment for the read-state/watermark
+/// handling and the one kind-mapping edge case it has to account for.
 ///
 /// **Return type is [WorkNotificationFixture]** (from
 /// `lib/shared/fixtures/work_seed_data.dart`), reused rather than a new

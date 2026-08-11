@@ -20,6 +20,7 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/fake_saved_listings_repository.dart';
 
 Ad savedAd({
@@ -72,6 +73,7 @@ void main() {
     Set<String>? favouriteAdIds,
     UserRole? role = UserRole.user,
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -117,6 +119,9 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -256,6 +261,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const SavedListingsScreen(),
           ),
@@ -409,6 +416,60 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets(
+          'grid: no overflow at ${size.label} (${locale.languageCode})',
+          (tester) async {
+            tester.view.physicalSize = size.size;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            await pumpScreen(
+              tester,
+              repository: FakeSavedListingsRepository(
+                ads: [
+                  savedAd(
+                    id: 'ad-1',
+                    title: 'Bright 3-room apartment in Chilonzor with a view',
+                  ),
+                  savedAd(id: 'ad-2', title: 'Quiet studio near the metro'),
+                ],
+              ),
+              locale: locale,
+            );
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+
+        testWidgets(
+          'empty state: no overflow at ${size.label} (${locale.languageCode})',
+          (tester) async {
+            tester.view.physicalSize = size.size;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            await pumpScreen(
+              tester,
+              repository: FakeSavedListingsRepository(ads: const []),
+              locale: locale,
+            );
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
     }
   });
 }

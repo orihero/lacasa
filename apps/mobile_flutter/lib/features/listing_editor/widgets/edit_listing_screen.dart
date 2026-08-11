@@ -1,9 +1,11 @@
 /// `edit-listing` (SCREENS.md §27) — pushed from `my-listings`' row edit
 /// icon at `RoutePaths.workEditListing` (`:id` → [adId]). Same Basics +
 /// Details field set as `create-listing` (minus Hashtags, per §27), plus
-/// the existing-photo grid with per-photo delete and the real
-/// [PublishSection] (channel buttons + "Publish Status" link) that
-/// `create-listing`'s Step 4 can't offer yet.
+/// the existing-photo grid with per-photo delete, `create-listing`'s own
+/// [PhotosStep] reused as §27's "new-upload picker" (separate control,
+/// same [ListingFormFields.media] machinery — see that file's doc
+/// comment), and the real [PublishSection] (channel buttons + "Publish
+/// Status" link) that `create-listing`'s Step 4 can't offer yet.
 ///
 /// **No step wizard here** — §5: "`edit-listing` uses a real submit
 /// ('Save') from any point since all fields are already valid/pre-filled."
@@ -22,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -33,6 +36,7 @@ import 'form/basics_step.dart';
 import 'form/details_step.dart';
 import 'form/existing_photos_grid.dart';
 import 'form/listing_form_fields.dart';
+import 'form/photos_step.dart';
 import 'form/publish_section.dart';
 
 class EditListingScreen extends ConsumerStatefulWidget {
@@ -91,8 +95,15 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
   Future<void> _save() async {
     if (_submitting || _deleting) return;
-    if (!_fields.validateAll()) {
+    final l10n = AppLocalizations.of(context);
+    if (!_fields.validateAll(l10n)) {
       setState(() {});
+      return;
+    }
+    // See `create_listing_screen.dart`'s identical guard — a still-
+    // uploading photo/video has no URL yet to persist.
+    if (_fields.hasPendingUploads) {
+      LaCasaToast.showError(context, l10n.listingEditorPendingUploadsMessage);
       return;
     }
 
@@ -100,13 +111,18 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     try {
       await LaCasaToast.run<Ad>(
         context: context,
-        action: () => ref.read(listingEditorRepositoryProvider).update(
-          widget.adId,
-          _fields.toWriteInput(includeHashtags: false, photos: _photos),
-        ),
-        pending: 'Updating',
-        success: 'Successfully updated',
-        errorMessage: (_) => 'Something went wrong.',
+        action: () => ref
+            .read(listingEditorRepositoryProvider)
+            .update(
+              widget.adId,
+              _fields.toWriteInput(
+                includeHashtags: false,
+                photos: [..._photos, ..._fields.uploadedMediaUrls],
+              ),
+            ),
+        pending: l10n.listingEditorUpdatePendingLabel,
+        success: l10n.listingEditorUpdateSuccessMessage,
+        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
       );
       if (!mounted) return;
       setState(() => _touched = false);
@@ -123,17 +139,22 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
   Future<void> _delete() async {
     if (_submitting || _deleting) return;
-    final confirmed = await confirmDelete(context, subject: 'listing');
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await confirmDelete(
+      context,
+      subject: l10n.listingEditorDeleteConfirmSubject,
+    );
     if (!confirmed || !mounted) return;
 
     setState(() => _deleting = true);
     try {
       await LaCasaToast.run<void>(
         context: context,
-        action: () => ref.read(listingEditorRepositoryProvider).delete(widget.adId),
-        pending: 'Deleting',
-        success: 'Listing deleted',
-        errorMessage: (_) => 'Something went wrong.',
+        action: () =>
+            ref.read(listingEditorRepositoryProvider).delete(widget.adId),
+        pending: l10n.listingEditorDeletePendingLabel,
+        success: l10n.listingEditorDeleteSuccessMessage,
+        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
       );
       ref.invalidate(dashboardAdsProvider);
       if (!mounted) return;
@@ -146,6 +167,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final adAsync = ref.watch(editListingAdProvider(widget.adId));
     // `AgentAdsResource.delete` is AGENT only server-side (see that
@@ -167,7 +189,7 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               NavRow(
-                title: 'Update New Post',
+                title: l10n.listingEditorEditNavTitle,
                 onBack: _handleBack,
                 backKey: const ValueKey('editListing-back'),
               ),
@@ -175,7 +197,8 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 child: adAsync.when(
                   loading: () => const _LoadingBody(),
                   error: (error, stackTrace) => _ErrorBody(
-                    onRetry: () => ref.invalidate(editListingAdProvider(widget.adId)),
+                    onRetry: () =>
+                        ref.invalidate(editListingAdProvider(widget.adId)),
                   ),
                   data: (ad) {
                     _seed(ad);
@@ -220,13 +243,25 @@ class _LoadingBody extends StatelessWidget {
           vertical: AppSpacing.base,
         ),
         children: [
-          ShimmerBox(height: 52, borderRadius: BorderRadius.circular(AppRadii.control)),
+          ShimmerBox(
+            height: 52,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+          ),
           const SizedBox(height: AppSpacing.lg),
-          ShimmerBox(height: 52, borderRadius: BorderRadius.circular(AppRadii.control)),
+          ShimmerBox(
+            height: 52,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+          ),
           const SizedBox(height: AppSpacing.lg),
-          ShimmerBox(height: 52, borderRadius: BorderRadius.circular(AppRadii.control)),
+          ShimmerBox(
+            height: 52,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+          ),
           const SizedBox(height: AppSpacing.lg),
-          ShimmerBox(height: 120, borderRadius: BorderRadius.circular(AppRadii.control)),
+          ShimmerBox(
+            height: 120,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+          ),
         ],
       ),
     );
@@ -240,10 +275,11 @@ class _ErrorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return FullWidthState(
       icon: Icons.error_outline_rounded,
-      message: "Couldn't load this listing.",
-      actionLabel: 'Retry',
+      message: l10n.listingEditorLoadErrorMessage,
+      actionLabel: l10n.sharedRetryLabel,
       onAction: onRetry,
     );
   }
@@ -276,6 +312,7 @@ class _FormBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return ScrollConfiguration(
@@ -292,10 +329,21 @@ class _FormBody extends StatelessWidget {
           children: [
             BasicsStep(fields: fields, onChanged: onFieldChanged),
             const SizedBox(height: AppSpacing.section),
-            DetailsStep(fields: fields, onChanged: onFieldChanged, showHashtags: false),
+            DetailsStep(
+              fields: fields,
+              onChanged: onFieldChanged,
+              showHashtags: false,
+            ),
             const SizedBox(height: AppSpacing.section),
-            const FieldLabel('Existing Photos'),
+            FieldLabel(l10n.listingEditorExistingPhotosLabel),
             ExistingPhotosGrid(photos: photos, onChanged: onPhotosChanged),
+            const SizedBox(height: AppSpacing.section),
+            FieldLabel(l10n.listingEditorAddPhotosLabel),
+            PhotosStep(
+              fields: fields,
+              onChanged: onFieldChanged,
+              existingPhotoCount: photos.length,
+            ),
             const SizedBox(height: AppSpacing.section),
             PublishSection(ad: ad, showPublishStatusLink: true),
             const SizedBox(height: AppSpacing.section),
@@ -312,7 +360,9 @@ class _FormBody extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           gradient: AppAccent.gradient,
-                          borderRadius: BorderRadius.circular(AppRadii.pillButton),
+                          borderRadius: BorderRadius.circular(
+                            AppRadii.pillButton,
+                          ),
                         ),
                         child: submitting
                             ? const SizedBox(
@@ -320,10 +370,17 @@ class _FormBody extends StatelessWidget {
                                 height: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
-                            : Text('Save', style: type.rowTitle.copyWith(color: Colors.white)),
+                            : Text(
+                                l10n.listingEditorSaveButtonLabel,
+                                style: type.rowTitle.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -343,7 +400,10 @@ class _FormBody extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(AppRadii.pillButton),
-                      border: Border.all(color: AppStatusColors.dangerBorder, width: 1.5),
+                      border: Border.all(
+                        color: AppStatusColors.dangerBorder,
+                        width: 1.5,
+                      ),
                     ),
                     child: deleting
                         ? SizedBox(
@@ -351,10 +411,17 @@ class _FormBody extends StatelessWidget {
                             height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(AppStatusColors.errorText),
+                              valueColor: AlwaysStoppedAnimation(
+                                AppStatusColors.errorText,
+                              ),
                             ),
                           )
-                        : Text('Delete', style: type.rowTitle.copyWith(color: AppStatusColors.errorText)),
+                        : Text(
+                            l10n.listingEditorDeleteButtonLabel,
+                            style: type.rowTitle.copyWith(
+                              color: AppStatusColors.errorText,
+                            ),
+                          ),
                   ),
                 ),
               ),

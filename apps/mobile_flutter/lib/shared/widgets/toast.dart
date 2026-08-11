@@ -17,6 +17,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../api/api.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
 
 abstract final class LaCasaToast {
@@ -126,15 +127,19 @@ abstract final class LaCasaToast {
       if (context.mounted) {
         showError(
           context,
-          errorMessage?.call(error) ?? _defaultErrorMessage(error),
+          errorMessage?.call(error) ?? _defaultErrorMessage(context, error),
         );
       }
       rethrow;
     }
   }
 
-  static String _defaultErrorMessage(Object error) {
+  // Takes [context] (rather than a plain top-level function taking
+  // [AppLocalizations]) purely because a context is already sitting right
+  // there in [run]'s catch block and this is a private helper with exactly
+  // one caller — no need to widen the seam further.
+  static String _defaultErrorMessage(BuildContext context, Object error) {
     if (error is ApiException) return error.message;
-    return 'Something went wrong.';
+    return AppLocalizations.of(context).sharedGenericErrorMessage;
   }
 }

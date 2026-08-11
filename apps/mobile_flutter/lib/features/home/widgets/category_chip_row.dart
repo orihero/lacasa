@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
 
@@ -17,12 +18,15 @@ class _ChipSpec {
   final IconData icon;
 }
 
-const List<_ChipSpec> _chips = [
-  _ChipSpec('All', Icons.grid_view_rounded),
-  _ChipSpec('Apartment', Icons.apartment_rounded),
-  _ChipSpec('House', Icons.house_rounded),
-  _ChipSpec('Office', Icons.business_rounded),
-  _ChipSpec('Retail', Icons.storefront_rounded),
+/// Built from [AppLocalizations] rather than a top-level `const` list (the
+/// original shape) since every label is now a localized lookup, which
+/// requires a [BuildContext] and so cannot be `const`.
+List<_ChipSpec> _chips(AppLocalizations l10n) => [
+  _ChipSpec(l10n.homeCategoryAllLabel, Icons.grid_view_rounded),
+  _ChipSpec(l10n.homeCategoryApartmentLabel, Icons.apartment_rounded),
+  _ChipSpec(l10n.homeCategoryHouseLabel, Icons.house_rounded),
+  _ChipSpec(l10n.homeCategoryOfficeLabel, Icons.business_rounded),
+  _ChipSpec(l10n.homeCategoryRetailLabel, Icons.storefront_rounded),
 ];
 
 class CategoryChipRow extends ConsumerWidget {
@@ -31,6 +35,7 @@ class CategoryChipRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(selectedCategoryChipProvider);
+    final chips = _chips(AppLocalizations.of(context));
 
     return SizedBox(
       height: 40,
@@ -39,11 +44,11 @@ class CategoryChipRow extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.screenGutter,
         ),
-        itemCount: _chips.length,
+        itemCount: chips.length,
         separatorBuilder: (context, index) =>
             const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, index) {
-          final chip = _chips[index];
+          final chip = chips[index];
           final isOn = index == selected;
           return _Chip(
             key: ValueKey('categoryChip-$index'),

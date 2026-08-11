@@ -30,6 +30,14 @@ AgentDetail agentDetail({
   String? email,
   int adsCount = 0,
   int dealsClosedCount = 0,
+  // Optional, defaulting to the same "no reviews yet" shape
+  // `AgentDetail.ratingAverage`'s doc comment requires of a real
+  // zero-review agent — `null` average, `0` count — so every existing
+  // call site built before `agent_reviews_section_test.dart` needed a
+  // rated agent keeps compiling and keeps rendering "No reviews yet"
+  // unchanged.
+  double? ratingAverage,
+  int ratingCount = 0,
 }) {
   return AgentDetail.fromJson({
     'id': id,
@@ -39,6 +47,37 @@ AgentDetail agentDetail({
     'avatar': null,
     'adsCount': adsCount,
     'dealsClosedCount': dealsClosedCount,
+    'ratingAverage': ratingAverage,
+    'ratingCount': ratingCount,
+  });
+}
+
+/// One `GET /agents/:id/reviews` row — for `agent_reviews_section_test.dart`
+/// and `FakeAgentsRepository`'s `reviews:` seed list. [authorId]/
+/// [authorFullName] are required rather than defaulted: every test that
+/// reaches for this helper is asserting something author-identity-shaped
+/// (upsert-by-author, "is this mine", the reviewer's name on the tile), so a
+/// silently-shared default author would make it too easy to write a test
+/// that passes for the wrong reason.
+AgentReview agentReview({
+  required String id,
+  required int rating,
+  String? comment,
+  required String authorId,
+  required String authorFullName,
+  String? authorAvatar,
+  int createdAtSeconds = 1700000000,
+}) {
+  return AgentReview.fromJson({
+    'id': id,
+    'rating': rating,
+    'comment': comment,
+    'createdAt': {'seconds': createdAtSeconds},
+    'author': {
+      'id': authorId,
+      'fullName': authorFullName,
+      'avatar': authorAvatar,
+    },
   });
 }
 

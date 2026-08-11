@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
 import '../data/onboarding_slides.dart';
@@ -45,7 +46,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  bool get _onLastSlide => _page == onboardingSlides.length - 1;
+  bool get _onLastSlide => _page == onboardingSlideCount - 1;
 
   void _finish() {
     // Flag first: the router's redirect watches this, and `go`-ing to Home
@@ -69,6 +70,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+    final slides = onboardingSlides(l10n);
 
     return PopScope(
       canPop: false,
@@ -95,7 +98,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           vertical: AppSpacing.md,
                         ),
                         child: Text(
-                          'Skip',
+                          l10n.onboardingSkipButtonLabel,
                           style: type.label.copyWith(color: colors.muted),
                         ),
                       ),
@@ -107,12 +110,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: PageView.builder(
                   controller: _pageController,
                   onPageChanged: (index) => setState(() => _page = index),
-                  itemCount: onboardingSlides.length,
-                  itemBuilder: (context, index) =>
-                      _Slide(slide: onboardingSlides[index]),
+                  itemCount: slides.length,
+                  itemBuilder: (context, index) => _Slide(slide: slides[index]),
                 ),
               ),
-              _PageDots(count: onboardingSlides.length, active: _page),
+              _PageDots(count: slides.length, active: _page),
               const SizedBox(height: AppSpacing.xl),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -127,7 +129,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   // swipe strands anyone who doesn't try one, so the earlier
                   // slides carry the same button advancing the page — an
                   // addition to the spec, not a change to it.
-                  label: _onLastSlide ? 'Get Started' : 'Next',
+                  label: _onLastSlide
+                      ? l10n.onboardingGetStartedButtonLabel
+                      : l10n.onboardingNextButtonLabel,
                   onTap: _next,
                 ),
               ),

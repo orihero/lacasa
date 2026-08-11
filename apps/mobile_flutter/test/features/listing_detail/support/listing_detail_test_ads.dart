@@ -28,6 +28,7 @@ Ad testAd({
   double? lng,
   String agentId = 'agent-javlon',
   List<String> photos = const [],
+  String? tour3dLink,
 }) {
   return Ad.fromJson({
     'id': id,
@@ -52,7 +53,7 @@ Ad testAd({
     'active': true,
     'lat': lat,
     'lng': lng,
-    'tour3dLink': null,
+    'tour3dLink': tour3dLink,
     'agentId': agentId,
     'coworkerId': '',
     'photos': photos,

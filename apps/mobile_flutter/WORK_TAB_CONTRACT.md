@@ -315,8 +315,8 @@ class CoworkersResource {
 }
 ```
 `Coworker` (`models/coworker.dart`): `id, fullName, email, phoneNumber, avatar, agentId`
-— genuinely only these 5 fields, no `listingsCount`/`closed`/`lastActive` (derive those
-client-side from `workAdsFixtures`/`ActivityEvent`, see §7.6).
+— genuinely only these 5 fields, no `listingsCount`/`closed`/`lastActive` on this shape
+itself; get those from `StatisticsResource.coworkersSummary()` instead (§7.6, superseded).
 
 `create` 403s with `code: solo_realtor` for a SOLO agent — check
 `AuthUser.realtor?.kind` (via `authSessionProvider`) to hide "+ Add new coworker"
@@ -329,13 +329,18 @@ enum StatisticsFilter { all, today, thisWeek, thisMonth }  // .wireOrNull
 
 class StatisticsResource {
   Future<AdsStatistics> ads({StatisticsFilter filterType = StatisticsFilter.all});
+  Future<AdsSeries> series({StatisticsFilter filterType, DateTime? from, DateTime? to});
   Future<List<ActivityEvent>> coworkers();   // ignores date range entirely, always all-time
+  Future<List<CoworkerSummary>> coworkersSummary();   // ditto — always all-time
 }
 ```
 `AdsStatistics`: `{adsNewCount, adsSoldCount}` — a pair of totals for the whole selected
-range, **not** a daily series. `ActivityEvent`: `{id, agentId, coworkerId, adId, leadId,
-stage(ActivityEventStage), createdAt}` — raw rows, you fold them yourself. See §7.1 for
-the dashboard-chart ruling.
+range, not a series. `AdsSeries`: `{granularity(hour|day), from, to, buckets}`, added this
+run — see §7.1 (superseded), now the dashboard chart's real data source. `ActivityEvent`:
+`{id, agentId, coworkerId, adId, leadId, stage(ActivityEventStage), createdAt}` — raw
+rows, fold them yourself if you need something `coworkersSummary()` doesn't already give
+you. `CoworkerSummary`: `{coworkerId, adsCreatedCount, adsSoldCount, leadsCreatedCount,
+lastActiveAt(nullable)}`, added this run — see §7.6 (superseded).
 
 #### `PublishResource` (`resources/publish_resource.dart`)
 
@@ -629,15 +634,16 @@ These are real gaps between SCREENS.md's ask and what `apps/api`/`apps/console`/
 `apps/web` actually support. Build against the **ruling**, not the literal spec text,
 in every case below.
 
-**7.1 — Dashboard chart has no server-backed daily series.** `GET /statistics/ads`
-returns `{adsNewCount, adsSoldCount}` for the whole selected period — no per-day
-breakdown exists anywhere. **Ruling**: in fixture mode, render `workDashboardChartFixture`
-(§4.3) as a static 12-point chart, exactly as SCREENS.md's §4.6 seed data intends. In
-live mode, there is nothing to bind the chart to — either fold `GET /statistics/coworkers`'s
-raw `ActivityEvent` list into a per-day count yourself (imprecise: that endpoint mixes
-every event type, and its own `filterType` is ignored server-side, see 7.2) or degrade
-to `apps/console`'s own honest 2-bar "Created vs Sold" period-total comparison for live
-mode. Either is acceptable; do not fabricate a smoother series than the data supports.
+**7.1 — CLOSED. Dashboard chart now has a server-backed bucketed series.**
+`GET /statistics/ads/series?filterType=|from=&to=` now exists and returns a real,
+server-bucketed day/hour series (`granularity` field), zero-filled per bucket. **Ruling
+(superseded)**: both modes plot this one endpoint through `DashboardRepository.fetchAdsSeries`
+— fixture mode builds its `AdsSeries` from `workDashboardChartFixture` (§4.3) instead of
+reading it directly, live mode calls the real endpoint, and `ads_statistics_panel.dart`'s
+`CustomPainter` renders whichever `AdsSeries` it's handed, formatting axis labels by
+`granularity` rather than assuming a daily series. The old "fold `GET /statistics/coworkers`
+yourself, or degrade to a 2-bar comparison" advice below no longer applies to this screen —
+kept only as a record of what the gap used to require before this endpoint existed.
 
 **7.2 — `GET /statistics/coworkers` ignores `filterType` entirely.** Always returns the
 agent's full, unfiltered event history regardless of Dashboard's time-range selector.
@@ -646,17 +652,21 @@ to actually narrow the coworker section; do not pass a `filterType` to this endp
 expecting it to do anything (`StatisticsResource.coworkers()` takes no such param at
 all — this is already reflected in the resource's own signature).
 
-**7.3 — No multi-channel "publish to N at once" endpoint, no retry-failed endpoint.**
-`apps/console` permanently disables both affordances. **Ruling**: `publish-channels-sheet`
-(§28) may still offer the multi-select checkbox UI, but "Publish" must fan out one
-`PublishResource.publishInstagram`/`publishTelegram` call per selected channel (YouTube
-has no direct-publish call at all — only `reportYoutube`, a report-back for an upload
-that happened some other way this build has no mechanism for, so treat YouTube as
-effectively unavailable in this app, same as OLX). `publish-status`'s "Retry" affordance
-(§29) should be **visibly present but disabled**, mirroring OLX's own always-disabled
-treatment — do not wire it to re-call `publishInstagram`/`publishTelegram` yourself,
-since a "retry" semantically implies re-attempting the exact failed request, which
-neither of those endpoints is designed to distinguish from a fresh publish.
+**7.3 — PARTIALLY CLOSED (2026-08-11). A dedicated retry endpoint now exists for
+Telegram/Instagram; the "publish to N at once" gap stands.** `POST
+/publish/ads/:adId/:channel/retry` replays the exact original request stored on the
+FAILED row server-side — a genuinely different call from a fresh
+`publishInstagram`/`publishTelegram`, which is what made "do not wire Retry, it can't be
+distinguished from a fresh publish" the right call originally. **Ruling (superseded for
+Telegram/Instagram)**: `publish-status`'s "Retry" (§29) is real and tappable for those two
+channels (`PublishResource.retry`), surfacing each of the endpoint's distinct rejection
+codes (`already_published`/`awaiting_review`/`not_failed`/`retry_unavailable`/
+`retry_in_progress`) as its own message rather than one generic "failed" toast. **Still
+true, unchanged**: `publish-channels-sheet` (§28) still has no multi-channel "publish to
+N at once" endpoint, so "Publish" still fans out one call per selected channel; YouTube
+(no direct-publish call, only `reportYoutube`) and OLX (needs the desktop extension) stay
+visibly disabled — Retry has nothing to replay for either, since neither channel's FAILED
+row (if one existed) would have a stored request behind it the way Telegram/Instagram's do.
 
 **7.4 — Create/edit-listing: build the full spec field set, not console's reduced one.**
 `apps/console`'s own editor drops Address, Reference, Nearby chips (`nearPlacesList`),
@@ -674,26 +684,58 @@ agrees with the new status, avoiding a flicker-back to the old column before the
 data catches up. This is `apps/console`'s own `KanbanScreen.tsx` mechanism, worth
 replicating exactly rather than reinventing.
 
-**7.6 — Coworkers table has no `listingsCount`/`closed`/`lastActive` on the wire.**
-Derive `listingsCount` from counting `Ad.coworkerId == coworker.id` over `AgentAdsResource.myList()`
-(fixture: `workAdsFixtures`); derive "last active" from the latest
-`ActivityEvent.createdAt` for that `coworkerId` from `StatisticsResource.coworkers()`
-(fixture: `workStatisticsCoworkersFixture`), em-dash if none. "Deals closed"/a 6th
-"Success" lead status **does not exist anywhere in the schema** — render an em-dash +
-whatever visual flag your screen already uses for a known gap, don't fabricate a count.
+**7.6 — CLOSED. `GET /statistics/coworkers/summary` now serves the fold server-side,
+including "Sale count".** `Coworker` still carries none of `listingsCount`/`closed`/
+`lastActive` on its own wire shape — that part of the original ruling stands. But
+`GET /statistics/coworkers/summary` now returns one row per coworker
+(`adsCreatedCount`/`adsSoldCount`/`leadsCreatedCount`/`lastActiveAt`, the last genuinely
+nullable for a coworker with no tracked events — never fabricate a date for it). **Ruling
+(superseded)**: `coworkers-list`/`coworker-detail` read `adsCreatedCount`/`lastActiveAt`
+from this one endpoint (`CoworkersRepository.summary`) instead of folding
+`AgentAdsResource.myList()`/`StatisticsResource.coworkers()` client-side. **"Deals
+closed"/"Sale count" is real too, and was wrongly read as ungettable** — no `LeadStatus
+.SUCCESS`-shaped status exists, that much was correct, but `ActivityEventStage.adSold`
+events always carried `coworkerId`; `dashboard`'s coworker table folds that stage from
+the same event stream it already reads for "Ads count" (`CoworkerStatRow.saleCount`,
+`state/dashboard_providers.dart`), and `summary`'s own `adsSoldCount` field covers the
+same figure server-side. Render `0`, not an em-dash, for a coworker whose real count is
+genuinely zero — an em-dash is now reserved for a fetch that hasn't resolved.
 
-**7.7 — `my-listings` has no pagination contract.** `AgentAdsResource.myList()` always
-returns the complete list — there is no `limit`/`cursor`/`page`. **Ruling**: SCREENS.md
-§25's "Infinite scroll" is client-side only — fetch the whole list once, page through it
-in a `ListView.builder` locally if you want the infinite-scroll *feel*, but there is
-nothing server-side to actually page against.
+**7.7 — CLOSED. `my-listings` now has a real pagination contract.** `GET
+/my/ads?paged=true&limit=&cursor=&stage=` returns `{ items, nextCursor }` — the same
+opt-in envelope `GET /ads` gained for `listing-search` — instead of the old bare,
+complete-list-only array. **Ruling (superseded)**: `AgentAdsResource.myListPage` sends
+real keyset paging (and a real `stage` filter) server-side; `MyListingsResultsNotifier
+.loadMore` (`state/my_listings_providers.dart`) fetches genuinely-unfetched pages, not a
+client-side reveal over an already-complete list. `AgentAdsResource.myList()` (the old
+bare-array method) still exists and is still used where the caller genuinely wants
+everything at once with no paging (`dashboard`'s stat folding) — the two are now separate
+methods with separate return types, not one method with a runtime branch.
 
-**7.8 — Kanban card footer: no assigned-agent identity to show.** `Lead` carries no
-agent-identity field distinct from its own `agentId`/`coworkerId` — every lead is
-already scoped server-side to the signed-in agent, so SCREENS.md §31's "coworker
-avatar/name" footer slot has nothing real to bind for an agent's own view. **Ruling**:
-omit that slot rather than fabricate an avatar; keep the created-at timestamp half of
-the footer (real: `Lead.createdAt`).
+**7.8 — CLOSED. `Lead.coworkerId` is real and resolvable — the original refusal was
+wrong.** The original ruling (below, superseded) claimed `Lead` carries no
+agent/coworker identity distinct from the signed-in session's own scope. That premise
+doesn't hold: `Lead.coworkerId` (`leadService.js#serializeLead`, same
+empty-string-means-none convention as `Ad.coworkerId`) is set from the acting user on
+create when they're a COWORKER, and `GET /coworkers` resolves it for **either** role —
+an AGENT sees their team, a COWORKER sees their siblings — via `coworkersListProvider`
+(`features/coworkers/state/coworkers_providers.dart`), the same plain, already-cached
+provider `coworkers-list` itself reads, so resolving it here triggers no fetch of its
+own. And since leads are agent-scoped, not coworker-scoped
+(`leadService.js#listLeads`), a coworker's board shows the *whole team's* leads —
+resolving the id is the only place on that board that tells them who owns a card,
+information genuinely unavailable anywhere else on it. **Ruling**: `kanban_card.dart`
+renders the footer's coworker half whenever `Lead.coworkerId` is non-empty, omits it
+outright when empty (a solo agent's — and a lone coworker's — leads always are, and the
+coworkers feature is hidden for that session anyway), and degrades to just the
+created-at half — never a placeholder identity, never a spinner — while the roster is
+loading or has failed to load.
+
+**Ruling (superseded)**: `Lead` carries no agent-identity field distinct from its own
+`agentId`/`coworkerId` — every lead is already scoped server-side to the signed-in
+agent, so SCREENS.md §31's "coworker avatar/name" footer slot has nothing real to bind
+for an agent's own view. Omit that slot rather than fabricate an avatar; keep the
+created-at timestamp half of the footer (real: `Lead.createdAt`).
 
 **7.9 — Instagram connected-account fields ARE real, use them.** `media_count`/
 `followers_count`/`follows_count`/`profile_picture_url` are genuine optional fields on
@@ -712,14 +754,18 @@ note for Telegram) and YouTube as a visibly-disabled "Add account"/"Sign out" pa
 a "Beta — not available in this build" note, exactly like OLX's own always-disabled
 treatment elsewhere in the app.
 
-**7.11 — Notifications has no backend at all.** No `notifications` route, no
-`Notification` model, nothing. **Ruling**: fixture mode renders `workNotificationsFixture`
-(§4.3) as-is. There is no live-mode ruling to make here — a live implementation would
-need to synthesize from `GET /leads` + `GET /publish/status` + `GET /my/ads` +
-`GET /statistics/coworkers`, which is a real design decision beyond this contract's
-scope; if you build a live mode, keep it behind the feature's own `*_mode.dart` switch
-(default off) like everything else, and document your synthesis choice in your own
-return value.
+**7.11 — CLOSED. `GET /notifications` now exists; no client-side synthesis needed.**
+A real `notifications` route/service exists server-side (still no `Notification` table —
+it's derived per-request from leads/ad-lifecycle/coworker/publish activity, but that's
+now the *server's* derivation to own, not this client's). **Ruling (superseded)**:
+`LiveNotificationsRepository` calls the endpoint directly (`NotificationsResource.fetch`)
+instead of folding `GET /leads` + `GET /my/ads` + `GET /statistics/coworkers` +
+`GET /coworkers` itself — which also closes the old synthesis's real limitation of only
+covering 3 of SCREENS.md §4.4's 4 kinds (`publish` needed a `lastAttemptAt` the old
+client-side fold had no way to get; the server's own implementation reads it directly).
+`unread` is a snapshot the server computes against whatever `since` the caller sends, not
+a stored flag — this client persists its own client-side read-state watermark
+(`notifications_watermark_repository.dart`) across visits to give `since` a real value.
 
 **7.12 — Currency default: `uzs`, not console's `usd`.** SCREENS.md §26 specifies
 `uzs` ("so'm") as `create-listing`'s default `priceType`; `apps/console`'s own form

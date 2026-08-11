@@ -61,6 +61,23 @@ final adsStatisticsProvider =
       AdsStatisticsNotifier.new,
     );
 
+/// The "Ads statistics" chart's real, server-bucketed series
+/// (`widgets/ads_statistics_panel.dart`) — re-fetches whenever the time
+/// range changes, same as [adsStatisticsProvider], and independent of it:
+/// the stat tiles and the chart are two different endpoints
+/// (`fetchAdsStatistics`/`fetchAdsSeries`) that can fail independently.
+class AdsSeriesNotifier extends AsyncNotifier<AdsSeries> {
+  @override
+  Future<AdsSeries> build() {
+    final filter = ref.watch(dashboardTimeRangeProvider);
+    return ref.read(dashboardRepositoryProvider).fetchAdsSeries(filter);
+  }
+}
+
+final adsSeriesProvider = AsyncNotifierProvider<AdsSeriesNotifier, AdsSeries>(
+  AdsSeriesNotifier.new,
+);
+
 class DashboardLeadsNotifier extends AsyncNotifier<List<Lead>> {
   @override
   Future<List<Lead>> build() =>
@@ -145,22 +162,35 @@ bool isWithinTimeRange(
 }
 
 /// One row of the Coworker statistics section (bar chart + list, SCREENS.md
-/// §24). There is deliberately **no `saleCount`/"deals closed" field on
-/// this class** — see `coworker_statistics_section.dart`'s doc comment for
-/// why that column renders as an honest em dash instead (ruling 7.6).
+/// §24). **`saleCount` used to be a permanent em dash here** — ruling 7.6
+/// originally (and wrongly) concluded there was no "deals closed" event
+/// anywhere in the schema. There is: `ActivityEventStage.adSold` events
+/// always carried `coworkerId` (the same stream [adsCount] already folds
+/// for `adCreated`), so `saleCount` folds that same stream by the `adSold`
+/// stage instead — see `coworker_statistics_section.dart`'s doc comment for
+/// how the column renders now that it's a real number.
 class CoworkerStatRow {
   const CoworkerStatRow({
     required this.coworker,
     required this.adsCount,
     required this.leadCount,
+    required this.saleCount,
   });
 
   final Coworker coworker;
   final int adsCount;
   final int leadCount;
+  final int saleCount;
 }
 
 /// The Coworker statistics section's data source.
+///
+/// **`saleCount` folds the same [dashboardCoworkerActivityProvider] stream
+/// as `adsCount`, just filtered to [ActivityEventStage.adSold] instead of
+/// `adCreated`** — no separate fetch, no separate provider, since both
+/// numbers already live in the one event stream this provider already
+/// watches. It is time-range-filtered the same way `adsCount` is (live mode
+/// only — see the `inRange` note below).
 ///
 /// **`adsCount` folds [dashboardCoworkerActivityProvider]'s
 /// [ActivityEventStage.adCreated] events by [ActivityEvent.coworkerId],
@@ -220,6 +250,14 @@ final coworkerStatRowsProvider = Provider<AsyncValue<List<CoworkerStatRow>>>((
                 .length,
             leadCount: leads
                 .where((lead) => lead.coworkerId == coworker.id)
+                .length,
+            saleCount: events
+                .where(
+                  (event) =>
+                      event.coworkerId == coworker.id &&
+                      event.stage == ActivityEventStage.adSold &&
+                      inRange(event),
+                )
                 .length,
           ),
         )

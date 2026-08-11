@@ -9,6 +9,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import 'lead_form_controls.dart';
 
@@ -94,10 +95,11 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     final title = _isCallback
-        ? 'Enter the next call-back time'
-        : 'Write briefly about the conversation';
+        ? l10n.leadsCallbackSheetTitle
+        : l10n.leadsConversationSheetTitle;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -136,7 +138,7 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                   ),
                 ),
               ] else ...[
-                Text('COMMIT', style: type.label.copyWith(color: colors.muted)),
+                Text(l10n.leadsCommitFieldUppercaseLabel, style: type.label.copyWith(color: colors.muted)),
                 const SizedBox(height: AppSpacing.sm),
                 GlassSurface(
                   variant: GlassVariant.flatForm,
@@ -155,7 +157,7 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                       isDense: true,
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
-                      hintText: 'What did you discuss?',
+                      hintText: l10n.leadsConversationHint,
                       hintStyle: type.body.copyWith(color: colors.faint),
                     ),
                   ),
@@ -163,7 +165,7 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                 if (_noteTouched && _note.text.trim().length < _minNoteLength) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'At least $_minNoteLength characters.',
+                    l10n.leadsCommitMinLengthError(_minNoteLength),
                     style: type.bodySmall.copyWith(color: AppStatusColors.errorText),
                   ),
                 ],
@@ -174,7 +176,7 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('kanbanMoveSheet-cancel'),
-                      label: 'Cancel',
+                      label: l10n.leadsCancelButtonLabel,
                       onTap: () => Navigator.of(context).pop(),
                     ),
                   ),
@@ -182,7 +184,7 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('kanbanMoveSheet-save'),
-                      label: 'Save',
+                      label: l10n.leadsSaveButtonLabel,
                       primary: true,
                       onTap: _canSave ? _save : null,
                     ),

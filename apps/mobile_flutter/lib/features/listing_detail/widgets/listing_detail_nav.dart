@@ -1,14 +1,19 @@
 /// `.hero__nav` — the three round glass buttons floating over the hero:
 /// back, share, and save. SCREENS.md §3.7's header row, verbatim.
 ///
-/// **Share copies the listing link to the clipboard and toasts**, rather
-/// than opening the OS share sheet the spec names. A native share sheet
-/// needs a platform plugin (`share_plus`) this app does not depend on, and
-/// adding one is a `pubspec.yaml` + per-platform-config change well outside
-/// a screen build. The mockup's own share button does exactly this — its
-/// markup is `data-toast="Link copied for sharing"` — so this matches the
-/// prototype's behaviour while the plugin question stays open. Flagged in
-/// the README's gap list, not quietly substituted.
+/// **Share opens the real OS share sheet** via [LinkLauncher.share] — the
+/// payload is the listing title, its formatted price, and the public web
+/// link, not a bare URL, so whatever the user shares to (Telegram, SMS,
+/// mail…) receives something worth reading on its own. Only a sheet the
+/// user dismissed without picking a target falls back to copying just the
+/// link and saying so honestly — the same "copy and toast" this button used
+/// before `share_plus` existed, now reserved for the one path where the
+/// real share genuinely didn't happen.
+/// `ShareResultStatus.unavailable` (the platform can't say which action the
+/// user took, but the sheet did open) does **not** fall back: [LinkLauncher.share]
+/// already treats it as a success, and copy-link on top of a share that may
+/// well have worked would just be a confusing second toast under a sheet
+/// that did its job.
 ///
 /// **Save is [FavouriteButton] with `hideForCoworker: false`**, the one
 /// caller in the app that opts into SCREENS.md §3.7's literal "shown only
@@ -19,14 +24,17 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
+import '../../../shared/platform/link_launcher.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
-class ListingDetailNav extends StatelessWidget {
+class ListingDetailNav extends ConsumerWidget {
   const ListingDetailNav({super.key, this.ad});
 
   /// Null while the listing is still loading or failed to load — back is
@@ -35,8 +43,9 @@ class ListingDetailNav extends StatelessWidget {
   final Ad? ad;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentAd = ad;
+    final l10n = AppLocalizations.of(context);
 
     return Positioned(
       top: AppSpacing.base,
@@ -48,15 +57,15 @@ class ListingDetailNav extends StatelessWidget {
           children: [
             _RoundGlassButton(
               icon: Icons.arrow_back_rounded,
-              semanticLabel: 'Back',
+              semanticLabel: l10n.listingNavBackSemanticsLabel,
               onTap: () => _pop(context),
             ),
             const Spacer(),
             if (currentAd != null) ...[
               _RoundGlassButton(
                 icon: Icons.ios_share_rounded,
-                semanticLabel: 'Share',
-                onTap: () => _share(context, currentAd),
+                semanticLabel: l10n.listingNavShareSemanticsLabel,
+                onTap: () => _share(context, ref, currentAd),
               ),
               const SizedBox(width: 9),
               // Sized to match the two buttons beside it — FavouriteButton's
@@ -84,15 +93,28 @@ class ListingDetailNav extends StatelessWidget {
     }
   }
 
-  Future<void> _share(BuildContext context, Ad ad) async {
+  Future<void> _share(BuildContext context, WidgetRef ref, Ad ad) async {
     // The public web listing URL — the same surface a recipient without the
     // app can open. `apps/web` serves listings at `/ads/:id`.
-    await Clipboard.setData(
-      ClipboardData(text: 'https://lacasa.uz/ads/${ad.id}'),
-    );
+    final link = 'https://lacasa.uz/ads/${ad.id}';
+    // A share payload worth receiving: title + formatted price + link, not
+    // a bare URL. `Formatters.price` is the same rule the price footer
+    // shows, reused rather than re-derived.
+    final text = '${ad.title}\n${Formatters.price(ad)}\n$link';
+
+    final shared = await ref
+        .read(linkLauncherProvider)
+        .share(text: text, subject: ad.title);
+    if (!context.mounted || shared) return;
+
+    // The sheet was dismissed without a target (or the platform can't say
+    // which happened) — fall back to the old copy-and-toast behaviour
+    // rather than a tap that looks like it did nothing.
+    await Clipboard.setData(ClipboardData(text: link));
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link copied for sharing')),
+    LaCasaToast.showSuccess(
+      context,
+      AppLocalizations.of(context).listingLinkCopiedToastMessage,
     );
   }
 }

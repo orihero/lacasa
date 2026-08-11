@@ -21,6 +21,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/search_providers.dart';
 
@@ -67,6 +68,7 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Row(
       children: [
@@ -91,7 +93,7 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
                     decoration: InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
-                      hintText: 'Search city, district, or title',
+                      hintText: l10n.searchInputHint,
                       hintStyle: type.body.copyWith(color: colors.faint),
                     ),
                   ),
@@ -105,7 +107,7 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
           key: const ValueKey('searchCancelButton'),
           onTap: _onCancel,
           child: Text(
-            'Cancel',
+            l10n.searchCancelButtonLabel,
             style: type.rowTitle.copyWith(color: AppAccent.color),
           ),
         ),

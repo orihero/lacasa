@@ -22,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/agents_providers.dart';
@@ -52,7 +53,7 @@ class AgentsDirectoryScreen extends ConsumerWidget {
                 0,
               ),
               child: Text(
-                'Agents',
+                AppLocalizations.of(context).agentsDirectoryScreenTitle,
                 style: type.navTitle.copyWith(color: colors.ink),
               ),
             ),
@@ -65,17 +66,21 @@ class AgentsDirectoryScreen extends ConsumerWidget {
                   error: (error, stackTrace) => _ScrollableState(
                     child: FullWidthState(
                       icon: Icons.cloud_off_rounded,
-                      message: "Couldn't load agents",
-                      actionLabel: 'Retry',
+                      message: AppLocalizations.of(
+                        context,
+                      ).agentsDirectoryLoadErrorMessage,
+                      actionLabel: AppLocalizations.of(context).sharedRetryLabel,
                       onAction: () => ref.invalidate(agentsDirectoryProvider),
                     ),
                   ),
                   data: (list) {
                     if (list.isEmpty) {
-                      return const _ScrollableState(
+                      return _ScrollableState(
                         child: FullWidthState(
                           icon: Icons.person_search_outlined,
-                          message: 'No agents found.',
+                          message: AppLocalizations.of(
+                            context,
+                          ).agentsDirectoryEmptyMessage,
                         ),
                       );
                     }

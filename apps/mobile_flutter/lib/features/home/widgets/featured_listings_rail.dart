@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -32,6 +33,7 @@ class FeaturedListingsRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(homeFeedAdsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return feed.when(
       loading: () => _Shell(
@@ -60,7 +62,7 @@ class FeaturedListingsRail extends ConsumerWidget {
           ),
           child: RailRetryCard(
             width: _cardWidth,
-            message: "Couldn't load listings",
+            message: l10n.homeFeaturedListingsRetryMessage,
             onRetry: () => ref.invalidate(homeFeedAdsProvider),
           ),
         ),
@@ -69,11 +71,13 @@ class FeaturedListingsRail extends ConsumerWidget {
         if (ads.isEmpty) {
           // Whole-feed empty: the canonical centered state lives here, in
           // Featured Listings' position (build spec: "below the chips").
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenGutter,
+            ),
             child: FullWidthState(
               icon: Icons.home_work_outlined,
-              message: 'No listings available yet.',
+              message: l10n.homeFeedEmptyMessage,
             ),
           );
         }
@@ -113,12 +117,14 @@ class _Shell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: 'Featured Listings',
-          linkLabel: 'View all',
+          title: l10n.homeFeaturedListingsSectionTitle,
+          linkLabel: l10n.homeFeaturedListingsViewAllLabel,
           onLink: () => context.go(RoutePaths.search),
         ),
         const SizedBox(height: AppSpacing.base),

@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
 
@@ -26,21 +27,23 @@ class FilterCategoryTypeSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Category'),
+        FieldLabel(l10n.filterCategoryFieldLabel),
         ChoiceChipGroup<AdCategory>(
           keyPrefix: 'filterCategory',
-          options: filterCategoryOptions,
+          options: filterCategoryOptions(l10n),
           selected: category,
           onChanged: onCategoryChanged,
         ),
         const SizedBox(height: 14),
-        const FieldLabel('Type'),
+        FieldLabel(l10n.filterTypeFieldLabel),
         ChoiceChipGroup<AdType>(
           keyPrefix: 'filterType',
-          options: filterTypeOptions,
+          options: filterTypeOptions(l10n),
           selected: type,
           onChanged: onTypeChanged,
         ),

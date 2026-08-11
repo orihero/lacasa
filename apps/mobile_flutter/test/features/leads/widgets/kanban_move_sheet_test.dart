@@ -8,12 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/leads/widgets/kanban_move_sheet.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 void main() {
   Future<void> pumpTrigger(WidgetTester tester, {required LeadStatus destination}) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: Builder(
           builder: (context) => Scaffold(
@@ -52,6 +55,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(
@@ -88,6 +93,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(
@@ -161,6 +168,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(

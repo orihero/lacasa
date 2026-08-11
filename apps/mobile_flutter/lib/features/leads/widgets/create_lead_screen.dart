@@ -29,6 +29,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -88,13 +89,14 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     setState(() {
-      _fullNameError = fullName.isEmpty ? 'First name is required' : null;
+      _fullNameError = fullName.isEmpty ? l10n.leadsCreateFullNameRequiredError : null;
       _phoneError = phone.isEmpty
-          ? 'Phone number is required'
-          : (Formatters.isValidUzPhone(phone) ? null : 'Invalid Uzbekistan phone number');
+          ? l10n.leadsCreatePhoneRequiredError
+          : (Formatters.isValidUzPhone(phone) ? null : l10n.leadsPhoneInvalidError);
     });
     return _fullNameError == null && _phoneError == null;
   }
@@ -123,20 +125,24 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
       );
       if (!mounted) return;
       context.go(RoutePaths.workLeads);
-      LaCasaToast.showSuccess(context, 'Lead successfully created!');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsCreatedToastMessage);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      LaCasaToast.showError(context, 'Error creating lead: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).leadsCreateErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
-  static String _messageFor(ApiException e) {
+  static String _messageFor(BuildContext context, ApiException e) {
     if (e is ApiErrorException) return e.message;
+    final l10n = AppLocalizations.of(context);
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.leadsNoConnectionMessage;
     }
-    return 'Something went wrong.';
+    return l10n.sharedGenericErrorMessage;
   }
 
   @override
@@ -145,6 +151,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
     final isAgent = ref.watch(
       authSessionProvider.select((s) => s.role == UserRole.agent),
     );
+    final l10n = AppLocalizations.of(context);
 
     return PopScope(
       canPop: !_hasChanges,
@@ -160,7 +167,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              NavRow(title: 'Create Lead', onBack: _handleCancel),
+              NavRow(title: l10n.leadsCreateScreenTitle, onBack: _handleCancel),
               Expanded(
                 child: ScrollConfiguration(
                   behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
@@ -175,7 +182,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         LeadTextField(
-                          label: 'Full name',
+                          label: l10n.leadsFieldFullNameLabel,
                           controller: _fullName,
                           errorText: _fullNameError,
                           textInputAction: TextInputAction.next,
@@ -184,7 +191,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
-                          label: 'Phone',
+                          label: l10n.leadsFieldPhoneLabel,
                           controller: _phone,
                           errorText: _phoneError,
                           hintText: '+998901234567',
@@ -197,7 +204,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
-                          label: 'Email',
+                          label: l10n.leadsFieldEmailLabel,
                           controller: _email,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -205,7 +212,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
-                          label: 'Budget',
+                          label: l10n.leadsFieldBudgetLabel,
                           controller: _budget,
                           hintText: '50000',
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -214,11 +221,11 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
-                          label: 'Commit',
+                          label: l10n.leadsFieldCommitLabel,
                           controller: _commit,
                           maxLines: 3,
                           keyboardType: TextInputType.multiline,
-                          hintText: 'What is this lead looking for?',
+                          hintText: l10n.leadsCreateCommitHint,
                           onChanged: () => setState(() {}),
                         ),
                         const SizedBox(height: AppSpacing.lg),
@@ -228,7 +235,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
-                          label: 'Source',
+                          label: l10n.leadsFieldSourceLabel,
                           controller: _source,
                           textInputAction: TextInputAction.done,
                           onChanged: () => setState(() {}),
@@ -242,14 +249,14 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                           children: [
                             Expanded(
                               child: _SecondaryButton(
-                                label: 'Cancel',
+                                label: l10n.leadsCancelButtonLabel,
                                 onTap: _handleCancel,
                               ),
                             ),
                             const SizedBox(width: AppSpacing.base),
                             Expanded(
                               child: _PrimaryButton(
-                                label: 'Save',
+                                label: l10n.leadsSaveButtonLabel,
                                 submitting: _submitting,
                                 onTap: _submit,
                               ),

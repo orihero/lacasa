@@ -24,6 +24,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -38,6 +39,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final notificationsAsync = ref.watch(notificationsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -45,7 +47,7 @@ class NotificationsScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'Notifications', onBack: () => _pop(context)),
+            NavRow(title: l10n.notificationsScreenTitle, onBack: () => _pop(context)),
             Expanded(
               child: notificationsAsync.when(
                 loading: () => ScrollConfiguration(
@@ -86,19 +88,19 @@ class NotificationsScreen extends ConsumerWidget {
                   ),
                   child: FullWidthState(
                     icon: Icons.error_outline_rounded,
-                    message: "Couldn't load your notifications.",
-                    actionLabel: 'Retry',
+                    message: l10n.notificationsLoadErrorMessage,
+                    actionLabel: l10n.sharedRetryLabel,
                     onAction: () => ref.invalidate(notificationsProvider),
                   ),
                 ),
                 data: (notifications) => notifications.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.screenGutter,
                         ),
                         child: FullWidthState(
                           icon: Icons.notifications_none_rounded,
-                          message: 'No notifications yet.',
+                          message: l10n.notificationsEmptyMessage,
                         ),
                       )
                     : ScrollConfiguration(

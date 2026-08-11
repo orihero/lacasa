@@ -9,6 +9,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
+
 class OnboardingSlide {
   const OnboardingSlide({
     required this.title,
@@ -21,23 +23,31 @@ class OnboardingSlide {
   final IconData icon;
 }
 
-const List<OnboardingSlide> onboardingSlides = [
+/// The slide count — fixed regardless of locale (SCREENS.md §3.1 spec's
+/// exactly three), so callers that only need the count (page-dot math, the
+/// "is this the last slide" check) don't need an [AppLocalizations] just to
+/// call [onboardingSlides] and throw the list away.
+const int onboardingSlideCount = 3;
+
+// Was a top-level `const List<OnboardingSlide>` before localization — a
+// localized string needs a BuildContext/AppLocalizations, which a `const`
+// initializer can't provide, so this became a function. Its one caller
+// (onboarding_screen.dart) already has a context to read AppLocalizations
+// from on every build.
+List<OnboardingSlide> onboardingSlides(AppLocalizations l10n) => [
   OnboardingSlide(
-    title: 'Manage every listing in one place',
-    body:
-        'Keep all your listings organized and easy to access, all in one app.',
+    title: l10n.onboardingSlideOneTitle,
+    body: l10n.onboardingSlideOneBody,
     icon: Icons.home_work_rounded,
   ),
   OnboardingSlide(
-    title: 'Share to every channel at once',
-    body:
-        'Publish to Instagram, Telegram and more without leaving the app.',
+    title: l10n.onboardingSlideTwoTitle,
+    body: l10n.onboardingSlideTwoBody,
     icon: Icons.share_rounded,
   ),
   OnboardingSlide(
-    title: 'Track leads from first contact to close',
-    body:
-        'Sort and follow up on every inquiry so nothing slips through.',
+    title: l10n.onboardingSlideThreeTitle,
+    body: l10n.onboardingSlideThreeBody,
     icon: Icons.trending_up_rounded,
   ),
 ];

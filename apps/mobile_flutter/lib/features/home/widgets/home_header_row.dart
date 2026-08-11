@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
 
@@ -21,6 +22,7 @@ class HomeHeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -46,7 +48,7 @@ class HomeHeaderRow extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   Flexible(
                     child: Text(
-                      'Tashkent, Uzbekistan',
+                      l10n.homeLocationPillLabel,
                       overflow: TextOverflow.ellipsis,
                       style: type.rowTitle.copyWith(color: colors.ink),
                     ),
@@ -64,15 +66,16 @@ class HomeHeaderRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           _IconButton(
             icon: Icons.notifications_rounded,
-            semanticLabel:
-                'Notifications, $_fixtureUnreadNotificationsCount unread',
+            semanticLabel: l10n.homeNotificationsBellSemanticLabel(
+              _fixtureUnreadNotificationsCount,
+            ),
             showDot: _fixtureUnreadNotificationsCount > 0,
             onTap: () => context.push(RoutePaths.homeNotifications),
           ),
           const SizedBox(width: AppSpacing.sm),
           _IconButton(
             icon: Icons.search_rounded,
-            semanticLabel: 'Search',
+            semanticLabel: l10n.homeSearchIconSemanticLabel,
             onTap: () => context.go(RoutePaths.search),
           ),
         ],

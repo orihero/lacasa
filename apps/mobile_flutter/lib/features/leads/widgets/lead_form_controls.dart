@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -41,12 +42,16 @@ Future<DateTime?> pickLeadDateTime(BuildContext context, {DateTime? initial}) as
 class LeadDateTimeField extends StatelessWidget {
   const LeadDateTimeField({
     super.key,
-    this.label = 'CALL TIME',
+    this.label,
     required this.value,
     required this.onTap,
   });
 
-  final String label;
+  /// Defaults to [AppLocalizations.leadsCallTimeLabel] — kept nullable
+  /// (rather than a `'CALL TIME'` compile-time default) purely so the
+  /// fallback can go through localization; every current caller leaves this
+  /// unset.
+  final String? label;
   final DateTime? value;
   final VoidCallback onTap;
 
@@ -54,11 +59,12 @@ class LeadDateTimeField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: type.label.copyWith(color: colors.muted)),
+        Text(label ?? l10n.leadsCallTimeLabel, style: type.label.copyWith(color: colors.muted)),
         const SizedBox(height: AppSpacing.sm),
         GestureDetector(
           onTap: onTap,
@@ -73,7 +79,7 @@ class LeadDateTimeField extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    value == null ? 'Select date' : Formatters.date(value!),
+                    value == null ? l10n.leadsSelectDateLabel : Formatters.date(value!),
                     style: type.body.copyWith(
                       color: value == null ? colors.faint : colors.ink,
                     ),
@@ -89,17 +95,18 @@ class LeadDateTimeField extends StatelessWidget {
   }
 }
 
-/// `LeadStatus` display label, matching `LeadStatusPill`'s own copy
-/// verbatim (SCREENS.md §30's exact strings) — duplicated rather than
-/// imported since [LeadStatusPill]'s label switch is private to
-/// `shared/widgets/status_pill.dart`.
-String leadStatusLabel(LeadStatus status) => switch (status) {
-  LeadStatus.newLead => 'New',
-  LeadStatus.couldNotConnect => 'Could Not Connect',
-  LeadStatus.needToCallBack => 'Need To Call Back',
-  LeadStatus.rejected => 'Rejected',
-  LeadStatus.accepted => 'Accepted',
-  LeadStatus.unknown => 'Unknown',
+/// `LeadStatus` display label, matching `LeadStatusPill`'s own copy exactly
+/// — reuses the same `AppLocalizations.shared*` keys `LeadStatusPill`
+/// itself reads (`shared/widgets/status_pill.dart`) rather than a
+/// second, independently-translated set of ARB entries for the identical
+/// five strings (SCREENS.md §30's exact display copy).
+String leadStatusLabel(AppLocalizations l10n, LeadStatus status) => switch (status) {
+  LeadStatus.newLead => l10n.sharedLeadStatusNewLabel,
+  LeadStatus.couldNotConnect => l10n.sharedLeadStatusCouldNotConnectLabel,
+  LeadStatus.needToCallBack => l10n.sharedLeadStatusNeedToCallBackLabel,
+  LeadStatus.rejected => l10n.sharedLeadStatusRejectedLabel,
+  LeadStatus.accepted => l10n.sharedLeadStatusAcceptedLabel,
+  LeadStatus.unknown => l10n.sharedStatusUnknownLabel,
 };
 
 /// A labelled text input on the flat-glass form material, with an optional
@@ -217,11 +224,12 @@ class LeadStatusField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('STATUS', style: type.label.copyWith(color: colors.muted)),
+        Text(l10n.leadsStatusFieldLabel, style: type.label.copyWith(color: colors.muted)),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.sm,
@@ -230,7 +238,7 @@ class LeadStatusField extends StatelessWidget {
             for (final status in LeadStatus.kanbanOrder)
               _StatusChip(
                 key: ValueKey('leadStatus-${status.wire}'),
-                label: leadStatusLabel(status),
+                label: leadStatusLabel(l10n, status),
                 isOn: status == value,
                 onTap: () => onChanged(status),
               ),
@@ -286,8 +294,10 @@ class _StatusChip extends StatelessWidget {
 /// ever be persisted. Shown only to an agent session (the caller gates
 /// visibility), pre-filled with the resolved coworker name where one
 /// exists, styled to *look* like the other select-shaped fields so it
-/// reads as "present but inert," not missing — matching this codebase's
-/// `MediaUploadUnavailableNotice` precedent for the same kind of gap.
+/// reads as "present but inert," not missing — the same "look real, say
+/// honestly that it isn't" shape every other stand-in in this app follows
+/// (see the permissions-primer's `PermissionOutcome.unavailable` row for
+/// another instance of the same idea).
 class LeadCoworkerField extends StatelessWidget {
   const LeadCoworkerField({super.key, required this.coworkerName});
 
@@ -298,11 +308,12 @@ class LeadCoworkerField extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('COWORKER', style: type.label.copyWith(color: colors.muted)),
+        Text(l10n.leadsCoworkerFieldLabel, style: type.label.copyWith(color: colors.muted)),
         const SizedBox(height: AppSpacing.sm),
         Opacity(
           opacity: 0.6,
@@ -334,7 +345,7 @@ class LeadCoworkerField extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             Flexible(
               child: Text(
-                "Assigning a coworker isn't available in this build yet.",
+                l10n.leadsCoworkerUnavailableNote,
                 style: type.caption.copyWith(color: colors.faint),
               ),
             ),

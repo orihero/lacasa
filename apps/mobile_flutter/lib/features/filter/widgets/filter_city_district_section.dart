@@ -1,34 +1,55 @@
-/// City + District — free-text fields, not the `regions.json`-backed
-/// selects SCREENS.md §3.5 specifies. See `data/filter_options.dart`'s doc
-/// comment for the full gap explanation. District stays disabled until
-/// City is non-empty, which is the one piece of the cascade contract this
-/// build *can* honor without the region vocabulary.
+/// City + District — a cascading Region → District picker sourced from
+/// `GET /regions` (`regions_repository_provider.dart`'s cached
+/// `regionsDataProvider`), closing the gap `data/filter_options.dart` used
+/// to document (free-text fields, no shared vocabulary). District stays
+/// disabled until City is non-empty and is scoped to the chosen region's
+/// `regionId` — the cascade *behavior* is unchanged from the free-text
+/// build, only the input mechanism (tap-to-pick instead of type-to-fill) is
+/// new.
+///
+/// Each field renders as a tappable `GlassSurface` (not a `TextField`) that
+/// opens `showFilterOptionPicker`. Three states for the region fetch:
+///  - loading: both fields disabled, "Loading…" placeholder.
+///  - error: both fields disabled, an inline retry row (mirrors
+///    `filter_sheet.dart`'s own `_CountErrorRow` for the live-count
+///    preview — same "don't blank the rest of the sheet over one failed
+///    piece" rule).
+///  - data: City enabled; District enabled only once a City is chosen.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import 'filter_text_field.dart';
+import '../state/regions_repository_provider.dart';
+import 'filter_option_picker_sheet.dart';
 
-class FilterCityDistrictSection extends StatelessWidget {
+class FilterCityDistrictSection extends ConsumerWidget {
   const FilterCityDistrictSection({
     super.key,
-    required this.cityController,
-    required this.districtController,
-    required this.districtEnabled,
+    required this.city,
+    required this.district,
     required this.onCityChanged,
     required this.onDistrictChanged,
   });
 
-  final TextEditingController cityController;
-  final TextEditingController districtController;
-  final bool districtEnabled;
-  final ValueChanged<String> onCityChanged;
-  final ValueChanged<String> onDistrictChanged;
+  final String? city;
+  final String? district;
+
+  /// `null` means "Any city" was chosen (clears the filter); a non-null
+  /// value is the picked region's name, verbatim (matches `AdFilters.city`
+  /// — free text server-side, see `regions_repository.dart`'s doc comment
+  /// for why a name, not an id, is what flows through here).
+  final ValueChanged<String?> onCityChanged;
+  final ValueChanged<String?> onDistrictChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final regionsAsync = ref.watch(regionsDataProvider);
+    final l10n = AppLocalizations.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -36,12 +57,37 @@ class FilterCityDistrictSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FieldLabel('City'),
-              FilterTextField(
-                key: const ValueKey('filterField-city'),
-                controller: cityController,
-                placeholder: 'e.g. Tashkent',
-                onChanged: onCityChanged,
+              FieldLabel(l10n.filterCityFieldLabel),
+              regionsAsync.when(
+                loading: () => _PickerField(
+                  key: const ValueKey('filterField-city'),
+                  value: null,
+                  placeholder: l10n.filterRegionsLoadingPlaceholder,
+                  enabled: false,
+                ),
+                error: (error, stackTrace) => _PickerField(
+                  key: const ValueKey('filterField-city'),
+                  value: null,
+                  placeholder: l10n.filterRegionsErrorPlaceholder,
+                  enabled: false,
+                  onRetry: () => ref.invalidate(regionsDataProvider),
+                ),
+                data: (regions) => _PickerField(
+                  key: const ValueKey('filterField-city'),
+                  value: city,
+                  placeholder: l10n.filterCityAnyOptionLabel,
+                  enabled: true,
+                  onTap: () async {
+                    final selected = await showFilterOptionPicker(
+                      context,
+                      title: l10n.filterCityPickerTitle,
+                      options: regions.regions.map((r) => r.name).toList(),
+                      current: city,
+                      anyLabel: l10n.filterCityAnyOptionLabel,
+                    );
+                    onCityChanged(selected);
+                  },
+                ),
               ),
             ],
           ),
@@ -51,18 +97,120 @@ class FilterCityDistrictSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const FieldLabel('District'),
-              FilterTextField(
-                key: const ValueKey('filterField-district'),
-                controller: districtController,
-                placeholder: districtEnabled ? 'e.g. Chilonzor' : 'Pick a city first',
-                enabled: districtEnabled,
-                onChanged: onDistrictChanged,
+              FieldLabel(l10n.filterDistrictFieldLabel),
+              regionsAsync.when(
+                loading: () => _PickerField(
+                  key: const ValueKey('filterField-district'),
+                  value: null,
+                  placeholder: l10n.filterRegionsLoadingPlaceholder,
+                  enabled: false,
+                ),
+                error: (error, stackTrace) => _PickerField(
+                  key: const ValueKey('filterField-district'),
+                  value: null,
+                  placeholder: l10n.filterRegionsErrorPlaceholder,
+                  enabled: false,
+                ),
+                data: (regions) {
+                  final selectedRegion = city == null
+                      ? null
+                      : regions.regions.where((r) => r.name == city).firstOrNull;
+                  final districtEnabled = selectedRegion != null;
+                  final districtOptions = selectedRegion == null
+                      ? const <String>[]
+                      : regions.districts
+                            .where((d) => d.regionId == selectedRegion.id)
+                            .map((d) => d.name)
+                            .toList();
+
+                  return _PickerField(
+                    key: const ValueKey('filterField-district'),
+                    value: district,
+                    placeholder: districtEnabled
+                        ? l10n.filterDistrictAnyOptionLabel
+                        : l10n.filterDistrictPickCityFirstPlaceholder,
+                    enabled: districtEnabled,
+                    onTap: districtEnabled
+                        ? () async {
+                            final selected = await showFilterOptionPicker(
+                              context,
+                              title: l10n.filterDistrictPickerTitle,
+                              options: districtOptions,
+                              current: district,
+                              anyLabel: l10n.filterDistrictAnyOptionLabel,
+                            );
+                            onDistrictChanged(selected);
+                          }
+                        : null,
+                  );
+                },
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A tappable `GlassSurface` styled like `FilterTextField` (same material,
+/// same border radius) but read-only — a chevron replaces the text cursor
+/// as the "this opens something" affordance.
+class _PickerField extends StatelessWidget {
+  const _PickerField({
+    super.key,
+    required this.value,
+    required this.placeholder,
+    required this.enabled,
+    this.onTap,
+    this.onRetry,
+  });
+
+  final String? value;
+  final String placeholder;
+  final bool enabled;
+  final VoidCallback? onTap;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: GestureDetector(
+        onTap: enabled ? onTap : onRetry,
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 4,
+          ),
+          height: 44,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  value ?? placeholder,
+                  overflow: TextOverflow.ellipsis,
+                  style: type.body.copyWith(
+                    color: value == null ? colors.faint : colors.ink,
+                  ),
+                ),
+              ),
+              Icon(
+                onRetry != null
+                    ? Icons.refresh_rounded
+                    : Icons.expand_more_rounded,
+                size: 18,
+                color: colors.muted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

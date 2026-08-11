@@ -26,4 +26,26 @@ class LiveAgentsRepository implements AgentsRepository {
   @override
   Future<List<Ad>> fetchAgentAds(String agentId) =>
       _api.ads.list(agentId: agentId);
+
+  @override
+  Future<AgentReviewPage> fetchAgentReviews(
+    String agentId, {
+    int? limit,
+    String? cursor,
+  }) => _api.agents.listReviews(agentId, limit: limit, cursor: cursor);
+
+  @override
+  Future<AgentReview> postAgentReview(
+    String agentId, {
+    required int rating,
+    String? comment,
+    // Ignored — see AgentsRepository.postAgentReview's doc comment. The
+    // live endpoint authenticates via the request's bearer token, exactly
+    // like every other authenticated call this client makes.
+    required ReviewAuthor actingAs,
+  }) => _api.agents.postReview(agentId, rating: rating, comment: comment);
+
+  @override
+  Future<void> deleteMyAgentReview(String agentId, {required ReviewAuthor actingAs}) =>
+      _api.agents.deleteMyReview(agentId);
 }

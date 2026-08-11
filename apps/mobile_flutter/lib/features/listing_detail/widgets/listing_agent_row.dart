@@ -11,18 +11,30 @@
 /// fetch, which *is* fatal, is the whole reason the repository has two
 /// methods.
 ///
-/// **The call button copies the number instead of dialling.** Placing a
-/// call needs `url_launcher` (a `tel:` intent), which this app does not
-/// depend on; the same reasoning as the share button in
-/// `listing_detail_nav.dart`. Copy-and-toast is honest and immediately
-/// useful; a button that silently did nothing would not be.
+/// **The call button dials via [dialOrCopyPhone]** — a real `tel:` intent.
+/// When there's no dialer on the device (or the OS declines to launch it),
+/// it falls back to the previous copy-and-toast behaviour, with the toast
+/// saying so honestly rather than pretending the tap did nothing. Shared
+/// with `profile-agent`'s phone row and `agent-profile`'s Call action —
+/// three independent copies of this exact logic existed before the
+/// cross-slice integration pass that promoted it to `shared/widgets/`.
+///
+/// **Address and the rating row, added this task**, read straight off the
+/// same [AgentDetail] this block already fetches — `GET /agents/:id` (and
+/// its fixture stand-in) now carries `address`/`ratingAverage`/
+/// `ratingCount` alongside the fields this block already used. Address
+/// only appears when set (same honest-absence rule `agent_card.dart` and
+/// `agent_info_block.dart` both follow — no "—" filler in a block this
+/// compact); the rating row always renders, via `RatingStars`, whose own
+/// doc comment covers the null-average-means-"No reviews yet" rule this
+/// call site relies on.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/listing_detail_providers.dart';
@@ -78,6 +90,7 @@ class _AgentRowContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
     final phone = agent.phoneNumber;
 
     return GestureDetector(
@@ -103,9 +116,26 @@ class _AgentRowContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  _statsLine(agent),
+                  l10n.listingAgentStatsLine(
+                    agent.adsCount,
+                    agent.dealsClosedCount,
+                  ),
                   overflow: TextOverflow.ellipsis,
                   style: type.bodySmall.copyWith(color: colors.muted),
+                ),
+                if (agent.address?.trim() case final address? when address.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    address,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.bodySmall.copyWith(color: colors.muted),
+                  ),
+                ],
+                const SizedBox(height: 2),
+                RatingStars(
+                  average: agent.ratingAverage,
+                  count: agent.ratingCount,
+                  starSize: 11,
                 ),
               ],
             ),
@@ -119,36 +149,32 @@ class _AgentRowContent extends StatelessWidget {
     );
   }
 
-  /// "Agent · 24 listings · 9 closed". `adsCount` is an all-time
-  /// `AD_CREATED` tally, not a live count of current listings — see
-  /// [AgentDetail.adsCount]. Labelled "listings" anyway because that is
-  /// what SCREENS.md's own agent card calls it, and the distinction is not
-  /// one a buyer can act on.
-  static String _statsLine(AgentDetail agent) {
-    return [
-      'Agent',
-      '${agent.adsCount} listing${agent.adsCount == 1 ? '' : 's'}',
-      '${agent.dealsClosedCount} closed',
-    ].join(' · ');
-  }
+  // "Agent · 24 listings · 9 closed" — see AppLocalizations.
+  // listingAgentStatsLine's ARB description for the full reasoning.
+  // `adsCount` is an all-time `AD_CREATED` tally, not a live count of
+  // current listings — see [AgentDetail.adsCount]. Labelled "listings"
+  // anyway because that is what SCREENS.md's own agent card calls it, and
+  // the distinction is not one a buyer can act on.
 }
 
-class _CallButton extends StatelessWidget {
+class _CallButton extends ConsumerWidget {
   const _CallButton({required this.agent, required this.phone});
 
   final AgentDetail agent;
   final String phone;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
 
     return Semantics(
       button: true,
-      label: 'Copy ${agent.fullName}\'s phone number',
+      label: AppLocalizations.of(context).listingAgentCallSemanticsLabel(
+        agent.fullName,
+      ),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => _copy(context),
+        onTap: () => dialOrCopyPhone(context, ref, phone),
         child: Container(
           width: 38,
           height: 38,
@@ -163,13 +189,6 @@ class _CallButton extends StatelessWidget {
     );
   }
 
-  Future<void> _copy(BuildContext context) async {
-    await Clipboard.setData(ClipboardData(text: phone));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Phone number copied: $phone')));
-  }
 }
 
 class _AgentRowSkeleton extends StatelessWidget {
@@ -235,7 +254,7 @@ class _AgentUnavailable extends StatelessWidget {
         const SizedBox(width: 11),
         Expanded(
           child: Text(
-            'Agent details unavailable',
+            AppLocalizations.of(context).listingAgentUnavailableLabel,
             style: type.rowTitle.copyWith(color: colors.muted),
           ),
         ),

@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
 import '../../filter/filter.dart';
@@ -102,7 +103,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 0,
               ),
               child: Text(
-                'Search',
+                AppLocalizations.of(context).searchScreenTitle,
                 style: type.navTitle.copyWith(color: colors.ink),
               ),
             ),

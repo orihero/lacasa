@@ -3,6 +3,8 @@
 // back arrow and Cancel button both branch on `context.canPop()`, and a
 // successful save exits the same way.
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,10 +13,16 @@ import 'package:go_router/go_router.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/auth/state/auth_repository_provider.dart';
 import 'package:lacasa_mobile/features/edit_profile/edit_profile.dart';
-import 'package:lacasa_mobile/features/permissions/permissions.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
+import 'package:lacasa_mobile/shared/platform/media_picker.dart';
+import 'package:lacasa_mobile/shared/state/uploads_repository.dart';
+import 'package:lacasa_mobile/shared/state/uploads_repository_provider.dart';
+import 'package:lacasa_mobile/shared/widgets/agent_avatar.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_media_picker.dart';
+import '../../shared/support/fake_uploads_repository.dart';
 import 'support/recording_auth_repository.dart';
 
 AuthUser _user({
@@ -38,22 +46,6 @@ AuthUser _user({
   });
 }
 
-/// Counts every [PermissionGateway.request] call — stands in for the real
-/// default ([UnavailablePermissionGateway], which this reproduces the
-/// answer of) purely so a test can assert the avatar tap actually goes
-/// through the gateway seam, not just that a toast happened to appear.
-class _CountingPermissionGateway implements PermissionGateway {
-  int requestCallCount = 0;
-  AppPermission? lastRequested;
-
-  @override
-  Future<PermissionOutcome> request(AppPermission permission) async {
-    requestCallCount++;
-    lastRequested = permission;
-    return PermissionOutcome.unavailable;
-  }
-}
-
 void main() {
   /// Pumps `EditProfileScreen` at `/profile/edit`, with `/profile` as the
   /// route below it so `canPop()` is true — the ordinary case (this screen
@@ -70,7 +62,13 @@ void main() {
     RecordingAuthRepository? repository,
     AuthUser? signedInUser,
     bool withBackStack = true,
-    PermissionGateway? permissionGateway,
+    // Both default to `null` (i.e. "leave the real provider in place"),
+    // same reasoning as `add_coworker_screen_test.dart`'s `pumpScreen` —
+    // only the "real avatar uploader" group below ever taps the avatar
+    // control, so there is nothing for these to fake in every other test.
+    MediaPicker? mediaPicker,
+    UploadsRepository? uploadsRepository,
+    Locale locale = const Locale('en'),
   }) async {
     final repo = repository ?? RecordingAuthRepository();
     final container = ProviderContainer(
@@ -78,8 +76,9 @@ void main() {
       overrides: [
         authRepositoryProvider.overrideWithValue(repo),
         hasPersistedAuthTokenProvider.overrideWithValue(false),
-        if (permissionGateway != null)
-          permissionGatewayProvider.overrideWithValue(permissionGateway),
+        if (mediaPicker != null) mediaPickerProvider.overrideWithValue(mediaPicker),
+        if (uploadsRepository != null)
+          uploadsRepositoryProvider.overrideWithValue(uploadsRepository),
       ],
     );
     addTearDown(container.dispose);
@@ -109,7 +108,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -480,30 +479,97 @@ void main() {
     });
   });
 
-  group('avatar uploader unavailability', () {
-    testWidgets('always shows the unavailable caption, and tapping routes '
-        'through the real PermissionGateway seam', (tester) async {
-      final gateway = _CountingPermissionGateway();
+  // Was "avatar uploader unavailability" — that framing (and its literal
+  // "Photo upload isn't available in this build yet." caption plus a
+  // `PermissionGateway` seam to assert against) described the honest
+  // stand-in this screen used before `shared/widgets/avatar_upload_control
+  // .dart` and its `MediaPicker`/`UploadsRepository` seams existed.
+  // `edit_profile_screen.dart`'s own file doc comment now says plainly
+  // that the avatar control is "a real picker" and that this screen
+  // deliberately does **not** go through `PermissionGateway` (a second,
+  // app-level prompt on top of `image_picker`'s own OS prompt would be a
+  // worse experience) — so asserting the old "unavailable" copy and a
+  // gateway call would be asserting a screen state that can no longer
+  // occur, not a real regression. Rewritten below to exercise the
+  // control's actual contract (tap → camera/gallery choice →
+  // `MediaPicker.pickImage` → `UploadsRepository.upload` →
+  // `onUploaded`/`onError`) via the same `FakeMediaPicker`/
+  // `FakeUploadsRepository` seams `test/shared/support/` already provides
+  // for exactly this purpose — same pattern as
+  // `add_coworker_screen_test.dart`'s "the real avatar uploader" group.
+  group('the real avatar uploader (AvatarUploadControl)', () {
+    testWidgets('is labelled "Change photo" per §3.18, with the '
+        'placeholder initials avatar showing before anything is picked', (
+      tester,
+    ) async {
+      await pumpScreen(tester, signedInUser: _user());
+
+      expect(find.bySemanticsLabel(RegExp('Change photo')), findsOneWidget);
+      final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+      expect(avatar.avatarUrl, isNull);
+    });
+
+    testWidgets('tapping it opens the camera/gallery choice, and picking '
+        'gallery uploads the photo and swaps in its URL', (tester) async {
+      final media = PickedMedia(
+        bytes: Uint8List.fromList([1, 2, 3]),
+        fileName: 'selfie.jpg',
+        mimeType: 'image/jpeg',
+      );
       await pumpScreen(
         tester,
         signedInUser: _user(),
-        permissionGateway: gateway,
-      );
-
-      expect(
-        find.text("Photo upload isn't available in this build yet."),
-        findsOneWidget,
+        mediaPicker: FakeMediaPicker(imageResult: media),
+        uploadsRepository: FakeUploadsRepository(
+          result: 'https://example.test/avatars/new.jpg',
+        ),
       );
 
       await tester.tap(find.bySemanticsLabel(RegExp('Change photo')));
       await tester.pumpAndSettle();
 
-      expect(gateway.requestCallCount, 1);
-      expect(gateway.lastRequested, AppPermission.cameraAndPhotos);
-      expect(
-        find.text("Photo upload isn't available in this build yet."),
-        findsWidgets,
+      // The camera/gallery choice sheet (media_source_sheet.dart) — both
+      // rows are on screen once the sheet has settled.
+      expect(find.text('Camera'), findsOneWidget);
+      expect(find.text('Choose from library'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('Choose from library')));
+      await tester.pumpAndSettle();
+
+      final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+      expect(avatar.avatarUrl, 'https://example.test/avatars/new.jpg');
+    });
+
+    testWidgets('a denied-permission failure from the picker is shown as '
+        'an error toast, not silently swallowed', (tester) async {
+      await pumpScreen(
+        tester,
+        signedInUser: _user(),
+        mediaPicker: FakeMediaPicker(
+          error: const MediaPickerException(
+            "La Casa doesn't have permission to use the camera or photo "
+            'library. Allow it in system settings, then try again.',
+          ),
+        ),
       );
+
+      await tester.tap(find.bySemanticsLabel(RegExp('Change photo')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel(RegExp('Choose from library')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          "La Casa doesn't have permission to use the camera or photo "
+          'library. Allow it in system settings, then try again.',
+        ),
+        findsOneWidget,
+      );
+      // The picker never got as far as producing bytes, so the avatar
+      // stays on the initials placeholder rather than showing a broken
+      // preview.
+      final avatar = tester.widget<AgentAvatar>(find.byType(AgentAvatar));
+      expect(avatar.avatarUrl, isNull);
     });
   });
 
@@ -544,6 +610,37 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpScreen(
+            tester,
+            signedInUser: _user(
+              fullName: 'Shahnoza Yoldosheva-Abdurahmonova',
+              email: 'shahnoza.yoldosheva.abdurahmonova@lacasa.uz',
+              phoneNumber: '+998901234567',
+            ),
+            locale: locale,
+          );
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

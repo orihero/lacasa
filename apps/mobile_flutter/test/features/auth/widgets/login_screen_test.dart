@@ -17,12 +17,18 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/auth_test_data.dart';
 import '../support/fake_auth_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<
     ({ProviderContainer container, GoRouter router, FakeAuthRepository repo})
   >
-  pumpLogin(WidgetTester tester, {FakeAuthRepository? repository, bool withBackStack = true}) async {
+  pumpLogin(
+    WidgetTester tester, {
+    FakeAuthRepository? repository,
+    bool withBackStack = true,
+    Locale locale = const Locale('en'),
+  }) async {
     final repo = repository ?? FakeAuthRepository();
     final container = ProviderContainer(
       // Riverpod 3 auto-retries a thrown error; a deterministic call-count
@@ -62,7 +68,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -242,6 +248,34 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  // Russian is routinely 30-50% longer than English and Uzbek can run
+  // longer still — re-running the same widths under both catches overflow
+  // that only a longer language introduces (see l10n/README.md's plurals
+  // section for the same "the ICU block only fixes correctness, not
+  // layout" caveat in spirit).
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpLogin(tester, locale: locale);
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

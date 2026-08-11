@@ -1,18 +1,29 @@
 /// Offline stand-in for [CoworkersRepository], seeded from
-/// `work_seed_data.dart`'s [workCoworkersFixtures]/[workAdsFixtures]/
-/// [workStatisticsCoworkersFixture] (§4.3 of SCREENS.md). No network, no
-/// [LaCasaApi] dependency — what all three coworker screens render from by
-/// default (see `coworkers_mode.dart`).
+/// `work_seed_data.dart`'s [workCoworkersFixtures]/
+/// [workStatisticsCoworkersFixture]/[workLeadsFixtures] (§4.3 of
+/// SCREENS.md). No network, no [LaCasaApi] dependency — what all three
+/// coworker screens render from by default (see `coworkers_mode.dart`).
 ///
 /// **Mutations are real, in-memory, for the lifetime of this instance.**
 /// [create]/[update]/[delete] mutate a private copy of the seed list rather
 /// than either no-op-ing or throwing — a fixture "Save"/"Delete" that
 /// silently did nothing would make `coworker-detail`/`add-coworker`
 /// impossible to exercise with no network at all, which is exactly the
-/// scenario this build must render sensibly through. `ads`/`activity` stay
-/// static (nothing in this feature ever mutates an ad or an activity
-/// event), matching `apps/console`'s own choice to keep those two lists
-/// read-only inputs to `deriveCoworkerMetrics`.
+/// scenario this build must render sensibly through. [summary] stays
+/// static (nothing in this feature ever mutates an activity event or a
+/// lead), matching `apps/console`'s own choice to keep those inputs
+/// read-only.
+///
+/// **[summary] folds the same fixture rows the real endpoint would fold
+/// server-side** — [workStatisticsCoworkersFixture] by `coworkerId`/
+/// `ActivityEventStage` for `adsCreatedCount`/`adsSoldCount`/
+/// `lastActiveAt`, [workLeadsFixtures] by `coworkerId` for
+/// `leadsCreatedCount` (that fixture set has no `coworkerId`-tagged lead
+/// rows at all, so this is honestly `0` for both seed coworkers — not a
+/// bug, the same fact `dashboard`'s own fixture "Lead count" column already
+/// shows). A coworker created via [create] naturally gets an all-zero,
+/// `lastActiveAt: null` summary — no fabricated activity for an id that
+/// genuinely has none.
 ///
 /// **Failure modes mirror the live endpoint's shape**, same rule
 /// `fixture_agents_repository.dart`'s 404 and `fixture_auth_repository.dart`'s
@@ -119,10 +130,34 @@ class FixtureCoworkersRepository implements CoworkersRepository {
   }
 
   @override
-  Future<List<Ad>> ads() async => workAdsFixtures;
+  Future<List<CoworkerSummary>> summary() async {
+    return _coworkers.map((coworker) {
+      final events = workStatisticsCoworkersFixture.where(
+        (e) => e.coworkerId == coworker.id,
+      );
 
-  @override
-  Future<List<ActivityEvent>> activity() async => workStatisticsCoworkersFixture;
+      DateTime? lastActive;
+      for (final event in events) {
+        if (lastActive == null || event.createdAt.isAfter(lastActive)) {
+          lastActive = event.createdAt;
+        }
+      }
+
+      return CoworkerSummary(
+        coworkerId: coworker.id,
+        adsCreatedCount: events
+            .where((e) => e.stage == ActivityEventStage.adCreated)
+            .length,
+        adsSoldCount: events
+            .where((e) => e.stage == ActivityEventStage.adSold)
+            .length,
+        leadsCreatedCount: workLeadsFixtures
+            .where((l) => l.coworkerId == coworker.id)
+            .length,
+        lastActiveAt: lastActive,
+      );
+    }).toList(growable: false);
+  }
 
   void _assertEmailFree(String email, {required String? excludingId}) {
     final normalized = email.trim().toLowerCase();

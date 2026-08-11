@@ -9,7 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lacasa_mobile/app.dart';
 import 'package:lacasa_mobile/features/language/language.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import 'support/fake_language_repository.dart';
@@ -18,6 +20,7 @@ void main() {
   Future<ProviderContainer> pumpSheet(
     WidgetTester tester, {
     required FakeLanguageRepository repository,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       // See agents_directory_screen_test.dart for why: Riverpod 3
@@ -32,6 +35,9 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(
@@ -62,16 +68,45 @@ void main() {
     expect(find.text('Ru'), findsOneWidget);
   });
 
-  testWidgets('is honest that only the preference, not the copy, changes', (
-    tester,
-  ) async {
-    await pumpSheet(tester, repository: FakeLanguageRepository());
+  // Replaces a now-obsolete assertion that used to check for
+  // `_LocalisationNote`'s honest "app text is English-only for now" line —
+  // that line is gone (see this file's own header and app.dart's doc
+  // comment) because it is no longer true: `app.dart` watches
+  // [languageProvider] and drives `MaterialApp.locale` from it, so this
+  // proves the replacement claim end to end instead — pumping the *real*
+  // [App] (not this file's own bespoke `MaterialApp` harness, which never
+  // wires a `locale:`) and confirming a selection changes
+  // `Localizations.localeOf` on the very next frame, no
+  // `tester.pumpWidget`/restart involved.
+  testWidgets(
+    'selecting a language changes the live app locale, no restart needed',
+    (tester) async {
+      final repository = FakeLanguageRepository();
+      final container = ProviderContainer(
+        retry: (retryCount, error) => null,
+        overrides: [languageRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
 
-    expect(
-      find.textContaining('app text is English-only for now'),
-      findsOneWidget,
-    );
-  });
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: container, child: const App()),
+      );
+      await tester.pumpAndSettle();
+
+      // `Localizations.localeOf` needs a context *below* the `Localizations`
+      // widget `MaterialApp` builds — `MaterialApp`'s own element sits above
+      // it — so this reads from the `Navigator` `MaterialApp.router` renders
+      // beneath it instead, matching the pattern the framework's own tests
+      // use.
+      final navigator = tester.element(find.byType(Navigator).first);
+      expect(Localizations.localeOf(navigator), const Locale('en'));
+
+      await container.read(languageProvider.notifier).select(AppLanguage.uz);
+      await tester.pump();
+
+      expect(Localizations.localeOf(navigator), const Locale('uz'));
+    },
+  );
 
   testWidgets('the currently-saved language starts selected', (tester) async {
     await pumpSheet(
@@ -189,6 +224,49 @@ void main() {
           reason: 'RenderFlex overflow(s) at ${size.label}: $overflows',
         );
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          final overflows = <String>[];
+          final previous = FlutterError.onError;
+          FlutterError.onError = (details) {
+            final text = details.exceptionAsString();
+            if (text.contains('overflowed')) {
+              overflows.add(text.split('\n').first);
+            } else {
+              previous?.call(details);
+            }
+          };
+          addTearDown(() => FlutterError.onError = previous);
+
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpSheet(
+            tester,
+            repository: FakeLanguageRepository(),
+            locale: locale,
+          );
+
+          expect(
+            overflows,
+            isEmpty,
+            reason: 'RenderFlex overflow(s) at ${size.label}: $overflows',
+          );
+        });
+      }
     }
   });
 }

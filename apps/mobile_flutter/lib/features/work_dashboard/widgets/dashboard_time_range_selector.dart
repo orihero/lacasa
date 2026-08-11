@@ -9,17 +9,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/dashboard_providers.dart';
 
-extension _StatisticsFilterLabel on StatisticsFilter {
-  String get label => switch (this) {
-    StatisticsFilter.all => 'All',
-    StatisticsFilter.thisMonth => 'This month',
-    StatisticsFilter.thisWeek => 'This week',
-    StatisticsFilter.today => 'Today',
-  };
-}
+/// [StatisticsFilter]'s display label — a top-level function taking
+/// [AppLocalizations] rather than an extension getter, since the label now
+/// needs the current locale, and every call site below already has one in
+/// scope (via `build`).
+String _filterLabel(AppLocalizations l10n, StatisticsFilter filter) => switch (filter) {
+  StatisticsFilter.all => l10n.dashboardFilterLabelAll,
+  StatisticsFilter.thisMonth => l10n.dashboardFilterLabelThisMonth,
+  StatisticsFilter.thisWeek => l10n.dashboardFilterLabelThisWeek,
+  StatisticsFilter.today => l10n.dashboardFilterLabelToday,
+};
 
 /// Display order per SCREENS.md §24 — deliberately *not*
 /// `StatisticsFilter.values` (whose declaration order, `all, today,
@@ -77,16 +80,17 @@ class _RangeChip extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final foreground = selected ? colors.pillInk : colors.ink;
+    final label = _filterLabel(AppLocalizations.of(context), option);
 
     final content = Text(
-      option.label,
+      label,
       style: type.rowTitle.copyWith(color: foreground),
     );
 
     return Semantics(
       button: true,
       selected: selected,
-      label: option.label,
+      label: label,
       child: GestureDetector(
         onTap: onTap,
         child: selected

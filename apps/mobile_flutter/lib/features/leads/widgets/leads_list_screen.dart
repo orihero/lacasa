@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -21,6 +22,7 @@ class LeadsListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -31,12 +33,12 @@ class LeadsListScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             NavRow(
-              title: 'Leads',
+              title: l10n.leadsListScreenTitle,
               onBack: () => _pop(context),
               trailing: [
                 LeadsNavActions(
                   toggleIcon: Icons.view_kanban_outlined,
-                  toggleLabel: 'View as Kanban',
+                  toggleLabel: l10n.leadsToggleViewKanbanLabel,
                   toggleKey: const ValueKey('leadsList-toggleView'),
                   onToggleView: () => context.push(RoutePaths.workLeadsKanban),
                   addKey: const ValueKey('leadsList-addLead'),
@@ -66,6 +68,7 @@ class _LeadsListBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final leadsAsync = ref.watch(leadsProvider);
+    final l10n = AppLocalizations.of(context);
 
     // `hasValue` first, not `.when()`: a post-mutation refetch failure keeps
     // the previous list attached (`LeadsNotifier._refetch`'s
@@ -75,10 +78,10 @@ class _LeadsListBody extends ConsumerWidget {
     if (leadsAsync.hasValue) {
       final leads = leadsAsync.value!;
       if (leads.isEmpty) {
-        return const Center(
+        return Center(
           child: FullWidthState(
             icon: Icons.groups_outlined,
-            message: 'No leads yet.',
+            message: l10n.leadsEmptyMessage,
           ),
         );
       }
@@ -107,8 +110,8 @@ class _LeadsListBody extends ConsumerWidget {
       return Center(
         child: FullWidthState(
           icon: Icons.error_outline_rounded,
-          message: "Couldn't load your leads.",
-          actionLabel: 'Retry',
+          message: l10n.leadsLoadErrorMessage,
+          actionLabel: l10n.sharedRetryLabel,
           onAction: () => ref.invalidate(leadsProvider),
         ),
       );

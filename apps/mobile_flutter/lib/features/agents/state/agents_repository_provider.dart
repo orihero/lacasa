@@ -16,5 +16,5 @@ final agentsRepositoryProvider = Provider<AgentsRepository>((ref) {
   if (useLiveAgentsApi) {
     return LiveAgentsRepository(LaCasaApi.create());
   }
-  return const FixtureAgentsRepository();
+  return FixtureAgentsRepository();
 });

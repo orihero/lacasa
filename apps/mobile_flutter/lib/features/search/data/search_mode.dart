@@ -1,15 +1,26 @@
-/// Chooses which [SearchRepository] `listing-search` runs on: bundled
-/// fixtures (default) or the real [LaCasaApi]. Exact same pattern and
-/// rationale as `features/home/data/home_feed_mode.dart` — its own doc
-/// comment explains why this is a screen-local compile-time switch rather
-/// than reading `lib/api/env.dart` directly. Independent from
-/// `LACASA_HOME_LIVE_API`/`LACASA_FAVOURITES_LIVE_API` — flipping one does
-/// not flip the others.
+/// Chooses which [SearchRepository] `listing-search` runs on: the real
+/// [LaCasaApi] (default) or bundled fixtures — resolved through
+/// `lib/api/app_mode.dart`, the single source of truth every
+/// `*_mode.dart` switch's default now defers to. Independent from
+/// `LACASA_HOME_LIVE_API`/`LACASA_FAVOURITES_LIVE_API` — forcing one to
+/// fixtures does not force the others.
 ///
-/// **To point `listing-search` at a real running API:**
+/// **To force `listing-search` to fixtures:**
+/// ```
+/// flutter run --dart-define=LACASA_SEARCH_LIVE_API=false
+/// ```
+///
+/// **To point `listing-search` at a specific non-default API host:**
 /// ```
 /// flutter run \
-///   --dart-define=LACASA_SEARCH_LIVE_API=true \
 ///   --dart-define=LACASA_API_BASE_URL=http://<host>:4200/api
 /// ```
-const bool useLiveSearchApi = bool.fromEnvironment('LACASA_SEARCH_LIVE_API');
+library;
+
+import '../../../api/app_mode.dart';
+
+/// `final`, not `const` — see `app_mode.dart`'s doc comment for why the
+/// default now depends on a runtime check.
+final bool useLiveSearchApi = resolveUseLiveApi(
+  const String.fromEnvironment('LACASA_SEARCH_LIVE_API', defaultValue: ''),
+);

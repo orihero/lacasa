@@ -55,4 +55,17 @@ abstract class ListingEditorRepository {
     required List<String> imageUrls,
     required List<String> chatIds,
   });
+
+  /// `POST /publish/ads/:adId/:channel/retry` (or the fixture equivalent) —
+  /// `publish-status`'s (§29) Retry action (build contract §7.3, closed).
+  /// Only ever called for [Channel.telegram]/[Channel.instagram] — the two
+  /// channels with a real server-to-server call to replay; see
+  /// `publish_status_screen.dart`'s own doc comment for the full set of
+  /// [ApiErrorException.code] values a caller must branch on, each a
+  /// genuinely different reason to show the user rather than one generic
+  /// "failed."
+  Future<PublishAttemptResponse> retryPublish({
+    required String adId,
+    required Channel channel,
+  });
 }

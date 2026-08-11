@@ -19,6 +19,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../auth/support/fake_auth_repository.dart';
 import '../language/support/fake_language_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/fake_notifications_preference_repository.dart';
 
 void main() {
@@ -33,6 +34,7 @@ void main() {
     FakeNotificationsPreferenceRepository? notificationsRepository,
     UserRole? role,
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -77,7 +79,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -368,6 +370,34 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+          tester,
+        ) async {
+          tester.view.physicalSize = size.size;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+
+          await pumpSettings(
+            tester,
+            authRepository: FakeAuthRepository(),
+            role: UserRole.agent,
+            locale: locale,
+          );
+
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   });
 }

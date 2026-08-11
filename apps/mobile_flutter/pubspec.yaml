@@ -30,6 +30,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Ships MaterialLocalizations/CupertinoLocalizations/WidgetsLocalizations
+  # delegates for the locales `intl` knows about — required alongside the
+  # generated `AppLocalizations` delegate for anything below `sdk: flutter`
+  # rather than pub.dev, so its version always matches the Flutter SDK and
+  # is never bumped independently.
+  flutter_localizations:
+    sdk: flutter
+  # Pinned to whatever `flutter pub add intl` resolved against this SDK's
+  # bundled `flutter_localizations` (see that package's own `intl`
+  # constraint) — `flutter gen-l10n`-generated code imports `intl` directly,
+  # so this version is not a free choice.
+  intl: ^0.20.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -41,7 +53,19 @@ dependencies:
   flutter_riverpod: ^3.4.2
   liquid_glass_easy: ^3.5.0
   flutter_map: ^8.3.1
-  latlong2: ^0.10.1
+  # Pinned to the 0.9.x line, not the newer 0.10.x this app started on,
+  # because flutter_map_marker_cluster ^8.2.2 (the only flutter_map-8-
+  # compatible clustering plugin) depends on latlong2 ^0.9.1 and the two
+  # ranges don't overlap. Checked the 0.9.1->0.10.1 changelog first: no API
+  # this app uses (LatLng construction, no `.isValid`) changed, so this is
+  # a safe downgrade, not a silent one.
+  latlong2: ^0.9.1
+  image_picker: ^1.2.3
+  url_launcher: ^6.3.2
+  share_plus: ^13.3.0
+  permission_handler: ^13.0.0
+  webview_flutter: ^4.14.1
+  flutter_map_marker_cluster: ^8.2.2
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +88,12 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Turns on the `flutter gen-l10n` step (configured by `l10n.yaml`) as part
+  # of `flutter pub get`/`run`/`build`/`test`/`analyze` — see `l10n.yaml`'s
+  # own header comment for why the generated output is a real, committed
+  # directory rather than the synthetic-package default.
+  generate: true
 
   # To add assets to your application, add an assets section, like this:
   # assets:

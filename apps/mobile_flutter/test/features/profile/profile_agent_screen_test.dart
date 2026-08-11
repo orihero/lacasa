@@ -16,10 +16,13 @@ import 'package:lacasa_mobile/features/language/language.dart';
 import 'package:lacasa_mobile/features/profile/profile.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../shared/support/fake_link_launcher.dart';
 import '../auth/support/fake_auth_repository.dart';
 import '../language/support/fake_language_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/profile_test_data.dart';
 
 void main() {
@@ -45,6 +48,7 @@ void main() {
     WidgetTester tester, {
     required AuthUser user,
     FakeAuthRepository? authRepository,
+    LinkLauncher? linkLauncher,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -53,6 +57,13 @@ void main() {
         authRepositoryProvider.overrideWithValue(
           authRepository ?? FakeAuthRepository(),
         ),
+        // Only overridden by the phone-row test below — every other test
+        // leaves the real `UrlLauncherLinkLauncher` in place, which never
+        // gets a chance to run because nothing else in this suite taps the
+        // phone row. Same pattern as `profile_buyer_screen_test.dart`'s
+        // "Register as Agent" override.
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
       ],
     );
     addTearDown(container.dispose);
@@ -95,6 +106,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -144,12 +157,29 @@ void main() {
     testWidgets('tapping the phone copies it instead of dialling', (
       tester,
     ) async {
-      await pumpScreen(tester, user: agent);
+      // The row now dials through `dialOrCopyPhone` (see
+      // `lib/shared/widgets/dial_or_copy.dart`) rather than copying
+      // unconditionally: it tries a real `tel:` intent first and only
+      // falls back to copy-and-toast when nothing on the device answers
+      // it. A `FakeLinkLauncher(result: false)` forces that fallback path
+      // deterministically instead of relying on the widget-test harness's
+      // unmocked plugin channel — same pattern as
+      // `profile_buyer_screen_test.dart`'s "Register as Agent" case.
+      final launcher = FakeLinkLauncher(result: false);
+      await pumpScreen(tester, user: agent, linkLauncher: launcher);
 
       await tester.tap(find.text('+998901112233'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Phone number copied: +998901112233'), findsOneWidget);
+      expect(launcher.dialed, ['+998901112233']);
+      // Unlike the old copy-only toast this test used to assert,
+      // `sharedDialFallbackToastMessage` is honest about *why* it copied.
+      expect(
+        find.text(
+          "Couldn't open the dialer — phone number copied: +998901112233",
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Edit Profile pushes RoutePaths.profileEdit', (tester) async {

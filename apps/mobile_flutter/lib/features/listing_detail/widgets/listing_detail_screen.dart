@@ -32,6 +32,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -48,6 +49,7 @@ import 'listing_info_tags.dart';
 import 'listing_location_section.dart';
 import 'listing_price_footer.dart';
 import 'listing_sizes_section.dart';
+import 'listing_tour_section.dart';
 
 class ListingDetailScreen extends ConsumerWidget {
   const ListingDetailScreen({
@@ -126,6 +128,7 @@ class _ListingDetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
     final description = ad.description?.trim();
 
     // See `glass_surface.dart`: a Scrollable containing a GlassSurface (the
@@ -153,8 +156,15 @@ class _ListingDetailBody extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ListingInfoTags(ad: ad),
+                // SCREENS.md §7's tour link sits with the photo/video
+                // carousel; it renders here instead purely as a matter of
+                // this section's own honest-gap mechanism (absent for
+                // every ad but the handful that carry `tour3dLink`) — see
+                // `listing_tour_section.dart`'s doc comment for why it
+                // pushes a full screen rather than embedding inline.
+                ListingTourSection(ad: ad),
                 ListingDetailSection(
-                  title: 'Description',
+                  title: l10n.listingDescriptionSectionTitle,
                   child: description == null || description.isEmpty
                       ? null
                       : Text(
@@ -163,19 +173,19 @@ class _ListingDetailBody extends StatelessWidget {
                         ),
                 ),
                 ListingDetailSection(
-                  title: 'Additional Information',
+                  title: l10n.listingAdditionalInfoSectionTitle,
                   child: buildAdditionalInfoOrNull(ad),
                 ),
                 ListingDetailSection(
-                  title: 'Sizes',
-                  child: ListingSizesSection.buildOrNull(ad),
+                  title: l10n.listingSizesSectionTitle,
+                  child: ListingSizesSection.buildOrNull(l10n, ad),
                 ),
                 ListingDetailSection(
-                  title: 'Nearby Places',
+                  title: l10n.listingNearbyPlacesSectionTitle,
                   child: buildNearbyPlacesOrNull(ad),
                 ),
                 ListingDetailSection(
-                  title: 'Location',
+                  title: l10n.listingLocationSectionTitle,
                   // Always rendered — see this section's own doc comment
                   // for why it's the one exception to the drop-if-empty
                   // rule the other four follow.
@@ -267,19 +277,18 @@ class _ListingDetailError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: SingleChildScrollView(
         child: _isNotFound
-            ? const FullWidthState(
+            ? FullWidthState(
                 icon: Icons.search_off_rounded,
-                message:
-                    'This listing is no longer available.\n'
-                    'It may have been sold or removed.',
+                message: l10n.listingNotFoundMessage,
               )
             : FullWidthState(
                 icon: Icons.error_outline_rounded,
-                message: "Couldn't load this listing.",
-                actionLabel: 'Retry',
+                message: l10n.listingLoadErrorMessage,
+                actionLabel: l10n.sharedRetryLabel,
                 onAction: onRetry,
               ),
       ),

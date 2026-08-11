@@ -29,6 +29,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -49,7 +50,10 @@ class ConnectedAccountsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'Connected Accounts', onBack: () => _pop(context)),
+            NavRow(
+              title: AppLocalizations.of(context).connectedAccountsScreenTitle,
+              onBack: () => _pop(context),
+            ),
             Expanded(
               child: ScrollConfiguration(
                 behavior: const MaterialScrollBehavior().copyWith(

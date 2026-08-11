@@ -24,7 +24,9 @@ import 'resources/contact_resource.dart';
 import 'resources/coworkers_resource.dart';
 import 'resources/instagram_auth_resource.dart';
 import 'resources/leads_resource.dart';
+import 'resources/notifications_resource.dart';
 import 'resources/publish_resource.dart';
+import 'resources/regions_resource.dart';
 import 'resources/saved_ads_resource.dart';
 import 'resources/statistics_resource.dart';
 import 'resources/uploads_resource.dart';
@@ -34,11 +36,14 @@ import 'transport.dart';
 
 export 'api_client.dart';
 export 'api_exception.dart';
+export 'app_mode.dart';
 export 'env.dart';
 export 'models/ad.dart';
+export 'models/ad_page.dart';
 export 'models/ad_stage_counts.dart';
 export 'models/ad_write_input.dart';
 export 'models/agent.dart';
+export 'models/agent_review.dart';
 export 'models/api_error_body.dart';
 export 'models/auth_user.dart';
 export 'models/connected_account.dart';
@@ -46,8 +51,10 @@ export 'models/coworker.dart';
 export 'models/enums.dart';
 export 'models/lead.dart';
 export 'models/lead_write_input.dart';
+export 'models/notification.dart';
 export 'models/optional_field.dart';
 export 'models/publish.dart';
+export 'models/region.dart';
 export 'models/saved_ad.dart';
 export 'models/statistics.dart';
 export 'models/upload.dart';
@@ -59,7 +66,9 @@ export 'resources/contact_resource.dart';
 export 'resources/coworkers_resource.dart';
 export 'resources/instagram_auth_resource.dart';
 export 'resources/leads_resource.dart';
+export 'resources/notifications_resource.dart';
 export 'resources/publish_resource.dart';
+export 'resources/regions_resource.dart';
 export 'resources/saved_ads_resource.dart';
 export 'resources/statistics_resource.dart';
 export 'resources/uploads_resource.dart';
@@ -86,6 +95,13 @@ class LaCasaApi {
   final UploadsResource uploads;
   final InstagramAuthResource instagramAuth;
 
+  /// This run's additions: the derived notifications feed (§22) and the
+  /// static region/district picker vocabulary — both public/cross-cutting
+  /// rather than tied to one CRM screen, so they sit alongside [agents]/
+  /// [ads] rather than under the Work-tab group above.
+  final NotificationsResource notifications;
+  final RegionsResource regions;
+
   LaCasaApi(this.client)
     : auth = AuthResource(client),
       ads = AdsResource(client),
@@ -99,7 +115,9 @@ class LaCasaApi {
       statistics = StatisticsResource(client),
       publish = PublishResource(client),
       uploads = UploadsResource(client),
-      instagramAuth = InstagramAuthResource(client);
+      instagramAuth = InstagramAuthResource(client),
+      notifications = NotificationsResource(client),
+      regions = RegionsResource(client);
 
   /// Builds the real stack: dio over the network, tokens in the platform
   /// keystore/keychain, base URL from [apiBaseUrl] (or [baseUrl] to

@@ -15,6 +15,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
 import '../home/support/fake_home_feed_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/fake_onboarding_repository.dart';
 
 void main() {
@@ -50,6 +51,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),

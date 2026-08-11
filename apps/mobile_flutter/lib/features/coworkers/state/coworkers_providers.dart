@@ -11,12 +11,16 @@
 /// moment the user lands back on it, rather than relying on a rebuild that
 /// might not happen.
 ///
-/// **[coworkerAdsProvider]/[coworkerActivityProvider] are independent of
-/// [coworkersListProvider] and of each other** — the failure-isolation rule
-/// WORK_TAB_CONTRACT.md §6 asks for ("Independent providers per
-/// independently-failable section"). A coworker's row still renders (name,
-/// avatar, phone) if either of these two fails; only the derived
-/// listings-count/last-active figures on that row degrade to "…"/"—".
+/// **[coworkerSummariesProvider] is independent of [coworkersListProvider]**
+/// — the failure-isolation rule WORK_TAB_CONTRACT.md §6 asks for
+/// ("Independent providers per independently-failable section"). A
+/// coworker's row still renders (name, avatar, phone) if the summary fetch
+/// fails; only the derived listings-count/last-active figures on that row
+/// degrade to "…"/"—". This used to be two providers
+/// ([coworkerAdsProvider]/[coworkerActivityProvider], each folded
+/// client-side) — now one, since `GET /statistics/coworkers/summary` does
+/// that fold server-side (see `data/coworkers_repository.dart`'s own doc
+/// comment for why).
 ///
 /// **[coworkerDetailProvider] is `.autoDispose.family`**, matching
 /// `agentDetailProvider`/`EditListingScreen`'s own detail-by-id shape per
@@ -43,15 +47,11 @@ final coworkersListProvider =
       CoworkersListNotifier.new,
     );
 
-/// Backing data for [coworkerListingsCount] (`coworker_metrics.dart`) —
-/// every ad visible to the caller, fetched once per `coworkers-list` visit.
-final coworkerAdsProvider = FutureProvider<List<Ad>>((ref) {
-  return ref.read(coworkersRepositoryProvider).ads();
-});
-
-/// Backing data for [coworkerLastActiveAt] (`coworker_metrics.dart`).
-final coworkerActivityProvider = FutureProvider<List<ActivityEvent>>((ref) {
-  return ref.read(coworkersRepositoryProvider).activity();
+/// Backing data for [summaryFor] (`coworker_metrics.dart`) — one
+/// [CoworkerSummary] row per coworker, fetched once per `coworkers-list`
+/// visit and reused by `coworker-detail`.
+final coworkerSummariesProvider = FutureProvider<List<CoworkerSummary>>((ref) {
+  return ref.read(coworkersRepositoryProvider).summary();
 });
 
 /// One coworker, for `coworker-detail`. Fatal for that screen: an error

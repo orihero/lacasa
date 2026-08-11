@@ -34,12 +34,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/listing_editor_providers.dart';
 import '../state/listing_editor_repository_provider.dart';
-import 'form/publish_section.dart' show kOlxUnavailableHint;
+import 'form/publish_section.dart' show channelLabel, olxUnavailableHint;
 
 Future<void> showPublishChannelsSheet(BuildContext context, {required Ad ad}) {
   return showModalBottomSheet<void>(
@@ -56,7 +57,8 @@ class PublishChannelsSheet extends ConsumerStatefulWidget {
   final Ad ad;
 
   @override
-  ConsumerState<PublishChannelsSheet> createState() => _PublishChannelsSheetState();
+  ConsumerState<PublishChannelsSheet> createState() =>
+      _PublishChannelsSheetState();
 }
 
 class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
@@ -77,6 +79,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
     required List<ConnectedInstagramAccount> igAccounts,
   }) async {
     if (_publishing) return;
+    final l10n = AppLocalizations.of(context);
     setState(() => _publishing = true);
 
     final repository = ref.read(listingEditorRepositoryProvider);
@@ -113,7 +116,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
         }
       } on ApiException catch (e) {
         anyFailure = true;
-        failedIgUsernames.add(_messageFor(e));
+        failedIgUsernames.add(_messageFor(l10n, e));
       }
     }
 
@@ -130,7 +133,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
         if (response.results.any((r) => !r.ok)) telegramFailed = true;
       } on ApiException catch (e) {
         telegramFailed = true;
-        telegramError = _messageFor(e);
+        telegramError = _messageFor(l10n, e);
       }
     }
 
@@ -143,44 +146,62 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
       if (anyFailure) {
         LaCasaToast.showError(
           context,
-          'Instagram publish failed for ${failedIgUsernames.join(', ')}',
+          l10n.listingEditorInstagramPublishFailedMessage(
+            failedIgUsernames.join(', '),
+          ),
         );
       } else {
-        LaCasaToast.showSuccess(context, 'Instagram post published!');
+        LaCasaToast.showSuccess(
+          context,
+          l10n.listingEditorInstagramPublishSuccessMessage,
+        );
       }
     }
     if (_selectedChatIds.isNotEmpty) {
       if (telegramFailed) {
         LaCasaToast.showError(
           context,
-          telegramError ?? 'Telegram publish failed for ${_selectedChatIds.join(', ')}',
+          telegramError ??
+              l10n.listingEditorTelegramPublishFailedMessage(
+                _selectedChatIds.join(', '),
+              ),
         );
       } else {
-        LaCasaToast.showSuccess(context, 'Telegram post published!');
+        LaCasaToast.showSuccess(
+          context,
+          l10n.listingEditorTelegramPublishSuccessMessage,
+        );
       }
     }
 
     Navigator.of(context).pop();
   }
 
-  static String _messageFor(ApiException e) {
+  static String _messageFor(AppLocalizations l10n, ApiException e) {
     if (e is ApiErrorException) return e.message;
-    if (e is NetworkException) return 'No connection. Check your network and try again.';
-    return 'Something went wrong.';
+    if (e is NetworkException) {
+      return l10n.listingEditorNetworkErrorMessage;
+    }
+    return l10n.listingEditorGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final igAsync = ref.watch(instagramAccountsProvider);
-    final tgChatIds = ref.watch(authSessionProvider).user?.tgChatIds ?? const <int>[];
+    final tgChatIds =
+        ref.watch(authSessionProvider).user?.tgChatIds ?? const <int>[];
 
-    final canPublish = (_selectedIgUserIds.isNotEmpty || _selectedChatIds.isNotEmpty) &&
+    final canPublish =
+        (_selectedIgUserIds.isNotEmpty || _selectedChatIds.isNotEmpty) &&
         !_publishing;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: FractionallySizedBox(
         heightFactor: 0.82,
         child: Container(
@@ -197,7 +218,10 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
               Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
+                decoration: BoxDecoration(
+                  color: colors.line,
+                  borderRadius: AppRadii.pill,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -210,34 +234,49 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Select the channels you want to publish to!',
+                        l10n.listingEditorPublishChannelsSheetTitle,
                         style: type.sheetTitle.copyWith(color: colors.ink),
                       ),
                     ),
                     GestureDetector(
                       key: const ValueKey('publishChannelsSheet-close'),
                       onTap: () => Navigator.of(context).pop(),
-                      child: Icon(Icons.close_rounded, color: colors.ink2, size: 22),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.ink2,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    overscroll: false,
+                  ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenGutter,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         igAsync.when(
                           loading: () => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: AppSpacing.base),
-                            child: ShimmerBox(height: 56, borderRadius: BorderRadius.zero),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSpacing.base,
+                            ),
+                            child: ShimmerBox(
+                              height: 56,
+                              borderRadius: BorderRadius.zero,
+                            ),
                           ),
                           error: (error, stackTrace) => _SectionError(
-                            message: "Couldn't load connected Instagram accounts.",
-                            onRetry: () => ref.invalidate(instagramAccountsProvider),
+                            message:
+                                l10n.listingEditorInstagramLoadErrorMessage,
+                            onRetry: () =>
+                                ref.invalidate(instagramAccountsProvider),
                           ),
                           data: (accounts) => _InstagramSection(
                             accounts: accounts,
@@ -285,12 +324,19 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-                            border: Border.all(color: AppStatusColors.dangerBorder, width: 1.5),
+                            borderRadius: BorderRadius.circular(
+                              AppRadii.pillButton,
+                            ),
+                            border: Border.all(
+                              color: AppStatusColors.dangerBorder,
+                              width: 1.5,
+                            ),
                           ),
                           child: Text(
-                            'Cancel',
-                            style: type.rowTitle.copyWith(color: AppStatusColors.errorText),
+                            l10n.listingEditorCancelButtonLabel,
+                            style: type.rowTitle.copyWith(
+                              color: AppStatusColors.errorText,
+                            ),
                           ),
                         ),
                       ),
@@ -300,7 +346,9 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                       child: GestureDetector(
                         key: const ValueKey('publishChannelsSheet-publish'),
                         onTap: canPublish
-                            ? () => _publish(igAccounts: igAsync.value ?? const [])
+                            ? () => _publish(
+                                igAccounts: igAsync.value ?? const [],
+                              )
                             : null,
                         child: Opacity(
                           opacity: canPublish ? 1 : 0.5,
@@ -309,7 +357,9 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               gradient: AppAccent.gradient,
-                              borderRadius: BorderRadius.circular(AppRadii.pillButton),
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.pillButton,
+                              ),
                             ),
                             child: _publishing
                                 ? const SizedBox(
@@ -317,12 +367,16 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                                     height: 18,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
                                 : Text(
-                                    'Publish',
-                                    style: type.rowTitle.copyWith(color: Colors.white),
+                                    l10n.listingEditorPublishButtonLabel,
+                                    style: type.rowTitle.copyWith(
+                                      color: Colors.white,
+                                    ),
                                   ),
                           ),
                         ),
@@ -352,18 +406,21 @@ class _InstagramSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Instagram', style: type.panelHeading.copyWith(color: colors.ink)),
+        Text(
+          channelLabel(l10n, Channel.instagram),
+          style: type.panelHeading.copyWith(color: colors.ink),
+        ),
         const SizedBox(height: AppSpacing.sm),
         if (accounts.isEmpty)
           Text(
-            'No Instagram account is connected. You can connect one in '
-            'Settings, or draft the post yourself.',
+            l10n.listingEditorNoInstagramAccountMessage,
             style: type.bodySmall.copyWith(color: colors.faint),
           )
         else
@@ -392,17 +449,21 @@ class _TelegramSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Telegram', style: type.panelHeading.copyWith(color: colors.ink)),
+        Text(
+          channelLabel(l10n, Channel.telegram),
+          style: type.panelHeading.copyWith(color: colors.ink),
+        ),
         const SizedBox(height: AppSpacing.sm),
         if (chatIds.isEmpty)
           Text(
-            'No Telegram channel is connected.',
+            l10n.listingEditorNoTelegramChannelMessage,
             style: type.bodySmall.copyWith(color: colors.faint),
           )
         else
@@ -411,7 +472,7 @@ class _TelegramSection extends StatelessWidget {
               key: ValueKey('publishChannelsSheet-tg-$chatId'),
               // No per-channel title exists on this build's wire data
               // (ruling 7.10) — the raw chat id is the honest label.
-              label: 'Telegram channel #$chatId',
+              label: l10n.listingEditorTelegramChannelRowLabel(chatId),
               checked: selected.contains(chatId),
               onTap: () => onToggle(chatId),
             ),
@@ -425,6 +486,7 @@ class _OlxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
@@ -435,13 +497,23 @@ class _OlxRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.check_box_outline_blank_rounded, size: 20, color: colors.faint),
+              Icon(
+                Icons.check_box_outline_blank_rounded,
+                size: 20,
+                color: colors.faint,
+              ),
               const SizedBox(width: AppSpacing.base),
-              Text('OLX', style: type.rowTitle.copyWith(color: colors.ink2)),
+              Text(
+                channelLabel(l10n, Channel.olx),
+                style: type.rowTitle.copyWith(color: colors.ink2),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(kOlxUnavailableHint, style: type.caption.copyWith(color: colors.faint)),
+          Text(
+            olxUnavailableHint(l10n),
+            style: type.caption.copyWith(color: colors.faint),
+          ),
         ],
       ),
     );
@@ -472,13 +544,18 @@ class _CheckRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              checked ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
+              checked
+                  ? Icons.check_box_rounded
+                  : Icons.check_box_outline_blank_rounded,
               size: 20,
               color: checked ? AppAccent.color : colors.muted,
             ),
             const SizedBox(width: AppSpacing.base),
             Expanded(
-              child: Text(label, style: type.rowTitle.copyWith(color: colors.ink)),
+              child: Text(
+                label,
+                style: type.rowTitle.copyWith(color: colors.ink),
+              ),
             ),
           ],
         ),
@@ -501,14 +578,26 @@ class _SectionError extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, size: 16, color: AppStatusColors.warningText),
+          Icon(
+            Icons.error_outline_rounded,
+            size: 16,
+            color: AppStatusColors.warningText,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(message, style: type.bodySmall.copyWith(color: AppStatusColors.warningText)),
+            child: Text(
+              message,
+              style: type.bodySmall.copyWith(
+                color: AppStatusColors.warningText,
+              ),
+            ),
           ),
           GestureDetector(
             onTap: onRetry,
-            child: Text('Retry', style: type.label.copyWith(color: AppAccent.color)),
+            child: Text(
+              AppLocalizations.of(context).sharedRetryLabel,
+              style: type.label.copyWith(color: AppAccent.color),
+            ),
           ),
         ],
       ),

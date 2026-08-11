@@ -18,19 +18,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
 import '../state/dashboard_providers.dart';
 
-String _rangeSubtitle(StatisticsFilter filter) => switch (filter) {
-  StatisticsFilter.all => 'all time',
-  StatisticsFilter.thisMonth => 'this month',
-  StatisticsFilter.thisWeek => 'this week',
-  StatisticsFilter.today => 'today',
+String _rangeSubtitle(AppLocalizations l10n, StatisticsFilter filter) => switch (filter) {
+  StatisticsFilter.all => l10n.dashboardRangeSubtitleAll,
+  StatisticsFilter.thisMonth => l10n.dashboardRangeSubtitleThisMonth,
+  StatisticsFilter.thisWeek => l10n.dashboardRangeSubtitleThisWeek,
+  StatisticsFilter.today => l10n.dashboardRangeSubtitleToday,
 };
 
-String _callbackSubtitle(int dueToday) =>
-    dueToday == 1 ? '1 needs a call back' : '$dueToday need a call back';
+String _callbackSubtitle(AppLocalizations l10n, int dueToday) =>
+    l10n.dashboardCallbackSubtitle(dueToday);
 
 class DashboardStatTiles extends ConsumerWidget {
   const DashboardStatTiles({super.key});
@@ -41,7 +42,8 @@ class DashboardStatTiles extends ConsumerWidget {
     final adsStats = ref.watch(adsStatisticsProvider);
     final leadsAsync = ref.watch(dashboardLeadsProvider);
     final coworkersAsync = ref.watch(dashboardCoworkersProvider);
-    final rangeLabel = _rangeSubtitle(range);
+    final l10n = AppLocalizations.of(context);
+    final rangeLabel = _rangeSubtitle(l10n, range);
 
     return Column(
       children: [
@@ -50,7 +52,7 @@ class DashboardStatTiles extends ConsumerWidget {
             Expanded(
               child: _StatTile(
                 key: const ValueKey('dashboardTile-adsCreated'),
-                label: 'Ads created',
+                label: l10n.dashboardTileAdsCreatedLabel,
                 valueAsync: adsStats.whenData((s) => s.adsNewCount),
                 subtitle: rangeLabel,
                 onRetry: () => ref.invalidate(adsStatisticsProvider),
@@ -60,7 +62,7 @@ class DashboardStatTiles extends ConsumerWidget {
             Expanded(
               child: _StatTile(
                 key: const ValueKey('dashboardTile-adsSold'),
-                label: 'Ads sold',
+                label: l10n.dashboardTileAdsSoldLabel,
                 valueAsync: adsStats.whenData((s) => s.adsSoldCount),
                 subtitle: rangeLabel,
                 onRetry: () => ref.invalidate(adsStatisticsProvider),
@@ -74,11 +76,11 @@ class DashboardStatTiles extends ConsumerWidget {
             Expanded(
               child: _StatTile(
                 key: const ValueKey('dashboardTile-activeLeads'),
-                label: 'Active leads',
+                label: l10n.dashboardTileActiveLeadsLabel,
                 valueAsync: leadsAsync.whenData((leads) => leads.length),
                 subtitle: leadsAsync.whenOrNull(
                   data: (leads) =>
-                      _callbackSubtitle(countCallbacksDueToday(leads)),
+                      _callbackSubtitle(l10n, countCallbacksDueToday(leads)),
                 ),
                 onRetry: () => ref.invalidate(dashboardLeadsProvider),
               ),
@@ -87,9 +89,9 @@ class DashboardStatTiles extends ConsumerWidget {
             Expanded(
               child: _StatTile(
                 key: const ValueKey('dashboardTile-coworkers'),
-                label: 'Coworkers',
+                label: l10n.dashboardTileCoworkersLabel,
                 valueAsync: coworkersAsync.whenData((list) => list.length),
-                subtitle: 'tap to manage',
+                subtitle: l10n.dashboardTileTapToManageSubtitle,
                 onRetry: () => ref.invalidate(dashboardCoworkersProvider),
                 onTap: () => context.push(RoutePaths.workCoworkers),
               ),
@@ -139,7 +141,7 @@ class _StatTile extends StatelessWidget {
         ? GestureDetector(
             onTap: onRetry,
             child: Text(
-              'Retry',
+              AppLocalizations.of(context).sharedRetryLabel,
               style: type.bodySmall.copyWith(
                 color: AppAccent.color,
                 fontWeight: FontWeight.w600,

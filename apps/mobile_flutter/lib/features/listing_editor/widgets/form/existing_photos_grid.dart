@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 
@@ -29,7 +30,7 @@ class ExistingPhotosGrid extends StatelessWidget {
 
     if (photos.isEmpty) {
       return Text(
-        'No photos on this listing yet.',
+        AppLocalizations.of(context).listingEditorNoExistingPhotosMessage,
         style: type.bodySmall.copyWith(color: colors.faint),
       );
     }

@@ -20,16 +20,33 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../api/api.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../navigation/route_paths.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 import '../publish_channels_sheet.dart';
 
-/// SCREENS.md §5's fixed OLX hint, quoted verbatim so `publish_section.dart`
-/// and `publish_channels_sheet.dart` never drift on the exact sentence.
-const String kOlxUnavailableHint =
-    'OLX cross-posting is only available from the desktop app (requires a '
-    'browser extension).';
+/// SCREENS.md §5's fixed OLX hint, reused so `publish_section.dart`,
+/// `publish_channels_sheet.dart` and `publish_status_screen.dart` never
+/// drift on the exact sentence. Was a top-level `const String` before
+/// localization; now a function of [AppLocalizations] since the string can
+/// no longer be a compile-time constant.
+String olxUnavailableHint(AppLocalizations l10n) =>
+    l10n.listingEditorOlxUnavailableHint;
+
+/// The 6 [Channel] display names, reused across the Publish section,
+/// publish-channels-sheet and publish-status so all three never drift on
+/// wording — a pure function of [AppLocalizations] (see
+/// `lib/l10n/README.md`'s "passing AppLocalizations into a pure function"
+/// guidance for a non-widget file needing localized text).
+String channelLabel(AppLocalizations l10n, Channel channel) => switch (channel) {
+  Channel.telegram => l10n.listingEditorChannelTelegramLabel,
+  Channel.instagram => l10n.listingEditorChannelInstagramLabel,
+  Channel.youtube => l10n.listingEditorChannelYoutubeLabel,
+  Channel.olx => l10n.listingEditorChannelOlxLabel,
+  Channel.realting => l10n.listingEditorChannelRealtingLabel,
+  Channel.unknown => l10n.listingEditorChannelUnknownLabel,
+};
 
 class PublishSection extends StatelessWidget {
   const PublishSection({
@@ -48,40 +65,41 @@ class PublishSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Publish'),
+        FieldLabel(l10n.listingEditorPublishSectionLabel),
         _ChannelButton(
           key: const ValueKey('publish-channel-instagram'),
           icon: Icons.camera_alt_outlined,
-          label: 'Instagram',
+          label: channelLabel(l10n, Channel.instagram),
           onTap: () => showPublishChannelsSheet(context, ad: ad),
         ),
         const SizedBox(height: AppSpacing.sm),
         _ChannelButton(
           key: const ValueKey('publish-channel-telegram'),
           icon: Icons.send_outlined,
-          label: 'Telegram',
+          label: channelLabel(l10n, Channel.telegram),
           onTap: () => showPublishChannelsSheet(context, ad: ad),
         ),
         const SizedBox(height: AppSpacing.sm),
         _ChannelButton(
           key: const ValueKey('publish-channel-youtube'),
           icon: Icons.smart_display_outlined,
-          label: 'YouTube',
+          label: channelLabel(l10n, Channel.youtube),
           enabled: false,
-          hint: 'Beta — not available in this build.',
+          hint: l10n.listingEditorYoutubeUnavailableHint,
         ),
         const SizedBox(height: AppSpacing.sm),
         _ChannelButton(
           key: const ValueKey('publish-channel-olx'),
           icon: Icons.storefront_outlined,
-          label: 'OLX',
+          label: channelLabel(l10n, Channel.olx),
           enabled: false,
-          hint: kOlxUnavailableHint,
+          hint: olxUnavailableHint(l10n),
         ),
         if (showPublishStatusLink) ...[
           const SizedBox(height: AppSpacing.base),
@@ -94,11 +112,15 @@ class PublishSection extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Publish Status',
+                  l10n.listingEditorPublishStatusLinkLabel,
                   style: type.rowTitle.copyWith(color: AppAccent.color),
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Icon(Icons.arrow_forward_rounded, size: 14, color: AppAccent.color),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 14,
+                  color: AppAccent.color,
+                ),
               ],
             ),
           ),
@@ -156,7 +178,11 @@ class _ChannelButton extends StatelessWidget {
                     ),
                   ),
                   if (!enabled)
-                    Icon(Icons.lock_outline_rounded, size: 15, color: colors.faint),
+                    Icon(
+                      Icons.lock_outline_rounded,
+                      size: 15,
+                      color: colors.faint,
+                    ),
                 ],
               ),
               if (hint != null) ...[

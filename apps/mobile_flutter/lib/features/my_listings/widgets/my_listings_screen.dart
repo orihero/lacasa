@@ -4,10 +4,11 @@
 /// Post) → `create-listing`. Rows: thumbnail; `#{id}`; Created At; City;
 /// Status pill; Author; `{rooms} room`; `{area} m²`; edit icon →
 /// `edit-listing`. Row tap (outside thumbnail/edit) → `listing-detail`.
-/// Empty state: "Ads not found." Infinite scroll — see
-/// `data/my_listings_repository.dart`'s doc comment (build contract §7.7)
-/// for why this is a client-side paging window, never a real paginated
-/// fetch.
+/// Empty state: "Ads not found." Infinite scroll is a real paginated fetch
+/// loop against `GET /my/ads`'s keyset paging — see
+/// `data/my_listings_repository.dart`'s doc comment for how, and
+/// `README.md`'s Known gaps for why this used to be a client-side-only
+/// window.
 ///
 /// **Router wiring**: this screen takes no constructor arguments and reads
 /// no path params (build contract §2's exact table) — swap
@@ -33,6 +34,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -64,20 +66,18 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
     super.dispose();
   }
 
-  /// Reveals the next page of the client-side paging window once the
-  /// scroll position nears the bottom of what's currently rendered — see
-  /// `my_listings_providers.dart`'s `myListingsVisibleCountProvider` doc
-  /// comment for why this can only ever page an already-fetched list.
+  /// Fetches the next real `GET /my/ads` page once the scroll position
+  /// nears the bottom of what's currently rendered — see
+  /// `my_listings_providers.dart`'s `MyListingsResultsNotifier.loadMore`
+  /// doc comment; that method is itself a no-op if a page is already in
+  /// flight or there is no next page, so calling it eagerly on every
+  /// near-bottom scroll tick is safe.
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
     if (position.pixels < position.maxScrollExtent - 200) return;
 
-    final total = ref.read(displayedMyListingsProvider).value?.length ?? 0;
-    final visible = ref.read(myListingsVisibleCountProvider);
-    if (visible < total) {
-      ref.read(myListingsVisibleCountProvider.notifier).showMore();
-    }
+    ref.read(myListingsResultsProvider.notifier).loadMore();
   }
 
   Future<void> _openFilters() async {
@@ -93,8 +93,12 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
     ref
         .read(myListingsSortProvider.notifier)
         .setSort(result.sort ?? AdSort.newest);
+    // Each of these three is independently watched by
+    // `MyListingsResultsNotifier.build()` (`my_listings_providers.dart`), so
+    // setting the last one is what actually re-triggers the fetch — no
+    // separate "reset the paging window" call is needed any more, unlike
+    // before real server paging existed.
     ref.read(myListingsStatusProvider.notifier).setStatus(result.status);
-    ref.read(myListingsVisibleCountProvider.notifier).reset();
   }
 
   void _openCreate() => context.push(RoutePaths.createListing);
@@ -142,7 +146,10 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'My Ads', onBack: () => _pop(context)),
+            NavRow(
+              title: AppLocalizations.of(context).myListingsNavTitle,
+              onBack: () => _pop(context),
+            ),
             const SizedBox(height: AppSpacing.base),
             Padding(
               padding: const EdgeInsets.symmetric(

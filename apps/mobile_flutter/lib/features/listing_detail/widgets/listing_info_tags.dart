@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../formatters/listing_detail_formatters.dart';
 import 'listing_detail_section.dart';
 import 'listing_tag_chip.dart';
@@ -24,11 +25,12 @@ class ListingInfoTags extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final labels = <String>[
-      ?ListingDetailFormatters.typeLabel(ad.type),
-      ?ListingDetailFormatters.categoryLabel(ad.category),
-      ?ListingDetailFormatters.repairmentLabel(ad.repairment),
-      ?ListingDetailFormatters.furnitureLabel(ad.furniture),
+      ?ListingDetailFormatters.typeLabel(l10n, ad.type),
+      ?ListingDetailFormatters.categoryLabel(l10n, ad.category),
+      ?ListingDetailFormatters.repairmentLabel(l10n, ad.repairment),
+      ?ListingDetailFormatters.furnitureLabel(l10n, ad.furniture),
     ];
 
     return tagWrapOrNull([

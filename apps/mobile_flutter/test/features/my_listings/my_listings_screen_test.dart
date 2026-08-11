@@ -17,6 +17,7 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/my_listings/my_listings.dart';
 import 'package:lacasa_mobile/features/my_listings/state/my_listings_providers.dart';
 import 'package:lacasa_mobile/features/my_listings/state/my_listings_repository_provider.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
@@ -36,6 +37,7 @@ void main() {
     required FakeMyListingsRepository repository,
     AuthUser? user,
     bool withBackStack = true,
+    Locale locale = const Locale('en'),
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -84,6 +86,9 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           routerConfig: router,
         ),
@@ -209,6 +214,8 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             home: const MyListingsScreen(),
           ),
@@ -533,6 +540,63 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+    }
+  });
+
+  group('layout holds at real phone widths under ru/uz', () {
+    for (final locale in const [Locale('ru'), Locale('uz')]) {
+      for (final size in const [
+        (label: 'small android', size: Size(360, 800)),
+        (label: 'iphone 14', size: Size(390, 844)),
+        (label: 'pro max', size: Size(430, 932)),
+      ]) {
+        testWidgets(
+          'toolbar row: no overflow at ${size.label} (${locale.languageCode})',
+          (tester) async {
+            tester.view.physicalSize = size.size;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            await pumpScreen(
+              tester,
+              repository: FakeMyListingsRepository(
+                ads: [
+                  myListingAd(id: 'ad-1001', coworkerId: 'coworker-sardor'),
+                  myListingAd(id: 'ad-1002', stage: '3', rooms: null, area: null),
+                ],
+                coworkers: [
+                  myListingsCoworker(
+                    id: 'coworker-sardor',
+                    fullName: 'Sardor Abdullayev',
+                  ),
+                ],
+              ),
+              locale: locale,
+            );
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+
+        testWidgets(
+          'empty state: no overflow at ${size.label} (${locale.languageCode})',
+          (tester) async {
+            tester.view.physicalSize = size.size;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+
+            await pumpScreen(
+              tester,
+              repository: FakeMyListingsRepository(ads: const []),
+              locale: locale,
+            );
+
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
     }
   });
 }

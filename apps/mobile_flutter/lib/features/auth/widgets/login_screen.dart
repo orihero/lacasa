@@ -50,6 +50,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
@@ -94,11 +95,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (_submitting) return;
 
+    // Captured once, up front, so every later use is safe regardless of the
+    // `context.go` navigation and `mounted` re-check below — same reasoning
+    // `agent_review_sheet.dart`'s `_submit` documents for its own `l10n`.
+    final l10n = AppLocalizations.of(context);
+
     final email = _email.text.trim();
     final password = _password.text;
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Required fields are not filled');
+      setState(() => _error = l10n.authLoginRequiredFieldsError);
       return;
     }
 
@@ -114,21 +120,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       context.go(RoutePaths.home);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User successfully logged in.')),
+        SnackBar(content: Text(l10n.authLoginSuccessToast)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _messageFor(e);
+        _error = _messageFor(l10n, e);
         _submitting = false;
       });
     }
   }
 
-  static String _messageFor(ApiException e) {
+  /// Takes [AppLocalizations] as a parameter rather than a `BuildContext` —
+  /// see `agent_review_sheet.dart`'s identically-shaped `_messageFor` for
+  /// why (a pure function fed the `l10n` its caller already captured, not
+  /// one that re-derives it from a context that may be stale by the time an
+  /// error lands).
+  static String _messageFor(AppLocalizations l10n, ApiException e) {
     if (e is ApiErrorException) {
       return switch (e.code) {
-        ApiErrorCode.invalidCredentials => 'Invalid email or password',
+        ApiErrorCode.invalidCredentials => l10n.authLoginInvalidCredentialsError,
         // §3.12's fallback: "the server's validation message". Every other
         // code (chiefly `validation`) surfaces what the server actually
         // said rather than a copy invented here.
@@ -136,15 +147,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       };
     }
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.authLoginNetworkErrorMessage;
     }
-    return 'Something went wrong';
+    return l10n.authLoginGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -167,19 +179,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const AuthHeroIcon(icon: Icons.lock_outline_rounded),
               const SizedBox(height: AppSpacing.lg),
               Text(
-                'Welcome back',
+                l10n.authLoginWelcomeHeading,
                 style: type.displayLead.copyWith(color: colors.ink),
               ),
               const SizedBox(height: AppSpacing.section),
               AuthField(
-                label: 'Email',
+                label: l10n.authLoginEmailFieldLabel,
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.base),
               AuthField(
-                label: 'Password',
+                label: l10n.authLoginPasswordFieldLabel,
                 controller: _password,
                 obscureText: _obscurePassword,
                 textInputAction: TextInputAction.done,
@@ -196,14 +208,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
               const SizedBox(height: AppSpacing.section),
               AuthPrimaryButton(
-                label: 'Sign in',
+                label: l10n.authLoginSubmitButtonLabel,
                 submitting: _submitting,
                 onTap: _submit,
               ),
               const SizedBox(height: AppSpacing.lg),
               Center(
                 child: AuthFooterLink(
-                  text: "Don't you have an account?",
+                  text: l10n.authLoginFooterLinkText,
                   onTap: () => context.push(RoutePaths.register),
                 ),
               ),

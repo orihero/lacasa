@@ -78,6 +78,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -125,10 +126,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) return;
     if (!tokenCleared) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            "Signed out, but the saved session couldn't be removed from this "
-            'device. Sign out again, or remove the app, before handing it on.',
+            AppLocalizations.of(
+              context,
+            ).settingsSignOutTokenNotClearedMessage,
           ),
         ),
       );
@@ -184,7 +186,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             'settingsConnectedAccountsRow',
                           ),
                           icon: Icons.dynamic_feed_outlined,
-                          title: 'Connected Accounts',
+                          title: AppLocalizations.of(
+                            context,
+                          ).settingsConnectedAccountsRowTitle,
                           onTap: () => context.push(
                             '${widget.branchPrefix}/connected-accounts',
                           ),
@@ -194,12 +198,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ListRow(
                         key: const ValueKey('settingsAboutRow'),
                         icon: Icons.info_outline_rounded,
-                        title: 'About',
-                        subtitle: 'Version $appVersion',
+                        title: AppLocalizations.of(context).settingsAboutRowTitle,
+                        subtitle: AppLocalizations.of(
+                          context,
+                        ).settingsAboutRowSubtitle(appVersion),
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('$appName $appVersion'),
+                            SnackBar(
+                              content: Text(
+                                AppLocalizations.of(
+                                  context,
+                                ).settingsAboutToastMessage(
+                                  appName,
+                                  appVersion,
+                                ),
+                              ),
                             ),
                           );
                         },
@@ -209,7 +222,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       // padding (AppSpacing.base) — no extra SizedBox needed
                       // before the row underneath, unlike the plain Text
                       // this replaced.
-                      const ListRowGroupLabel('Session'),
+                      ListRowGroupLabel(
+                        AppLocalizations.of(context).settingsSessionGroupLabel,
+                      ),
                       _LogoutRow(
                         key: const ValueKey('settingsLogoutRow'),
                         loggingOut: _loggingOut,
@@ -262,7 +277,7 @@ class _NavRow extends StatelessWidget {
         children: [
           Semantics(
             button: true,
-            label: 'Back',
+            label: AppLocalizations.of(context).settingsNavBackLabel,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
@@ -280,7 +295,7 @@ class _NavRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              'Settings',
+              AppLocalizations.of(context).settingsScreenTitle,
               overflow: TextOverflow.ellipsis,
               style: t.navTitle.copyWith(color: colors.ink),
             ),
@@ -311,7 +326,7 @@ class _LanguageRow extends ConsumerWidget {
 
     return ListRow(
       icon: Icons.translate_rounded,
-      title: 'Language',
+      title: AppLocalizations.of(context).settingsLanguageRowTitle,
       subtitle: selected.label,
       onTap: () => showLanguageSheet(context),
     );
@@ -331,9 +346,8 @@ class _NotificationsRow extends ConsumerWidget {
 
     return ListRow(
       icon: Icons.notifications_none_rounded,
-      title: 'Notifications',
-      subtitle:
-          "Not sent yet — push notifications aren't wired up in this build.",
+      title: AppLocalizations.of(context).settingsNotificationsRowTitle,
+      subtitle: AppLocalizations.of(context).settingsNotificationsRowSubtitle,
       trailing: _NotificationsSwitch(
         // `_SettingsRow`'s own outer `Semantics(label: title)` merges this
         // switch's nested `Semantics(label: 'Notifications toggle')` into
@@ -380,7 +394,7 @@ class _NotificationsSwitch extends StatelessWidget {
       // finding two nodes with the same label.
       button: true,
       toggled: value,
-      label: 'Notifications toggle',
+      label: AppLocalizations.of(context).settingsNotificationsToggleLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => onChanged(!value),
@@ -431,8 +445,10 @@ class _LogoutRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListRow(
       icon: Icons.logout_rounded,
-      title: 'Logout',
-      subtitle: loggingOut ? 'Signing out…' : null,
+      title: AppLocalizations.of(context).settingsLogoutRowTitle,
+      subtitle: loggingOut
+          ? AppLocalizations.of(context).settingsLoggingOutLabel
+          : null,
       danger: true,
       onTap: onTap,
       // `.lrow--danger` never pairs with a trailing chevron (`ListRow`'s

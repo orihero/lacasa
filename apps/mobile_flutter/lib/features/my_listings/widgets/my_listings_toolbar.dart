@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 class MyListingsToolbar extends StatelessWidget {
@@ -62,7 +63,10 @@ class _FiltersButton extends StatelessWidget {
           children: [
             Icon(Icons.tune_rounded, size: 15, color: colors.ink),
             const SizedBox(width: AppSpacing.sm),
-            Text('Filter', style: type.rowTitle.copyWith(color: colors.ink)),
+            Text(
+              AppLocalizations.of(context).myListingsFilterButtonLabel,
+              style: type.rowTitle.copyWith(color: colors.ink),
+            ),
             if (count > 0) ...[
               const SizedBox(width: AppSpacing.xs),
               Container(
@@ -94,7 +98,7 @@ class _CreateButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Create New Post',
+      label: AppLocalizations.of(context).myListingsCreateButtonSemanticsLabel,
       child: GestureDetector(
         key: const ValueKey('myListingsCreateButton'),
         onTap: onTap,

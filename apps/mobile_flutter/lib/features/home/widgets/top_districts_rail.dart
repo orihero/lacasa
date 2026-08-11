@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -18,22 +19,25 @@ class _DistrictSpec {
   final Gradient gradient;
 }
 
-const List<_DistrictSpec> _districts = [
+/// Built from [AppLocalizations] rather than a top-level `const` list (the
+/// original shape) since every district name is now a localized lookup,
+/// which requires a [BuildContext] and so cannot be `const`.
+List<_DistrictSpec> _districts(AppLocalizations l10n) => [
   _DistrictSpec(
-    'Chilonzor',
-    LinearGradient(colors: [Color(0xFFB5804A), Color(0xFF5A3B1E)]),
+    l10n.homeDistrictChilonzorName,
+    const LinearGradient(colors: [Color(0xFFB5804A), Color(0xFF5A3B1E)]),
   ),
   _DistrictSpec(
-    'Yunusobod',
-    LinearGradient(colors: [Color(0xFF4A87B5), Color(0xFF1E3B5A)]),
+    l10n.homeDistrictYunusobodName,
+    const LinearGradient(colors: [Color(0xFF4A87B5), Color(0xFF1E3B5A)]),
   ),
   _DistrictSpec(
-    'Sergeli',
-    LinearGradient(colors: [Color(0xFF6FA55B), Color(0xFF2C4022)]),
+    l10n.homeDistrictSergeliName,
+    const LinearGradient(colors: [Color(0xFF6FA55B), Color(0xFF2C4022)]),
   ),
   _DistrictSpec(
-    'Mirobod',
-    LinearGradient(colors: [Color(0xFFB55A8B), Color(0xFF5A1E40)]),
+    l10n.homeDistrictMirobodName,
+    const LinearGradient(colors: [Color(0xFFB55A8B), Color(0xFF5A1E40)]),
   ),
 ];
 
@@ -43,13 +47,15 @@ class TopDistrictsRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+    final districts = _districts(l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
-          title: 'Top Districts',
-          linkLabel: 'Explore',
+          title: l10n.homeTopDistrictsSectionTitle,
+          linkLabel: l10n.homeTopDistrictsExploreLinkLabel,
           onLink: () => context.go(RoutePaths.search),
         ),
         const SizedBox(height: AppSpacing.base),
@@ -60,11 +66,11 @@ class TopDistrictsRail extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenGutter,
             ),
-            itemCount: _districts.length,
+            itemCount: districts.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(width: AppSpacing.sm),
             itemBuilder: (context, index) {
-              final district = _districts[index];
+              final district = districts[index];
               return GestureDetector(
                 key: ValueKey('district-${district.name}'),
                 onTap: () => context.go(RoutePaths.search),

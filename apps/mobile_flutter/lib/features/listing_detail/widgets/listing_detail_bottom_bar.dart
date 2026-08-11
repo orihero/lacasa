@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -139,7 +140,7 @@ class _SubmitButton extends StatelessWidget {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            'Submit an application',
+            AppLocalizations.of(context).listingSubmitApplicationButtonLabel,
             maxLines: 1,
             style: type.rowTitle.copyWith(color: Colors.white),
           ),
@@ -193,7 +194,11 @@ class SaveThePlaceButton extends ConsumerWidget {
               ),
               const SizedBox(width: AppSpacing.md),
               Text(
-                isSaved ? 'Saved' : 'Save the Place',
+                isSaved
+                    ? AppLocalizations.of(context).listingSavedButtonLabel
+                    : AppLocalizations.of(
+                        context,
+                      ).listingSaveThePlaceButtonLabel,
                 style: type.rowTitle.copyWith(color: colors.ink),
               ),
             ],
@@ -209,7 +214,11 @@ class SaveThePlaceButton extends ConsumerWidget {
     } on ApiException {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Couldn't update favourites")),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).listingFavouriteUpdateErrorMessage,
+          ),
+        ),
       );
     }
   }

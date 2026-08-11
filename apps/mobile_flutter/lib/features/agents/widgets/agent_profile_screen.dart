@@ -21,12 +21,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/agents_providers.dart';
 import 'agent_ads_grid.dart';
 import 'agent_info_block.dart';
+import 'agent_reviews_section.dart';
 
 class AgentProfileScreen extends ConsumerWidget {
   const AgentProfileScreen({
@@ -107,7 +109,7 @@ class _NavRow extends StatelessWidget {
         children: [
           Semantics(
             button: true,
-            label: 'Back',
+            label: AppLocalizations.of(context).agentsProfileNavBackLabel,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
@@ -125,7 +127,7 @@ class _NavRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              'Agent Information',
+              AppLocalizations.of(context).agentsProfileScreenTitle,
               overflow: TextOverflow.ellipsis,
               style: type.navTitle.copyWith(color: colors.ink),
             ),
@@ -159,6 +161,7 @@ class _ProfileBody extends StatelessWidget {
           children: [
             AgentInfoBlock(agent: agent),
             AgentAdsGrid(agentId: agent.id, onOpenListing: onOpenListing),
+            AgentReviewsSection(agent: agent),
           ],
         ),
       ),
@@ -183,16 +186,22 @@ class _ErrorState extends ConsumerWidget {
       child: notFound
           ? FullWidthState(
               icon: Icons.person_off_outlined,
-              message: 'This agent is no longer available.',
-              actionLabel: 'Go back',
+              message: AppLocalizations.of(
+                context,
+              ).agentsProfileNotFoundMessage,
+              actionLabel: AppLocalizations.of(
+                context,
+              ).agentsProfileGoBackLabel,
               onAction: () => context.canPop()
                   ? context.pop()
                   : context.go(RoutePaths.agents),
             )
           : FullWidthState(
               icon: Icons.cloud_off_rounded,
-              message: "Couldn't load this agent",
-              actionLabel: 'Retry',
+              message: AppLocalizations.of(
+                context,
+              ).agentsProfileLoadErrorMessage,
+              actionLabel: AppLocalizations.of(context).sharedRetryLabel,
               onAction: () => ref.invalidate(agentDetailProvider(agentId)),
             ),
     );

@@ -45,6 +45,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/filter_count_provider.dart';
 import 'filter_area_section.dart';
@@ -155,8 +156,6 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late AdSort _sort;
   late AdStage? _status;
 
-  late final TextEditingController _cityController;
-  late final TextEditingController _districtController;
   late final TextEditingController _areaMinController;
   late final TextEditingController _areaMaxController;
   late final TextEditingController _storeyController;
@@ -182,8 +181,6 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _applyToLocalState(_seedDefaults(widget.initialFilters));
     _sort = widget.initialSort;
     _status = widget.initialStatus;
-    _cityController = TextEditingController(text: _city ?? '');
-    _districtController = TextEditingController(text: _district ?? '');
     _areaMinController = TextEditingController(
       text: _areaMin == null ? '' : _trimNum(_areaMin!),
     );
@@ -207,8 +204,6 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   @override
   void dispose() {
-    _cityController.dispose();
-    _districtController.dispose();
     _areaMinController.dispose();
     _areaMaxController.dispose();
     _storeyController.dispose();
@@ -269,22 +264,21 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     setState(() => _status = status);
   }
 
-  void _onCityChanged(String value) {
-    final trimmed = value.trim();
-    _city = trimmed.isEmpty ? null : trimmed;
-    if (_city == null && _district != null) {
-      // City cleared: the free-text District field has nothing to be
-      // "cascaded" from any more, so clear it too rather than leaving a
-      // district value with no city attached.
-      _district = null;
-      _districtController.clear();
-    }
+  void _onCityChanged(String? value) {
+    if (value == _city) return; // re-picking the same region: a no-op
+    _city = value;
+    // Any city change — clearing it, or swapping to a different region —
+    // invalidates whatever District was picked under the old one, since
+    // the District picker's option list is scoped to the chosen region's
+    // `regionId`; a stale district name paired with a new/no city would be
+    // a filter combination the picker itself could never produce again.
+    _district = null;
     _onFieldChanged();
   }
 
-  void _onDistrictChanged(String value) {
-    final trimmed = value.trim();
-    _district = trimmed.isEmpty ? null : trimmed;
+  void _onDistrictChanged(String? value) {
+    if (value == _district) return;
+    _district = value;
     _onFieldChanged();
   }
 
@@ -306,8 +300,6 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   void _reset() {
     setState(() {
       _applyToLocalState(_seedDefaults(const AdFilters()));
-      _cityController.clear();
-      _districtController.clear();
       _areaMinController.clear();
       _areaMaxController.clear();
       _storeyController.clear();
@@ -341,11 +333,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
     // Never watched for the CRM variant — see `showLiveCount`'s doc
     // comment on `filter_sheet_footer.dart` for why that preview doesn't
     // apply there.
     final countAsync = widget.isCrm ? null : ref.watch(filterCountProvider);
-    final districtEnabled = _city != null;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -383,7 +375,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Filters',
+                        l10n.filterSheetTitle,
                         style: type.sheetTitle.copyWith(color: colors.ink),
                       ),
                     ),
@@ -412,9 +404,8 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         FilterCityDistrictSection(
-                          cityController: _cityController,
-                          districtController: _districtController,
-                          districtEnabled: districtEnabled,
+                          city: _city,
+                          district: _district,
                           onCityChanged: _onCityChanged,
                           onDistrictChanged: _onDistrictChanged,
                         ),
@@ -530,6 +521,7 @@ class _CountErrorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Row(
       children: [
@@ -541,7 +533,7 @@ class _CountErrorRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
-            "Couldn't calculate matching listings.",
+            l10n.filterCountErrorMessage,
             style: type.bodySmall.copyWith(color: AppStatusColors.warningText),
           ),
         ),
@@ -549,7 +541,7 @@ class _CountErrorRow extends StatelessWidget {
           key: const ValueKey('filterSheet-countRetry'),
           onTap: onRetry,
           child: Text(
-            'Retry',
+            l10n.sharedRetryLabel,
             style: type.label.copyWith(color: AppAccent.color),
           ),
         ),

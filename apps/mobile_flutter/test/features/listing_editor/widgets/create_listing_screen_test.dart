@@ -16,6 +16,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../work_dashboard/support/fake_dashboard_repository.dart';
 import '../support/fake_listing_editor_repository.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<
@@ -55,7 +56,7 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
@@ -152,10 +153,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const ValueKey('createListing-addPhotos')), findsOneWidget);
-      expect(
-        find.text("Photo upload isn't available in this build yet."),
-        findsWidgets,
+      // WORK_TAB_CONTRACT.md §5.2 documents an earlier decision to ship a
+      // `MediaUploadUnavailableNotice` ("Photo upload isn't available in
+      // this build yet.") in place of a real picker — that's now stale:
+      // `photos_step.dart`'s own doc comment describes a real
+      // `MediaPicker`/`UploadsRepository` flow, and its build() renders
+      // the "Add photos"/"Add video" tap targets plus the media-limits
+      // hint, not the retired unavailable copy. Assert what actually
+      // renders today rather than the superseded placeholder text.
+      final l10n = AppLocalizations.of(
+        tester.element(find.byKey(const ValueKey('createListing-addPhotos'))),
       );
+      expect(find.byKey(const ValueKey('createListing-addVideo')), findsOneWidget);
+      expect(find.text(l10n.listingEditorMediaLimitsHint), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('listingWizard-primary')));
       await tester.pumpAndSettle();

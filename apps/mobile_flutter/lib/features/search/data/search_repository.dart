@@ -4,17 +4,14 @@
 /// [LaCasaApi]) — see `search_mode.dart` for which one the app wires up by
 /// default and how to switch.
 ///
-/// **Deliberately narrow**: this interface only covers what `GET /ads`
-/// itself can do — filter by [AdFilters]. Sort, free-text search and
-/// pagination are NOT here, because `ads_resource.dart`'s own doc comment
-/// (and `apps/api/src/services/adService.js`) confirm the server has no
-/// `sort`/`q`/`skip`/`take` params at all: `listAds` always orders
-/// `createdAt: "desc"` and returns the complete filtered result set in one
-/// response. `search_providers.dart` applies sort and free-text search
-/// client-side, over whatever this method returns — see that file's doc
-/// comment for the exact client-side algorithm and why building a `sort=`
-/// query param into [AdFilters] here would just be silently ignored
-/// server-side.
+/// **No longer client-side.** `GET /ads` gained `?q=`, a whitelisted
+/// `?sort=`, and opt-in keyset paging (`docs/04-api-spec.md`'s Ads
+/// section) — this repository now sends all three server-side instead of
+/// fetching one bare page and filtering/sorting it in Dart. [fetchPage]
+/// mirrors `AdsResource.listPage`'s own shape exactly ([AdPage] — `{ items,
+/// nextCursor }`), which is what makes `search_providers.dart`'s infinite
+/// scroll a real paged fetch loop rather than lazy widget building over an
+/// already-complete list.
 ///
 /// Every method surfaces the same [ApiException] types [LaCasaApi] itself
 /// throws (`lib/api/api_exception.dart`).
@@ -23,11 +20,21 @@ library;
 import '../../../api/api.dart';
 
 abstract class SearchRepository {
-  /// The filtered browse feed backing the results list. Already scoped to
-  /// active listings by the server (`GET /ads` always filters
+  /// One page of the filtered browse feed backing the results list. Already
+  /// scoped to active listings by the server (`GET /ads` always filters
   /// `stage: "ACTIVE"` regardless of [filters] — see `ads_resource.dart`),
   /// or, for the fixture, by construction (mirrors that same scoping so the
   /// fixture and the live API never disagree about what a public search can
   /// surface).
-  Future<List<Ad>> fetchResults({AdFilters filters});
+  ///
+  /// [filters.q] is the free-text query (case-insensitive substring, OR'd
+  /// across title/description/address/district/city — see [AdFilters.q]'s
+  /// own doc comment); [sort] is the server's whitelisted `?sort=` vocabulary,
+  /// not a client-only re-sort. [cursor] is the previous call's
+  /// [AdPage.nextCursor]; omit for the first page.
+  Future<AdPage> fetchPage({
+    AdFilters filters = const AdFilters(),
+    AdListSort sort = AdListSort.newest,
+    String? cursor,
+  });
 }

@@ -2,12 +2,10 @@
 /// [LaCasaApi] that adds no wire shapes of its own, matching
 /// `live_agents_repository.dart`'s own rule.
 ///
-/// [ads] goes through [AgentAdsResource.myList] (not the public
-/// [AdsResource]) so it returns every stage (ACTIVE/SOLD/DRAFT) — a coworker
-/// listings count that silently dropped a coworker's sold/draft ads would
-/// undercount them. [activity] goes through [StatisticsResource.coworkers],
-/// which — see that method's own doc comment — ignores any date-range
-/// concept entirely; there is nothing to filter on here.
+/// [summary] goes through [StatisticsResource.coworkersSummary] — always
+/// the caller's team's complete, unfiltered history (no `filterType`/
+/// date-range param on that endpoint either), same as the raw
+/// `StatisticsResource.coworkers` feed this used to fold client-side.
 library;
 
 import '../../../api/api.dart';
@@ -60,8 +58,5 @@ class LiveCoworkersRepository implements CoworkersRepository {
   Future<void> delete(String id) => _api.coworkers.delete(id);
 
   @override
-  Future<List<Ad>> ads() => _api.agentAds.myList();
-
-  @override
-  Future<List<ActivityEvent>> activity() => _api.statistics.coworkers();
+  Future<List<CoworkerSummary>> summary() => _api.statistics.coworkersSummary();
 }

@@ -14,6 +14,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 /// A labelled `.glf` input — mirrors `edit_profile_screen.dart`'s private
@@ -157,7 +158,9 @@ class AuthVisibilityToggle extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: obscured ? 'Show password' : 'Hide password',
+      label: obscured
+          ? AppLocalizations.of(context).authVisibilityToggleShowLabel
+          : AppLocalizations.of(context).authVisibilityToggleHideLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -350,7 +353,7 @@ class AuthCloseButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Close',
+      label: AppLocalizations.of(context).authCloseButtonLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

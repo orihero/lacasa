@@ -2,17 +2,31 @@
 /// "Tap pin → mini preview card (thumbnail, title, price, `{rooms} room`) →
 /// tap → `listing-detail`").
 ///
-/// **Its four fields are exactly the four the spec names**, and `{rooms}
-/// room` is rendered in the spec's own un-pluralized form rather than
-/// `Formatters.statLine`'s richer `3 rooms · 72 m²` — this is the one place
-/// SCREENS.md pins a distinct, narrower format, and three implementations
+/// **Its four fields are exactly the four the spec names**, rendered via
+/// [AppLocalizations.listingRoomsCount] rather than `Formatters.statLine`'s
+/// richer `3 rooms · 72 m²` — this is the one place SCREENS.md pins a
+/// distinct, narrower single-field format, and three implementations
 /// agreeing on it matters more than internal consistency with a line that
 /// belongs to a different screen.
+///
+/// **Pluralization, added by the i18n pass.** SCREENS.md's own `{rooms}
+/// room` wording is un-pluralized (always literally "room", the English
+/// singular, regardless of count) — the pre-i18n Dart interpolation this
+/// replaced reproduced that literally, which is grammatically wrong for
+/// `rooms != 1` and, worse, silently un-fixable for a translator once
+/// baked into one concatenated string (see `lib/l10n/README.md`'s
+/// "Plurals" section, which names this exact call site). The ICU plural
+/// this now goes through renders "1 room" / "2 rooms" correctly in
+/// English and gives Russian's four plural categories a real place to
+/// live — a deliberate, documented correction of the interpolation bug,
+/// not a copy change (SCREENS.md's own wording is a spec shorthand, not
+/// a literal singular-only requirement).
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -82,7 +96,7 @@ class MapPreviewCard extends StatelessWidget {
                   if (rooms != null) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '$rooms room',
+                      AppLocalizations.of(context).listingRoomsCount(rooms),
                       style: type.specMeta.copyWith(color: colors.muted),
                     ),
                   ],

@@ -98,7 +98,9 @@ class ListingTextField extends StatelessWidget {
               Expanded(
                 child: Text(
                   errorText!,
-                  style: type.bodySmall.copyWith(color: AppStatusColors.errorText),
+                  style: type.bodySmall.copyWith(
+                    color: AppStatusColors.errorText,
+                  ),
                 ),
               ),
             ],

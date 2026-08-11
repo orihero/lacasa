@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
 
@@ -29,13 +30,15 @@ class FilterSortStatusSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Sort'),
+        FieldLabel(l10n.filterSortFieldLabel),
         ChoiceChipGroup<AdSort>(
           keyPrefix: 'filterCrmSort',
-          options: filterCrmSortOptions,
+          options: filterCrmSortOptions(l10n),
           selected: sort,
           // Sort always has a value (`AdSort.newest` is the "no sort
           // param sent" sentinel, not a null/"any" state — see that
@@ -44,10 +47,10 @@ class FilterSortStatusSection extends StatelessWidget {
           onChanged: (value) => onSortChanged(value ?? AdSort.newest),
         ),
         const SizedBox(height: 14),
-        const FieldLabel('Status'),
+        FieldLabel(l10n.filterStatusFieldLabel),
         ChoiceChipGroup<AdStage>(
           keyPrefix: 'filterCrmStatus',
-          options: filterCrmStatusOptions,
+          options: filterCrmStatusOptions(l10n),
           selected: status,
           onChanged: onStatusChanged,
         ),

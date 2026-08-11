@@ -12,10 +12,62 @@
 /// apart on copy.
 library;
 
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../../api/api.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
+
+enum MediaUploadStatus { uploading, done, failed }
+
+/// One photo/video the user picked in this session, tracked from the
+/// moment the picker returns bytes through however the upload resolves —
+/// see `photos_step.dart`'s doc comment for the full flow. Lives on
+/// [ListingFormFields] itself (not `PhotosStep`'s own widget state) so an
+/// in-flight upload survives `create-listing`'s Back/Next tearing down and
+/// rebuilding that step's widget subtree.
+class ListingMediaUpload {
+  ListingMediaUpload({
+    required this.id,
+    required this.isVideo,
+    required this.previewBytes,
+    this.fileName,
+  });
+
+  final String id;
+  final bool isVideo;
+  final Uint8List previewBytes;
+  final String? fileName;
+
+  MediaUploadStatus status = MediaUploadStatus.uploading;
+
+  /// Ticks on every chunk `UploadsResource.putBytes` reports — a
+  /// [ValueNotifier] rather than a plain field so the tile showing it can
+  /// rebuild on its own via [ValueListenableBuilder] instead of forcing a
+  /// full-step [ListingFormFields]-owning-screen rebuild per chunk (a 70MB
+  /// video is hundreds of chunks — see `uploads_resource.dart`'s
+  /// `_uploadChunkBytes`).
+  final ValueNotifier<double> progress = ValueNotifier(0);
+
+  /// Set once [status] is [MediaUploadStatus.done].
+  String? url;
+
+  /// Set once [status] is [MediaUploadStatus.failed] — already run through
+  /// `describeUploadError`, ready to show as-is.
+  String? errorMessage;
+
+  /// Lets a "remove" tap on a still-uploading tile actually cancel the
+  /// in-flight PUT rather than let it finish invisibly — see
+  /// `UploadHandle`'s own doc comment.
+  UploadHandle? handle;
+
+  void dispose() {
+    handle?.cancel();
+    progress.dispose();
+  }
+}
 
 /// One row of the Additional Info key/value list (§26's "dynamic key/value
 /// rows"). Plain mutable holder, not a model class from `lib/api/` — the
@@ -79,6 +131,26 @@ class ListingFormFields {
   List<String> nearPlaces = [];
   List<AdditionalInfoRow> additionalInfo = [];
 
+  /// Every photo/video picked this session — see [ListingMediaUpload]'s own
+  /// doc comment. Newest last, matching `additionalInfo`'s own append order.
+  final List<ListingMediaUpload> media = [];
+
+  int get photoUploadCount => media.where((m) => !m.isVideo).length;
+  int get videoUploadCount => media.where((m) => m.isVideo).length;
+
+  /// The public URLs of every successful upload this session — what a
+  /// caller actually sends on `photos[]` (folded in with any pre-existing
+  /// URLs `edit-listing`'s own grid already tracks). A still-uploading or
+  /// failed item contributes nothing here; it is not lost, just not ready
+  /// to submit yet — `hasPendingUploads` tells a caller whether to wait.
+  List<String> get uploadedMediaUrls => [
+    for (final m in media)
+      if (m.status == MediaUploadStatus.done && m.url != null) m.url!,
+  ];
+
+  bool get hasPendingUploads =>
+      media.any((m) => m.status == MediaUploadStatus.uploading);
+
   String? titleError;
   String? cityError;
   String? districtError;
@@ -112,10 +184,14 @@ class ListingFormFields {
     floors.text = ad.floors?.toString() ?? '';
     description.text = ad.description ?? '';
     type = ad.type == AdType.unknown ? AdType.residential : ad.type;
-    category = ad.category == AdCategory.unknown ? AdCategory.rent : ad.category;
+    category = ad.category == AdCategory.unknown
+        ? AdCategory.rent
+        : ad.category;
     repairment = ad.repairment ?? Repairment.notRepaired;
     furniture = ad.furniture ?? Furniture.withFurniture;
-    priceType = ad.priceType == CurrencyCode.unknown ? CurrencyCode.uzs : ad.priceType;
+    priceType = ad.priceType == CurrencyCode.unknown
+        ? CurrencyCode.uzs
+        : ad.priceType;
     stage = ad.stage == AdStage.unknown ? AdStage.active : ad.stage;
     nearPlaces = List.of(ad.nearPlacesList);
     additionalInfo = _parseOptionList(ad.optionList);
@@ -146,12 +222,29 @@ class ListingFormFields {
   /// Step 1's five required fields (§26). Sets every error field (not just
   /// the first failing one) so a user fixing one mistake isn't surprised by
   /// a second the next time they tap Next/Save.
-  bool validateBasics() {
-    titleError = title.text.trim().isEmpty ? 'Title is required' : null;
-    cityError = city.text.trim().isEmpty ? 'City is required' : null;
-    districtError = district.text.trim().isEmpty ? 'District is required' : null;
-    addressError = address.text.trim().isEmpty ? 'Address is required' : null;
-    referenceError = reference.text.trim().isEmpty ? 'Reference is required' : null;
+  ///
+  /// Takes [l10n] rather than a [BuildContext] — this class is a plain Dart
+  /// field bag, not a widget, so it has no context of its own; the caller
+  /// (a `State`'s own method, which does have one) resolves
+  /// `AppLocalizations.of(context)` once and passes it in, per
+  /// `lib/l10n/README.md`'s "passing AppLocalizations into a pure function"
+  /// guidance for non-widget files.
+  bool validateBasics(AppLocalizations l10n) {
+    titleError = title.text.trim().isEmpty
+        ? l10n.listingEditorTitleRequiredError
+        : null;
+    cityError = city.text.trim().isEmpty
+        ? l10n.listingEditorCityRequiredError
+        : null;
+    districtError = district.text.trim().isEmpty
+        ? l10n.listingEditorDistrictRequiredError
+        : null;
+    addressError = address.text.trim().isEmpty
+        ? l10n.listingEditorAddressRequiredError
+        : null;
+    referenceError = reference.text.trim().isEmpty
+        ? l10n.listingEditorReferenceRequiredError
+        : null;
     return titleError == null &&
         cityError == null &&
         districtError == null &&
@@ -159,10 +252,11 @@ class ListingFormFields {
         referenceError == null;
   }
 
-  /// Step 2's one required field (§26).
-  bool validateDescription() {
+  /// Step 2's one required field (§26). See [validateBasics] for why this
+  /// takes [l10n] rather than a [BuildContext].
+  bool validateDescription(AppLocalizations l10n) {
     descriptionError = description.text.trim().isEmpty
-        ? 'Description is required'
+        ? l10n.listingEditorDescriptionRequiredError
         : null;
     return descriptionError == null;
   }
@@ -170,14 +264,17 @@ class ListingFormFields {
   /// `edit-listing`'s single-shot validation — both groups, and
   /// deliberately `&` (not `&&`) so both always run and set their own
   /// error fields even once the first has already failed.
-  bool validateAll() => validateBasics() & validateDescription();
+  bool validateAll(AppLocalizations l10n) =>
+      validateBasics(l10n) & validateDescription(l10n);
 
   /// Builds the write body both screens submit. [includeHashtags] is
   /// `false` for `edit-listing` — §27: "Same fields ... (no Hashtags
   /// field)". [photos] is supplied by the caller rather than owned here:
-  /// `create-listing` has none to give (§26/§5.2 — no picker exists yet);
-  /// `edit-listing` passes its existing-photo grid's current state
-  /// (post-delete) so a removed photo's `X` actually persists on Save.
+  /// `create-listing` passes this session's own [uploadedMediaUrls] (it has
+  /// no pre-existing photos of its own to fold in); `edit-listing` passes
+  /// its existing-photo grid's current state (post-delete) with
+  /// [uploadedMediaUrls] already folded in, so a removed photo's `X` and a
+  /// freshly-uploaded photo/video both persist on Save.
   AdWriteInput toWriteInput({
     required bool includeHashtags,
     List<String>? photos,
@@ -224,5 +321,8 @@ class ListingFormFields {
     storey.dispose();
     floors.dispose();
     description.dispose();
+    for (final m in media) {
+      m.dispose();
+    }
   }
 }

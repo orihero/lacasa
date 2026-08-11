@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 class GalleryPageDots extends StatefulWidget {
@@ -57,7 +58,10 @@ class _GalleryPageDotsState extends State<GalleryPageDots> {
   Widget build(BuildContext context) {
     return Semantics(
       excludeSemantics: true,
-      label: 'Gallery position ${widget.currentIndex + 1} of ${widget.total}',
+      label: AppLocalizations.of(context).galleryPositionSemanticsLabel(
+        widget.currentIndex + 1,
+        widget.total,
+      ),
       child: SizedBox(
         height: 8,
         child: ListView.builder(

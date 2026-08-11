@@ -32,6 +32,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../navigation/auth_session.dart';
 import '../../theme/theme.dart';
 
@@ -39,24 +40,23 @@ import '../../theme/theme.dart';
 /// Never signs anyone out itself — see this file's doc comment for why that
 /// is left to the caller.
 Future<bool> confirmSignOut(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog.adaptive(
-      title: const Text('Log out?'),
-      content: const Text(
-        "You'll need to sign in again to access your account.",
-      ),
+      title: Text(l10n.sharedSignOutTitle),
+      content: Text(l10n.sharedSignOutBody),
       actions: [
         TextButton(
           key: const ValueKey('profileLogoutCancel'),
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.sharedConfirmDialogCancelLabel),
         ),
         TextButton(
           key: const ValueKey('profileLogoutConfirm'),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(
-            'Logout',
+            l10n.sharedSignOutConfirmLabel,
             style: TextStyle(color: AppStatusColors.errorText),
           ),
         ),
@@ -86,11 +86,13 @@ Future<void> confirmAndSignOut(BuildContext context, WidgetRef ref) async {
     await ref.read(authSessionProvider.notifier).signOut();
   } catch (_) {
     if (!context.mounted) return;
+    // Reuses settingsSignOutTokenNotClearedMessage rather than a new key —
+    // Settings' own _confirmLogout shows this exact sentence for the same
+    // failure; see that key's description in app_en.arb.
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          "Signed out, but the saved session couldn't be removed from this "
-          'device. Sign out again, or remove the app, before handing it on.',
+          AppLocalizations.of(context).settingsSignOutTokenNotClearedMessage,
         ),
       ),
     );

@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../state/search_providers.dart';
 
@@ -87,7 +88,10 @@ class _FiltersButton extends StatelessWidget {
           children: [
             Icon(Icons.tune_rounded, size: 15, color: colors.ink),
             const SizedBox(width: AppSpacing.sm),
-            Text('Filters', style: type.rowTitle.copyWith(color: colors.ink)),
+            Text(
+              AppLocalizations.of(context).searchFiltersButtonLabel,
+              style: type.rowTitle.copyWith(color: colors.ink),
+            ),
             if (count > 0) ...[
               const SizedBox(width: AppSpacing.xs),
               Container(
@@ -129,7 +133,7 @@ class _SortChip extends StatelessWidget {
     final foreground = selected ? colors.pillInk : colors.ink;
 
     final content = Text(
-      option.label,
+      option.label(AppLocalizations.of(context)),
       style: type.rowTitle.copyWith(color: foreground),
     );
 

@@ -18,6 +18,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -54,24 +55,24 @@ class DashboardScreen extends StatelessWidget {
                     AppSpacing.screenGutter,
                     MediaQuery.of(context).padding.bottom + 100,
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      DashboardTimeRangeSelector(),
-                      SizedBox(height: AppSpacing.base),
-                      DashboardStatTiles(),
-                      SizedBox(height: AppSpacing.section),
-                      AdsStatisticsPanel(),
-                      SizedBox(height: AppSpacing.section),
+                      const DashboardTimeRangeSelector(),
+                      const SizedBox(height: AppSpacing.base),
+                      const DashboardStatTiles(),
+                      const SizedBox(height: AppSpacing.section),
+                      const AdsStatisticsPanel(),
+                      const SizedBox(height: AppSpacing.section),
                       SectionHeader(
-                        title: 'Coworker statistics',
+                        title: AppLocalizations.of(context).dashboardCoworkerStatisticsSectionTitle,
                         padding: EdgeInsets.zero,
                       ),
-                      SizedBox(height: AppSpacing.base),
-                      CoworkerStatisticsSection(),
-                      SizedBox(height: AppSpacing.section),
-                      ListRowGroupLabel('Workspace'),
-                      DashboardWorkspaceLinks(),
+                      const SizedBox(height: AppSpacing.base),
+                      const CoworkerStatisticsSection(),
+                      const SizedBox(height: AppSpacing.section),
+                      ListRowGroupLabel(AppLocalizations.of(context).dashboardWorkspaceGroupLabel),
+                      const DashboardWorkspaceLinks(),
                     ],
                   ),
                 ),
@@ -103,13 +104,13 @@ class _DashboardHeader extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'Statistics',
+              AppLocalizations.of(context).dashboardScreenHeaderTitle,
               style: type.navTitle.copyWith(color: colors.ink),
             ),
           ),
           Semantics(
             button: true,
-            label: 'Notifications',
+            label: AppLocalizations.of(context).dashboardNotificationsSemanticsLabel,
             child: GestureDetector(
               key: const ValueKey('dashboardNotificationsButton'),
               behavior: HitTestBehavior.opaque,

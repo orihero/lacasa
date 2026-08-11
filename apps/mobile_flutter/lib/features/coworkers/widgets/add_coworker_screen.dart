@@ -1,6 +1,5 @@
-/// `add-coworker` (SCREENS.md §37) — header "Create coworker", an avatar
-/// uploader (default placeholder, per §5.2 always
-/// [MediaUploadUnavailableNotice] in this build), and the create form.
+/// `add-coworker` (SCREENS.md §37) — header "Create coworker", a real
+/// avatar uploader ([AvatarUploadControl]), and the create form.
 ///
 /// **Field copy is quoted from §37 character for character**: "Full Name is
 /// required", "Phone number is required" (empty) / "Invalid Uzbekistan
@@ -10,17 +9,22 @@
 /// "Password is required" (empty) / "Password must be at least 6
 /// characters" (too short).
 ///
-/// **The two-error-string toast is deliberate, not a spec inconsistency to
-/// resolve away.** §37 quotes a generic pending/error pair ("Uploading" /
-/// "Something went wrong!") *and* a specific catch pair ("Error creating
-/// coworker: {message}") — read as two different failure surfaces of one
-/// flow: an avatar-upload step (this build's [MediaUploadUnavailableNotice]
-/// seam, §5.2 — never reachable here since there is no picker to produce
-/// bytes for [UploadsResource] in the first place) ahead of the real
-/// `POST /coworkers` call. [_submit] keeps both branches in the code rather
-/// than quietly dropping the unreachable one, so the day a real picker
-/// lands, only the upload step itself needs filling in — see
-/// [_uploadAvatarIfAny]'s own doc comment.
+/// **The avatar uploads eagerly, at pick-time — not deferred to Save.**
+/// §37 quotes a generic pending/error pair ("Uploading" / "Something went
+/// wrong!") that, read literally, describes an avatar-upload step happening
+/// between tapping Save and the `POST /coworkers` call. [AvatarUploadControl]
+/// instead uploads (with its own inline progress ring) the moment a photo is
+/// picked, matching `edit-profile`/`coworker-detail`'s identical avatar
+/// controls rather than inventing a third, deferred-upload shape just for
+/// this screen — a failed avatar upload is then a distinct, immediately
+/// visible failure the user can retry before ever reaching Save, rather
+/// than one bundled into a generic "Something went wrong!" they'd see only
+/// after filling in the whole form. §37's "Uploading" pending toast is kept
+/// at Save time regardless — by then it accurately describes the
+/// `POST /coworkers` call itself (which does upload the form's data), not a
+/// dead avatar step; "Something went wrong!" never fires here for that
+/// reason and would have described a state this screen can no longer
+/// reach — see `_submit`.
 ///
 /// **Gated on the exact same fact `coworkers-list` hides its own entry
 /// point over** (WORK_TAB_CONTRACT.md: "check `AuthUser.realtor?.kind`...
@@ -42,6 +46,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
@@ -63,8 +68,18 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
 
+  /// Set once [AvatarUploadControl.onUploaded] fires — `null` (the default
+  /// placeholder avatar) is a perfectly valid create-time value, per §37.
+  String? _avatarUrl;
+
   bool _obscurePassword = true;
   bool _submitting = false;
+
+  /// See `AvatarUploadControl.onUploadStateChanged`'s doc comment — checked
+  /// in [_submit] so a Save tapped before a pick finishes uploading is
+  /// refused rather than creating the coworker on a stale (or absent)
+  /// `_avatarUrl`.
+  bool _avatarUploading = false;
 
   String? _fullNameError;
   String? _phoneError;
@@ -84,7 +99,8 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       _fullName.text.trim().isNotEmpty ||
       _phone.text.trim().isNotEmpty ||
       _email.text.trim().isNotEmpty ||
-      _password.text.isNotEmpty;
+      _password.text.isNotEmpty ||
+      _avatarUrl != null;
 
   Future<void> _handleCancel() async {
     if (_hasChanges) {
@@ -103,23 +119,24 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
   }
 
   bool _validate() {
+    final l10n = AppLocalizations.of(context);
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
 
     setState(() {
-      _fullNameError = fullName.isEmpty ? 'Full Name is required' : null;
+      _fullNameError = fullName.isEmpty ? l10n.coworkersFullNameRequiredError : null;
       _phoneError = phone.isEmpty
-          ? 'Phone number is required'
+          ? l10n.coworkersPhoneRequiredError
           : (Formatters.isValidUzPhone(phone)
                 ? null
-                : 'Invalid Uzbekistan phone number');
-      _emailError = email.isEmpty ? 'Email is required' : null;
+                : l10n.coworkersPhoneInvalidError);
+      _emailError = email.isEmpty ? l10n.coworkersEmailRequiredError : null;
       _passwordError = password.isEmpty
-          ? 'Password is required'
+          ? l10n.coworkersPasswordRequiredError
           : (password.length < 6
-                ? 'Password must be at least 6 characters'
+                ? l10n.coworkersPasswordTooShortError
                 : null);
     });
 
@@ -129,24 +146,25 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
         _passwordError == null;
   }
 
-  /// This build's honest empty half of the upload step §37's "Uploading" /
-  /// "Something went wrong!" toast pair implies — see the file doc comment.
-  /// There is no picker anywhere in this build (§5.2) that could ever hand
-  /// this a byte to upload, so this always returns `null` (no avatar) and
-  /// never throws; kept as its own method, rather than inlined away, so the
-  /// day a real picker lands this is the one place that starts doing
-  /// something.
-  Future<String?> _uploadAvatarIfAny() async => null;
-
   Future<void> _submit() async {
     if (_submitting) return;
     if (!_validate()) return;
+    // A photo mid-upload has no settled URL yet — see
+    // `AvatarUploadControl`'s doc comment and `listing_form_fields.dart`'s
+    // `hasPendingUploads`, whose "block Save with a message" precedent this
+    // mirrors rather than awaiting the upload inline.
+    if (_avatarUploading) {
+      LaCasaToast.showError(context, AppLocalizations.of(context).coworkersUploadWaitMessage);
+      return;
+    }
 
     setState(() => _submitting = true);
-    LaCasaToast.showPending(context, 'Uploading');
+    // See the file doc comment: by the time Save is reachable, any avatar
+    // upload already finished (or was never started) — this now describes
+    // the create call itself, not a deferred avatar step.
+    LaCasaToast.showPending(context, AppLocalizations.of(context).coworkersUploadingToastLabel);
 
     try {
-      final avatar = await _uploadAvatarIfAny();
       await ref
           .read(coworkersRepositoryProvider)
           .create(
@@ -154,7 +172,7 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
             email: _email.text.trim(),
             password: _password.text,
             phoneNumber: _phone.text.trim(),
-            avatar: avatar,
+            avatar: _avatarUrl,
           );
       ref.invalidate(coworkersListProvider);
       // Dashboard owns an independent copy of this same list
@@ -165,27 +183,32 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, 'Coworker successfully created');
+      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersCreatedToastMessage);
       _leaveToCoworkersList();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      LaCasaToast.showError(context, 'Error creating coworker: ${_messageFor(e)}');
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).coworkersCreateErrorToastMessage(_messageFor(context, e)),
+      );
     }
   }
 
-  static String _messageFor(ApiException e) {
+  static String _messageFor(BuildContext context, ApiException e) {
     if (e is ApiErrorException) return e.message;
+    final l10n = AppLocalizations.of(context);
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.coworkersNoConnectionMessage;
     }
-    return 'Something went wrong';
+    return l10n.coworkersGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final session = ref.watch(authSessionProvider);
+    final l10n = AppLocalizations.of(context);
 
     return PopScope(
       canPop: !_hasChanges,
@@ -200,8 +223,8 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              NavRow(title: 'Create coworker', onBack: _handleCancel),
-              Expanded(child: _bodyFor(session)),
+              NavRow(title: l10n.coworkersCreateScreenTitle, onBack: _handleCancel),
+              Expanded(child: _bodyFor(l10n, session)),
             ],
           ),
         ),
@@ -209,18 +232,18 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
     );
   }
 
-  Widget _bodyFor(AuthSessionState session) {
+  Widget _bodyFor(AppLocalizations l10n, AuthSessionState session) {
     if (!session.isSignedIn) {
       return _BlockedState(
-        message: 'Sign in to manage your team.',
-        actionLabel: 'Sign In',
+        message: l10n.coworkersSignInPromptMessage,
+        actionLabel: l10n.coworkersSignInActionLabel,
         onAction: () => context.push(RoutePaths.login),
       );
     }
     if (session.role != UserRole.agent) {
       return _BlockedState(
-        message: 'Only agents can add coworkers.',
-        actionLabel: 'Go back',
+        message: l10n.coworkersAgentOnlyMessage,
+        actionLabel: l10n.coworkersGoBackLabel,
         onAction: _leaveToCoworkersList,
       );
     }
@@ -229,10 +252,8 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
         // The API's own literal copy — `apps/api/src/routes/coworkers.js`'s
         // `solo_realtor` error message — rather than an invented paraphrase,
         // shown pre-emptively instead of only after a submit round-trip.
-        message:
-            "Solo agents don't have a team. Switch to an agency account "
-            'to add coworkers.',
-        actionLabel: 'Go back',
+        message: l10n.coworkersSoloAgentMessage,
+        actionLabel: l10n.coworkersGoBackLabel,
         onAction: _leaveToCoworkersList,
       );
     }
@@ -250,6 +271,10 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       emailError: _emailError,
       passwordError: _passwordError,
       onFieldChanged: () => setState(() {}),
+      avatarUrl: _avatarUrl,
+      onAvatarUploaded: (url) => setState(() => _avatarUrl = url),
+      onAvatarError: (message) => LaCasaToast.showError(context, message),
+      onAvatarUploadStateChanged: (busy) => setState(() => _avatarUploading = busy),
       submitting: _submitting,
       onCancel: _handleCancel,
       onSave: _submit,
@@ -295,6 +320,10 @@ class _FormBody extends StatelessWidget {
     required this.emailError,
     required this.passwordError,
     required this.onFieldChanged,
+    required this.avatarUrl,
+    required this.onAvatarUploaded,
+    required this.onAvatarError,
+    required this.onAvatarUploadStateChanged,
     required this.submitting,
     required this.onCancel,
     required this.onSave,
@@ -313,6 +342,10 @@ class _FormBody extends StatelessWidget {
   final String? passwordError;
 
   final VoidCallback onFieldChanged;
+  final String? avatarUrl;
+  final ValueChanged<String> onAvatarUploaded;
+  final ValueChanged<String> onAvatarError;
+  final ValueChanged<bool> onAvatarUploadStateChanged;
 
   final bool submitting;
   final VoidCallback onCancel;
@@ -320,6 +353,7 @@ class _FormBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ScrollConfiguration(
       behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
       child: SingleChildScrollView(
@@ -332,10 +366,19 @@ class _FormBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(child: _AvatarPlaceholder()),
+            Center(
+              child: AvatarUploadControl(
+                avatarUrl: avatarUrl,
+                fullName: fullName.text,
+                semanticsLabel: l10n.coworkersAddPhotoLabel,
+                onUploaded: onAvatarUploaded,
+                onError: onAvatarError,
+                onUploadStateChanged: onAvatarUploadStateChanged,
+              ),
+            ),
             const SizedBox(height: AppSpacing.section),
             LabelledFormField(
-              label: 'Full name',
+              label: l10n.coworkersFieldFullNameLabel,
               controller: fullName,
               errorText: fullNameError,
               textInputAction: TextInputAction.next,
@@ -344,7 +387,7 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Phone',
+              label: l10n.coworkersFieldPhoneLabel,
               controller: phone,
               errorText: phoneError,
               hintText: '+998901234567',
@@ -357,7 +400,7 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Email',
+              label: l10n.coworkersFieldEmailLabel,
               controller: email,
               errorText: emailError,
               keyboardType: TextInputType.emailAddress,
@@ -366,10 +409,10 @@ class _FormBody extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.lg),
             LabelledFormField(
-              label: 'Password',
+              label: l10n.coworkersFieldPasswordLabel,
               controller: password,
               errorText: passwordError,
-              hintText: 'At least 6 characters',
+              hintText: l10n.coworkersPasswordHint,
               obscureText: obscurePassword,
               textInputAction: TextInputAction.done,
               onChanged: onFieldChanged,
@@ -382,12 +425,12 @@ class _FormBody extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _SecondaryButton(label: 'Cancel', onTap: onCancel),
+                  child: _SecondaryButton(label: l10n.coworkersCancelButtonLabel, onTap: onCancel),
                 ),
                 const SizedBox(width: AppSpacing.base),
                 Expanded(
                   child: _PrimaryButton(
-                    label: 'Save',
+                    label: l10n.coworkersSaveButtonLabel,
                     submitting: submitting,
                     onTap: onSave,
                   ),
@@ -397,56 +440,6 @@ class _FormBody extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AvatarPlaceholder extends StatelessWidget {
-  const _AvatarPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-
-    return Column(
-      children: [
-        Semantics(
-          button: true,
-          label: 'Add photo — $kMediaUploadUnavailableMessage',
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () =>
-                showMediaUploadUnavailableToast(context, label: 'Avatar upload'),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                const AgentAvatar(avatarUrl: null, fullName: '', size: 84),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.sunk,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: colors.screen, width: 2),
-                    ),
-                    child: Icon(
-                      Icons.photo_camera_outlined,
-                      size: 14,
-                      color: colors.faint,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        const MediaUploadUnavailableNotice(label: 'Avatar upload'),
-      ],
     );
   }
 }

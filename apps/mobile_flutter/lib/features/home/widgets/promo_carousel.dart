@@ -14,23 +14,32 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 class _PromoSpec {
   const _PromoSpec({
-    required this.titleLines,
+    required this.title,
     required this.subtitle,
     required this.gradient,
   });
-  final List<String> titleLines;
+  /// Pre-joined with the same `\n` the original two-element `titleLines`
+  /// list was rendered with (`spec.titleLines.join('\n')`) — the ARB
+  /// message itself now carries that newline, so there is nothing left to
+  /// join at render time.
+  final String title;
   final String subtitle;
   final Gradient gradient;
 }
 
-final List<_PromoSpec> _promos = [
+/// Built from [AppLocalizations] rather than a top-level `final` list (the
+/// original shape) since every string is now a localized lookup, which
+/// requires a [BuildContext] and so cannot be a compile-time/top-level
+/// constant.
+List<_PromoSpec> _promos(AppLocalizations l10n) => [
   _PromoSpec(
-    titleLines: const ['One Post,', 'Every Channel'],
-    subtitle: 'Instagram, Telegram and YouTube',
+    title: l10n.homePromoOneTitle,
+    subtitle: l10n.homePromoOneSubtitle,
     gradient: const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -38,8 +47,8 @@ final List<_PromoSpec> _promos = [
     ),
   ),
   _PromoSpec(
-    titleLines: const ['New in', 'Yashnobod'],
-    subtitle: '4-room new builds from \$95,000',
+    title: l10n.homePromoTwoTitle,
+    subtitle: l10n.homePromoTwoSubtitle,
     gradient: const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -53,6 +62,8 @@ class PromoCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final promos = _promos(AppLocalizations.of(context));
+
     return SizedBox(
       height: 128,
       child: ListView.separated(
@@ -60,10 +71,10 @@ class PromoCarousel extends StatelessWidget {
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.screenGutter,
         ),
-        itemCount: _promos.length,
+        itemCount: promos.length,
         separatorBuilder: (context, index) =>
             const SizedBox(width: AppSpacing.base),
-        itemBuilder: (context, index) => _PromoCard(spec: _promos[index]),
+        itemBuilder: (context, index) => _PromoCard(spec: promos[index]),
       ),
     );
   }
@@ -110,7 +121,7 @@ class _PromoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  spec.titleLines.join('\n'),
+                  spec.title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

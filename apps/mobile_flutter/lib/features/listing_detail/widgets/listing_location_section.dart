@@ -25,6 +25,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/map/map_attribution.dart';
 import '../../../shared/map/map_defaults.dart';
@@ -187,7 +188,7 @@ class _NoLocation extends StatelessWidget {
           Icon(Icons.location_off_rounded, size: 20, color: colors.faint),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'No location provided for this listing.',
+            AppLocalizations.of(context).listingNoLocationMessage,
             textAlign: TextAlign.center,
             style: type.bodySmall.copyWith(color: colors.muted),
           ),

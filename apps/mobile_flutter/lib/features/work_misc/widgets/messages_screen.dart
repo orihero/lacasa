@@ -20,6 +20,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -37,7 +38,10 @@ class MessagesScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            NavRow(title: 'Messages', onBack: () => _pop(context)),
+            NavRow(
+              title: AppLocalizations.of(context).messagesScreenTitle,
+              onBack: () => _pop(context),
+            ),
             const Expanded(child: _ComingSoonBanner()),
           ],
         ),
@@ -80,7 +84,7 @@ class _ComingSoonBanner extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.base),
               Text(
-                'Messaging is coming soon. For now, contact leads by phone.',
+                AppLocalizations.of(context).messagesComingSoonBanner,
                 textAlign: TextAlign.center,
                 style: type.body.copyWith(color: colors.ink2),
               ),

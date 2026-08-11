@@ -12,9 +12,11 @@ library;
 
 import '../api_client.dart';
 import '../models/ad.dart';
+import '../models/ad_page.dart';
 import '../models/ad_stage_counts.dart';
 import '../models/ad_write_input.dart';
-import 'ads_resource.dart' show AdFilters;
+import '../models/enums.dart' show AdStage;
+import 'ads_resource.dart' show AdFilters, AdListSort;
 
 /// `GET /my/ads`'s `sort` query param — same 3 values `listing-search`'s
 /// own sort control offers (SCREENS.md §4), but [newest] is a client-only
@@ -39,19 +41,31 @@ class AgentAdsResource {
   const AgentAdsResource(this._client);
 
   /// `GET /my/ads`. Scoped server-side to `agentId: effectiveAgentId` —
-  /// **all stages included** (ACTIVE/SOLD/DRAFT), unlike the public
-  /// `GET /ads` feed, which forces `stage: "ACTIVE"`. [filters] reuses
-  /// [AdFilters]'s query-param set (city/district/category/type/rooms/...);
-  /// its own `agentId` field is ignored here — the server sets that from
-  /// the caller's token, not from a query param, on this route.
+  /// **all stages included** (ACTIVE/SOLD/DRAFT) by default, unlike the
+  /// public `GET /ads` feed, which forces `stage: "ACTIVE"`. [filters]
+  /// reuses [AdFilters]'s query-param set (city/district/category/type/
+  /// rooms/.../q); its own `agentId` field is ignored here — the server
+  /// sets that from the caller's token, not from a query param, on this
+  /// route. [stage] narrows to one lifecycle stage when given — the one
+  /// filter [AdsResource]'s public feed has no equivalent for, since that
+  /// feed always forces `stage: "ACTIVE"` regardless of what's sent.
   ///
-  /// **No pagination exists** — the complete list returns every call; see
-  /// the API contract survey's §25 gap note. A screen wanting "infinite
-  /// scroll" has to fake it client-side over this one full list.
-  Future<List<Ad>> myList({AdFilters? filters, AdSort sort = AdSort.newest}) async {
+  /// **Always a bare array** — this method never sends `limit`/`cursor`/
+  /// `paged`, so it can never receive the `{ items, nextCursor }` envelope
+  /// back; see [myListPage] for the opt-in paged form. [sort] keeps the
+  /// narrower legacy [AdSort] type (3 values) for backward compatibility
+  /// with existing exhaustive `switch`es over it — [myListPage] offers the
+  /// full [AdListSort] vocabulary (`oldest`/`priceAsc`/`priceDesc`/
+  /// `areaAsc`/`areaDesc`) for new call sites.
+  Future<List<Ad>> myList({
+    AdFilters? filters,
+    AdSort sort = AdSort.newest,
+    AdStage? stage,
+  }) async {
     final query = <String, Object?>{
       ...(filters ?? const AdFilters()).toQuery(),
       'sort': sort.wireOrNull,
+      'stage': _stageWireOrNull(stage),
     };
     final json = await _client.request(
       method: 'GET',
@@ -61,6 +75,36 @@ class AgentAdsResource {
     return (json as List<dynamic>)
         .map((e) => Ad.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  /// `GET /my/ads`'s opt-in paged form — same filters/[stage] as [myList],
+  /// full [AdListSort] vocabulary, always answers [AdPage] (`{ items,
+  /// nextCursor }`). Unconditionally sends `paged=true` itself (even for a
+  /// first page with no [limit]/[cursor] given) — see [AdPage]'s doc
+  /// comment for why. [limit] defaults to 20 server-side, capped at 100;
+  /// [cursor] is the previous call's [AdPage.nextCursor], omit for the
+  /// first page.
+  Future<AdPage> myListPage({
+    AdFilters? filters,
+    AdListSort sort = AdListSort.newest,
+    AdStage? stage,
+    int? limit,
+    String? cursor,
+  }) async {
+    final query = <String, Object?>{
+      ...(filters ?? const AdFilters()).toQuery(),
+      'sort': sort.wireOrNull,
+      'stage': _stageWireOrNull(stage),
+      'limit': limit,
+      'cursor': cursor,
+      'paged': 'true',
+    };
+    final json = await _client.request(
+      method: 'GET',
+      path: '/my/ads',
+      query: query,
+    );
+    return AdPage.fromJson(json as Map<String, dynamic>);
   }
 
   /// `GET /my/ads/stage-counts`. Independent of [myList] — call both if a
@@ -117,3 +161,9 @@ class AgentAdsResource {
     await _client.request(method: 'DELETE', path: '/ads/$id');
   }
 }
+
+/// `stage`'s wire values are the "1"/"2"/"3" form-select values
+/// [AdStage.wire] already maps — `null`/[AdStage.unknown] both mean "send
+/// nothing," same convention as [AdFilters.toQuery]'s other enum fields.
+String? _stageWireOrNull(AdStage? stage) =>
+    stage == null || stage == AdStage.unknown ? null : stage.wire;

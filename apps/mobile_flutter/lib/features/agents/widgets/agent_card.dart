@@ -1,28 +1,23 @@
 /// One row of `agents-directory` (SCREENS.md §3.9) — avatar, name, phone,
-/// email, and an "Ads: {adsCount}" count chip. Tapping opens
-/// `agent-profile`.
+/// email, address, a `"Review: {rating}/5"` star row, and an
+/// "Ads: {adsCount}" count chip. Tapping opens `agent-profile`.
 ///
-/// **Two fields the spec asks for are not rendered, because they do not
-/// exist in the system**, and inventing them would be worse than their
-/// absence:
-///
-/// - **`address`** — `User` (`apps/api/prisma/schema.prisma:120`) has no
-///   address column, and `agentService.js#serializeAgent` hand-picks the
-///   public field list, so `GET /agents` could not send one even if the
-///   column existed. There is nothing to show.
-/// - **"Review: {rating}/5"** — there is no review, rating, or feedback
-///   table anywhere in the schema. A star row is a trust signal; rendering
-///   a hardcoded or zero rating would be a *false* trust signal, which is
-///   the one failure mode worth refusing outright.
-///
-/// Both are flagged in the mobile README's data-model gap list rather than
-/// silently dropped. `adsCount` renders as a labelled chip in the space
-/// they would have occupied.
+/// **Both `address` and the rating row are honest-absence, not
+/// always-on.** `AgentSummary.address` is `null` for an agent who never set
+/// one (see its own doc comment) and is simply omitted — no "—" filler,
+/// matching this card's existing phone/email treatment. `ratingAverage`
+/// `== null` (no reviews yet) renders `RatingStars`' "No reviews yet" text
+/// rather than a zero-star row or being hidden outright — SCREENS.md's
+/// star row is a trust signal, and silently hiding "nobody has reviewed
+/// this agent" would itself read as a claim ("this row just doesn't apply
+/// here") the app has no basis for. See `RatingStars`' own doc comment for
+/// the full null-vs-zero reasoning this call site relies on.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 
@@ -80,6 +75,10 @@ class AgentCard extends StatelessWidget {
                       icon: Icons.mail_outline_rounded,
                       text: agent.email.trim(),
                     ),
+                  if (agent.address?.trim() case final address? when address.isNotEmpty)
+                    _MetaLine(icon: Icons.place_outlined, text: address),
+                  const SizedBox(height: AppSpacing.sm),
+                  RatingStars(average: agent.ratingAverage, count: agent.ratingCount),
                   const SizedBox(height: AppSpacing.md),
                   _AdsCountChip(count: agent.adsCount),
                 ],
@@ -157,7 +156,7 @@ class _AdsCountChip extends StatelessWidget {
         borderRadius: AppRadii.pill,
       ),
       child: Text(
-        'Ads: $count',
+        AppLocalizations.of(context).agentsCardAdsCountLabel(count),
         style: type.micro.copyWith(color: colors.ink2),
       ),
     );

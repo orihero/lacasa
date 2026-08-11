@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../data/filter_options.dart';
 
@@ -21,7 +22,7 @@ class FilterRoomsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const FieldLabel('Rooms'),
+        FieldLabel(AppLocalizations.of(context).filterRoomsFieldLabel),
         ChoiceChipGroup<int>(
           keyPrefix: 'filterRooms',
           options: [

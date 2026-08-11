@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 import '../formatters/gallery_formatters.dart';
 
@@ -59,7 +60,7 @@ class GalleryCloseButton extends StatelessWidget {
       distortionWidth: 10,
       child: IconButton(
         icon: const Icon(Icons.close_rounded, color: Colors.white),
-        tooltip: 'Close gallery',
+        tooltip: AppLocalizations.of(context).galleryCloseTooltip,
         onPressed: onTap,
         constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
         padding: EdgeInsets.zero,
@@ -87,7 +88,7 @@ class _CounterBadge extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       child: Semantics(
-        label: 'Photo $label',
+        label: AppLocalizations.of(context).galleryCounterSemanticsLabel(label),
         excludeSemantics: true,
         child: Text(
           label,

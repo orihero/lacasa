@@ -14,6 +14,7 @@ import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/fake_leads_repository.dart';
 import '../support/lead_fixtures.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<ProviderContainer> pumpSheet(
@@ -33,6 +34,8 @@ void main() {
       UncontrolledProviderScope(
         container: container,
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(

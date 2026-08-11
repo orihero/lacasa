@@ -22,6 +22,14 @@
 /// into one client-side shape, each method returns exactly what its
 /// endpoint gives — the extra field is the whole reason §3.10 can show a
 /// closed-deals count and §3.9 cannot.
+///
+/// **Reviews (SCREENS.md §3.9's `"Review: {rating}/5"` row, and the
+/// leave-a-review surface this task adds beyond the spec)**: three more
+/// methods, mirroring `/api/agents/:id/reviews`'s three verbs one-for-one.
+/// [fetchAgentReviews] is public, like [fetchAgents]/[fetchAgent].
+/// [postAgentReview]/[deleteMyAgentReview] require an authenticated caller
+/// — see their own doc comments for how that requirement is split between
+/// this interface and its callers.
 library;
 
 import '../../../api/api.dart';
@@ -48,4 +56,56 @@ abstract class AgentsRepository {
   /// `agent_ads_grid.dart` for how that difference is surfaced rather
   /// than hidden.
   Future<List<Ad>> fetchAgentAds(String agentId);
+
+  /// `GET /agents/:id/reviews?limit=&cursor=` — public, newest-first, no
+  /// auth required. Does **not** throw for an id that isn't a real agent
+  /// (or doesn't exist at all) — it just has no rows, mirroring
+  /// `apps/api/src/services/reviewService.js#listReviews`, which never
+  /// looks the agent up before querying its reviews. [limit] is clamped to
+  /// 1..50 (default 20) by both implementations, matching the server's own
+  /// clamp; [cursor] is the previous page's [AgentReviewPage.nextCursor].
+  Future<AgentReviewPage> fetchAgentReviews(
+    String agentId, {
+    int? limit,
+    String? cursor,
+  });
+
+  /// `POST /agents/:id/reviews` — upserts on `(agentId, authorId)`: a
+  /// second call from the same author edits their existing review rather
+  /// than stacking a new one next to it. Requires an authenticated caller;
+  /// **this method does not itself check that one is signed in** — the
+  /// screen that opens the review sheet gates it behind
+  /// `authSessionProvider.isSignedIn` first (see
+  /// `agent_review_sheet.dart`'s doc comment), the same split
+  /// `add_coworker_screen.dart` already uses for its own auth-gated form.
+  ///
+  /// [actingAs] is who the caller is posting as. [LiveAgentsRepository]
+  /// ignores it completely — the real server derives the author from the
+  /// request's bearer token, the same way every other authenticated call in
+  /// this app works, and never receives an explicit author id on the wire.
+  /// [FixtureAgentsRepository] has no token to decode, though, so this is
+  /// the one piece of context a fixture-mode caller must supply for the
+  /// upsert-by-author and self-review checks to mean anything at all —
+  /// callers build it from `authSessionProvider`'s signed-in `AuthUser`,
+  /// which is available identically in both modes.
+  ///
+  /// Throws [ApiErrorException] with `code: validation` (400, an
+  /// out-of-range rating or an over-long comment), `code: forbidden` (403,
+  /// self-review — [agentId] is the caller's own agent id), or
+  /// `code: notFound` (404, [agentId] is a real user but not role AGENT) —
+  /// both implementations surface the same three codes in the same order
+  /// `apps/api/src/services/reviewService.js#createOrUpdateReview` checks
+  /// them in.
+  Future<AgentReview> postAgentReview(
+    String agentId, {
+    required int rating,
+    String? comment,
+    required ReviewAuthor actingAs,
+  });
+
+  /// `DELETE /agents/:id/reviews/me` — idempotent, same [actingAs] bridge
+  /// as [postAgentReview]. Always succeeds, including for a caller who
+  /// never posted a review here, matching the live endpoint's own
+  /// always-204 contract.
+  Future<void> deleteMyAgentReview(String agentId, {required ReviewAuthor actingAs});
 }

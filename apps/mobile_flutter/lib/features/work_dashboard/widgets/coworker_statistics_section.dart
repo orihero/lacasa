@@ -2,17 +2,18 @@
 /// (Ads count / Lead count / Sale count) plus a list with the same columns
 /// ... Tap coworker row → coworker-detail."
 ///
-/// **"Sale count" renders as an honest em dash, never a number — this is
-/// contract ruling 7.6's own call-out**: "'Deals closed'/a 6th 'Success'
-/// lead status does not exist anywhere in the schema". "Ads count"/"Lead
-/// count" are both real, both derived — [CoworkerStatRow.adsCount] folds
-/// `GET /statistics/coworkers`'s [ActivityEvent] stream by `coworkerId`/
-/// `ActivityEventStage.adCreated`, [CoworkerStatRow.leadCount] folds
-/// [Lead.coworkerId] directly (`state/dashboard_providers.dart`'s
-/// `coworkerStatRowsProvider` doc comment explains why the two columns use
-/// two different real sources) — only the sale/"deals closed" figure has no
-/// backing field anywhere in the schema, so only that column is flagged
-/// rather than the whole section.
+/// **All three columns are real now.** "Sale count" used to render as a
+/// permanent em dash — ruling 7.6 originally read "'deals closed'/a 6th
+/// 'Success' lead status does not exist anywhere in the schema" as "there is
+/// nothing to derive this from." That first half is still true (no such
+/// lead status exists), but it was the wrong question: `AD_SOLD` activity
+/// events always carried `coworkerId`, the same stream `GET
+/// /statistics/coworkers` already exposes for "Ads count" — so
+/// [CoworkerStatRow.saleCount] folds that stream by
+/// `ActivityEventStage.adSold` exactly the way `adsCount` folds it by
+/// `adCreated`. [CoworkerStatRow.leadCount] stays on [Lead.coworkerId]
+/// directly (`state/dashboard_providers.dart`'s `coworkerStatRowsProvider`
+/// doc comment explains why that one column uses a different real source).
 ///
 /// Row tap uses `context.go`, not `context.push`, per
 /// `WORK_TAB_CONTRACT.md` §2.2: `coworker-detail` is named there as one of
@@ -24,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -36,6 +38,7 @@ class CoworkerStatisticsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rowsAsync = ref.watch(coworkerStatRowsProvider);
+    final l10n = AppLocalizations.of(context);
 
     return rowsAsync.when(
       loading: () => const _Panel(
@@ -49,16 +52,16 @@ class CoworkerStatisticsSection extends ConsumerWidget {
       error: (error, stackTrace) => _Panel(
         child: RailRetryCard(
           width: double.infinity,
-          message: "Couldn't load coworker statistics",
+          message: l10n.dashboardCoworkerStatisticsLoadErrorMessage,
           onRetry: () => ref.invalidate(dashboardCoworkersProvider),
         ),
       ),
       data: (rows) {
         if (rows.isEmpty) {
-          return const _Panel(
+          return _Panel(
             child: FullWidthState(
               icon: Icons.groups_outlined,
-              message: 'No coworkers yet.',
+              message: l10n.dashboardNoCoworkersMessage,
             ),
           );
         }
@@ -104,7 +107,7 @@ class _CoworkerBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxCount = rows.fold<int>(
       1,
-      (max, row) => [max, row.adsCount, row.leadCount].reduce(
+      (max, row) => [max, row.adsCount, row.leadCount, row.saleCount].reduce(
         (a, b) => a > b ? a : b,
       ),
     );
@@ -159,6 +162,11 @@ class _BarRow extends StatelessWidget {
                 fraction: fractionOf(row.leadCount),
                 color: kDashboardSoldColor,
               ),
+              const SizedBox(height: 4),
+              _Track(
+                fraction: fractionOf(row.saleCount),
+                color: kDashboardSaleColor,
+              ),
             ],
           ),
         ),
@@ -207,15 +215,16 @@ class _Legend extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Wrap(
       spacing: AppSpacing.lg,
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _dot(context, AppAccent.color, 'Ads count'),
-        _dot(context, kDashboardSoldColor, 'Lead count'),
-        _dot(context, colors.faint, 'Sale count — not tracked'),
+        _dot(context, AppAccent.color, l10n.dashboardLegendAdsCount),
+        _dot(context, kDashboardSoldColor, l10n.dashboardLegendLeadCount),
+        _dot(context, kDashboardSaleColor, l10n.dashboardLegendSaleCount),
       ]
           .map(
             (child) => DefaultTextStyle.merge(
@@ -252,6 +261,7 @@ class _CoworkerList extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,13 +271,13 @@ class _CoworkerList extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Text(
-                'COWORKERS',
+                l10n.dashboardHeaderCoworkers,
                 style: type.label.copyWith(color: colors.muted),
               ),
             ),
-            _HeaderCell('ADS'),
-            _HeaderCell('LEADS'),
-            _HeaderCell('SALES'),
+            _HeaderCell(l10n.dashboardHeaderAds),
+            _HeaderCell(l10n.dashboardHeaderLeads),
+            _HeaderCell(l10n.dashboardHeaderSales),
           ],
         ),
         const SizedBox(height: AppSpacing.base),
@@ -367,9 +377,11 @@ class _CoworkerListRow extends StatelessWidget {
               SizedBox(
                 width: 44,
                 child: Text(
-                  '—',
+                  '${row.saleCount}',
                   textAlign: TextAlign.right,
-                  style: type.bodySmall.copyWith(color: colors.faint),
+                  style: LaCasaTypography.tabular(
+                    type.bodySmall,
+                  ).copyWith(color: colors.ink2),
                 ),
               ),
             ],

@@ -20,6 +20,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/agents_providers.dart';
@@ -59,7 +60,9 @@ class AgentAdsGrid extends ConsumerWidget {
         child: LayoutBuilder(
           builder: (context, constraints) => RailRetryCard(
             width: constraints.maxWidth,
-            message: "Couldn't load this agent's listings",
+            message: AppLocalizations.of(
+              context,
+            ).agentsAdsGridLoadErrorMessage,
             onRetry: () => ref.invalidate(agentAdsProvider(agentId)),
           ),
         ),
@@ -68,10 +71,10 @@ class AgentAdsGrid extends ConsumerWidget {
         if (list.isEmpty) {
           // §3.10's own empty copy, and the same string `list_states.dart`
           // pins app-wide — never the web app's misspelled "Not fount post".
-          return const _Shell(
+          return _Shell(
             child: FullWidthState(
               icon: Icons.home_work_outlined,
-              message: 'No listings found.',
+              message: AppLocalizations.of(context).agentsAdsGridEmptyMessage,
             ),
           );
         }
@@ -126,7 +129,11 @@ class _Shell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            count == null ? 'Ads List' : 'Ads List ($count)',
+            count == null
+                ? AppLocalizations.of(context).agentsAdsGridHeading
+                : AppLocalizations.of(
+                    context,
+                  ).agentsAdsGridHeadingWithCount(count!),
             style: type.panelHeading.copyWith(color: colors.ink),
           ),
           const SizedBox(height: AppSpacing.base),

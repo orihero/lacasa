@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../theme/theme.dart';
 
 class ReadOnlyChannelSwitch extends StatelessWidget {
@@ -27,7 +28,9 @@ class ReadOnlyChannelSwitch extends StatelessWidget {
       // No `button: true` — this control cannot be tapped, so it must never
       // present as one to assistive tech either.
       toggled: value,
-      label: value ? 'Connected' : 'Not connected',
+      label: value
+          ? AppLocalizations.of(context).connectedAccountsConnectedStatusLabel
+          : AppLocalizations.of(context).connectedAccountsNotConnectedStatusLabel,
       child: Container(
         width: 46,
         height: 28,

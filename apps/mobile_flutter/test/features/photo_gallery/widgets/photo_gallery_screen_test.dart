@@ -11,6 +11,7 @@ import 'package:lacasa_mobile/features/photo_gallery/photo_gallery.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/ad_fixtures.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
 void main() {
   Future<void> pumpScreen(
@@ -25,6 +26,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: PhotoGalleryScreen(args: args),
       ),
@@ -95,6 +98,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         theme: AppTheme.light(),
         home: Builder(
           builder: (context) => Scaffold(

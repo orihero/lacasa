@@ -24,6 +24,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
@@ -135,14 +136,19 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
   /// `copyWithPrevious`), so an `AsyncError` that still carries a value
   /// should render the (mostly correct) cached board, not the fatal error
   /// screen below — see `leads_providers.dart`'s doc comment.
-  Widget _buildBody(AsyncValue<List<Lead>> leadsAsync, KanbanMoveState moveState) {
+  Widget _buildBody(
+    BuildContext context,
+    AsyncValue<List<Lead>> leadsAsync,
+    KanbanMoveState moveState,
+  ) {
+    final l10n = AppLocalizations.of(context);
     if (leadsAsync.hasValue) {
       final leads = leadsAsync.value!;
       if (leads.isEmpty) {
-        return const Center(
+        return Center(
           child: FullWidthState(
             icon: Icons.groups_outlined,
-            message: 'No leads yet.',
+            message: l10n.leadsEmptyMessage,
           ),
         );
       }
@@ -195,8 +201,8 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
       return Center(
         child: FullWidthState(
           icon: Icons.error_outline_rounded,
-          message: "Couldn't load your leads.",
-          actionLabel: 'Retry',
+          message: l10n.leadsLoadErrorMessage,
+          actionLabel: l10n.sharedRetryLabel,
           onAction: () => ref.invalidate(leadsProvider),
         ),
       );
@@ -210,6 +216,7 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final leadsAsync = ref.watch(leadsProvider);
     final moveState = ref.watch(kanbanMoveProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -220,12 +227,12 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             NavRow(
-              title: 'Kanban',
+              title: l10n.leadsKanbanScreenTitle,
               onBack: () => _goToLeadsList(context),
               trailing: [
                 LeadsNavActions(
                   toggleIcon: Icons.view_list_outlined,
-                  toggleLabel: 'View as list',
+                  toggleLabel: l10n.leadsToggleViewListLabel,
                   toggleKey: const ValueKey('leadsKanban-toggleView'),
                   onToggleView: () => _goToLeadsList(context),
                   addKey: const ValueKey('leadsKanban-addLead'),
@@ -233,7 +240,7 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
                 ),
               ],
             ),
-            Expanded(child: _buildBody(leadsAsync, moveState)),
+            Expanded(child: _buildBody(context, leadsAsync, moveState)),
           ],
         ),
       ),
@@ -279,7 +286,10 @@ Future<LeadStatus?> _showMoveToSheet(
                 decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
               ),
             ),
-            Text('Move to…', style: type.sheetTitle.copyWith(color: colors.ink)),
+            Text(
+              AppLocalizations.of(context).leadsMoveToSheetTitle,
+              style: type.sheetTitle.copyWith(color: colors.ink),
+            ),
             const SizedBox(height: AppSpacing.base),
             for (final status in options)
               Material(
