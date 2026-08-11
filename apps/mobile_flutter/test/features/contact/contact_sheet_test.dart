@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/contact/contact.dart';
+import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 /// Records what it was handed, or fails with a chosen error.
@@ -39,6 +40,8 @@ void main() {
           contactRepositoryProvider.overrideWithValue(repository),
         ],
         child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           theme: AppTheme.light(),
           home: Builder(
             builder: (context) => Scaffold(
@@ -165,7 +168,7 @@ void main() {
     expect(find.textContaining('#ad-1'), findsOneWidget);
   });
 
-  testWidgets('a long title is truncated so the 200-char cap still fits', (
+  testWidgets('a long title is truncated so the 500-char cap still fits', (
     tester,
   ) async {
     final prefill = ContactPrefill.forListing(
@@ -174,7 +177,7 @@ void main() {
       agentName: 'Javlon Rustamov',
     );
 
-    expect(prefill.message.length, lessThanOrEqualTo(200));
+    expect(prefill.message.length, lessThanOrEqualTo(500));
     expect(prefill.message, contains('...'));
   });
 

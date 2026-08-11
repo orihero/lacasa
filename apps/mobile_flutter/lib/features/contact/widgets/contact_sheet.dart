@@ -10,13 +10,15 @@
 /// paraphrased, because three independent implementations are meant to
 /// agree on them.
 ///
-/// **The 200-character message cap is the spec's, not the server's.**
-/// `contactSchema` (`packages/domain/src/schemas/contact.ts`) allows 2000;
-/// SCREENS.md §3.11 says "textarea, max 200 chars". The tighter of the two
-/// is enforced here — a client that let a user type 500 characters only to
-/// have the server accept them would be fine, but it would diverge from the
-/// two sibling implementations building against the same spec. Flagged
-/// rather than silently reconciled.
+/// **The 500-character message cap matches the spec and the server.**
+/// `contactSchema` (`packages/domain/src/schemas/contact.ts`) and
+/// SCREENS.md §3.11 ("textarea, max 500 chars") were reconciled onto the
+/// same number: 200 was too tight for a realistic property enquiry
+/// (move-in date, budget and a question already runs past 230), and 500
+/// stays compact for reading in Telegram while sitting far under
+/// `sendMessage`'s own 4096-char limit. Message length was never the abuse
+/// guard anyway — the 5/min per-IP rate limiter is — so all three
+/// implementations now agree on 500.
 ///
 /// **Validation runs client-side before any request.** The server validates
 /// too, but a round trip to be told a field is empty is a round trip that
@@ -30,13 +32,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../data/contact_prefill.dart';
 import '../state/contact_repository_provider.dart';
 
-/// SCREENS.md §3.11: "Message (textarea, max 200 chars)".
-const int contactMessageMaxLength = 200;
+/// SCREENS.md §3.11: "Message (textarea, max 500 chars)".
+const int contactMessageMaxLength = 500;
 
 /// Opens the sheet. Resolves when it closes — to `true` if a message was
 /// actually sent, `false` or `null` otherwise, so a caller that wants to
@@ -95,17 +98,23 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
   Future<void> _submit() async {
     if (_submitting) return;
 
+    // Captured once, up front — this method crosses an `await`, and every
+    // later use is after either a `pop` or a `mounted` re-check, so the
+    // lookup happens while `context` is unambiguously still attached (same
+    // reasoning `agent_review_sheet.dart`'s `_submit` documents).
+    final l10n = AppLocalizations.of(context);
+
     final name = _name.text.trim();
     final phone = _phone.text.trim();
 
     // Order matters and is the spec's: emptiness is reported before format,
     // so an empty phone reads as "required", not "invalid".
     if (name.isEmpty || phone.isEmpty) {
-      setState(() => _error = 'Required fields are not filled');
+      setState(() => _error = l10n.contactRequiredFieldsError);
       return;
     }
     if (!Formatters.isValidUzPhone(phone)) {
-      setState(() => _error = 'Invalid phone number format');
+      setState(() => _error = l10n.contactInvalidPhoneError);
       return;
     }
 
@@ -127,12 +136,12 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
       if (!mounted) return;
       Navigator.of(context).pop(true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Message sent successfully.')),
+        SnackBar(content: Text(l10n.contactSendSuccessToast)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _messageFor(e);
+        _error = _messageFor(l10n, e);
         _submitting = false;
       });
     }
@@ -140,32 +149,31 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
 
   /// Maps a typed failure to copy the user can act on. The three
   /// contact-specific server codes mean genuinely different things and are
-  /// not collapsed into one "something went wrong".
-  static String _messageFor(ApiException e) {
+  /// not collapsed into one "something went wrong". Takes [AppLocalizations]
+  /// as a parameter rather than a `BuildContext` — see
+  /// `agent_review_sheet.dart`'s identically-shaped `_messageFor` for why.
+  static String _messageFor(AppLocalizations l10n, ApiException e) {
     if (e is ApiErrorException) {
       return switch (e.code) {
-        ApiErrorCode.rateLimited =>
-          'Too many messages just now. Please try again in a minute.',
+        ApiErrorCode.rateLimited => l10n.contactRateLimitedError,
         // Retrying cannot help: nobody is configured to receive this.
-        ApiErrorCode.contactUnconfigured =>
-          "The contact form isn't available right now. Please call the "
-              'agent directly.',
-        ApiErrorCode.contactRelayFailed =>
-          "Couldn't send your message right now. Please try again.",
+        ApiErrorCode.contactUnconfigured => l10n.contactUnconfiguredError,
+        ApiErrorCode.contactRelayFailed => l10n.contactGenericErrorMessage,
         ApiErrorCode.validation => e.message,
-        _ => "Couldn't send your message right now. Please try again.",
+        _ => l10n.contactGenericErrorMessage,
       };
     }
     if (e is NetworkException) {
-      return 'No connection. Check your network and try again.';
+      return l10n.contactNetworkErrorMessage;
     }
-    return "Couldn't send your message right now. Please try again.";
+    return l10n.contactGenericErrorMessage;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       // Lifts the sheet above the on-screen keyboard. Without this the
@@ -196,13 +204,13 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Contact Us',
+                      l10n.contactSheetTitle,
                       style: type.sheetTitle.copyWith(color: colors.ink),
                     ),
                   ),
                   Semantics(
                     button: true,
-                    label: 'Close',
+                    label: l10n.contactSheetCloseLabel,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () => Navigator.of(context).pop(),
@@ -217,21 +225,19 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'We welcome all your concerns, issues, and suggestions. '
-                'Feel free to get in touch with us at your most convenient '
-                'time.',
+                l10n.contactSheetSubtitle,
                 style: type.bodySmall.copyWith(color: colors.muted),
               ),
               const SizedBox(height: AppSpacing.section),
               _Field(
-                label: 'Full name',
+                label: l10n.contactFullNameFieldLabel,
                 controller: _name,
                 textInputAction: TextInputAction.next,
                 keyboardType: TextInputType.name,
               ),
               const SizedBox(height: AppSpacing.base),
               _Field(
-                label: 'Phone',
+                label: l10n.contactPhoneFieldLabel,
                 controller: _phone,
                 hintText: '+998901234567',
                 keyboardType: TextInputType.phone,
@@ -245,7 +251,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
               ),
               const SizedBox(height: AppSpacing.base),
               _Field(
-                label: 'Message',
+                label: l10n.contactMessageFieldLabel,
                 controller: _message,
                 maxLines: 4,
                 maxLength: contactMessageMaxLength,
@@ -409,7 +415,7 @@ class _SendButton extends StatelessWidget {
                   ),
                 )
               : Text(
-                  'Send message',
+                  AppLocalizations.of(context).contactSendButtonLabel,
                   style: type.rowTitle.copyWith(color: Colors.white),
                 ),
         ),

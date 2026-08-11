@@ -21,9 +21,9 @@ describe('contactSchema', () => {
     expect(() => contactSchema.parse({ name: 'Aziz', phone: '+1234567890' })).toThrow();
   });
 
-  it('rejects a message over the 2000-char bound', () => {
+  it('rejects a message over the 500-char bound', () => {
     expect(() =>
-      contactSchema.parse({ name: 'Aziz', phone: '+998901234567', message: 'x'.repeat(2001) }),
+      contactSchema.parse({ name: 'Aziz', phone: '+998901234567', message: 'x'.repeat(501) }),
     ).toThrow();
   });
 });

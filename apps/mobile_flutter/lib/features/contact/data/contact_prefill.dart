@@ -17,7 +17,7 @@ class ContactPrefill {
 
   final String message;
 
-  /// SCREENS.md caps the message field at 200 characters, so this stays
+  /// SCREENS.md caps the message field at 500 characters, so this stays
   /// well inside it: a long listing title is truncated rather than eating
   /// the whole allowance and leaving the user nothing to type in. The id
   /// badge (`Formatters.adIdBadge`'s `#` + 5 chars) is included because it

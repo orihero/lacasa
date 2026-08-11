@@ -158,7 +158,7 @@ Section "Ads List" — grid of Listing Cards for this agent. Empty state: "No li
 
 ### 11 · `contact-sheet`
 Sheet title "Contact Us", subtitle "We welcome all your concerns, issues, and suggestions. Feel free to get in touch with us at your most convenient time."
-Fields: **"Full name"** (text), **"Phone"** (text, `^\+998\d{9}$`), **"Message"** (textarea, max 200 chars).
+Fields: **"Full name"** (text), **"Phone"** (text, `^\+998\d{9}$`), **"Message"** (textarea, max 500 chars).
 Validation: empty name/phone → "Required fields are not filled"; bad phone → "Invalid phone number format"; success toast "Message sent successfully."
 Button: **"Send message"**. Close "X".
 

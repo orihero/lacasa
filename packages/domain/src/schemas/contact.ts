@@ -13,6 +13,6 @@ import { UZ_PHONE_REGEX } from '../validators/phone';
 export const contactSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(120),
   phone: z.string().regex(UZ_PHONE_REGEX, 'Phone must be in +998XXXXXXXXX format'),
-  message: z.string().trim().max(2000).optional().default(''),
+  message: z.string().trim().max(500).optional().default(''),
 });
 export type ContactInput = z.infer<typeof contactSchema>;

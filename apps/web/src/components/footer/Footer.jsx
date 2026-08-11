@@ -120,7 +120,7 @@ const Footer = () => {
               }
               value={formData.message}
               className="bg-bgInput sm:border-none border-2 text-[14px] md:text-[1.2rem] resize-none p-4 h-[200px] rounded-md w-full outline-none"
-              maxLength="200"
+              maxLength="500"
               placeholder={t("message")}
             />
 
