@@ -30,11 +30,20 @@
 /// client-side paging window — both were built around the old
 /// no-server-pagination gap (build contract §7.7), which is closed; see
 /// `README.md`'s Known gaps for the before/after.
+///
+/// [invalidateAdCaches] is the seam every ad create/update/delete mutation
+/// must call — see that function's own doc comment (finding M4: before this,
+/// `create_listing_screen.dart`/`edit_listing_screen.dart` invalidated only
+/// `dashboardAdsProvider`, a provider nothing visible on the dashboard
+/// actually reads for its stat tiles, while [myListingsResultsProvider]
+/// itself was never invalidated by anything).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../navigation/auth_session.dart';
+import '../../work_dashboard/state/dashboard_providers.dart';
 import 'my_listings_repository_provider.dart';
 
 class AppliedMyListingsFiltersNotifier extends Notifier<AdFilters> {
@@ -170,6 +179,17 @@ class MyListingsPageState {
 class MyListingsResultsNotifier extends AsyncNotifier<MyListingsPageState> {
   @override
   Future<MyListingsPageState> build() async {
+    // Finding M5's provider half: this screen is the Work tab's landing
+    // screen for a coworker session (see this file's own doc comment) and
+    // is never `.autoDispose`, so nothing tears it down across a
+    // sign-out/sign-in — without watching the signed-in user's id, a new
+    // session (even one sharing the exact same role, which the router's own
+    // redirect guard can't tell apart from the previous session) would keep
+    // rendering the previous account's ads until this provider happened to
+    // be invalidated some other way. Selecting just `user?.id` (not the
+    // whole `AuthSessionState`) keeps `isRestoring` flicker from re-firing
+    // this fetch on its own.
+    ref.watch(authSessionProvider.select((s) => s.user?.id));
     // Watching (not reading) filters/sort/status is what makes the CRM
     // filter sheet's "Apply Filters" re-trigger this fetch automatically —
     // and, since `build()` re-running always starts a fresh
@@ -243,6 +263,8 @@ final myListingsResultsProvider =
 class MyListingsCoworkersNotifier extends AsyncNotifier<List<Coworker>> {
   @override
   Future<List<Coworker>> build() {
+    // See `MyListingsResultsNotifier.build()`'s identical line for why.
+    ref.watch(authSessionProvider.select((s) => s.user?.id));
     return ref.read(myListingsRepositoryProvider).fetchCoworkers();
   }
 }
@@ -251,6 +273,54 @@ final myListingsCoworkersProvider =
     AsyncNotifierProvider<MyListingsCoworkersNotifier, List<Coworker>>(
       MyListingsCoworkersNotifier.new,
     );
+
+/// Finding M4's fix. The one seam every ad create/update/delete mutation
+/// must call on success (`create_listing_screen.dart`'s `_submit`,
+/// `edit_listing_screen.dart`'s `_save`/`_delete`) — one function call
+/// instead of one `ref.invalidate` per affected cache, because the
+/// server-side ad set is mirrored by **four** independent client caches at
+/// once, and the bug this fixes was exactly one of those four being
+/// invalidated while the other three (including the one the dashboard
+/// actually renders) silently kept serving stale data:
+///
+/// - [myListingsResultsProvider] — `my-listings`' own paged results; this
+///   one was never invalidated by anything before this fix, so a created/
+///   deleted ad simply never appeared/disappeared until the next full
+///   re-fetch (a filter toggle or app restart).
+/// - [dashboardAdsProvider] — the Workspace links' "My Ads" row subtitle
+///   (`dashboard_workspace_links.dart`); this was the one lone call site
+///   used to invalidate, but it backs no visible stat tile.
+/// - [adsStatisticsProvider] — the dashboard's actual visible "Ads created"/
+///   "Ads sold" stat tiles (`dashboard_stat_tiles.dart`) — the thing the
+///   original bug report means by "the dashboard tile holds its stale
+///   value". Independent of [dashboardAdsProvider]; see
+///   `dashboard_providers.dart`'s own doc comment for why the dashboard
+///   keeps several separate mirrors rather than one.
+/// - [adsSeriesProvider] — the "Ads statistics" chart, same underlying
+///   server data as [adsStatisticsProvider] but a genuinely separate
+///   fetch/endpoint (that provider's own doc comment).
+///
+/// listing_editor's mutations are deliberately not routed through a
+/// notifier of their own (`listing_editor_providers.dart`'s doc comment:
+/// "each screen calls the repository directly inside its own submit
+/// handler"), so there is no single method — the way
+/// `leads_providers.dart#LeadsNotifier._refetch` invalidates
+/// `dashboardLeadsProvider` from inside every lead mutation — to hang this
+/// off instead. A free function called from both screens' submit handlers
+/// is the next best seam: it can't be *partially* remembered the way four
+/// separate `ref.invalidate` calls scattered across two files could.
+///
+/// Takes [WidgetRef] rather than the bare [Ref] a notifier's own `ref`
+/// would be, since both call sites are `ConsumerState.build` submit
+/// handlers, not another provider's `build()` — Riverpod 3's `WidgetRef`
+/// and `Ref` are separate sealed types with no subtyping relationship
+/// between them, even though both expose an identical `invalidate`.
+void invalidateAdCaches(WidgetRef ref) {
+  ref.invalidate(myListingsResultsProvider);
+  ref.invalidate(dashboardAdsProvider);
+  ref.invalidate(adsStatisticsProvider);
+  ref.invalidate(adsSeriesProvider);
+}
 
 /// Resolves the row-level "Author" text (SCREENS.md §25). Mirrors
 /// `apps/console/src/screens/myAds/deriveMyAds.ts#resolveAdAuthor` field

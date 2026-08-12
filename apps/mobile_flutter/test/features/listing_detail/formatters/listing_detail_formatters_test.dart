@@ -171,14 +171,45 @@ void main() {
     test('groups thousands the same way a price does', () {
       // 120000 / 100 = 1200.
       expect(
-        ListingDetailFormatters.pricePerSqm(testAd(price: 120000, area: 100)),
+        ListingDetailFormatters.pricePerSqm(
+          l10n,
+          testAd(price: 120000, area: 100),
+        ),
         r'$ 1,200 / m²',
       );
     });
 
+    // Regression test for the bug this fix closes: `pricePerSqm` computes
+    // off `Ad.pricePerSqm` (a currency-agnostic `price / area`) but used to
+    // hardcode the `$` prefix regardless of `Ad.priceType`, so a UZS ad's
+    // secondary figure misstated its own currency even after
+    // `Formatters.price` (the headline a few pixels above it, in
+    // `listing_price_footer.dart`) had already been fixed to say "so'm" —
+    // the two halves of one line disagreeing, confirmed on device on the
+    // Chilonzor commercial UZS listing before this change
+    // ("3,650,000,000 so'm · $ 6,083,333 / m²"). A prior pass's version of
+    // this test only ever constructed USD ads (`testAd`'s `priceType`
+    // defaulted to `'usd'` with no override available at all), so it stayed
+    // green through that bug — asserting only the USD branch can never
+    // catch a missing UZS branch.
+    test('uses the UZS suffix instead of "\$" for a UZS ad', () {
+      // 3650000000 / 600 = 6083333.33.. -> rounds to 6,083,333 (see
+      // Ad.pricePerSqm / computePricePerSqm's own rounding rule).
+      expect(
+        ListingDetailFormatters.pricePerSqm(
+          l10n,
+          testAd(price: 3650000000, area: 600, priceType: 'uzs'),
+        ),
+        "6,083,333 so'm / m²",
+      );
+    });
+
     test('is null when the ad states no usable area', () {
-      expect(ListingDetailFormatters.pricePerSqm(testAd()), isNull);
-      expect(ListingDetailFormatters.pricePerSqm(testAd(area: 0)), isNull);
+      expect(ListingDetailFormatters.pricePerSqm(l10n, testAd()), isNull);
+      expect(
+        ListingDetailFormatters.pricePerSqm(l10n, testAd(area: 0)),
+        isNull,
+      );
     });
   });
 }

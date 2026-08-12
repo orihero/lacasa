@@ -85,6 +85,10 @@ Future<AdFilters?> showFilterSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment for why this is required, not optional, for every sheet
+    // opened from inside a shell branch.
+    useRootNavigator: true,
     builder: (context) =>
         FilterSheet(initialFilters: initialFilters, isCrm: isCrm),
   );
@@ -104,6 +108,10 @@ Future<FilterSheetResult?> showCrmFilterSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment for why this is required, not optional, for every sheet
+    // opened from inside a shell branch.
+    useRootNavigator: true,
     builder: (context) => FilterSheet(
       initialFilters: initialFilters,
       isCrm: true,

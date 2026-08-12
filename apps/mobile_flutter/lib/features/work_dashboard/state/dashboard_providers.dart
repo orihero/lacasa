@@ -27,13 +27,39 @@
 /// [coworkerStatRowsProvider] is the Coworker statistics section's actual
 /// per-row data source — see its own doc comment for the event-stage fold
 /// and the range-selector wiring ruling 7.2 asks for.
+///
+/// **Finding M5's provider half.** `dashboard` stays mounted for the whole
+/// Work-tab session (`StatefulShellRoute.indexedStack`) and none of the six
+/// `AsyncNotifierProvider`s below is `.autoDispose`, so nothing ever tore
+/// them down across a sign-out/sign-in before this fix — a new session
+/// (even one sharing the exact same role as the last, which the router's
+/// own redirect guard can't distinguish) would keep rendering the previous
+/// account's leads/coworkers/ads/stats until the app happened to restart.
+/// Each `build()` below now starts with [_watchSessionForCacheInvalidation],
+/// which watches (not reads) the signed-in user's id — the same "let
+/// Riverpod's own dependency graph do the invalidation" approach as
+/// [myListingsResultsProvider] (`my_listings/state/my_listings_providers
+/// .dart`) and [coworkersListProvider] (`coworkers/state/coworkers_providers
+/// .dart`), rather than a fourth place trying to remember to call
+/// `ref.invalidate` from inside `auth_session.dart`'s `signIn`/`signOut`
+/// (out of this fix's file ownership, and a worse seam anyway — a provider
+/// declaring its own dependency can't be forgotten by a future caller the
+/// way an imperative invalidate-on-sign-out call site could be).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../navigation/auth_session.dart';
 import '../data/dashboard_mode.dart';
 import 'dashboard_repository_provider.dart';
+
+/// See this file's doc comment's "Finding M5's provider half" section.
+/// Selecting just `user?.id` (never the whole [AuthSessionState]) keeps
+/// [AuthSessionState.isRestoring] flicker from re-firing every dashboard
+/// fetch on its own.
+void _watchSessionForCacheInvalidation(Ref ref) =>
+    ref.watch(authSessionProvider.select((s) => s.user?.id));
 
 /// SCREENS.md §24's time-range selector. `thisMonth` is the spec'd default.
 class DashboardTimeRangeNotifier extends Notifier<StatisticsFilter> {
@@ -51,6 +77,7 @@ final dashboardTimeRangeProvider =
 class AdsStatisticsNotifier extends AsyncNotifier<AdsStatistics> {
   @override
   Future<AdsStatistics> build() {
+    _watchSessionForCacheInvalidation(ref);
     final filter = ref.watch(dashboardTimeRangeProvider);
     return ref.read(dashboardRepositoryProvider).fetchAdsStatistics(filter);
   }
@@ -69,6 +96,7 @@ final adsStatisticsProvider =
 class AdsSeriesNotifier extends AsyncNotifier<AdsSeries> {
   @override
   Future<AdsSeries> build() {
+    _watchSessionForCacheInvalidation(ref);
     final filter = ref.watch(dashboardTimeRangeProvider);
     return ref.read(dashboardRepositoryProvider).fetchAdsSeries(filter);
   }
@@ -80,8 +108,10 @@ final adsSeriesProvider = AsyncNotifierProvider<AdsSeriesNotifier, AdsSeries>(
 
 class DashboardLeadsNotifier extends AsyncNotifier<List<Lead>> {
   @override
-  Future<List<Lead>> build() =>
-      ref.read(dashboardRepositoryProvider).fetchAllLeads();
+  Future<List<Lead>> build() {
+    _watchSessionForCacheInvalidation(ref);
+    return ref.read(dashboardRepositoryProvider).fetchAllLeads();
+  }
 }
 
 final dashboardLeadsProvider =
@@ -91,8 +121,10 @@ final dashboardLeadsProvider =
 
 class DashboardCoworkersNotifier extends AsyncNotifier<List<Coworker>> {
   @override
-  Future<List<Coworker>> build() =>
-      ref.read(dashboardRepositoryProvider).fetchCoworkers();
+  Future<List<Coworker>> build() {
+    _watchSessionForCacheInvalidation(ref);
+    return ref.read(dashboardRepositoryProvider).fetchCoworkers();
+  }
 }
 
 final dashboardCoworkersProvider =
@@ -102,8 +134,10 @@ final dashboardCoworkersProvider =
 
 class DashboardAdsNotifier extends AsyncNotifier<List<Ad>> {
   @override
-  Future<List<Ad>> build() =>
-      ref.read(dashboardRepositoryProvider).fetchAllAds();
+  Future<List<Ad>> build() {
+    _watchSessionForCacheInvalidation(ref);
+    return ref.read(dashboardRepositoryProvider).fetchAllAds();
+  }
 }
 
 final dashboardAdsProvider = AsyncNotifierProvider<DashboardAdsNotifier, List<Ad>>(
@@ -113,8 +147,10 @@ final dashboardAdsProvider = AsyncNotifierProvider<DashboardAdsNotifier, List<Ad
 class DashboardCoworkerActivityNotifier
     extends AsyncNotifier<List<ActivityEvent>> {
   @override
-  Future<List<ActivityEvent>> build() =>
-      ref.read(dashboardRepositoryProvider).fetchCoworkerActivity();
+  Future<List<ActivityEvent>> build() {
+    _watchSessionForCacheInvalidation(ref);
+    return ref.read(dashboardRepositoryProvider).fetchCoworkerActivity();
+  }
 }
 
 final dashboardCoworkerActivityProvider =

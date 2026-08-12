@@ -30,7 +30,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import '../../work_dashboard/state/dashboard_providers.dart';
+import '../../my_listings/state/my_listings_providers.dart';
 import '../state/listing_editor_repository_provider.dart';
 import 'form/basics_step.dart';
 import 'form/details_step.dart';
@@ -151,11 +151,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
         success: l10n.listingEditorCreateSuccessMessage,
         errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
       );
-      // Dashboard owns an independent copy of the caller's full ad list
-      // (`dashboardAdsProvider`) and stays mounted for the whole Work-tab
-      // session — without this it would silently keep showing the
-      // pre-create list/stat tiles.
-      ref.invalidate(dashboardAdsProvider);
+      // `my-listings` and the dashboard's stat tiles/chart/workspace links
+      // each cache an independent copy of the caller's ad list, and both
+      // screens stay mounted across this modal's whole lifetime — without
+      // this they would silently keep showing the pre-create data. See
+      // `invalidateAdCaches`'s own doc comment (finding M4) for why this is
+      // one call rather than one `ref.invalidate` per cache.
+      invalidateAdCaches(ref);
       if (!mounted) return;
       context.go(RoutePaths.workMyListings);
     } catch (_) {

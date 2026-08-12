@@ -120,13 +120,36 @@ abstract final class ListingDetailFormatters {
     return '${ad.lat!.toStringAsFixed(4)}, ${ad.lng!.toStringAsFixed(4)}';
   }
 
-  /// `$ 1,200 / m²` for the price footer's secondary figure, or `null`
-  /// when the ad states no usable area. Reuses [Ad.pricePerSqm], which is
-  /// a port of web's own `computePricePerSqm` — the figure this screen
-  /// shows and the one web shows can't drift apart.
-  static String? pricePerSqm(Ad ad) {
+  /// `$ 1,200 / m²` for a USD ad, `1,200 so'm / m²` for a UZS one, or
+  /// `null` when the ad states no usable area. Reuses [Ad.pricePerSqm],
+  /// which is a port of web's own `computePricePerSqm` — the figure this
+  /// screen shows and the one web shows can't drift apart.
+  ///
+  /// **Why this branches on [Ad.priceType] at all.** [Ad.pricePerSqm] is
+  /// just `price / area` in whatever currency the ad's own price is
+  /// already in — it was never a USD-only figure, so hardcoding the `$`
+  /// prefix here mischaracterized every UZS ad's per-m² figure by the same
+  /// ~13x this file's sibling fix ([Formatters.price]) already corrected
+  /// for the headline price. That first pass fixed the headline and the
+  /// card pill but missed this one because it lives behind its own call
+  /// site ([ListingPriceFooter]) rather than sharing [Formatters.price]'s —
+  /// confirmed on device on the Chilonzor commercial UZS listing, where the
+  /// asking-price line read "3,650,000,000 so'm · $ 6,083,333 / m²" with
+  /// the two halves of the same line disagreeing on currency. Mirrors
+  /// [Formatters.price]'s branch and reuses the same
+  /// `listingEditorPriceTypeUzsOption` ("so'm") suffix rather than
+  /// inventing a second UZS convention for this one figure.
+  ///
+  /// Takes [AppLocalizations] rather than a [BuildContext], matching every
+  /// other label function in this file — [ListingPriceFooter.build] always
+  /// has a [BuildContext] on hand to resolve one from.
+  static String? pricePerSqm(AppLocalizations l10n, Ad ad) {
     final value = ad.pricePerSqm;
     if (value == null) return null;
-    return '\$ ${Formatters.groupedNumber(value)} / m²';
+    final grouped = Formatters.groupedNumber(value);
+    final body = ad.priceType == CurrencyCode.uzs
+        ? '$grouped ${l10n.listingEditorPriceTypeUzsOption}'
+        : '\$ $grouped';
+    return '$body / m²';
   }
 }

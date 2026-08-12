@@ -29,17 +29,36 @@
 /// coworker-detail on top of the first, but the convention is uniform
 /// across every detail-by-id screen in this app), and state should die with
 /// the route rather than accumulate one entry per coworker ever opened.
+///
+/// **Finding M5's provider half.** [coworkersListProvider] is not
+/// `.autoDispose` (see above), so nothing tore it down across a
+/// sign-out/sign-in before this fix — a new session (even one sharing the
+/// exact same role as the last, which the router's own redirect guard can't
+/// distinguish) would keep rendering the previous account's roster.
+/// [CoworkersListNotifier.build] now watches (not reads) the signed-in
+/// user's id first, so Riverpod's own dependency graph re-fetches the
+/// moment the session changes — the same approach
+/// `work_dashboard/state/dashboard_providers.dart`'s six AsyncNotifiers and
+/// `my_listings/state/my_listings_providers.dart`'s two now take, rather
+/// than a fourth imperative `ref.invalidate` call site living inside
+/// `auth_session.dart`'s `signIn`/`signOut` (out of this fix's file
+/// ownership).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
+import '../../../navigation/auth_session.dart';
 import 'coworkers_repository_provider.dart';
 
 class CoworkersListNotifier extends AsyncNotifier<List<Coworker>> {
   @override
-  Future<List<Coworker>> build() =>
-      ref.read(coworkersRepositoryProvider).list();
+  Future<List<Coworker>> build() {
+    // Select just `user?.id` — never the whole `AuthSessionState` — so
+    // `AuthSessionState.isRestoring` flicker doesn't re-fire this fetch.
+    ref.watch(authSessionProvider.select((s) => s.user?.id));
+    return ref.read(coworkersRepositoryProvider).list();
+  }
 }
 
 final coworkersListProvider =

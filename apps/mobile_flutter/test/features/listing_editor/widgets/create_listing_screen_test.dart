@@ -12,6 +12,7 @@ import 'package:lacasa_mobile/features/listing_editor/state/listing_editor_repos
 import 'package:lacasa_mobile/features/work_dashboard/state/dashboard_providers.dart';
 import 'package:lacasa_mobile/features/work_dashboard/state/dashboard_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/widgets/glass_option_picker.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../work_dashboard/support/fake_dashboard_repository.dart';
@@ -67,15 +68,27 @@ void main() {
     return (container: container, router: router, repository: repo);
   }
 
+  // City/District (finding M6) are tap-to-pick `GlassPickerField`s, not
+  // `TextField`s — picking an option means tapping the field to open
+  // `showGlassOptionPicker`'s bottom sheet, then tapping the wanted row in
+  // it (`glassOption-$name`), settling between each step so the sheet's
+  // route transition and the picker's own async `regionsDataProvider`
+  // resolution (instant under `flutter test`'s forced fixtures, but still
+  // a microtask) have both landed.
+  Future<void> pickOption(WidgetTester tester, Key fieldKey, String optionLabel) async {
+    await tester.tap(find.byKey(fieldKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(ValueKey('glassOption-$optionLabel')));
+    await tester.pumpAndSettle();
+  }
+
   Future<void> fillBasics(WidgetTester tester) async {
     await tester.enterText(find.byKey(const ValueKey('listingField-title')), 'New listing');
-    await tester.enterText(find.byKey(const ValueKey('listingField-city')), 'Tashkent');
-    // District only becomes enabled once City's text actually lands in the
-    // widget tree (SCREENS.md §26's "disabled until City") — `enterText`
-    // alone doesn't rebuild the form, so a pump is required here before
-    // District's now-enabled `TextField` can be found/entered into.
-    await tester.pump();
-    await tester.enterText(find.byKey(const ValueKey('listingField-district')), 'Chilonzor');
+    await pickOption(tester, const ValueKey('listingField-city'), 'Tashkent');
+    // District only becomes enabled once City has a value (SCREENS.md
+    // §26's "disabled until City") — the settle inside `pickOption` above
+    // already covers the rebuild that flips it on.
+    await pickOption(tester, const ValueKey('listingField-district'), 'Chilonzor');
     await tester.enterText(find.byKey(const ValueKey('listingField-address')), '12 Main St');
     await tester.enterText(find.byKey(const ValueKey('listingField-reference')), 'Near park');
   }
@@ -175,41 +188,63 @@ void main() {
     });
   });
 
-  group('District field (SCREENS.md §26 — disabled until City)', () {
-    TextField districtField(WidgetTester tester) => tester.widget<TextField>(
-      find.descendant(
-        of: find.byKey(const ValueKey('listingField-district')),
-        matching: find.byType(TextField),
-      ),
-    );
+  group('City/District (SCREENS.md §26 — select, District disabled until City; finding M6)', () {
+    GlassPickerField districtField(WidgetTester tester) =>
+        tester.widget<GlassPickerField>(find.byKey(const ValueKey('listingField-district')));
+
+    testWidgets('City/District render as selects, not free text — no TextField in either', (
+      tester,
+    ) async {
+      await pumpScreen(tester);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('listingField-city')),
+          matching: find.byType(TextField),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('listingField-district')),
+          matching: find.byType(TextField),
+        ),
+        findsNothing,
+      );
+    });
 
     testWidgets('District starts disabled while City is empty', (tester) async {
       await pumpScreen(tester);
+      await tester.pumpAndSettle();
 
       expect(districtField(tester).enabled, isFalse);
     });
 
-    testWidgets('District becomes enabled once City has a value', (tester) async {
+    testWidgets('District becomes enabled, scoped to the chosen City, once City is picked', (
+      tester,
+    ) async {
       await pumpScreen(tester);
+      await tester.pumpAndSettle();
 
-      await tester.enterText(find.byKey(const ValueKey('listingField-city')), 'Tashkent');
-      await tester.pump();
+      await pickOption(tester, const ValueKey('listingField-city'), 'Tashkent');
 
       expect(districtField(tester).enabled, isTrue);
+
+      // Picking District now opens the scoped sheet — a fixture-mode
+      // district not under the chosen region must not be offered.
+      await tester.tap(find.byKey(const ValueKey('listingField-district')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('glassOption-Chilonzor')), findsOneWidget);
     });
 
-    testWidgets('District disables again if City is cleared back to empty', (tester) async {
-      await pumpScreen(tester);
-
-      await tester.enterText(find.byKey(const ValueKey('listingField-city')), 'Tashkent');
-      await tester.pump();
-      expect(districtField(tester).enabled, isTrue);
-
-      await tester.enterText(find.byKey(const ValueKey('listingField-city')), '');
-      await tester.pump();
-
-      expect(districtField(tester).enabled, isFalse);
-    });
+    // The City→District "picking a new City clears District" cascade
+    // (`basics_step.dart`'s own `onTap`) needs a second region to actually
+    // exercise a City *change* — `filter_regions_fixtures.dart`'s bundled
+    // vocabulary is deliberately just the one region (see that file's own
+    // doc comment), so that case is covered in isolation with a 2-region
+    // `regionsDataProvider` override instead — see
+    // `basics_step_test.dart`'s "cascade" group.
   });
 
   group('submit', () {

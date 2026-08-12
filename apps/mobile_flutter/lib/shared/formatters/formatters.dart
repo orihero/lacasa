@@ -30,13 +30,46 @@ abstract final class Formatters {
   static String groupedNumber(num value) => _groupInteger(value);
 
   /// The full price string per SCREENS.md's rule: `$ {price}` for a sale
-  /// ad, `$ {price}/month` for a rent ad, thousands grouped, no decimals.
+  /// ad, `$ {price}/month` for a rent ad, thousands grouped, no decimals —
+  /// but that literal rule only ever covered USD. SCREENS.md's preamble
+  /// says the `$` prefix "consolidates the web app's three inconsistent
+  /// formats — `$`, `y.e`, `{priceType}` — into one rule for mobile"; it
+  /// was never a claim that every ad is USD, just that mobile shouldn't
+  /// pick its symbol per-screen the way web did. The live API returns
+  /// `priceType: "uzs"` for a real fraction of ads (7 of 37 seeded), and a
+  /// `$` prefix on those misstates the price by roughly 13x (800,000 so'm
+  /// read as $800,000) — that's the bug this branches on [Ad.priceType] to
+  /// fix. USD keeps the spec's `$ {price}` prefix unchanged; UZS uses the
+  /// suffix convention the listing-editor's own live price preview already
+  /// established (`listingEditorPriceTypeUzsOption` = "so'm",
+  /// `{amount} {currency}` — see `_PricePreview` in
+  /// `features/listing_editor/widgets/form/details_step.dart`) rather than
+  /// inventing a second one. [CurrencyCode.unknown] falls back to the `$`
+  /// prefix, matching this method's pre-fix behaviour for every ad — a
+  /// currency the wire didn't say is not grounds to guess "so'm" over the
+  /// previous always-USD assumption.
+  ///
   /// Use this wherever a price is needed as plain text with no glass
   /// styling (a share-sheet body, a static price row) — `PricePill` does
   /// not call this, since it needs the `/month` suffix as a separately
-  /// styled [TextSpan].
-  static String price(Ad ad) {
-    final body = '\$ ${groupedPrice(ad)}';
+  /// styled [TextSpan], and builds the same USD/UZS branch itself so it can
+  /// pass a real [l10n] (it always has a [BuildContext]).
+  ///
+  /// [l10n] is optional for the same reason [rooms]'s is: most of this
+  /// method's call sites (map-view, listing-detail's hero/footer/share
+  /// text) don't have a [BuildContext] on hand at the call site, and
+  /// threading one through is out of this fix's scope. Pass it (from
+  /// `AppLocalizations.of(context)`) wherever a context is available, for a
+  /// so'm suffix sourced through the localization layer like the editor's
+  /// own preview; omit it and a UZS ad still renders "so'm" — the ARB's own
+  /// description flags that value as likely invariant across en/uz/ru — just
+  /// not routed through [AppLocalizations].
+  static String price(Ad ad, {AppLocalizations? l10n}) {
+    final body = switch (ad.priceType) {
+      CurrencyCode.uzs =>
+        '${groupedPrice(ad)} ${l10n?.listingEditorPriceTypeUzsOption ?? "so'm"}',
+      CurrencyCode.usd || CurrencyCode.unknown => '\$ ${groupedPrice(ad)}',
+    };
     return ad.category == AdCategory.rent ? '$body/month' : body;
   }
 

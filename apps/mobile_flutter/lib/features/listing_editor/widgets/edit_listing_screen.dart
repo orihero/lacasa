@@ -29,7 +29,7 @@ import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
-import '../../work_dashboard/state/dashboard_providers.dart';
+import '../../my_listings/state/my_listings_providers.dart';
 import '../state/listing_editor_providers.dart';
 import '../state/listing_editor_repository_provider.dart';
 import 'form/basics_step.dart';
@@ -127,9 +127,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       if (!mounted) return;
       setState(() => _touched = false);
       ref.invalidate(editListingAdProvider(widget.adId));
-      // See `create_listing_screen.dart`'s identical invalidation for why
-      // Dashboard's own ad list needs this too.
-      ref.invalidate(dashboardAdsProvider);
+      // See `create_listing_screen.dart`'s identical call — `my-listings`
+      // and the dashboard both cache an independent copy of this ad.
+      invalidateAdCaches(ref);
       _leave();
     } catch (_) {
       if (!mounted) return;
@@ -156,7 +156,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
         success: l10n.listingEditorDeleteSuccessMessage,
         errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
       );
-      ref.invalidate(dashboardAdsProvider);
+      // See `create_listing_screen.dart`'s identical call — the deleted ad
+      // must disappear from `my-listings` and every dashboard cache too.
+      invalidateAdCaches(ref);
       if (!mounted) return;
       context.go(RoutePaths.workMyListings);
     } catch (_) {

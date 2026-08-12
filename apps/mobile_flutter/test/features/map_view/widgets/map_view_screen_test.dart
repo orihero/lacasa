@@ -301,6 +301,20 @@ void main() {
     });
   });
 
+  // The Android/Impeller tile-compositing workaround used to live as a
+  // `Ticker` directly on `_MapViewScreenState` and was tested here. It has
+  // moved to `TileCompositingPrimer` in `map_tile_layer_provider.dart`
+  // (see that class's doc comment for why: `map-view` isn't the only
+  // surface that needs it — `listing-detail`'s Location preview hits the
+  // same bug and only the shared tile-layer construction site reaches
+  // both). This file's `pumpMap` overrides `mapTileLayerProvider` with a
+  // plain coloured box on every test (see the file-level comment above),
+  // so the primer is never even in this screen's tree here — the old test
+  // that lived in this spot was asserting a guard on code this suite
+  // structurally can't exercise. Its replacement is
+  // `test/shared/map/map_tile_layer_provider_test.dart`, which pumps the
+  // real (non-overridden) provider.
+
   group('layout holds at real phone widths', () {
     for (final size in const [
       (label: 'small android', size: Size(360, 800)),

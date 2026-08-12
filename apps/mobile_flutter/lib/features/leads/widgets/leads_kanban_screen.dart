@@ -258,6 +258,10 @@ Future<LeadStatus?> _showMoveToSheet(
   return showModalBottomSheet<LeadStatus>(
     context: context,
     backgroundColor: Colors.transparent,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment for why this is required, not optional, for every sheet
+    // opened from inside a shell branch.
+    useRootNavigator: true,
     builder: (context) {
       final colors = Theme.of(context).extension<LaCasaColors>()!;
       final type = Theme.of(context).extension<LaCasaTypography>()!;

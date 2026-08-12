@@ -55,6 +55,10 @@ Future<bool?> showContactSheet(
     // The sheet must clear the keyboard, which a bottom sheet does not do
     // for free — see the viewInsets padding inside _ContactSheet.
     useSafeArea: true,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment for why this is required, not optional, for every sheet
+    // opened from inside a shell branch.
+    useRootNavigator: true,
     builder: (context) => _ContactSheet(prefill: prefill),
   );
 }

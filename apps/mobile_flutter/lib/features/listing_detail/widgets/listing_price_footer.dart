@@ -25,7 +25,8 @@ class ListingPriceFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final perSqm = ListingDetailFormatters.pricePerSqm(ad);
+    final l10n = AppLocalizations.of(context);
+    final perSqm = ListingDetailFormatters.pricePerSqm(l10n, ad);
 
     return Padding(
       padding: const EdgeInsets.only(top: 18, left: 6, right: 6, bottom: 4),
@@ -33,7 +34,7 @@ class ListingPriceFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context).listingAskingPriceLabel,
+            l10n.listingAskingPriceLabel,
             style: type.bodySmall.copyWith(color: colors.muted),
           ),
           const SizedBox(height: 1),

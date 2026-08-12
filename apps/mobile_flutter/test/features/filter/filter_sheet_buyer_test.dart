@@ -354,6 +354,36 @@ void main() {
   });
 
   group('reset', () {
+    /// Whether `key`'s `ChoiceChipGroup` option renders in its *selected*
+    /// state. `_Chip` (`choice_chip_group.dart`) is private, so there's no
+    /// `isOn` getter to read directly — but its two states render two
+    /// different widget types at the chip's own root: a filled `Container`
+    /// when on, a `GlassSurface` when off (which happens to build a
+    /// `Container` of its own further down, so this checks for the
+    /// `GlassSurface` specifically — its presence/absence is unambiguous
+    /// either way). That's the same signal the chip's own build method keys
+    /// its look off of, so this can't drift from what the user actually
+    /// sees on screen. Deliberately checking the *rendered* chip rather than
+    /// only the draft handed to `recountNow`/`onApply` — finding B1 ("Reset
+    /// does nothing") was a real-device-only symptom: every field read back
+    /// correctly from `_reset()`'s own local state, yet the sheet on screen
+    /// visibly still showed the old selections, because the tap on Reset
+    /// was landing on `GlassTabBar` underneath the sheet instead (see
+    /// `tab_shell_scaffold.dart`'s doc comment, and the
+    /// `useRootNavigator: true` this file's `showFilterSheet`/
+    /// `showCrmFilterSheet` now pass because of it) — a class of bug a
+    /// state-only assertion against a fake repository's `lastFilters` can't
+    /// catch, since that value is correct either way.
+    bool chipIsOn(WidgetTester tester, String key) {
+      return find
+          .descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(GlassSurface),
+          )
+          .evaluate()
+          .isEmpty;
+    }
+
     testWidgets(
       'clears every touched field back to defaults and recounts immediately',
       (tester) async {
@@ -377,6 +407,15 @@ void main() {
           tester,
           find.byKey(ValueKey('filterCategory-${AdCategory.sale}')),
         );
+        await tapVisible(tester, find.byKey(const ValueKey('filterRooms-5')));
+        await tapVisible(
+          tester,
+          find.byKey(ValueKey('filterFurniture-${Furniture.withoutFurniture}')),
+        );
+        await tapVisible(
+          tester,
+          find.byKey(ValueKey('filterRepair-${Repairment.excellent}')),
+        );
 
         expect(
           find.descendant(
@@ -384,6 +423,19 @@ void main() {
             matching: find.text('Tashkent'),
           ),
           findsOneWidget,
+        );
+        // Baseline: every touched chip actually rendered as selected before
+        // Reset is tapped, so the post-reset checks below are a real
+        // transition, not an assertion against a field that was already at
+        // rest.
+        expect(chipIsOn(tester, 'filterRooms-5'), isTrue);
+        expect(
+          chipIsOn(tester, 'filterFurniture-${Furniture.withoutFurniture}'),
+          isTrue,
+        );
+        expect(
+          chipIsOn(tester, 'filterRepair-${Repairment.excellent}'),
+          isTrue,
         );
 
         await tapVisible(tester, find.byKey(const ValueKey('filterSheet-reset')));
@@ -399,11 +451,33 @@ void main() {
           ),
           findsOneWidget,
         );
+        // The rendered chips themselves drop back out of their selected
+        // state — see `chipIsOn`'s doc comment for why this, not just the
+        // draft below, is the assertion that actually matters for B1.
+        expect(chipIsOn(tester, 'filterRooms-5'), isFalse);
+        // Furniture/Repair fall back to their SCREENS.md §3.5 defaults, not
+        // to "any" — the default chip is the one now selected, and the one
+        // just touched is not.
+        expect(
+          chipIsOn(tester, 'filterFurniture-${Furniture.withFurniture}'),
+          isTrue,
+        );
+        expect(
+          chipIsOn(tester, 'filterFurniture-${Furniture.withoutFurniture}'),
+          isFalse,
+        );
+        expect(
+          chipIsOn(tester, 'filterRepair-${Repairment.notRepaired}'),
+          isTrue,
+        );
+        expect(
+          chipIsOn(tester, 'filterRepair-${Repairment.excellent}'),
+          isFalse,
+        );
         // Reset recounts immediately (no debounce wait needed to observe it).
         expect(repo.lastFilters?.city, isNull);
         expect(repo.lastFilters?.category, isNull);
-        // Furniture/Repair fall back to their SCREENS.md §3.5 defaults, not
-        // to "any".
+        expect(repo.lastFilters?.rooms, isNull);
         expect(repo.lastFilters?.furniture, Furniture.withFurniture);
         expect(repo.lastFilters?.repairment, Repairment.notRepaired);
 
@@ -411,6 +485,7 @@ void main() {
 
         expect(result!.city, isNull);
         expect(result!.category, isNull);
+        expect(result!.rooms, isNull);
       },
     );
   });

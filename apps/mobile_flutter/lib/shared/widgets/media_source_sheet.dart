@@ -27,6 +27,10 @@ Future<ImageSourceKind?> showMediaSourceSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     useSafeArea: true,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment for why this is required, not optional, for every sheet
+    // opened from inside a shell branch.
+    useRootNavigator: true,
     builder: (context) => _MediaSourceSheet(title: title),
   );
 }

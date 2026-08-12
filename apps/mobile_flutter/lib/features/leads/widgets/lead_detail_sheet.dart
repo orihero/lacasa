@@ -48,6 +48,10 @@ Future<void> showLeadDetailSheet(BuildContext context, {required String leadId})
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     useSafeArea: true,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment. Without this, Delete (AGENT-only) is unclickable — a tap on
+    // it lands on the tab bar instead.
+    useRootNavigator: true,
     builder: (context) => _LeadDetailSheet(leadId: leadId),
   );
 }

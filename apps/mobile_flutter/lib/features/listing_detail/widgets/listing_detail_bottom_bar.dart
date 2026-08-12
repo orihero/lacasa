@@ -61,12 +61,22 @@ class ListingDetailBottomBar extends StatelessWidget {
           // `listing_detail_screen_test.dart` caught.
           //
           // The rule this encodes: the price always keeps at least
-          // [_minPriceWidth] and ellipsizes beyond that, and the button
-          // gets everything left over, scaling its label down (never
-          // truncating it) if that is narrower than the label's natural
-          // width. Truncating "Submit an application" to "Submit an appl…"
-          // is not an acceptable degradation for the screen's primary
-          // action, and neither is a price reading "$ 1,250,00…".
+          // [_minPriceWidth], and the button gets everything left over,
+          // scaling its label down (never truncating it) if that is
+          // narrower than the label's natural width. Truncating "Submit an
+          // application" to "Submit an appl…" is not an acceptable
+          // degradation for the screen's primary action — and neither is a
+          // price reading "$ 1,250,00…", which is exactly what this bar
+          // rendered for a UZS listing before this fix: `Text` alone with
+          // `overflow: TextOverflow.ellipsis` clips characters once the
+          // string outgrows [_minPriceWidth], and nothing before this line
+          // ever widened that budget for a currency whose grouped digits
+          // routinely run 10+ characters longer than a USD price
+          // (`3,650,000,000 so'm` vs `$ 1,250`). The fix mirrors the
+          // button's own answer to the identical problem: wrap the price in
+          // a [FittedBox] that shrinks the whole string to fit instead of
+          // cutting it off. A smaller-but-complete price is a legibility
+          // trade-off; a truncated one is a wrong number.
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxButtonWidth =
@@ -76,11 +86,14 @@ class ListingDetailBottomBar extends StatelessWidget {
               return Row(
                 children: [
                   Flexible(
-                    child: Text(
-                      Formatters.price(ad),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: type.price.copyWith(color: colors.ink),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        Formatters.price(ad),
+                        maxLines: 1,
+                        style: type.price.copyWith(color: colors.ink),
+                      ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.base),
@@ -99,9 +112,12 @@ class ListingDetailBottomBar extends StatelessWidget {
 }
 
 /// How much room the price keeps before the CTA starts giving way. Roughly
-/// a six-figure price at the bar's type size; past that the price
-/// ellipsizes, which is survivable because the full figure also appears
-/// un-truncated in the price footer a few lines up the page.
+/// a six-figure price at the bar's type size; past that the price's
+/// [FittedBox] starts scaling the digits down rather than growing the row
+/// past the button, which stays legible (if smaller) up to and including a
+/// ten-figure UZS sale price — unlike the ellipsis this budget used to hand
+/// off to, shrinking never drops a character, so the figure on-screen is
+/// always the real one.
 const double _minPriceWidth = 96;
 
 /// `.book` — the accent-gradient pill CTA.

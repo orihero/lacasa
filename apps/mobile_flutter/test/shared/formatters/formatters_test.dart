@@ -3,7 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 
-Map<String, dynamic> _adJson({required num price, required String category}) {
+Map<String, dynamic> _adJson({
+  required num price,
+  required String category,
+  String priceType = 'usd',
+}) {
   return {
     'id': 'ad-x',
     'title': 't',
@@ -19,7 +23,7 @@ Map<String, dynamic> _adJson({required num price, required String category}) {
     'floors': 1,
     'hashtags': null,
     'price': price,
-    'priceType': 'usd',
+    'priceType': priceType,
     'stage': '1',
     'description': null,
     'nearPlacesList': <String>[],
@@ -61,14 +65,41 @@ void main() {
   });
 
   group('Formatters.price', () {
-    test('a sale ad has no suffix', () {
+    test('a USD sale ad has no suffix', () {
       final ad = Ad.fromJson(_adJson(price: 78000, category: 'sale'));
       expect(Formatters.price(ad), r'$ 78,000');
     });
 
-    test('a rent ad gets a /month suffix', () {
+    test('a USD rent ad gets a /month suffix', () {
       final ad = Ad.fromJson(_adJson(price: 900, category: 'rent'));
       expect(Formatters.price(ad), r'$ 900/month');
+    });
+
+    // Regression coverage for finding M1: a UZS ad must never render with
+    // the `$` prefix — 800,000 so'm read as $800,000 overstates the price
+    // roughly 13x. See Formatters.price's doc comment for why the fix is a
+    // suffix ("so'm"), not a different prefix symbol.
+    test('a UZS sale ad gets a so\'m suffix, never a \$ prefix', () {
+      final ad = Ad.fromJson(
+        _adJson(price: 800000, category: 'sale', priceType: 'uzs'),
+      );
+      expect(Formatters.price(ad), "800,000 so'm");
+    });
+
+    test('a UZS rent ad keeps the /month suffix after the so\'m suffix', () {
+      final ad = Ad.fromJson(
+        _adJson(price: 800000, category: 'rent', priceType: 'uzs'),
+      );
+      expect(Formatters.price(ad), "800,000 so'm/month");
+    });
+
+    test('an unrecognised priceType falls back to the \$ prefix', () {
+      // Mirrors this method's pre-fix behaviour for every ad: a currency
+      // the wire didn't say is not grounds to guess "so'm" over USD.
+      final ad = Ad.fromJson(
+        _adJson(price: 100, category: 'sale', priceType: 'not-a-currency'),
+      );
+      expect(Formatters.price(ad), r'$ 100');
     });
   });
 

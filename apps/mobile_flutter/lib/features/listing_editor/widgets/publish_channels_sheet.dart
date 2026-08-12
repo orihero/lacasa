@@ -47,6 +47,9 @@ Future<void> showPublishChannelsSheet(BuildContext context, {required Ad ad}) {
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment. Without this, both Cancel and Publish are unclickable.
+    useRootNavigator: true,
     builder: (context) => PublishChannelsSheet(ad: ad),
   );
 }

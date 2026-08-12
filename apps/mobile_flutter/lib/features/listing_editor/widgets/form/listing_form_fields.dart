@@ -261,6 +261,42 @@ class ListingFormFields {
     return descriptionError == null;
   }
 
+  /// Re-checks only whichever Basics fields already have a non-`null`
+  /// error, against each field's *current* text — finding P1. Called on
+  /// every keystroke/pick in any Basics field (`basics_step.dart`'s own
+  /// `_handleChanged`), not just from Next/Submit: a field that has never
+  /// failed [validateBasics] stays untouched here (its error field is
+  /// already `null`, so there is nothing to re-check — a pristine field the
+  /// user hasn't reached yet must never grow an error just because a
+  /// sibling field changed), but a field that HAS shown its error gets that
+  /// error cleared (or re-set, if still empty) immediately rather than
+  /// waiting for the next full [validateBasics] pass. Deliberately
+  /// duplicates each field's own empty-check from [validateBasics] rather
+  /// than being expressed in terms of it — [validateBasics] always
+  /// (re)computes and returns all five; this must leave an untouched
+  /// field's `null` alone.
+  void revalidateTouchedBasics(AppLocalizations l10n) {
+    if (titleError != null) {
+      titleError = title.text.trim().isEmpty ? l10n.listingEditorTitleRequiredError : null;
+    }
+    if (cityError != null) {
+      cityError = city.text.trim().isEmpty ? l10n.listingEditorCityRequiredError : null;
+    }
+    if (districtError != null) {
+      districtError = district.text.trim().isEmpty
+          ? l10n.listingEditorDistrictRequiredError
+          : null;
+    }
+    if (addressError != null) {
+      addressError = address.text.trim().isEmpty ? l10n.listingEditorAddressRequiredError : null;
+    }
+    if (referenceError != null) {
+      referenceError = reference.text.trim().isEmpty
+          ? l10n.listingEditorReferenceRequiredError
+          : null;
+    }
+  }
+
   /// `edit-listing`'s single-shot validation — both groups, and
   /// deliberately `&` (not `&&`) so both always run and set their own
   /// error fields even once the first has already failed.

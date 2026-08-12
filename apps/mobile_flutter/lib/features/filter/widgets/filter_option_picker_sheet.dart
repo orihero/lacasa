@@ -33,6 +33,13 @@ Future<String?> showFilterOptionPicker(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     useSafeArea: true,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment. This sheet is opened from *inside* filter-sheet, which is
+    // itself now root-navigator-hosted, but the flag is set explicitly here
+    // too rather than relying on that transitively — a future caller of
+    // showFilterOptionPicker from a plain branch context must not silently
+    // reintroduce the occlusion bug.
+    useRootNavigator: true,
     builder: (context) => _FilterOptionPickerSheet(
       title: title,
       options: options,

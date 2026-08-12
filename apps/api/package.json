@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "migrate": "prisma migrate dev",
     "seed": "node prisma/seed.js",
+    "seed:olx": "node prisma/seed.js && node prisma/seed-olx.js",
     "studio": "prisma studio",
     "gen:env-example": "node scripts/gen-env-example.mjs",
     "test": "vitest run --project unit",

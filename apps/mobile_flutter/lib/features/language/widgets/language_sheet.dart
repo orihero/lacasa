@@ -43,6 +43,10 @@ Future<void> showLanguageSheet(BuildContext context) {
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     useSafeArea: true,
+    // Mounts above the floating tab bar — see tab_shell_scaffold.dart's doc
+    // comment. Without this, the third radio row ("Ru") never renders above
+    // the bar at all, since the sheet is clipped underneath it.
+    useRootNavigator: true,
     builder: (context) => const _LanguageSheet(),
   );
 }

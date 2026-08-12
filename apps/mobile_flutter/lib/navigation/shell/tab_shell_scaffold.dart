@@ -8,6 +8,26 @@
 /// [IndexedStack] under the hood, which is what keeps every branch's
 /// [Navigator] (back stack) and scroll state alive across tab switches
 /// (build spec, "Per-branch back stack & scroll position").
+///
+/// **Every `showModalBottomSheet`/`showDialog` opened from inside a branch
+/// MUST pass `useRootNavigator: true`.** [GlassTabBar] is this [Scaffold]'s
+/// `bottomNavigationBar`, a sibling of [body] — Flutter's own internal
+/// `_ScaffoldLayout` stack paints `bottomNavigationBar` *after* `body` and
+/// therefore hit-tests it *first*. A sheet opened with the default
+/// `useRootNavigator: false` mounts on the nearest [Navigator], which for
+/// any widget inside [navigationShell] is the *branch's* Navigator — itself
+/// hosted inside this [body] slot, i.e. underneath the bar in both paint and
+/// hit-test order. The bar's own [GlassSurface] blur then samples the
+/// sheet's content straight through it (the M2 "pink glow" symptom), and a
+/// tap aimed at the sheet's bottom edge lands on whatever tab button is
+/// there instead. Reordering the children of this [Scaffold] cannot fix
+/// this — `body`/`bottomNavigationBar` ordering is owned by the framework,
+/// not by this widget — so the only correct fix is at the call site:
+/// `showModalBottomSheet(context: context, useRootNavigator: true, ...)`
+/// mounts on `app_router.dart`'s `rootNavigatorKey` Navigator instead, the
+/// same one `login`/`register`'s full-screen modals already push onto, which
+/// sits above this entire shell (bar included). `showDialog` does not need
+/// the same reminder — its default `useRootNavigator` is already `true`.
 library;
 
 import 'package:flutter/material.dart';
