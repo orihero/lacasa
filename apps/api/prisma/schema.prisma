@@ -13,6 +13,14 @@ enum UserRole {
   USER
   AGENT
   COWORKER
+  // Platform staff running the control room (/api/admin): approving realtor
+  // applications, changing roles, reading the audit trail. Deliberately NOT
+  // agent-scoped — an ADMIN owns no ads, no coworkers and no leads, and
+  // effectiveAgentId() in src/middleware/roles.js returns null for it, so an
+  // admin can never act "as" an agency the way a COWORKER does. Access is
+  // granted out of band by scripts/promote-admin.mjs; there is no sign-up
+  // path to this value.
+  ADMIN
 }
 
 // Realtor sign-up (mockups/SCREENS.md §13). Mirrored in

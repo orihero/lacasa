@@ -22,6 +22,7 @@ import contactRouter from "./routes/contact.js";
 import notificationsRouter from "./routes/notifications.js";
 import regionsRouter from "./routes/regions.js";
 import pushRouter from "./routes/push.js";
+import adminRouter from "./routes/admin.js";
 
 // Builds a fully wired Express app. Takes NO action beyond that: no
 // app.listen(), no scheduleIgTokenRefresh() — those are src/server.js's job.
@@ -83,6 +84,13 @@ export function createApp(ctx = {}) {
   app.use("/api/notifications", notificationsRouter);
   app.use("/api/regions", regionsRouter);
   app.use("/api/push", pushRouter);
+  // Last, and on its own path prefix that overlaps no other mount: the whole
+  // router is gated at its own top (routes/admin.js) by requireAuth +
+  // requireRole("ADMIN") on the token, then loadCurrentUser +
+  // requireCurrentRole("ADMIN") on the persisted row, so nothing under
+  // /api/admin is reachable by an agent, a coworker, a buyer, or by someone
+  // whose admin rights were revoked after their token was issued.
+  app.use("/api/admin", adminRouter);
 
   // The `_next` parameter is load-bearing and must stay, unused as it is:
   // Express recognises error-handling middleware by arity alone (fn.length

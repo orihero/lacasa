@@ -1,5 +1,27 @@
 import { invert } from './invert';
 
+/**
+ * What an account is allowed to do. `serializeUser.js` puts the lowercase key
+ * on the wire; the value is the Postgres `UserRole` enum in
+ * apps/api/prisma/schema.prisma.
+ *
+ * Two of these carry agent scope and two do not: an `agent` acts on their own
+ * id and a `coworker` acts on their agent's, while `user` (a buyer) and
+ * `admin` have no agency behind them at all. `admin` is control-room staff —
+ * it is a *wider* role than agent, not a superset of it, so it must never be
+ * given agent scope; see effectiveAgentId() in apps/api/src/middleware/roles.js.
+ */
+export const USER_ROLE = {
+  user: 'USER',
+  agent: 'AGENT',
+  coworker: 'COWORKER',
+  admin: 'ADMIN',
+} as const;
+
+export type UserRoleKey = keyof typeof USER_ROLE;
+
+export const USER_ROLE_REV = invert(USER_ROLE);
+
 // The realtor-type vocabulary introduced with the Buyer/Realtor step on
 // `register` (mockups/SCREENS.md §13). Same shape as the other maps here:
 // lowercase wire/frontend key -> Postgres enum value in

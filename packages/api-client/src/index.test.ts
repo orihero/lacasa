@@ -18,6 +18,7 @@ describe('@lacasa/api-client root entry point', () => {
 
     expect(Object.keys(api).sort()).toEqual(
       [
+        'admin',
         'ads',
         'agents',
         'auth',

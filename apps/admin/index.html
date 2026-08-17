@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Desktop-only surface by design: the control room is read at a desk,
+         against a wide records table. Agents on the move get the Flutter app,
+         agents at work get apps/console, buyers get apps/web. -->
+    <!-- `color-scheme: dark` on the document (not just the body background)
+         so the browser paints its own chrome — scrollbars, form controls, the
+         flash before the first paint — dark too. A white scrollbar down the
+         side of the control room is the exact "this looks like the console"
+         confusion the palette exists to prevent. -->
+    <meta name="color-scheme" content="dark" />
+    <title>La Casa — Control Room</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+{
+  // The app itself. apps/console keeps its Vite/Vitest config files inside
+  // this same project; here they live in tsconfig.node.json instead, because
+  // they are Node programs (they import node:url and the plain-JS
+  // @lacasa/config-vitest preset) rather than browser code, and `npm run
+  // typecheck` runs BOTH projects so nothing goes unchecked. Two projects,
+  // not a `references` pair: references would need `composite: true`, which
+  // cannot coexist with the `noEmit: true` both halves need.
+  "extends": "@lacasa/config-typescript/react-library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

@@ -8,6 +8,7 @@
  */
 import { DOMAIN_PACKAGE_NAME } from '@lacasa/domain';
 import { createApiClient, type CreateApiClientOptions } from './core/client';
+import { createAdminResource } from './resources/admin';
 import { createAdsResource } from './resources/ads';
 import { createAgentsResource } from './resources/agents';
 import { createAuthResource } from './resources/auth';
@@ -24,6 +25,7 @@ import { createUtilsResource } from './resources/utils';
 export * from './core/transport';
 export * from './core/client';
 
+export * from './resources/admin';
 export * from './resources/ads';
 export * from './resources/agents';
 export * from './resources/auth';
@@ -44,6 +46,7 @@ export function describeDependency(): string {
 }
 
 export interface LaCasaApiClient {
+  admin: ReturnType<typeof createAdminResource>;
   ads: ReturnType<typeof createAdsResource>;
   agents: ReturnType<typeof createAgentsResource>;
   auth: ReturnType<typeof createAuthResource>;
@@ -67,6 +70,7 @@ export interface LaCasaApiClient {
 export function createLaCasaApiClient(options: CreateApiClientOptions): LaCasaApiClient {
   const client = createApiClient(options);
   return {
+    admin: createAdminResource(client),
     ads: createAdsResource(client),
     agents: createAgentsResource(client),
     auth: createAuthResource(client),

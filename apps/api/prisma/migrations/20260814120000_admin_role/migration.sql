@@ -1,0 +1,12 @@
+-- AlterEnum
+-- Purely additive: no existing row changes role, and nothing is backfilled.
+-- The first ADMIN is minted out of band by `npm run promote:admin -w @lacasa/api`,
+-- because there is deliberately no sign-up or self-service path to this value.
+--
+-- Postgres will not let a value added by ALTER TYPE ... ADD VALUE be *used*
+-- by any other statement in the same transaction (and before PG 12 the ADD
+-- VALUE itself could not run in one at all). Prisma wraps each migration file
+-- in a transaction, so this migration adds the label and stops there — the
+-- promotion script does the first UPDATE ... SET role = 'ADMIN' afterwards, in
+-- its own transaction.
+ALTER TYPE "UserRole" ADD VALUE 'ADMIN';

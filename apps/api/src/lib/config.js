@@ -30,8 +30,9 @@ export const ENV_VARS = [
   {
     name: "CORS_ORIGIN",
     type: "string",
-    example: "http://localhost:5273",
-    comment: "Comma-separated list of allowed origins; unset allows all",
+    example: "http://localhost:5273,http://localhost:5274,http://localhost:5275",
+    comment:
+      "Comma-separated list of allowed origins; unset allows all. Three browser apps talk to this API on three ports — web 5273, console 5274, control room 5275 — and a list missing one fails as a browser-level CORS error the app cannot explain, not as an API error",
   },
   {
     name: "APP_URL",

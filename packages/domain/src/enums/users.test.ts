@@ -6,9 +6,12 @@ import {
   REALTOR_STATUS_REV,
   TEAM_SIZE,
   TEAM_SIZE_REV,
+  USER_ROLE,
+  USER_ROLE_REV,
 } from './users';
 
 describe.each([
+  ['USER_ROLE', USER_ROLE, USER_ROLE_REV],
   ['REALTOR_KIND', REALTOR_KIND, REALTOR_KIND_REV],
   ['REALTOR_STATUS', REALTOR_STATUS, REALTOR_STATUS_REV],
   ['TEAM_SIZE', TEAM_SIZE, TEAM_SIZE_REV],
@@ -24,6 +27,21 @@ describe.each([
     for (const value of Object.values(map)) {
       expect(value).toMatch(/^[A-Z][A-Z_]*$/);
     }
+  });
+});
+
+describe('USER_ROLE', () => {
+  it('covers exactly the four roles the Postgres enum has', () => {
+    expect(Object.keys(USER_ROLE)).toEqual(['user', 'agent', 'coworker', 'admin']);
+  });
+
+  it('defaults a fresh account to user, the buyer role', () => {
+    expect(Object.keys(USER_ROLE)[0]).toBe('user');
+  });
+
+  it('keeps admin distinct from agent so it can never inherit agent scope', () => {
+    expect(USER_ROLE.admin).not.toBe(USER_ROLE.agent);
+    expect(USER_ROLE_REV.ADMIN).toBe('admin');
   });
 });
 
