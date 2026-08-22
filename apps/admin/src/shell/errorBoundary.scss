@@ -1,0 +1,75 @@
+// The crash screen. It renders INSTEAD of the whole app, so it draws its own
+// canvas rather than sitting on the shell's.
+//
+// Everything here is quoted from apps/web: the `#f5f6fa` canvas, a white
+// `#fff` panel with no radius and no shadow (`.content-list`), the light 2rem
+// `h1` from `.title h1 { font-weight: 300; }`, and the five-line accent button
+// (`padding: 12px 24px; background-color: #fece51; cursor: pointer; border:
+// none;`) written out here for the fourteenth time, exactly as the console
+// writes it in each of its own SCSS files.
+@import "../responsive.scss";
+
+.crash {
+  min-height: 100vh;
+  background-color: #f5f6fa;
+  color: #2b2d42;
+
+  .crash__body {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 30px;
+    margin-top: 60px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    @include sm {
+      margin-top: 20px;
+      padding: 20px;
+    }
+  }
+
+  // apps/web's destructive red, at the size its field errors use.
+  .crash__eyebrow {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgb(216, 72, 53);
+  }
+
+  .crash__title {
+    font-size: 2rem;
+    font-weight: 300;
+  }
+
+  .crash__text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #8d99ae;
+  }
+
+  // The bug's fingerprint. Monospace because it is a record, not prose, and
+  // scrolling inside its own box so a long stack never widens the panel.
+  .crash__message {
+    padding: 15px;
+    border: 1px solid #dedede;
+    background-color: #f5f6fa;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #2b2d42;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .crash__reload {
+    padding: 12px 24px;
+    background-color: #fece51;
+    cursor: pointer;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+}

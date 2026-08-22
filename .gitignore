@@ -7,12 +7,58 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
 *.local
-package-lock.json
+
+# Test coverage reports (vitest --coverage)
+coverage
+
+# Secrets — never commit. Each workspace keeps a local .env; templates are .env.example
+.env
+**/.env
+**/.env.local
 google-creds.json
+
+# Expo (apps/mobile)
+.expo/
+apps/mobile/web-build
+expo-env.d.ts
+*.tsbuildinfo
+apps/mobile/ios
+apps/mobile/android
+
+# Flutter (apps/mobile_flutter)
+apps/mobile_flutter/.dart_tool/
+apps/mobile_flutter/.flutter-plugins
+apps/mobile_flutter/.flutter-plugins-dependencies
+apps/mobile_flutter/.pub-cache/
+apps/mobile_flutter/.pub/
+apps/mobile_flutter/build/
+apps/mobile_flutter/*.iml
+apps/mobile_flutter/android/.gradle/
+apps/mobile_flutter/android/local.properties
+apps/mobile_flutter/android/key.properties
+apps/mobile_flutter/android/**/GeneratedPluginRegistrant.java
+apps/mobile_flutter/ios/Flutter/ephemeral/
+apps/mobile_flutter/ios/Flutter/Flutter.framework
+apps/mobile_flutter/ios/Flutter/Flutter.podspec
+apps/mobile_flutter/ios/Flutter/App.framework
+apps/mobile_flutter/ios/Flutter/Generated.xcconfig
+apps/mobile_flutter/ios/Flutter/flutter_export_environment.sh
+apps/mobile_flutter/ios/Pods/
+apps/mobile_flutter/ios/.symlinks/
+apps/mobile_flutter/ios/Runner/GeneratedPluginRegistrant.*
+
+# Pitch decks (presentation/) — the sources are src/*.html and fonts/*.woff2.
+# The built decks are those with the woff2 files inlined as base64 (~1MB each) and
+# the shots/ PNGs are QA output; both are reproducible with build.mjs / shots.mjs.
+presentation/*.html
+presentation/shots/
 
 # Editor directories and files
 .vscode/*
@@ -24,3 +70,6 @@ google-creds.json
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local settings (personal, not team config)
+.claude/settings.local.json

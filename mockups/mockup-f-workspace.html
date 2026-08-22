@@ -1,0 +1,505 @@
+<title>La Casa — Workspace</title>
+<style>
+  :root{
+    --canvas:#E9E9E7;
+    --surface:#F5F5F3;
+    --surface-inner:#ECECEA;
+    --pill-white:#FCFCFA;
+    --dark:#1E1E1E;
+    --dark-text:#F5F5F3;
+    --lime:#CDF44A;
+    --lime-text:#2A3505;
+    --text:#1B1B1B;
+    --text-secondary:#8E8E8C;
+    --hairline:rgba(0,0,0,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    background:var(--canvas);
+    color:var(--text);
+    font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+
+  .page{
+    max-width:1460px;
+    margin:0 auto;
+    padding:28px 28px 60px;
+    position:relative;
+  }
+
+  /* ============ LEFT RAIL ============ */
+  .body-row{display:flex;align-items:flex-start;gap:24px;}
+  .main{flex:1;min-width:0;}
+  .rail{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .rail-btn{
+    width:44px;height:44px;
+    border-radius:999px;
+    background:var(--pill-white);
+    border:1px solid var(--hairline);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text);
+  }
+  .rail-btn.active{
+    background:var(--dark);
+    color:var(--dark-text);
+    border-color:var(--dark);
+  }
+  .rail-gap{ height:60px; }
+  .rail svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* ============ TOP BAR ============ */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:4px 0 40px;
+    gap:16px;
+  }
+  .logo{ width:34px;height:34px;flex-shrink:0; }
+  .nav-pills{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1;
+    justify-content:center;
+    margin-left:-40px;
+  }
+  .nav-pill{
+    display:flex;align-items:center;gap:7px;
+    padding:11px 18px;
+    border-radius:999px;
+    background:var(--pill-white);
+    border:1px solid var(--hairline);
+    font-size:14px;
+    color:var(--text);
+    white-space:nowrap;
+  }
+  .nav-pill.active{
+    background:var(--dark);
+    color:var(--dark-text);
+    border-color:var(--dark);
+  }
+  .nav-pill svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+
+  .top-right{
+    display:flex;align-items:center;gap:10px;
+    flex-shrink:0;
+  }
+  .avatar-stack{ display:flex;align-items:center; }
+  .avatar-stack .av{
+    width:36px;height:36px;border-radius:999px;
+    border:2px solid var(--canvas);
+    margin-left:-10px;
+    display:block;
+  }
+  .avatar-stack .av:first-child{ margin-left:0; }
+  .plus-chip{
+    width:36px;height:36px;border-radius:999px;
+    background:var(--dark);color:var(--dark-text);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:600;
+    margin-left:-10px;
+    border:2px solid var(--canvas);
+  }
+  .shared-pill{
+    display:flex;align-items:center;gap:7px;
+    padding:10px 16px;
+    border-radius:999px;
+    background:var(--pill-white);
+    border:1px solid var(--hairline);
+    font-size:14px;
+    margin-left:6px;
+  }
+  .shared-pill svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+  .icon-btn-round{
+    width:40px;height:40px;border-radius:999px;
+    background:var(--pill-white);
+    border:1px solid var(--hairline);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .icon-btn-round svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
+  .user-av{ width:40px;height:40px;border-radius:999px;display:block; }
+
+  /* ============ PAGE HEADING ============ */
+  .page-title{
+    font-size:52px;
+    font-weight:500;
+    letter-spacing:-0.02em;
+    color:var(--text);
+    margin-bottom:28px;
+  }
+
+  .search-bar{
+    width:56%;
+    min-width:420px;
+    height:64px;
+    background:var(--surface);
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:6px 6px 6px 26px;
+    margin-bottom:36px;
+  }
+  .search-bar .ph{ font-size:15px;color:var(--text-secondary); }
+  .search-bar .sbtn{
+    width:52px;height:52px;border-radius:999px;
+    background:var(--dark);color:var(--dark-text);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .search-bar .sbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+
+  /* ============ LEAD GRID ============ */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:24px;
+  }
+
+  .card{
+    position:relative;
+    background:var(--surface);
+    border-radius:30px;
+    padding:28px 26px 26px;
+    min-height:300px;
+    display:flex;
+    flex-direction:column;
+  }
+  .card.lime{ background:var(--lime); }
+
+  /* notch cutout button */
+  .notch{
+    position:absolute;
+    top:-1px;right:-1px;
+    width:88px;height:88px;
+  }
+  .notch-mask{
+    position:absolute;
+    top:0;right:0;
+    width:88px;height:88px;
+    background:var(--canvas);
+    border-bottom-left-radius:88px;
+  }
+  .notch-btn{
+    position:absolute;
+    top:14px;right:14px;
+    width:56px;height:56px;
+    border-radius:999px;
+    background:var(--pill-white);
+    border:1px solid var(--hairline);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .notch-btn svg{ width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round; }
+
+  .card-header{
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    margin-bottom:22px;
+    padding-right:70px;
+  }
+  .card-header .avatar{ width:56px;height:56px;border-radius:999px;flex-shrink:0;display:block; }
+  .card-header .who{ padding-top:2px; }
+  .card-header .name{ font-size:22px;font-weight:600;color:var(--text);line-height:1.2; }
+  .card-header .role{ font-size:13px;color:var(--text-secondary);margin-top:3px; }
+  .card.lime .role{ color:#4B5711; }
+
+  .mid-card{
+    background:var(--pill-white);
+    border-radius:20px;
+    padding:16px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:20px;
+    flex:1;
+  }
+  .card.lime .mid-card{ background:rgba(255,255,255,.35); }
+  .mid-icon{
+    width:44px;height:44px;
+    border-radius:14px;
+    background:var(--pill-white);
+    flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card.lime .mid-icon{ background:#FCFCFA; }
+  .mid-text .mid-title{ font-size:17px;font-weight:600;color:var(--text); }
+  .mid-meta{
+    display:flex;align-items:center;gap:8px;
+    margin-top:7px;
+  }
+  .mid-avatars{ display:flex;align-items:center; }
+  .mid-avatars .av{
+    width:20px;height:20px;border-radius:999px;
+    border:2px solid var(--pill-white);
+    margin-left:-7px;
+    display:block;
+  }
+  .card.lime .mid-avatars .av{ border-color:rgba(255,255,255,.6); }
+  .mid-avatars .av:first-child{ margin-left:0; }
+  .mid-date{ font-size:13px;color:var(--text-secondary); }
+  .card.lime .mid-date{ color:#4B5711; }
+
+  .card-footer{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .status-pill{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--pill-white);
+    border-radius:999px;
+    padding:8px 14px 8px 8px;
+    min-width:0;
+  }
+  .status-pill .av{ width:28px;height:28px;border-radius:999px;flex-shrink:0;display:block; }
+  .status-pill .label{ font-size:14px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .status-pill svg{ width:14px;height:14px;stroke:var(--text-secondary);fill:none;stroke-width:1.7;flex-shrink:0; }
+
+  .circle-btn{
+    width:52px;height:52px;border-radius:999px;
+    background:var(--pill-white);
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .circle-btn.dark{ background:var(--dark);color:var(--dark-text); }
+  .circle-btn svg{ width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round; }
+</style>
+
+<div class="page">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <svg class="logo" viewBox="0 0 34 34" fill="#1B1B1B">
+      <circle cx="17" cy="6" r="3"/>
+      <circle cx="17" cy="28" r="3"/>
+      <circle cx="6" cy="17" r="3"/>
+      <circle cx="28" cy="17" r="3"/>
+      <circle cx="10.5" cy="10.5" r="2.4"/>
+      <circle cx="23.5" cy="10.5" r="2.4"/>
+      <circle cx="10.5" cy="23.5" r="2.4"/>
+      <circle cx="23.5" cy="23.5" r="2.4"/>
+      <circle cx="17" cy="17" r="2.8"/>
+    </svg>
+
+    <div class="nav-pills">
+      <a class="nav-pill" href="mockup-f-dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
+        Dashboard
+      </a>
+      <a class="nav-pill" href="mockup-f-analytics.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        Analytics
+      </a>
+      <a class="nav-pill active" href="mockup-f-workspace.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>
+        Workspace
+      </a>
+      <a class="nav-pill" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="2.5"/><path d="M4.5 5.5V18.5C4.5 19.9 7.9 21 12 21C16.1 21 19.5 19.9 19.5 18.5V5.5"/><path d="M4.5 12C4.5 13.4 7.9 14.5 12 14.5C16.1 14.5 19.5 13.4 19.5 12"/></svg>
+        Data
+      </a>
+    </div>
+
+    <div class="top-right">
+      <div class="avatar-stack">
+        <svg class="av" width="36" height="36" viewBox="0 0 40 40"><defs><linearGradient id="wa1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9CBA3"/><stop offset="1" stop-color="#C7965F"/></linearGradient><clipPath id="wc1"><circle cx="20" cy="20" r="20"/></clipPath></defs>
+        <circle cx="20" cy="20" r="20" fill="url(#wa1)"/><g clip-path="url(#wc1)" fill="rgba(0,0,0,.28)"><circle cx="20" cy="16" r="7"/><path d="M5 40c0-9.4 6.7-16 15-16s15 6.6 15 16z"/></g></svg>
+        <svg class="av" width="36" height="36" viewBox="0 0 40 40"><defs><linearGradient id="wa2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B7C99C"/><stop offset="1" stop-color="#889D68"/></linearGradient><clipPath id="wc2"><circle cx="20" cy="20" r="20"/></clipPath></defs>
+        <circle cx="20" cy="20" r="20" fill="url(#wa2)"/><g clip-path="url(#wc2)" fill="rgba(0,0,0,.28)"><circle cx="20" cy="16" r="7"/><path d="M5 40c0-9.4 6.7-16 15-16s15 6.6 15 16z"/></g></svg>
+        <svg class="av" width="36" height="36" viewBox="0 0 40 40"><defs><linearGradient id="wa3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9FB3C9"/><stop offset="1" stop-color="#65809B"/></linearGradient><clipPath id="wc3"><circle cx="20" cy="20" r="20"/></clipPath></defs>
+        <circle cx="20" cy="20" r="20" fill="url(#wa3)"/><g clip-path="url(#wc3)" fill="rgba(0,0,0,.28)"><circle cx="20" cy="16" r="7"/><path d="M5 40c0-9.4 6.7-16 15-16s15 6.6 15 16z"/></g></svg>
+        <div class="plus-chip">+6</div>
+      </div>
+      <div class="shared-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M12 4L8 8M12 4l4 4"/><path d="M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg>
+        Shared
+      </div>
+      <div class="icon-btn-round">
+        <svg viewBox="0 0 24 24"><path d="M12 3a5 5 0 0 0-5 5v3.5c0 1-.4 1.9-1.1 2.6L5 15h14l-.9-.9a3.7 3.7 0 0 1-1.1-2.6V8a5 5 0 0 0-5-5z"/><path d="M9.5 18.5a2.5 2.5 0 0 0 5 0"/></svg>
+      </div>
+      <svg class="user-av" width="40" height="40" viewBox="0 0 40 40"><defs><linearGradient id="wa4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DB9F84"/><stop offset="1" stop-color="#B96F52"/></linearGradient><clipPath id="wc4"><circle cx="20" cy="20" r="20"/></clipPath></defs>
+      <circle cx="20" cy="20" r="20" fill="url(#wa4)"/><g clip-path="url(#wc4)" fill="rgba(0,0,0,.28)"><circle cx="20" cy="16" r="7"/><path d="M5 40c0-9.4 6.7-16 15-16s15 6.6 15 16z"/></g></svg>
+    </div>
+  </div>
+
+  <div class="body-row">
+  <!-- LEFT RAIL -->
+  <div class="rail">
+    <div class="rail-btn active">
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M9.94 15.5a2 2 0 0 0-1.44-1.44L2.36 12.48a.5.5 0 0 1 0-.96l6.14-1.58A2 2 0 0 0 9.94 8.5L11.52 2.36a.5.5 0 0 1 .96 0L14.06 8.5a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/></svg>
+    </div>
+    <div class="rail-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10z"/><path d="M13.5 6.5l3 3"/></svg>
+    </div>
+    <div class="rail-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    </div>
+    <div class="rail-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 12h6M9 16h6"/></svg>
+    </div>
+    <div class="rail-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H8.7a1.7 1.7 0 0 0 1-1.6V2.5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z"/></svg>
+    </div>
+    <div class="rail-gap"></div>
+    <div class="rail-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="14" width="4" height="6" rx="1.5"/><rect x="17.5" y="14" width="4" height="6" rx="1.5"/></svg>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- PAGE TITLE -->
+    <div class="page-title">Workspace</div>
+
+    <div class="search-bar">
+      <div class="ph">Search and filter leads…</div>
+      <div class="sbtn">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </div>
+    </div>
+
+    <!-- LEAD GRID -->
+    <div class="grid" id="grid"></div>
+  </div>
+  </div>
+</div>
+
+<script>
+const meetGlyph = `<svg viewBox="0 0 24 24" width="24" height="24">
+  <rect x="3" y="6" width="12" height="12" rx="2.5" fill="#4285F4"/>
+  <path d="M15 10l5-3v10l-5-3z" fill="#34A853"/>
+  <rect x="3" y="6" width="12" height="4" fill="#34A853" opacity=".55"/>
+  <rect x="3" y="14" width="12" height="4" fill="#FBBC05" opacity=".7"/>
+  <rect x="3" y="6" width="4" height="12" fill="#EA4335" opacity=".55"/>
+</svg>`;
+
+// Hair silhouettes keyed by style, drawn in the 0-40 headshot viewBox.
+const hairPaths = {
+  short:(c)=>`<path d="M10.5 15.5C10.5 8.2 14.7 3.5 20 3.5S29.5 8.2 29.5 15.5c0-2.6-1-4.7-2.6-6.1-1.1 2-4 3.3-6.9 3.3s-5.8-1.3-6.9-3.3c-1.6 1.4-2.6 3.5-2.6 6.1z" fill="${c}"/>`,
+  curly:(c)=>`<g fill="${c}"><circle cx="12" cy="12.5" r="3.3"/><circle cx="16" cy="8.6" r="3.5"/><circle cx="20" cy="7.2" r="3.7"/><circle cx="24" cy="8.6" r="3.5"/><circle cx="28" cy="12.5" r="3.3"/><circle cx="11" cy="16.5" r="2.5"/><circle cx="29" cy="16.5" r="2.5"/></g>`,
+  bun:(c)=>`<path d="M11 15.2C11 8.5 14.9 4.2 20 4.2S29 8.5 29 15.2c0-2.4-.9-4.4-2.4-5.8-1 2-3.9 3.2-6.6 3.2s-5.6-1.2-6.6-3.2c-1.5 1.4-2.4 3.4-2.4 5.8z" fill="${c}"/><circle cx="24.8" cy="4.6" r="3.1" fill="${c}"/>`,
+  side:(c)=>`<path d="M10.5 16.5C10 8.6 14.2 3.7 20.3 3.7c5.5 0 9.3 4.1 9.4 10-.1 2-.5 3.7-1.1 5-.5-3.6-1.6-6.7-3.6-8.1-1.8 2.4-5.7 3.6-9.1 3-2.6-.5-4.4-1.8-5.4-3.6-.7 1.7-1 3.6 0 6.5z" fill="${c}"/>`,
+  wave:(c)=>`<path d="M10.1 18.2C9 9.4 13.2 3.4 20 3.4s11 6 9.9 14.8c-.3 2.2-.9 4-1.6 5.3l-.5-1V15c0-2.6-1-4.6-2.6-6-1.1 2-4 3.3-6.4 3.3s-5.3-1.3-6.4-3.3c-1.6 1.4-2.6 3.4-2.6 6v7.5l-.4 1c-.7-1.3-1.3-3.1-1.6-5.3z" fill="${c}"/>`,
+  buzz:(c)=>`<path d="M11.2 14.7c-.3-6.9 3.8-11.2 8.8-11.2s9.1 4.3 8.8 11.2c-.5-2-1.6-3.6-3-4.8-1.1 1.8-3.6 2.8-5.8 2.8s-4.7-1-5.8-2.8c-1.4 1.2-2.5 2.8-3 4.8z" fill="${c}" opacity="0.92"/>`,
+};
+const hairOrder = ["short","curly","bun","side","wave","buzz"];
+
+// Six muted, low-saturation personas standing in for real headshot photos:
+// blurred neutral-gray background + skin/hair/shirt gradients + a light
+// film-grain overlay, rather than a flat brand-colored circle + glyph.
+const personas = [
+  {skin:["#F0C9A0","#D9A873"], hair:"#3B2A20", style:"short", shirt:["#5B6B63","#42504A"], bg:["#DAD5CB","#C7C2B7"]},
+  {skin:["#8B5A3C","#6B4028"], hair:"#141210", style:"curly", shirt:["#4A5568","#37414F"], bg:["#CACECF","#B7BBBC"]},
+  {skin:["#F4D9BB","#E0B98F"], hair:"#8A6A3E", style:"bun",   shirt:["#6E5A4A","#54443A"], bg:["#DCD6CC","#CBC5BA"]},
+  {skin:["#C88F63","#A66B42"], hair:"#241E1A", style:"side",  shirt:["#5C4A5C","#453648"], bg:["#D3CFCB","#C2BEB9"]},
+  {skin:["#EAC9AE","#D2A67F"], hair:"#5C4632", style:"wave",  shirt:["#4B5A52","#37453E"], bg:["#D6D2C8","#C5C1B6"]},
+  {skin:["#9C6B45","#7A4E2C"], hair:"#1C1815", style:"buzz",  shirt:["#5A5148","#443D36"], bg:["#CFCBC2","#BEBAB0"]},
+];
+
+function avatarInner(seed, p){
+  const hair = hairPaths[p.style](p.hair);
+  return `<defs>
+      <radialGradient id="bg${seed}" cx="34%" cy="28%" r="82%">
+        <stop offset="0" stop-color="${p.bg[0]}"/><stop offset="1" stop-color="${p.bg[1]}"/>
+      </radialGradient>
+      <linearGradient id="sk${seed}" x1="0.2" y1="0" x2="0.75" y2="1">
+        <stop offset="0" stop-color="${p.skin[0]}"/><stop offset="1" stop-color="${p.skin[1]}"/>
+      </linearGradient>
+      <linearGradient id="sh${seed}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${p.shirt[0]}"/><stop offset="1" stop-color="${p.shirt[1]}"/>
+      </linearGradient>
+      <clipPath id="cp${seed}"><circle cx="20" cy="20" r="20"/></clipPath>
+      <filter id="gr${seed}" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" result="n"/>
+        <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.07 0"/>
+      </filter>
+    </defs>
+    <g clip-path="url(#cp${seed})">
+      <rect width="40" height="40" fill="url(#bg${seed})"/>
+      <path d="M2 40 Q2 24.5 20 24.5 Q38 24.5 38 40 Z" fill="url(#sh${seed})"/>
+      <ellipse cx="20" cy="22.5" rx="4.3" ry="5.2" fill="url(#sk${seed})"/>
+      <ellipse cx="20" cy="16.5" rx="9" ry="10.6" fill="url(#sk${seed})"/>
+      <ellipse cx="16.6" cy="18" rx="1.2" ry="6.2" fill="rgba(0,0,0,.1)"/>
+      ${hair}
+      <ellipse cx="16.7" cy="16.2" rx="0.85" ry="1.05" fill="rgba(30,25,20,.5)"/>
+      <ellipse cx="23.3" cy="16.2" rx="0.85" ry="1.05" fill="rgba(30,25,20,.5)"/>
+      <rect width="40" height="40" filter="url(#gr${seed})"/>
+    </g>`;
+}
+
+function avatarSVG(seed, p, size){
+  return `<svg class="av" viewBox="0 0 40 40" width="${size}" height="${size}">${avatarInner(seed, p)}</svg>`;
+}
+
+const cards = [
+  {name:"Jane Doe", role:"Buyer · Yakkasaray District", lime:true, task:"Schedule Property Viewing", status:"Viewing Scheduled", date:"28 03 2026  01  2 pm", av:0, notch:1},
+  {name:"Alexander", role:"Buyer · Chilonzor District", lime:false, task:"Schedule Property Viewing", status:"Viewing Scheduled", date:"28 03 2026  01  2 pm", av:2, notch:3},
+  {name:"Benjamin", role:"Seller · Mirzo Ulugbek District", lime:false, task:"Schedule Property Viewing", status:"Call Scheduled", date:"29 03 2026  02  11 am", av:4, notch:5},
+  {name:"Christopher", role:"Buyer · Yunusabad District", lime:false, task:"Schedule Property Viewing", status:"Viewing Scheduled", date:"28 03 2026  01  2 pm", av:1, notch:0},
+  {name:"Penelope", role:"Seller · Sergeli District", lime:false, task:"Schedule Property Viewing", status:"Offer Sent", date:"30 03 2026  03  4 pm", av:3, notch:2},
+  {name:"Whitmore", role:"Buyer · Shayxontohur District", lime:false, task:"Schedule Property Viewing", status:"Viewing Scheduled", date:"28 03 2026  01  2 pm", av:5, notch:4},
+];
+
+const grid = document.getElementById('grid');
+cards.forEach((c, i) => {
+  const pAv = personas[c.av];
+  const pNotch = personas[c.notch];
+  const pMid = personas[(c.av+2)%personas.length];
+  const card = document.createElement('div');
+  card.className = 'card' + (c.lime ? ' lime' : '');
+  card.innerHTML = `
+    <div class="notch">
+      <div class="notch-mask"></div>
+      <div class="notch-btn">
+        <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+      </div>
+    </div>
+    <div class="card-header">
+      ${avatarSVG('h'+i, pAv, 56)}
+      <div class="who">
+        <div class="name">${c.name}</div>
+        <div class="role">${c.role}</div>
+      </div>
+    </div>
+    <div class="mid-card">
+      <div class="mid-icon">${meetGlyph}</div>
+      <div class="mid-text">
+        <div class="mid-title">${c.task}</div>
+        <div class="mid-meta">
+          <div class="mid-avatars">
+            ${avatarSVG('m1'+i, pMid, 20)}
+            ${avatarSVG('m2'+i, pNotch, 20)}
+          </div>
+          <div class="mid-date">${c.date}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="status-pill">
+        ${avatarSVG('s'+i, pNotch, 28)}
+        <div class="label">${c.status}</div>
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="circle-btn">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg>
+      </div>
+      <div class="circle-btn dark">
+        <svg viewBox="0 0 24 24"><rect x="3" y="6" width="12" height="12" rx="2.5"/><path d="M15 10l5-3v10l-5-3z"/></svg>
+      </div>
+    </div>
+  `;
+  grid.appendChild(card);
+});
+</script>

@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+import { loadConfig } from "../../src/lib/config.js";
+
+const VALID_ENV = {
+  DATABASE_URL: "postgresql://u:p@localhost:5432/db",
+  JWT_SECRET: "secret",
+  MINIO_ACCESS_KEY: "key",
+  MINIO_SECRET_KEY: "secret",
+};
+
+describe("loadConfig", () => {
+  it("throws one error listing every missing required var at once", () => {
+    expect(() => loadConfig({})).toThrowError(
+      /DATABASE_URL: Required[\s\S]*JWT_SECRET: Required[\s\S]*MINIO_ACCESS_KEY: Required[\s\S]*MINIO_SECRET_KEY: Required/,
+    );
+  });
+
+  it("applies documented defaults when optional vars are unset", () => {
+    const config = loadConfig(VALID_ENV);
+    expect(config.PORT).toBe(4200);
+    expect(config.JWT_EXPIRES_IN).toBe("7d");
+    expect(config.MINIO_BUCKET).toBe("lacasa");
+    expect(config.MINIO_PUBLIC_URL).toBe("http://localhost:9000/lacasa");
+    expect(config.LLM_MODEL).toBe("claude-opus-5");
+    expect(config.OLX_DAILY_CAP).toBe(15);
+    expect(config.IG_ASSIST_DAILY_CAP).toBe(5);
+    expect(config.MINIO_USE_SSL).toBe(false);
+    expect(config.STATISTICS_TIMEZONE).toBe("Asia/Tashkent");
+  });
+
+  it("accepts any IANA zone STATISTICS_TIMEZONE is pointed at, and rejects a nonsense one", () => {
+    expect(loadConfig({ ...VALID_ENV, STATISTICS_TIMEZONE: "America/Los_Angeles" }).STATISTICS_TIMEZONE).toBe(
+      "America/Los_Angeles",
+    );
+    expect(() => loadConfig({ ...VALID_ENV, STATISTICS_TIMEZONE: "Mars/Olympus_Mons" })).toThrowError(
+      /STATISTICS_TIMEZONE must be a valid IANA timezone name/,
+    );
+  });
+
+  it("treats a blank KEY= (empty string) the same as unset", () => {
+    const config = loadConfig({ ...VALID_ENV, CORS_ORIGIN: "", LLM_MODEL: "" });
+    expect(config.CORS_ORIGIN).toBeUndefined();
+    expect(config.LLM_MODEL).toBe("claude-opus-5");
+  });
+
+  it("derives IG_CONFIGURED / LLM_CONFIGURED / TG_CONFIGURED / PUSH_CONFIGURED from the presence of their vars", () => {
+    expect(loadConfig(VALID_ENV).IG_CONFIGURED).toBe(false);
+    expect(loadConfig(VALID_ENV).LLM_CONFIGURED).toBe(false);
+    expect(loadConfig(VALID_ENV).TG_CONFIGURED).toBe(false);
+    expect(loadConfig(VALID_ENV).PUSH_CONFIGURED).toBe(false);
+    expect(
+      loadConfig({ ...VALID_ENV, IG_APP_ID: "a", IG_APP_SECRET: "b", IG_REDIRECT_URI: "c", ANTHROPIC_API_KEY: "k" })
+        .IG_CONFIGURED,
+    ).toBe(true);
+    expect(loadConfig({ ...VALID_ENV, TG_BOT_TOKEN: "t" }).TG_CONFIGURED).toBe(true);
+    expect(loadConfig({ ...VALID_ENV, FCM_SERVER_KEY: "k" }).PUSH_CONFIGURED).toBe(true);
+  });
+
+  it("TG_CONTACT_CHAT_ID stays optional independently of TG_BOT_TOKEN", () => {
+    expect(loadConfig({ ...VALID_ENV, TG_BOT_TOKEN: "t" }).TG_CONTACT_CHAT_ID).toBeUndefined();
+    expect(loadConfig({ ...VALID_ENV, TG_CONTACT_CHAT_ID: "-100123" }).TG_CONTACT_CHAT_ID).toBe("-100123");
+  });
+
+  it("respects an explicit MINIO_PUBLIC_URL instead of deriving one", () => {
+    const config = loadConfig({ ...VALID_ENV, MINIO_PUBLIC_URL: "https://cdn.example.com" });
+    expect(config.MINIO_PUBLIC_URL).toBe("https://cdn.example.com");
+  });
+});

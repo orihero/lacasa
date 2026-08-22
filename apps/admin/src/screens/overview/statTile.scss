@@ -1,0 +1,106 @@
+// The overview's KPI tile — apps/web's `.chart-header-card`, with a third line.
+//
+//   .chart-header-card { box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.1);
+//                        width: 220px; padding: 25px 10px; }
+//
+// and its contents, which apps/web writes in Tailwind:
+//   label  `text-2xl text-gray-600`      value `text-5xl text-black font-bold`
+//
+// Two departures, both because five of these sit in a row rather than two:
+// the padding is the console's 15px box instead of 25px 10px, and the numeral
+// is 32px rather than `text-5xl` (48px), which is what keeps "1,284" on one
+// line in a 230px column.
+@import "../../responsive.scss";
+
+.stat-tile {
+  display: block;
+  padding: 15px;
+  background-color: #ffffff;
+  // Square, like everything else here: the theme sets `shape.borderRadius: 0`
+  // and apps/web's cards have no radius of their own.
+  border: 1px solid #dedede;
+  box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.1);
+  color: inherit;
+
+  .stat-tile__head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  // apps/web's filter labels are `font-size: 10px`; this is the same quiet
+  // caps label, one point up so five of them read across a wide monitor.
+  .stat-tile__label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8d99ae;
+  }
+
+  .stat-tile__caret {
+    flex: none;
+    margin-left: auto;
+    color: #8d99ae;
+  }
+
+  .stat-tile__value {
+    margin-top: 8px;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #2b2d42;
+    // Counts are read column-against-column; proportional digits make two
+    // four-figure numbers different widths.
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-tile__sub {
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8d99ae;
+  }
+}
+
+// A LINKED tile. apps/web's `a { text-decoration: none; color: inherit; }`
+// already strips the browser's link paint, so the only affordance is the row
+// hover it shares with `.ads-item:hover`.
+a.stat-tile {
+  &:hover {
+    background-color: #eeeeee;
+
+    .stat-tile__caret {
+      color: #2b2d42;
+    }
+  }
+
+  // The rail and the topbar are keyboard-reachable; so is a tile that is the
+  // one-click route to the screen acting on its number.
+  &:focus-visible {
+    outline: 2px solid #fece51;
+    outline-offset: 2px;
+  }
+}
+
+// THE ONE EMPHASIS TREATMENT ON THIS SCREEN, and it appears at most twice.
+// The accent hairline plus a wash that fades out before the second line — the
+// numeral itself stays ink, because #fece51 is a background colour in
+// apps/web, never a type colour (see StatTile.tsx's header).
+.stat-tile--alert {
+  border-color: #fece51;
+  border-left-width: 4px;
+  background-color: #ffffff;
+  background-image: linear-gradient(180deg, rgba(254, 206, 81, 0.22), #ffffff 70%);
+
+  .stat-tile__caret {
+    color: #2b2d42;
+  }
+
+  &:hover {
+    // Keep the wash: a hover that flattened it would read as the alert
+    // clearing under the pointer.
+    background-color: #ffffff;
+    background-image: linear-gradient(180deg, rgba(254, 206, 81, 0.34), #ffffff 70%);
+  }
+}

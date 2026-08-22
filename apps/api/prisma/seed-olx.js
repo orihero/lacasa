@@ -1,0 +1,294 @@
+// Real listings scraped from OLX.uz's public real-estate tree and mapped onto
+// the Ad model: 48 ads, 6 in each of 8 subcategories (apartments/houses/
+// commercial/land x sale/rent, plus daily rentals), all in Tashkent across 11
+// city districts. Runs on top of `npm run seed` -- that one owns the currency
+// rate, the nearby-place options this script's nearPlaces values must match,
+// and agent@lacasa.dev. Use `npm run seed:olx` to run both in order.
+//
+// Every row in seed-data/olx-listings.json is a real, then-live OLX ad: its
+// `olxId` is the numeric id OLX prints on the detail page and `sourceUrl` is
+// the page it was read from, so any field here can be checked against the
+// original. Each was extracted and then independently re-fetched and verified
+// before being written -- but OLX ads are taken down all the time, so expect
+// `sourceUrl`s to 404 as the set ages. Re-scrape rather than hand-edit.
+//
+// ONE FIELD IS NOT SCRAPED: lat/lng. OLX detail pages do not expose listing
+// coordinates, so rather than leave the listing-detail map pin empty on every
+// ad, each row carries its *district's* approximate centre, offset by a small
+// deterministic amount derived from the olxId so that same-district pins do
+// not all stack on one point. These are neighbourhood-accurate, not
+// address-accurate, and nothing else in the seed data is approximated this
+// way. If real coordinates ever matter here, geocode `district` + `title`
+// rather than trusting these.
+//
+// Idempotent: every ad carries reference "OLX-<olxId>", and the run deletes any
+// ad already holding one of this file's references before recreating it, so
+// re-running refreshes rather than duplicates.
+//
+// Photos stay as remote olxcdn URLs rather than being copied into MinIO --
+// AdPhoto.objectKey is required, so it records the CDN path with an "olx/"
+// prefix to mark the row as externally hosted. Nothing in the app writes to
+// these keys; a later pass can mirror them into the bucket if the demo needs
+// to survive OLX rotating its CDN.
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+const here = dirname(fileURLToPath(import.meta.url));
+
+const listings = JSON.parse(
+  readFileSync(join(here, "seed-data", "olx-listings.json"), "utf8"),
+);
+
+// Three agents so the marketplace's "by agent" surfaces have more than one
+// column of data; ads are dealt round-robin.
+const AGENTS = [
+  {
+    email: "agent@lacasa.dev",
+    fullName: "Dev Agent",
+    phoneNumber: "+998900000000",
+    realtorKind: "SOLO",
+  },
+  {
+    email: "dilnoza@lacasa.dev",
+    fullName: "Dilnoza Karimova",
+    phoneNumber: "+998901234567",
+    realtorKind: "AGENCY",
+    agencyName: "Toshkent Uy Savdo",
+  },
+  {
+    email: "sardor@lacasa.dev",
+    fullName: "Sardor Rahimov",
+    phoneNumber: "+998935550101",
+    realtorKind: "SOLO",
+  },
+];
+
+// One plain USER alongside the agents. Every seeded account was an AGENT
+// before this, so there was no way to look at the app the way a buyer does
+// — the role gates on the notification bell, the favourite hearts and the
+// whole Work tab all read the other branch. The mobile login screen's
+// debug-only shortcut signs in as this account (see
+// `apps/mobile_flutter/lib/features/auth/widgets/login_screen.dart`), so
+// renaming it means updating that too.
+const BUYER = {
+  email: "user@lacasa.dev",
+  fullName: "Dev Buyer",
+  phoneNumber: "+998900000001",
+};
+
+// OLX prices in "у.е." (conventional units) are dollars in practice; the only
+// other currency the feed uses is UZS.
+const CURRENCY = { UYE: "USD", UZS: "UZS" };
+
+// OLX's near_is labels are a comma-joined list whose own items contain commas
+// ("Kasalxona, poliklinika"), so the string can't be split -- match on
+// substrings instead and emit the labels prisma/seed.js seeds into
+// NearbyPlaceOption, which is what the ad form offers.
+const NEARBY = [
+  ["Maktab", "Maktab"],
+  ["bogʻchasi", "Bog'cha"],
+  ["Bekatlar", "Metro"],
+  ["Supermarket", "Supermarket"],
+  ["Kasalxona", "Shifoxona"],
+  ["Park", "Park"],
+  ["turargoh", "Avtoturargoh"],
+];
+
+const HASHTAGS = {
+  apt_sale: "#kvartira #sotiladi",
+  apt_rent: "#kvartira #ijara",
+  house_sale: "#hovli #sotiladi",
+  house_rent: "#hovli #ijara",
+  comm_sale: "#tijorat #sotiladi",
+  comm_rent: "#tijorat #ijara",
+  land_sale: "#yer #sotiladi",
+  daily_rent: "#sutkalik #ijara",
+};
+
+// Nothing in the OLX feed maps 1:1 onto our Repairment scale, so read it off
+// the seller's own words. Order matters: "коробка" (bare shell) wins over a
+// "новый" that only describes the building.
+const REPAIRMENT_RULES = [
+  [/коробка|без ремонта|ta.?mirlanmagan|беловая/i, "NOT_REPAIRED"],
+  [/евро|дизайнерск|премиум|новый ремонт|янги ремонт|euro-?\d/i, "EXCELLENT"],
+  [/новостройк|yangi qurilgan|после ремонта|янги уй|yangi/i, "GOOD"],
+];
+
+function repairmentFor(listing) {
+  const haystack = `${listing.title} ${listing.description} ${listing.market ?? ""}`;
+  for (const [pattern, value] of REPAIRMENT_RULES) {
+    if (pattern.test(haystack)) return value;
+  }
+  return "NORMAL";
+}
+
+function nearPlacesFor(listing) {
+  if (!listing.nearIs) return [];
+  return NEARBY.filter(([needle]) => listing.nearIs.includes(needle)).map(
+    ([, label]) => label,
+  );
+}
+
+// The "more" label is a comma-join of amenity names that contain no commas of
+// their own, so this one is safe to split.
+function optionsFor(listing) {
+  if (!listing.more) return [];
+  return listing.more
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function num(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// A handful of commercial rentals quote $/m² instead of a monthly total, which
+// reads as a broken $11 listing in the app. The scrape flags those.
+function priceFor(listing) {
+  const area = num(listing.areaTotal);
+  if (listing.pricePerSqm && area) return listing.price * area;
+  return listing.price;
+}
+
+function adDataFor(listing, agentId) {
+  return {
+    title: listing.title,
+    city: listing.city,
+    district: listing.district,
+    address: null,
+    reference: `OLX-${listing.olxId}`,
+    type: listing.type,
+    category: listing.category,
+    repairment: repairmentFor(listing),
+    rooms: num(listing.rooms),
+    area: num(listing.areaTotal),
+    storey: num(listing.floor),
+    floors: num(listing.floors),
+    furniture:
+      listing.furnished === "yes"
+        ? "WITH"
+        : listing.furnished === "no"
+          ? "WITHOUT"
+          : null,
+    hashtags: HASHTAGS[listing.bucket] ?? null,
+    price: priceFor(listing),
+    priceType: CURRENCY[listing.currency] ?? "UZS",
+    stage: "ACTIVE",
+    description: listing.description,
+    nearPlaces: nearPlacesFor(listing),
+    options: optionsFor(listing),
+    active: true,
+    lat: listing.lat,
+    lng: listing.lng,
+    agentId,
+    // Keep OLX's own publish date so the marketplace's "newest first" ordering
+    // has a realistic spread instead of 30 rows sharing one timestamp.
+    createdAt: new Date(listing.created),
+    photos: {
+      create: listing.photos.map((url, position) => ({
+        url,
+        objectKey: `olx/${url.split("/files/")[1] ?? url}`,
+        position,
+      })),
+    },
+  };
+}
+
+async function main() {
+  const agents = [];
+  for (const agent of AGENTS) {
+    const { email, ...rest } = agent;
+    agents.push(
+      await prisma.user.upsert({
+        where: { email },
+        update: { role: "AGENT", realtorStatus: "APPROVED" },
+        create: {
+          ...rest,
+          email,
+          passwordHash: await bcrypt.hash("password123", 10),
+          role: "AGENT",
+          realtorStatus: "APPROVED",
+          realtorAppliedAt: new Date(),
+          realtorDecidedAt: new Date(),
+        },
+      }),
+    );
+  }
+
+  // `update` forces the role back to USER on a re-run: this account exists
+  // to be the buyer's-eye view, and a role changed by hand while testing
+  // would otherwise stick and quietly make the next run's "sign in as user"
+  // land somewhere else entirely.
+  const { email: buyerEmail, ...buyerRest } = BUYER;
+  await prisma.user.upsert({
+    where: { email: buyerEmail },
+    update: { role: "USER" },
+    create: {
+      ...buyerRest,
+      email: buyerEmail,
+      passwordHash: await bcrypt.hash("password123", 10),
+      role: "USER",
+    },
+  });
+
+  const references = listings.map((listing) => `OLX-${listing.olxId}`);
+  const stale = await prisma.ad.findMany({
+    where: { reference: { in: references } },
+    select: { id: true },
+  });
+  const staleIds = stale.map((ad) => ad.id);
+  // ActivityEvent.adId is onDelete: SetNull, so dropping the ads alone would
+  // leave the AD_CREATED rows behind with a null adId and keep inflating the
+  // agent cards' "N listings" on every re-run. Clear them first.
+  await prisma.activityEvent.deleteMany({ where: { adId: { in: staleIds } } });
+  const { count: removed } = await prisma.ad.deleteMany({
+    where: { id: { in: staleIds } },
+  });
+
+  for (const [index, listing] of listings.entries()) {
+    const agent = agents[index % agents.length];
+    const ad = await prisma.ad.create({ data: adDataFor(listing, agent.id) });
+    // GET /api/agents derives "N listings" from AD_CREATED events rather than
+    // counting the ads table (agentRepository.countAdsByAgentIds), so seeding
+    // straight into Prisma has to write the event the ad service normally
+    // would -- otherwise every seeded agent reads as "0 listings".
+    await prisma.activityEvent.create({
+      data: {
+        type: "AD_CREATED",
+        agentId: agent.id,
+        adId: ad.id,
+        createdAt: ad.createdAt,
+        meta: { source: "olx-seed", olxId: listing.olxId },
+      },
+    });
+  }
+
+  const byBucket = listings.reduce((acc, listing) => {
+    acc[listing.bucket] = (acc[listing.bucket] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  console.log(
+    `OLX seed complete: ${listings.length} ads across ${agents.length} agents` +
+      (removed ? ` (replaced ${removed} from a previous run)` : ""),
+  );
+  console.log(
+    `Accounts (password123): ${AGENTS.map((a) => a.email).join(", ")}, ${BUYER.email}`,
+  );
+  console.table(byBucket);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

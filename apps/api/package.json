@@ -1,0 +1,48 @@
+{
+  "name": "@lacasa/api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "migrate": "prisma migrate dev",
+    "seed": "node prisma/seed.js",
+    "seed:olx": "node prisma/seed.js && node prisma/seed-olx.js",
+    "studio": "prisma studio",
+    "gen:env-example": "node scripts/gen-env-example.mjs",
+    "promote:admin": "node scripts/promote-admin.mjs",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "lint": "eslint ."
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@lacasa/domain": "*",
+    "@prisma/client": "^5.19.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "minio": "^8.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@lacasa/config-eslint": "*",
+    "@lacasa/config-vitest": "*",
+    "@vitest/coverage-v8": "^3.2.7",
+    "eslint": "^8.57.0",
+    "prisma": "^5.19.0",
+    "supertest": "^7.2.2",
+    "vitest": "^3.2.7"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true
+  }
+}

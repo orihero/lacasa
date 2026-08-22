@@ -1,0 +1,30 @@
+{
+  // The app itself. The Vite/Vitest config files live in tsconfig.node.json
+  // instead, because they are Node programs (they import node:url and the
+  // plain-JS @lacasa/config-vitest preset) rather than browser code, and
+  // `npm run typecheck` runs BOTH projects so nothing goes unchecked. Two
+  // projects, not a `references` pair: references would need `composite: true`,
+  // which cannot coexist with the `noEmit: true` both halves need.
+  //
+  // STRICT, unlike apps/web's tsconfig (`strict: false`, `strictNullChecks:
+  // false`). That is a deliberate divergence from the house style, not an
+  // oversight: this surface can irreversibly change other people's roles, the
+  // @lacasa/api-client types are the only thing that says which fields the
+  // server may legitimately send as null, and the incident that motivated the
+  // error boundary was exactly a nullable field dereferenced without a guard.
+  // Loose null checks here would have compiled that bug silently.
+  "extends": "@lacasa/config-typescript/react-library.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

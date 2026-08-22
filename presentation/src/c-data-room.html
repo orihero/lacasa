@@ -1,0 +1,1168 @@
+<title>La Casa &mdash; Seed Deck &middot; Data Room</title>
+<style>
+  @font-face { font-family:"Archivo"; src:url("{{font:archivo-700}}") format("woff2"); font-weight:700; font-display:block; }
+  @font-face { font-family:"IBM Plex Sans"; src:url("{{font:ibm-plex-sans-400}}") format("woff2"); font-weight:400; font-display:block; }
+  @font-face { font-family:"IBM Plex Sans"; src:url("{{font:ibm-plex-sans-600}}") format("woff2"); font-weight:600; font-display:block; }
+  @font-face { font-family:"IBM Plex Mono"; src:url("{{font:ibm-plex-mono-400}}") format("woff2"); font-weight:400; font-display:block; }
+  @font-face { font-family:"IBM Plex Mono"; src:url("{{font:ibm-plex-mono-600}}") format("woff2"); font-weight:600; font-display:block; }
+
+  :root{
+    --bg:#0C0D0C;
+    --surface:#161815;
+    --hairline:rgba(255,255,255,.10);
+    --hairline-strong:rgba(255,255,255,.18);
+    --text:#EDEEEA;
+    --text-dim:#94978F;
+    --lime:#CDF44A;
+    --ok:#6FBF87;
+    --warn:#D6A94A;
+    --err:#E0776A;
+    --info:#7FA9D8;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
+    --ghost: rgba(255,255,255,.045);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    width:100%; height:100%;
+    overflow:hidden;
+    font-family:"IBM Plex Sans", sans-serif;
+  }
+
+  html, body { margin:0; padding:0; }
+
+  #viewport{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    background:var(--bg);
+  }
+
+  #stage{
+    position:relative;
+    width:1280px; height:720px;
+    flex:none;
+    background:var(--bg);
+    transform-origin:center center;
+    box-shadow:0 0 0 1px var(--hairline);
+  }
+
+  .slide{
+    position:absolute; inset:0;
+    width:1280px; height:720px;
+    display:none;
+    flex-direction:column;
+    padding:56px 64px 0 64px;
+    overflow:hidden;
+  }
+  .slide.active{ display:flex; }
+
+  /* ---------- footer strip ---------- */
+  .footer{
+    position:absolute; left:0; right:0; bottom:0; height:40px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 64px;
+    border-top:1px solid var(--hairline);
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .footer .dot{ color:var(--lime); }
+  .footer-left{ display:flex; gap:16px; align-items:center; }
+  .footer-right{ display:flex; gap:16px; align-items:center; font-variant-numeric:tabular-nums; }
+
+  /* ---------- shared type ---------- */
+  .microlabel{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    font-weight:400;
+  }
+  .microlabel .n{ color:var(--lime); }
+
+  h1.title{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:44px;
+    line-height:1.08;
+    letter-spacing:-0.01em;
+    color:var(--text);
+    max-width:1000px;
+  }
+  h2.section-title{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:34px;
+    line-height:1.12;
+    color:var(--text);
+  }
+
+  .lede{
+    font-family:"IBM Plex Sans", sans-serif;
+    font-weight:400;
+    font-size:18px;
+    line-height:1.5;
+    color:var(--text-dim);
+    max-width:760px;
+  }
+
+  .accent{ color:var(--lime); }
+
+  /* mock chip */
+  .mock{
+    display:inline-flex;
+    align-items:center;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:11px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    color:var(--warn);
+    border:1px solid var(--warn);
+    border-radius:3px;
+    padding:2px 6px;
+    line-height:1.4;
+    white-space:nowrap;
+    background:rgba(214,169,74,.08);
+    vertical-align:middle;
+    font-weight:600;
+  }
+  .mock::before{ content:"["; margin-right:1px; }
+  .mock::after{ content:"]"; margin-left:1px; }
+
+  /* numeric emphasis */
+  .num{
+    font-family:"IBM Plex Mono", monospace;
+    font-variant-numeric:tabular-nums;
+    color:var(--text);
+  }
+  .num-hero{
+    font-family:"IBM Plex Mono", monospace;
+    font-weight:600;
+    font-variant-numeric:tabular-nums;
+    color:var(--lime);
+    letter-spacing:-.01em;
+  }
+
+  ul.bullets{ list-style:none; }
+  ul.bullets li{
+    position:relative;
+    padding-left:20px;
+    font-size:18px;
+    line-height:1.5;
+    color:var(--text);
+    margin-bottom:14px;
+    max-width:900px;
+  }
+  ul.bullets li::before{
+    content:"";
+    position:absolute; left:0; top:9px;
+    width:7px; height:1px;
+    background:var(--lime);
+  }
+  ul.bullets li b{ font-weight:600; }
+  ul.bullets li .dim{ color:var(--text-dim); }
+
+  .hairline-h{ height:1px; background:var(--hairline); width:100%; }
+  .hairline-v{ width:1px; background:var(--hairline); height:100%; }
+
+  /* column ticks grid backdrop */
+  .col-ticks{
+    position:absolute; top:0; left:64px; right:64px; height:100%;
+    display:grid; grid-template-columns:repeat(12,1fr);
+    pointer-events:none;
+    z-index:0;
+  }
+  .col-ticks .tick{ border-left:1px solid rgba(255,255,255,.04); height:100%; }
+
+  /* ============ SLIDE 1 : COVER ============ */
+  #slide-1{ justify-content:center; padding-top:0; }
+  .cover-wrap{ position:relative; z-index:1; }
+  .cover-mark{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:56px;
+  }
+  .cover-mark .sq{ width:14px; height:14px; background:var(--lime); }
+  .cover-mark .word{ font-family:"IBM Plex Mono", monospace; font-size:13px; letter-spacing:.16em; text-transform:uppercase; color:var(--text-dim); }
+  .cover-title{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:76px;
+    line-height:1.0;
+    letter-spacing:-.01em;
+    margin-bottom:28px;
+  }
+  .cover-sub{
+    font-family:"IBM Plex Sans", sans-serif;
+    font-size:22px;
+    color:var(--text-dim);
+    max-width:640px;
+    line-height:1.5;
+    margin-bottom:44px;
+  }
+  .cover-meta{
+    display:flex; gap:32px;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    letter-spacing:.10em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .cover-meta span b{ color:var(--text); font-weight:600; }
+  .cover-corner{
+    position:absolute; top:56px; right:64px;
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px;
+    color:var(--text-dim);
+    letter-spacing:.1em;
+    text-align:right;
+    line-height:1.8;
+    z-index:1;
+  }
+
+  /* ============ SLIDE 2 : PROBLEM ============ */
+  .problem-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .problem-grid{
+    display:grid; grid-template-columns:1fr 1px 1fr; gap:0 48px;
+    margin-top:36px; z-index:1; align-items:start;
+  }
+  .quote-block{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:30px;
+    line-height:1.3;
+    color:var(--text);
+  }
+  .quote-block .mark{ color:var(--lime); }
+  .quote-col{ display:flex; flex-direction:column; padding-right:24px; }
+  .quote-chips{ margin-top:40px; }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--text); border:1px solid var(--hairline-strong); border-radius:3px; padding:6px 10px; background:var(--surface); }
+  .chip.dim{ color:var(--text-dim); border-color:var(--hairline); }
+  .problem-list{ padding-left:24px; padding-top:4px; }
+  .problem-list li{ font-size:17px; }
+  .stat-inline{ font-family:"IBM Plex Mono", monospace; color:var(--lime); font-weight:600; }
+  .problem-tagline{
+    margin-top:44px; padding-top:20px; border-top:1px solid var(--hairline);
+    font-family:"Archivo", sans-serif; font-weight:700; font-size:19px; color:var(--text); z-index:1;
+  }
+  .problem-tagline .accent{ color:var(--lime); }
+
+  /* ============ SLIDE 3 : SOLUTION ============ */
+  .mech-row{ display:flex; gap:0; margin-top:52px; align-items:stretch; z-index:1; }
+  .mech-col{
+    flex:1; position:relative;
+    padding:28px 28px 0 0;
+    display:flex; flex-direction:column;
+  }
+  .mech-col + .mech-col{ padding-left:28px; }
+  .mech-col:not(:last-child)::after{
+    content:"";
+    position:absolute; right:0; top:0; bottom:0;
+    width:1px; background:var(--hairline);
+  }
+  .mech-num{
+    font-family:"IBM Plex Mono", monospace;
+    font-size:12px; color:var(--text-dim); letter-spacing:.12em;
+    margin-bottom:18px;
+  }
+  .mech-arrow{
+    position:absolute; top:8px; right:-9px;
+    font-family:"IBM Plex Mono", monospace;
+    color:var(--lime); font-size:16px;
+    z-index:2;
+  }
+  .mech-verb{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:26px;
+    color:var(--text);
+    margin-bottom:14px;
+  }
+  .mech-desc{
+    font-size:16px; color:var(--text-dim); line-height:1.55; max-width:320px;
+  }
+  .mech-bignum{
+    font-family:"IBM Plex Mono", monospace;
+    font-weight:600;
+    font-size:240px;
+    line-height:1;
+    color:var(--ghost);
+    margin-top:auto;
+    user-select:none;
+  }
+  .mech-tagline{
+    font-family:"Archivo", sans-serif;
+    font-weight:700;
+    font-size:24px;
+    margin-top:40px;
+    padding-top:24px;
+    border-top:1px solid var(--hairline);
+    color:var(--text);
+    z-index:1;
+  }
+  .mech-tagline .accent{ color:var(--lime); }
+
+  /* ============ SLIDE 4 : WHY NOW ============ */
+  .why-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .why-grid{ display:grid; grid-template-columns:1fr 1fr; gap:32px 56px; margin-top:60px; z-index:1; }
+  .why-card{ border-top:1px solid var(--hairline-strong); padding-top:18px; }
+  .why-card .microlabel{ margin-bottom:10px; }
+  .why-card p{ font-size:16.5px; line-height:1.6; color:var(--text); }
+  .why-card p .dim{ color:var(--text-dim); }
+  .why-tagline{ margin-top:44px; padding-top:20px; border-top:1px solid var(--hairline); font-family:"Archivo",sans-serif; font-weight:700; font-size:19px; color:var(--text); z-index:1; }
+
+  /* ============ SLIDE 5 : PRODUCT ============ */
+  .surfaces-row{ display:flex; gap:20px; margin-top:52px; z-index:1; }
+  .surface-card{
+    flex:1; background:var(--surface); border:1px solid var(--hairline);
+    border-radius:4px; padding:26px 22px; display:flex; flex-direction:column; min-height:270px;
+  }
+  .surface-icon{ width:44px; height:44px; margin-bottom:20px; }
+  .surface-name{ font-family:"Archivo",sans-serif; font-weight:700; font-size:20px; margin-bottom:12px; }
+  .surface-desc{ font-size:15.5px; color:var(--text-dim); line-height:1.55; flex:1; }
+  .surface-tag{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--lime); margin-top:14px;
+  }
+  .stack-strip{
+    margin-top:34px; padding-top:20px; border-top:1px solid var(--hairline);
+    display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; z-index:1;
+  }
+  .stack-strip .microlabel{ margin-right:6px; }
+  .stack-chip{
+    font-family:"IBM Plex Mono", monospace; font-size:13px; color:var(--text);
+    background:var(--surface); border:1px solid var(--hairline); padding:4px 9px; border-radius:3px;
+  }
+  .product-tagline{
+    margin-top:28px; padding-top:20px; border-top:1px solid var(--hairline);
+    font-family:"Archivo",sans-serif; font-weight:700; font-size:18px; color:var(--text); z-index:1;
+  }
+  .product-tagline .accent{ color:var(--lime); }
+
+  /* ============ SLIDE 6 : DISTRIBUTION ============ */
+  .pipeline-wrap{ margin-top:48px; z-index:1; flex:1; display:flex; flex-direction:column; }
+  .pipeline-row{ display:flex; align-items:center; gap:0; }
+  .pipeline-source{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:150px; height:120px; border:1px solid var(--hairline-strong); border-radius:4px;
+    background:var(--surface); text-align:center; padding:0 12px; flex:none;
+  }
+  .pipeline-source .microlabel{ margin-bottom:8px; }
+  .pipeline-source .lbl{ font-family:"Archivo",sans-serif; font-weight:700; font-size:16px; }
+  .pipeline-connector{
+    flex:none; width:64px; height:2px; background:repeating-linear-gradient(90deg, var(--lime) 0 6px, transparent 6px 11px);
+    position:relative;
+  }
+  .pipeline-connector::after{
+    content:"\203A"; position:absolute; right:-6px; top:-11px; color:var(--lime); font-size:18px; font-weight:700;
+  }
+  .pipeline-targets{ display:flex; flex-direction:column; gap:14px; flex:1; }
+  .target-row{
+    display:flex; align-items:center; gap:14px;
+    border:1px solid var(--hairline); border-radius:4px; padding:16px 16px;
+    background:var(--surface);
+  }
+  .target-name{ font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:16px; width:220px; flex:none; }
+  .status-dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .status-dot.ok{ background:var(--ok); }
+  .status-dot.warn{ background:var(--warn); }
+  .status-dot.err{ background:var(--err); }
+  .status-label{ font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+  .status-label.ok{ color:var(--ok); }
+  .status-label.warn{ color:var(--warn); }
+  .status-label.err{ color:var(--err); }
+  .target-field{ font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--text-dim); margin-left:auto; }
+  .pipeline-key{
+    margin-top:52px; padding-top:20px; border-top:1px solid var(--hairline);
+    display:flex; align-items:center; gap:28px; z-index:1;
+  }
+  .pipeline-key .key-item{ display:flex; align-items:center; gap:8px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--text-dim); }
+
+  /* ============ SLIDE 7 : MARKET ============ */
+  .market-body{ display:flex; gap:56px; margin-top:24px; flex:1; z-index:1; align-items:center; padding-bottom:40px; }
+  .tam-block{ position:relative; width:460px; height:460px; flex:none; }
+  .ring{ position:absolute; border-radius:50%; border:1px solid var(--hairline-strong); display:flex; align-items:flex-start; justify-content:center; }
+  .ring .ring-label{ margin-top:14px; text-align:center; }
+  .ring.tam{ width:460px; height:460px; left:0; top:0; }
+  .ring.sam{ width:300px; height:300px; left:80px; top:80px; background:rgba(205,244,74,.03); }
+  .ring.som{ width:150px; height:150px; left:155px; top:155px; background:rgba(205,244,74,.10); border-color:var(--lime); align-items:center; }
+  .ring.som .ring-label{ margin-top:0; }
+  .ring-tag{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.14em; color:var(--text-dim); }
+  .ring-val{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:22px; color:var(--text); margin-top:4px; }
+  .ring.som .ring-val{ color:var(--lime); font-size:20px; }
+  .market-legend{ flex:1; display:flex; flex-direction:column; gap:18px; }
+  .legend-row{ border-top:1px solid var(--hairline); padding-top:12px; }
+  .legend-row .lt{ display:flex; justify-content:space-between; align-items:baseline; }
+  .legend-row .lname{ font-family:"Archivo",sans-serif; font-weight:700; font-size:16px; }
+  .legend-row .lval{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:22px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .legend-row:last-child .lval{ color:var(--lime); }
+  .legend-row .ldesc{ font-size:14px; color:var(--text-dim); margin-top:4px; }
+  .market-ref{ margin-top:8px; font-size:13.5px; color:var(--text-dim); border-top:1px solid var(--hairline); padding-top:12px; }
+  .market-ref b{ color:var(--text); font-weight:600; }
+  .tam-wrap{ display:flex; flex-direction:column; align-items:center; gap:16px; flex:none; }
+  .ring-disclosure{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.04em;
+    color:var(--text-dim); text-align:center; max-width:420px; line-height:1.5;
+  }
+  .ring-disclosure b{ color:var(--text); font-weight:600; }
+
+  /* ============ SLIDE 8 : BUSINESS MODEL ============ */
+  .model-body{ display:flex; gap:48px; margin-top:30px; z-index:1; }
+  .streams{ flex:1.3; display:flex; flex-direction:column; gap:0; }
+  .stream-row{ display:flex; justify-content:space-between; align-items:baseline; padding:14px 0; border-top:1px solid var(--hairline); }
+  .stream-name{ font-size:16.5px; color:var(--text); max-width:420px; }
+  .stream-name b{ font-weight:600; }
+  .stream-val{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:17px; color:var(--lime); white-space:nowrap; margin-left:16px; font-variant-numeric:tabular-nums; }
+  .stream-tagline{ margin-top:32px; padding-top:20px; border-top:1px solid var(--hairline); font-family:"Archivo",sans-serif; font-weight:700; font-size:17px; line-height:1.5; color:var(--text); max-width:460px; }
+  .stream-tagline .accent{ color:var(--lime); }
+  .metrics-col{ flex:1; display:flex; flex-direction:column; gap:14px; justify-content:center; }
+  .metric-tile{ background:var(--surface); border:1px solid var(--hairline); border-radius:4px; padding:16px 18px; }
+  .metric-tile .microlabel{ margin-bottom:8px; }
+  .metric-tile .mval{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:28px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .metric-tile .mval .accent{ color:var(--lime); }
+
+  /* ============ SLIDE 9 : TRACTION ============ */
+  .traction-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .traction-warn-banner{
+    display:flex; align-items:center; gap:10px; margin-top:8px; margin-bottom:28px;
+    border:1px solid var(--warn); background:rgba(214,169,74,.08); border-radius:4px; padding:10px 16px; z-index:1;
+    max-width:900px;
+  }
+  .traction-warn-banner .mock{ flex:none; }
+  .traction-warn-banner span.txt{ font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--warn); letter-spacing:.03em; }
+  .traction-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--hairline); z-index:1; margin-bottom:0; }
+  .traction-cell{ background:var(--bg); padding:22px 20px; display:flex; flex-direction:column; gap:8px; }
+  .traction-cell .tval{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:34px; color:var(--lime); font-variant-numeric:tabular-nums; line-height:1; }
+  .traction-cell .tlbl{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; }
+  .traction-second{ display:grid; grid-template-columns:repeat(2,1fr); gap:24px; margin-top:28px; z-index:1; }
+  .tr2-card{ border-top:1px solid var(--hairline-strong); padding-top:14px; }
+  .tr2-card .tval{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:26px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .tr2-card .tval .accent{ color:var(--lime); }
+  .tr2-card .tlbl{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase; margin-top:6px; }
+  .mrr-chart{ margin-top:34px; z-index:1; max-width:900px; }
+  .mrr-bar-row{ display:flex; align-items:center; gap:16px; margin-bottom:12px; }
+  .mrr-bar-lbl{ flex:none; width:82px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--text-dim); }
+  .mrr-bar-track{ flex:1; height:30px; background:var(--surface); border:1px solid var(--hairline); border-radius:2px; position:relative; }
+  .mrr-bar-fill{ height:100%; background:var(--lime); border-radius:2px 0 0 2px; display:flex; align-items:center; justify-content:flex-end; padding-right:10px; font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600; color:var(--bg); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mrr-bar-fill.dim{ background:#5B6650; color:var(--text); }
+
+  /* ============ SLIDE 10 : COMPETITION ============ */
+  .competition-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .matrix{ margin-top:30px; border:1px solid var(--hairline-strong); border-radius:4px; overflow:hidden; z-index:1; }
+  .matrix-row{ display:grid; grid-template-columns:220px 1fr 1fr 1fr; }
+  .matrix-row + .matrix-row{ border-top:1px solid var(--hairline); }
+  .matrix-cell{ padding:15px 18px; display:flex; align-items:center; font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--text); }
+  .matrix-row.head .matrix-cell{ font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); background:var(--surface); }
+  .matrix-row.head .matrix-cell:first-child{ color:var(--text-dim); }
+  .matrix-cell.rowname{ font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:15px; color:var(--text); }
+  .matrix-cell.dash{ color:var(--text-dim); }
+  .matrix-row.winner{ background:rgba(205,244,74,.07); }
+  .matrix-row.winner .matrix-cell{ color:var(--text); font-weight:600; }
+  .matrix-row.winner .matrix-cell.rowname{ color:var(--lime); }
+  .matrix-caption{ margin-top:18px; font-size:15px; color:var(--text-dim); z-index:1; }
+  .matrix-caption b{ color:var(--text); font-weight:600; }
+
+  /* ============ SLIDE 11 : GTM ============ */
+  .gtm-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .gtm-row{ display:flex; gap:0; margin-top:64px; z-index:1; }
+  .gtm-step{ flex:1; position:relative; padding:0 22px 0 0; display:flex; flex-direction:column; }
+  .gtm-step + .gtm-step{ padding-left:22px; }
+  .gtm-num-badge{
+    width:40px; height:40px; border:1px solid var(--lime); color:var(--lime); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace;
+    font-weight:600; font-size:17px; margin-bottom:22px;
+  }
+  .gtm-step-title{ font-family:"Archivo",sans-serif; font-weight:700; font-size:21px; margin-bottom:12px; }
+  .gtm-step-desc{ font-size:15px; color:var(--text-dim); line-height:1.6; }
+  .gtm-connector{
+    position:absolute; top:20px; right:-3px; width:26px; height:1px; background:var(--hairline-strong); z-index:2;
+  }
+  .gtm-connector::after{ content:"\203A"; position:absolute; right:-6px; top:-9px; color:var(--text-dim); font-size:14px; }
+  .gtm-divider{ margin-top:56px; border-top:1px solid var(--hairline); z-index:1; }
+  .gtm-caption{ margin-top:22px; font-size:16px; color:var(--text-dim); line-height:1.6; max-width:1040px; z-index:1; }
+  .gtm-caption b{ color:var(--text); font-weight:600; }
+
+  /* ============ SLIDE 12 : TEAM ============ */
+  .team-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .team-mock-banner{
+    display:inline-flex; align-items:center; gap:10px; margin-top:8px; margin-bottom:40px; z-index:1;
+  }
+  .team-mock-banner .txt{ font-size:16px; color:var(--text-dim); }
+  .team-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:28px; z-index:1; }
+  .team-card{ border-top:1px solid var(--hairline-strong); padding-top:22px; }
+  .team-avatar{ width:64px; height:64px; border-radius:50%; background:var(--surface); border:1px solid var(--hairline); margin-bottom:16px; display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace; color:var(--text-dim); font-size:15px; }
+  .team-tag{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--lime); margin-bottom:10px; }
+  .team-role{ font-family:"Archivo",sans-serif; font-weight:700; font-size:18px; margin-bottom:10px; line-height:1.3; }
+  .team-desc{ font-size:15px; color:var(--text-dim); line-height:1.55; }
+  .team-eng{ margin-top:32px; grid-column:1 / -1; border-top:1px solid var(--hairline); padding-top:20px; display:flex; gap:32px; align-items:center; }
+  .team-eng-item{ font-family:"IBM Plex Mono",monospace; font-size:14px; color:var(--text); }
+  .team-eng-item .n{ color:var(--lime); font-weight:600; }
+  .team-eng-item.dim{ color:var(--text-dim); }
+
+  /* ============ SLIDE 13 : ASK ============ */
+  .ask-body{ flex:1; display:flex; flex-direction:column; justify-content:center; padding-bottom:40px; z-index:1; }
+  .ask-hero{ display:flex; align-items:baseline; gap:24px; margin-top:8px; z-index:1; }
+  .ask-figure{ font-family:"Archivo",sans-serif; font-weight:700; font-size:88px; color:var(--lime); line-height:1; letter-spacing:-0.01em; }
+  .ask-runway{ font-family:"IBM Plex Mono",monospace; font-size:16px; color:var(--text-dim); }
+  .alloc-wrap{ margin-top:36px; z-index:1; }
+  .alloc-bar{ display:flex; width:100%; height:44px; border-radius:3px; overflow:hidden; border:1px solid var(--hairline-strong); }
+  .alloc-seg{ display:flex; align-items:center; justify-content:center; font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px; color:#0C0D0C; }
+  .alloc-seg.eng{ background:var(--lime); }
+  .alloc-seg.gtm{ background:#9FC85A; }
+  .alloc-seg.ops{ background:#6E8A4A; color:var(--text); }
+  .alloc-seg.infra{ background:var(--surface); color:var(--text-dim); border-left:1px solid var(--hairline-strong); }
+  .alloc-legend{ display:flex; gap:28px; margin-top:16px; }
+  .alloc-legend-item{ display:flex; align-items:center; gap:8px; font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--text-dim); }
+  .alloc-legend-item .sw{ width:10px; height:10px; border-radius:2px; }
+  .milestones-wrap{ margin-top:36px; z-index:1; }
+  .milestones-row{ display:flex; gap:24px; }
+  .milestone{ flex:1; border-top:1px solid var(--hairline-strong); padding-top:14px; }
+  .milestone .mval{ font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:22px; color:var(--text); font-variant-numeric:tabular-nums; }
+  .milestone .mlbl{ font-size:13.5px; color:var(--text-dim); margin-top:6px; }
+
+  /* ---------- nav affordance ---------- */
+  .nav-click{ position:absolute; top:0; bottom:40px; width:50%; z-index:50; cursor:pointer; }
+  .nav-click.left{ left:0; }
+  .nav-click.right{ right:0; }
+
+  /* ---------- static mode ---------- */
+  .static-mode, .static-mode *{
+    transition:none !important;
+    animation:none !important;
+  }
+
+  /* ---------- print ---------- */
+  @page{ size:1280px 720px; margin:0; }
+  @media print{
+    html, body{ overflow:visible !important; }
+    #viewport{ position:static; display:block; overflow:visible; }
+    #stage{ transform:none !important; width:1280px; height:720px; }
+    .slide{ display:flex !important; position:relative; break-after:page; width:1280px; height:720px; }
+    .nav-click, .footer .counter-live{ }
+  }
+</style>
+
+<div id="viewport">
+  <div id="stage">
+
+    <!-- ===================== 1 — COVER ===================== -->
+    <section class="slide" data-slide="1" id="slide-1">
+      <div class="col-ticks">
+        <div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+        <div class="tick"></div><div class="tick"></div><div class="tick"></div><div class="tick"></div>
+      </div>
+      <div class="cover-corner">DATA ROOM<br/>REV. 2026-08-10</div>
+      <div class="cover-wrap">
+        <div class="cover-mark"><div class="sq"></div><div class="word">La Casa / Seed Deck</div></div>
+        <h1 class="cover-title">The operating system for<br/>Uzbekistan&rsquo;s real&#8209;estate<br/>agents.</h1>
+        <p class="cover-sub">Seed round &middot; August 2026</p>
+        <div class="cover-meta">
+          <span><b>13</b> sections</span>
+          <span><b>Tashkent</b> HQ</span>
+          <span><b>Style</b> data room</span>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>COVER</span><span class="counter">01 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 2 — PROBLEM ===================== -->
+    <section class="slide" data-slide="2" id="slide-2">
+      <div class="microlabel"><span class="n">02</span> &middot; PROBLEM</div>
+      <div class="problem-body">
+      <div class="problem-grid">
+        <div class="quote-col">
+          <div class="quote-block">
+            <span class="mark">&ldquo;</span>A listing lives in nine places and belongs to none of them.<span class="mark">&rdquo;</span>
+          </div>
+          <div class="quote-chips">
+            <div class="microlabel" style="margin-bottom:14px;">TODAY, ONE LISTING TOUCHES</div>
+            <div class="chip-row">
+              <span class="chip">OLX</span>
+              <span class="chip">Telegram &times;3&ndash;4</span>
+              <span class="chip">Instagram</span>
+              <span class="chip">Paper notebook</span>
+            </div>
+            <div class="chip-row" style="margin-top:10px;">
+              <span class="chip dim">Marketplace &mdash; none yet</span>
+              <span class="chip dim">CRM &mdash; none yet</span>
+            </div>
+          </div>
+        </div>
+        <div class="hairline-v"></div>
+        <ul class="bullets problem-list">
+          <li>One property is retyped into OLX, three or four Telegram channels, Instagram and a paper notebook &mdash; <span class="stat-inline">40+ min</span> per listing <span class="mock">mock</span></li>
+          <li>Buyers scroll duplicates of the same flat; <span class="stat-inline">a third already sold</span> <span class="mock">mock</span></li>
+          <li>Leads arrive as Telegram DMs. <span class="dim">No pipeline, no history, no handover</span></li>
+          <li>Agency owners can&rsquo;t see what their agents did this week</li>
+        </ul>
+      </div>
+      <div class="problem-tagline">Four different failure points, <span class="accent">one root cause</span>: no single system of record for a listing or a lead.</div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>PROBLEM</span><span class="counter">02 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 3 — SOLUTION ===================== -->
+    <section class="slide" data-slide="3" id="slide-3">
+      <div class="microlabel"><span class="n">03</span> &middot; SOLUTION</div>
+      <h2 class="section-title">List once. Publish everywhere. Work the lead.</h2>
+      <div class="mech-row">
+        <div class="mech-col">
+          <div class="mech-num">STEP 01</div>
+          <div class="mech-verb">Publish</div>
+          <div class="mech-desc">One form pushes to Telegram, Instagram, OLX and the marketplace.</div>
+          <div class="mech-bignum">01</div>
+          <div class="mech-arrow">&rarr;</div>
+        </div>
+        <div class="mech-col">
+          <div class="mech-num">STEP 02</div>
+          <div class="mech-verb">Work</div>
+          <div class="mech-desc">Leads land in a kanban pipeline with owners, stages and history.</div>
+          <div class="mech-bignum">02</div>
+          <div class="mech-arrow">&rarr;</div>
+        </div>
+        <div class="mech-col">
+          <div class="mech-num">STEP 03</div>
+          <div class="mech-verb">Prove</div>
+          <div class="mech-desc">Per&#8209;agent analytics the agency owner actually trusts.</div>
+          <div class="mech-bignum">03</div>
+        </div>
+      </div>
+      <div class="mech-tagline">One mechanism, <span class="accent">three outcomes</span>.</div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>SOLUTION</span><span class="counter">03 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 4 — WHY NOW ===================== -->
+    <section class="slide" data-slide="4" id="slide-4">
+      <div class="microlabel"><span class="n">04</span> &middot; WHY NOW</div>
+      <div class="why-body">
+      <h2 class="section-title">Four forces, aligned this year.</h2>
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="microlabel">PLATFORM</div>
+          <p><b>The platform is real.</b> <span class="dim">Firebase MVP &rarr; Express + PostgreSQL + MinIO, server&#8209;held tokens, server&#8209;side validation. Migration complete August 2026 (docs/05).</span></p>
+        </div>
+        <div class="why-card">
+          <div class="microlabel">CHANNELS</div>
+          <p><b>The channels opened.</b> <span class="dim">Meta Graph API and OLX now allow programmatic posting from a reviewed app &mdash; the manual re&#8209;typing is newly automatable.</span></p>
+        </div>
+        <div class="why-card">
+          <div class="microlabel">MARKET</div>
+          <p><b>The market moved.</b> <span class="dim">Uzbekistan mortgage issuance up</span> <span class="num-hero" style="font-size:20px;">23%&nbsp;YoY</span> <span class="mock">mock</span><span class="dim">; new&#8209;build supply at a record</span> <span class="mock">mock</span></p>
+        </div>
+        <div class="why-card">
+          <div class="microlabel">POSITIONING</div>
+          <p><b>Telegram is the distribution layer, not the competitor.</b> <span class="dim">We publish into it.</span></p>
+        </div>
+      </div>
+      <div class="why-tagline">The mechanism that was manual is now buildable &mdash; and the market is already moving without it.</div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>WHY NOW</span><span class="counter">04 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 5 — PRODUCT ===================== -->
+    <section class="slide" data-slide="5" id="slide-5">
+      <div class="microlabel"><span class="n">05</span> &middot; PRODUCT</div>
+      <h2 class="section-title">Four surfaces, one backend.</h2>
+      <div class="surfaces-row">
+        <div class="surface-card">
+          <svg class="surface-icon" viewBox="0 0 36 36" fill="none"><rect x="2" y="4" width="32" height="24" rx="1.5" stroke="#CDF44A" stroke-width="1.6"/><path d="M2 10h32" stroke="#CDF44A" stroke-width="1.6"/><circle cx="6" cy="7" r="1" fill="#CDF44A"/></svg>
+          <div class="surface-name">Marketplace</div>
+          <div class="surface-desc">Search, map, agent profiles, saved listings.</div>
+          <div class="surface-tag">REACT</div>
+        </div>
+        <div class="surface-card">
+          <svg class="surface-icon" viewBox="0 0 36 36" fill="none"><rect x="3" y="6" width="8" height="22" rx="1" stroke="#CDF44A" stroke-width="1.6"/><rect x="14" y="10" width="8" height="18" rx="1" stroke="#CDF44A" stroke-width="1.6"/><rect x="25" y="14" width="8" height="14" rx="1" stroke="#CDF44A" stroke-width="1.6"/></svg>
+          <div class="surface-name">Agent console</div>
+          <div class="surface-desc">Listings, leads kanban, coworkers, analytics.</div>
+          <div class="surface-tag">REACT 19</div>
+        </div>
+        <div class="surface-card">
+          <svg class="surface-icon" viewBox="0 0 36 36" fill="none"><rect x="10" y="2" width="16" height="32" rx="3" stroke="#CDF44A" stroke-width="1.6"/><line x1="15" y1="30" x2="21" y2="30" stroke="#CDF44A" stroke-width="1.6"/></svg>
+          <div class="surface-name">Mobile</div>
+          <div class="surface-desc">Role&#8209;aware: buyers browse, agents work, one binary.</div>
+          <div class="surface-tag">FLUTTER</div>
+        </div>
+        <div class="surface-card">
+          <svg class="surface-icon" viewBox="0 0 36 36" fill="none"><path d="M4 12l14-8 14 8v12l-14 8-14-8z" stroke="#CDF44A" stroke-width="1.6"/><path d="M4 12l14 8 14-8" stroke="#CDF44A" stroke-width="1.6"/></svg>
+          <div class="surface-name">Crosspost ext.</div>
+          <div class="surface-desc">Drives OLX and Instagram from the agent&rsquo;s session.</div>
+          <div class="surface-tag">CHROME</div>
+        </div>
+      </div>
+      <div class="stack-strip">
+        <span class="microlabel">STACK</span>
+        <span class="stack-chip">Express</span>
+        <span class="stack-chip">Prisma</span>
+        <span class="stack-chip">PostgreSQL 16</span>
+        <span class="stack-chip">MinIO presigned uploads</span>
+        <span class="stack-chip">JWT auth</span>
+        <span class="stack-chip">CI + integration tests vs. real DB</span>
+      </div>
+      <div class="product-tagline">One data model, <span class="accent">four ways in</span> &mdash; no surface re&#8209;implements a listing, a lead or a login.</div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>PRODUCT</span><span class="counter">05 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 6 — DISTRIBUTION ===================== -->
+    <section class="slide" data-slide="6" id="slide-6">
+      <div class="microlabel"><span class="n">06</span> &middot; DISTRIBUTION &mdash; THE WEDGE</div>
+      <h2 class="section-title">One listing &rarr; five destinations, one click.</h2>
+      <p class="lede" style="margin-top:6px;">Per&#8209;channel publish status (<span class="num">AdPublication</span>: queued / published / failed) so an agent can see where their property actually landed.</p>
+      <div class="pipeline-wrap">
+        <div class="pipeline-row">
+          <div class="pipeline-source">
+            <div class="microlabel">SOURCE</div>
+            <div class="lbl">One listing form</div>
+          </div>
+          <div class="pipeline-connector"></div>
+          <div class="pipeline-targets">
+            <div class="target-row">
+              <div class="target-name">Marketplace</div>
+              <div class="status-dot ok"></div><div class="status-label ok">published</div>
+              <div class="target-field">channel: internal</div>
+            </div>
+            <div class="target-row">
+              <div class="target-name">Telegram channel</div>
+              <div class="status-dot ok"></div><div class="status-label ok">published</div>
+              <div class="target-field">channel: telegram</div>
+            </div>
+            <div class="target-row">
+              <div class="target-name">Instagram carousel</div>
+              <div class="status-dot ok"></div><div class="status-label ok">published</div>
+              <div class="target-field">channel: instagram</div>
+            </div>
+            <div class="target-row">
+              <div class="target-name">OLX</div>
+              <div class="status-dot warn"></div><div class="status-label warn">queued</div>
+              <div class="target-field">channel: olx</div>
+            </div>
+            <div class="target-row">
+              <div class="target-name">YouTube tour</div>
+              <div class="status-dot err"></div><div class="status-label err">failed</div>
+              <div class="target-field">channel: youtube &middot; retry queued</div>
+            </div>
+          </div>
+        </div>
+        <div class="pipeline-key">
+          <span class="microlabel">STATUS KEY</span>
+          <span class="key-item"><span class="status-dot ok"></span>published &mdash; live</span>
+          <span class="key-item"><span class="status-dot warn"></span>queued &mdash; awaiting channel</span>
+          <span class="key-item"><span class="status-dot err"></span>failed &mdash; agent notified, retry queued</span>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>DISTRIBUTION</span><span class="counter">06 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 7 — MARKET ===================== -->
+    <section class="slide" data-slide="7" id="slide-7">
+      <div class="microlabel"><span class="n">07</span> &middot; MARKET</div>
+      <h2 class="section-title">TAM / SAM / SOM.</h2>
+      <div class="market-body">
+        <div class="tam-wrap">
+          <div class="tam-block">
+            <div class="ring tam">
+              <div class="ring-label">
+                <div class="ring-tag">TAM</div>
+              </div>
+            </div>
+            <div class="ring sam">
+              <div class="ring-label">
+                <div class="ring-tag">SAM</div>
+              </div>
+            </div>
+            <div class="ring som">
+              <div class="ring-label">
+                <div class="ring-tag">SOM</div>
+                <div class="ring-val">$4.1M</div>
+              </div>
+            </div>
+          </div>
+          <div class="ring-disclosure">Rings are illustrative, not to scale &mdash; actual ratio is <b>&asymp;1,560 : 44 : 1</b> (TAM : SAM : SOM).</div>
+        </div>
+        <div class="market-legend">
+          <div class="legend-row">
+            <div class="lt"><div class="lname">TAM &middot; Uzbekistan residential transactions</div><div class="lval">$6.4B<span class="mock" style="margin-left:8px;">mock</span></div></div>
+            <div class="ldesc">per year, all transaction volume nationally</div>
+          </div>
+          <div class="legend-row">
+            <div class="lt"><div class="lname">SAM &middot; Agent&#8209;mediated deals &middot; 14,000 licensed agents</div><div class="lval">$180M<span class="mock" style="margin-left:8px;">mock</span></div></div>
+            <div class="ldesc">the slice that runs through a licensed agent today</div>
+          </div>
+          <div class="legend-row">
+            <div class="lt"><div class="lname">SOM &middot; 1,200 paying seats by year 3</div><div class="lval">$4.1M ARR<span class="mock" style="margin-left:8px;">mock</span></div></div>
+            <div class="ldesc">seat revenue at target penetration</div>
+          </div>
+          <div class="market-ref">Reference point: global proptech is <b>$50.1B in 2026 &rarr; $115B by 2033, 12.6% CAGR</b> (Coherent Market Insights). Residential is 56% of it.</div>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>MARKET</span><span class="counter">07 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 8 — BUSINESS MODEL ===================== -->
+    <section class="slide" data-slide="8" id="slide-8">
+      <div class="microlabel"><span class="n">08</span> &middot; BUSINESS MODEL</div>
+      <h2 class="section-title">Four revenue lines.</h2>
+      <div class="model-body">
+        <div class="streams">
+          <div class="stream-row">
+            <div class="stream-name"><b>Agent seat</b></div>
+            <div class="stream-val">$19/mo solo &middot; $15/seat 5+ <span class="mock">mock</span></div>
+          </div>
+          <div class="stream-row">
+            <div class="stream-name"><b>Featured placement</b></div>
+            <div class="stream-val">$4 / listing / 7d <span class="mock">mock</span></div>
+          </div>
+          <div class="stream-row">
+            <div class="stream-name"><b>Crosspost credits</b> <span class="dim" style="font-size:14px;">beyond the free monthly tier</span></div>
+            <div class="stream-val">metered <span class="mock">mock</span></div>
+          </div>
+          <div class="stream-row">
+            <div class="stream-name"><b>Developer inventory</b> <span class="dim" style="font-size:14px;">on new&#8209;build units sold through the platform</span></div>
+            <div class="stream-val">0.5% take <span class="mock">mock</span></div>
+          </div>
+          <div class="stream-tagline">The seat is the base; <span class="accent">placement, credits and take-rate</span> stack on top as usage grows.</div>
+        </div>
+        <div class="metrics-col">
+          <div class="metric-tile"><div class="microlabel">ARPA</div><div class="mval"><span class="accent">$27</span>/mo</div></div>
+          <div class="metric-tile"><div class="microlabel">CAC</div><div class="mval">$38</div></div>
+          <div class="metric-tile"><div class="microlabel">PAYBACK</div><div class="mval">1.4 mo</div></div>
+          <div class="metric-tile"><div class="microlabel">GROSS MARGIN</div><div class="mval">82%</div></div>
+        </div>
+      </div>
+      <div style="margin-top:10px;"><span class="mock">mock</span> <span class="dim" style="font-size:13px; font-family:'IBM Plex Mono',monospace;">all four unit metrics above are modeled, not measured</span></div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>BUSINESS MODEL</span><span class="counter">08 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 9 — TRACTION ===================== -->
+    <section class="slide" data-slide="9" id="slide-9">
+      <div class="microlabel"><span class="n">09</span> &middot; TRACTION</div>
+      <div class="traction-body">
+      <h2 class="section-title" style="margin-bottom:14px;">The traction numbers &mdash; and the caveat.</h2>
+      <div class="traction-warn-banner">
+        <span class="mock">mock</span>
+        <span class="txt">EVERY FIGURE ON THIS SLIDE IS ILLUSTRATIVE. NONE OF IT IS MEASURED YET.</span>
+      </div>
+      <div class="traction-grid">
+        <div class="traction-cell"><div class="tval">480</div><div class="tlbl">Agents onboarded</div></div>
+        <div class="traction-cell"><div class="tval">11,300</div><div class="tlbl">Live listings</div></div>
+        <div class="traction-cell"><div class="tval">62,000</div><div class="tlbl">Monthly buyers</div></div>
+      </div>
+      <div class="traction-second">
+        <div class="tr2-card"><div class="tval"><span class="accent">$19,400</span> MRR</div><div class="tlbl">3.1&times; YoY growth</div></div>
+        <div class="tr2-card"><div class="tval">94% <span class="dim" style="font-size:15px;">retention</span> &middot; 41% <span class="dim" style="font-size:15px;">crossposted &lt;24h</span></div><div class="tlbl">Logo retention &middot; crosspost speed of listings created</div></div>
+      </div>
+      <div class="mrr-chart">
+        <div class="microlabel" style="margin-bottom:12px;">MRR &middot; TRAILING 12 MONTHS <span class="mock">mock</span></div>
+        <div class="mrr-bar-row">
+          <div class="mrr-bar-lbl">12 mo. ago</div>
+          <div class="mrr-bar-track"><div class="mrr-bar-fill dim" style="width:32%;">$6,300</div></div>
+        </div>
+        <div class="mrr-bar-row">
+          <div class="mrr-bar-lbl">Today</div>
+          <div class="mrr-bar-track"><div class="mrr-bar-fill" style="width:100%;">$19,400</div></div>
+        </div>
+      </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>TRACTION</span><span class="counter">09 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 10 — COMPETITION ===================== -->
+    <section class="slide" data-slide="10" id="slide-10">
+      <div class="microlabel"><span class="n">10</span> &middot; COMPETITION</div>
+      <div class="competition-body">
+      <h2 class="section-title">Nobody else spans distribution <span class="accent">and</span> the pipeline.</h2>
+      <div class="matrix">
+        <div class="matrix-row head">
+          <div class="matrix-cell"></div>
+          <div class="matrix-cell">REACH</div>
+          <div class="matrix-cell">AGENT TOOLS</div>
+          <div class="matrix-cell">LOCAL CHANNELS</div>
+        </div>
+        <div class="matrix-row">
+          <div class="matrix-cell rowname">OLX.uz</div>
+          <div class="matrix-cell">High</div>
+          <div class="matrix-cell">None</div>
+          <div class="matrix-cell dash">&mdash;</div>
+        </div>
+        <div class="matrix-row">
+          <div class="matrix-cell rowname">uybor.uz</div>
+          <div class="matrix-cell">Medium</div>
+          <div class="matrix-cell">Listing only</div>
+          <div class="matrix-cell dash">&mdash;</div>
+        </div>
+        <div class="matrix-row">
+          <div class="matrix-cell rowname">Telegram channels</div>
+          <div class="matrix-cell">High</div>
+          <div class="matrix-cell">None</div>
+          <div class="matrix-cell">Native</div>
+        </div>
+        <div class="matrix-row">
+          <div class="matrix-cell rowname">International CRMs</div>
+          <div class="matrix-cell dash">&mdash;</div>
+          <div class="matrix-cell">Strong</div>
+          <div class="matrix-cell">None</div>
+        </div>
+        <div class="matrix-row winner">
+          <div class="matrix-cell rowname">La Casa</div>
+          <div class="matrix-cell">Growing</div>
+          <div class="matrix-cell">Full CRM</div>
+          <div class="matrix-cell">Native + automated</div>
+        </div>
+      </div>
+      <p class="matrix-caption">Reach, tooling and channel automation are each owned by someone. <b>Only La Casa owns all three.</b></p>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>COMPETITION</span><span class="counter">10 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 11 — GO TO MARKET ===================== -->
+    <section class="slide" data-slide="11" id="slide-11">
+      <div class="microlabel"><span class="n">11</span> &middot; GO TO MARKET</div>
+      <div class="gtm-body">
+      <h2 class="section-title">Wedge &rarr; land &rarr; flywheel &rarr; expand.</h2>
+      <div class="gtm-row">
+        <div class="gtm-step">
+          <div class="gtm-num-badge">1</div>
+          <div class="gtm-step-title">Wedge</div>
+          <div class="gtm-step-desc">Free crossposting extension; agents install it for the time saved.</div>
+          <div class="gtm-connector"></div>
+        </div>
+        <div class="gtm-step">
+          <div class="gtm-num-badge">2</div>
+          <div class="gtm-step-title">Land</div>
+          <div class="gtm-step-desc">Tashkent agencies of 5&ndash;20 seats, owner&#8209;led sale.</div>
+          <div class="gtm-connector"></div>
+        </div>
+        <div class="gtm-step">
+          <div class="gtm-num-badge">3</div>
+          <div class="gtm-step-title">Flywheel</div>
+          <div class="gtm-step-desc">Agent supply fills the marketplace; buyer demand pulls the next agency.</div>
+          <div class="gtm-connector"></div>
+        </div>
+        <div class="gtm-step">
+          <div class="gtm-num-badge">4</div>
+          <div class="gtm-step-title">Expand</div>
+          <div class="gtm-step-desc">Developer new&#8209;build inventory (yr 2), Almaty &amp; Bishkek (yr 3).</div>
+        </div>
+      </div>
+      <div class="gtm-divider"></div>
+      <p class="gtm-caption">Each stage is funded by the one before it: a <b>free</b> tool buys the install, the <b>owner-led sale</b> buys the seats, the <b>flywheel</b> buys the liquidity &mdash; only then does La Casa spend to expand the category.</p>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>GO TO MARKET</span><span class="counter">11 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 12 — TEAM ===================== -->
+    <section class="slide" data-slide="12" id="slide-12">
+      <div class="microlabel"><span class="n">12</span> &middot; TEAM</div>
+      <div class="team-body">
+      <h2 class="section-title" style="margin-bottom:8px;">Team.</h2>
+      <div class="team-mock-banner"><span class="mock">mock</span><span class="txt">placeholders &mdash; replace with the real roster</span></div>
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar">CEO</div>
+          <div class="team-tag">OPERATOR</div>
+          <div class="team-role">Founder / CEO</div>
+          <div class="team-desc">9 yrs Tashkent residential brokerage.</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">CTO</div>
+          <div class="team-tag">BUILDER</div>
+          <div class="team-role">Founder / CTO</div>
+          <div class="team-desc">Built the platform; ex&#8209;fintech backend.</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">HoG</div>
+          <div class="team-tag">GROWTH</div>
+          <div class="team-role">Head of Growth</div>
+          <div class="team-desc">Ex&#8209;OLX Uzbekistan.</div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar">&mdash;</div>
+          <div class="team-tag">HIRING</div>
+          <div class="team-role">Open roles</div>
+          <div class="team-desc">Rounding out engineering &amp; design.</div>
+        </div>
+        <div class="team-eng">
+          <div class="team-eng-item"><span class="n">3</span> engineers</div>
+          <div class="team-eng-item"><span class="n">1</span> designer</div>
+          <div class="team-eng-item dim">Advisors &mdash; none onboarded yet</div>
+        </div>
+      </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>TEAM</span><span class="counter">12 / 13</span></div>
+      </div>
+    </section>
+
+    <!-- ===================== 13 — ASK ===================== -->
+    <section class="slide" data-slide="13" id="slide-13">
+      <div class="microlabel"><span class="n">13</span> &middot; THE ASK</div>
+      <div class="ask-body">
+      <div class="ask-hero">
+        <div class="ask-figure">$1.2M</div>
+        <div>
+          <div style="margin-bottom:6px;"><span class="microlabel" style="font-size:13px;">SEED ROUND</span> <span class="mock">mock</span></div>
+          <div class="ask-runway">18 months runway</div>
+        </div>
+      </div>
+      <div class="alloc-wrap">
+        <div class="microlabel" style="margin-bottom:10px;">USE OF FUNDS</div>
+        <div class="alloc-bar">
+          <div class="alloc-seg eng" style="width:45%;">45%</div>
+          <div class="alloc-seg gtm" style="width:30%;">30%</div>
+          <div class="alloc-seg ops" style="width:15%;">15%</div>
+          <div class="alloc-seg infra" style="width:10%;">10%</div>
+        </div>
+        <div class="alloc-legend">
+          <div class="alloc-legend-item"><div class="sw" style="background:var(--lime);"></div>Engineering &middot; 45%</div>
+          <div class="alloc-legend-item"><div class="sw" style="background:#9FC85A;"></div>Go&#8209;to&#8209;market &middot; 30%</div>
+          <div class="alloc-legend-item"><div class="sw" style="background:#6E8A4A;"></div>Ops &amp; compliance &middot; 15%</div>
+          <div class="alloc-legend-item"><div class="sw" style="background:var(--surface); border:1px solid var(--hairline-strong);"></div>Infrastructure &middot; 10%</div>
+        </div>
+      </div>
+      <div class="milestones-wrap">
+        <div class="microlabel" style="margin-bottom:10px;">MILESTONES</div>
+        <div class="milestones-row">
+          <div class="milestone"><div class="mval">1,200</div><div class="mlbl">paying seats</div></div>
+          <div class="milestone"><div class="mval">$4.1M</div><div class="mlbl">ARR run&#8209;rate</div></div>
+          <div class="milestone"><div class="mval">Live <span class="mock">mock</span></div><div class="mlbl">developer channel</div></div>
+        </div>
+      </div>
+      </div>
+      <div class="footer">
+        <div class="footer-left"><span class="dot">&#9679;</span><span>LA CASA</span></div>
+        <div class="footer-right"><span>ASK</span><span class="counter">13 / 13</span></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var TOTAL = 13;
+  var root = document.documentElement;
+  var stage = document.getElementById('stage');
+  var viewport = document.getElementById('viewport');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var current = 1;
+
+  // static mode
+  if (/\?.*static|[?&]static\b/.test(location.search) || location.search.indexOf('static') !== -1) {
+    root.classList.add('static-mode');
+  }
+
+  function fit(){
+    var vw = viewport.clientWidth;
+    var vh = viewport.clientHeight;
+    var scale = Math.min(vw / 1280, vh / 720);
+    stage.style.transform = 'scale(' + scale + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  function clamp(n){
+    if (n < 1) return 1;
+    if (n > TOTAL) return TOTAL;
+    return n;
+  }
+
+  function render(){
+    for (var i = 0; i < slides.length; i++) {
+      var n = parseInt(slides[i].getAttribute('data-slide'), 10);
+      if (n === current) slides[i].classList.add('active');
+      else slides[i].classList.remove('active');
+    }
+  }
+
+  function goTo(n, pushHash){
+    current = clamp(n);
+    render();
+    if (pushHash !== false) {
+      history.replaceState(null, '', '#' + current);
+    }
+  }
+
+  function next(){ goTo(current + 1); }
+  function prev(){ goTo(current - 1); }
+
+  document.addEventListener('keydown', function(e){
+    switch(e.key){
+      case 'ArrowRight':
+      case ' ':
+      case 'PageDown':
+        e.preventDefault(); next(); break;
+      case 'ArrowLeft':
+      case 'PageUp':
+        e.preventDefault(); prev(); break;
+      case 'Home':
+        e.preventDefault(); goTo(1); break;
+      case 'End':
+        e.preventDefault(); goTo(TOTAL); break;
+    }
+  });
+
+  // click affordances, injected per-slide (avoid stealing clicks from links if any)
+  slides.forEach(function(s){
+    var left = document.createElement('div');
+    left.className = 'nav-click left';
+    left.addEventListener('click', prev);
+    var right = document.createElement('div');
+    right.className = 'nav-click right';
+    right.addEventListener('click', next);
+    s.appendChild(left);
+    s.appendChild(right);
+  });
+
+  function fromHash(){
+    var m = /^#(\d+)/.exec(location.hash);
+    if (m) {
+      goTo(parseInt(m[1], 10), false);
+    } else {
+      render();
+    }
+  }
+  window.addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>

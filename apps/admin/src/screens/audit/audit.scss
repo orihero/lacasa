@@ -1,0 +1,163 @@
+// The audit log's own elements: the scope note, the two-line time cell, the
+// quiet placeholders and the detail drawer. Everything else on this screen is
+// a ui/ primitive already wearing apps/web's look, so nothing here restates a
+// panel, a table or a button.
+@import "../../responsive.scss";
+
+// The filter select. 215px is the width of the Event column beside it, so the
+// control and the values it filters line up.
+.audit-type-filter {
+  width: 215px;
+
+  @include sm {
+    width: 100%;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The scope note.
+//
+// Deliberately NOT ui/States' `.notice`: that one is the accent-yellow bar,
+// and on this surface yellow means "waiting on you". This is the app canvas
+// (#f5f6fa) inside the white content column with the list-row hairline
+// (#dedede) around it — the weight of a table header, which is what a
+// permanent, unactionable caveat should carry.
+// ---------------------------------------------------------------------------
+.audit-scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  background-color: #f5f6fa;
+  border: 1px solid #dedede;
+
+  .audit-scope__icon {
+    display: flex;
+    flex: none;
+    margin-top: 2px;
+    color: #8d99ae;
+  }
+
+  .audit-scope__text {
+    min-width: 0;
+  }
+
+  .audit-scope__title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2b2d42;
+  }
+
+  .audit-scope__body {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #2b2d42;
+  }
+
+  // Bold inside the sentence, not a colour change: the fragment is emphasis,
+  // not a status.
+  .audit-scope__emphasis {
+    font-weight: 700;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The row.
+// ---------------------------------------------------------------------------
+
+// Time of day on the prominent line, date underneath. `.tbl__td--mono` already
+// supplies the monospace face for both.
+.audit-time {
+  display: block;
+  line-height: 1.3;
+  color: #2b2d42;
+}
+
+.audit-time__date {
+  display: block;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #8d99ae;
+}
+
+// The "there is nothing here, and here is why" placeholders: an em dash for a
+// deleted ad/lead, the word `unattributed` for an event with no agent. Quiet,
+// but never blank.
+.audit-faint {
+  color: #8d99ae;
+}
+
+// The strip between the table and the footer when a LATER page fails. The
+// already-loaded rows stay above it; this reports only what did not arrive.
+.audit-page-error {
+  padding: 10px 15px;
+  border-top: 1px solid #dedede;
+  font-size: 13px;
+  color: rgb(216, 72, 53);
+}
+
+// ---------------------------------------------------------------------------
+// The detail drawer — a raw full-width <tr> under the row it belongs to.
+// ---------------------------------------------------------------------------
+.audit-drawer {
+  background-color: #f5f6fa;
+
+  .audit-drawer__cell {
+    padding: 12px 16px;
+    border-bottom: 1px solid #dedede;
+  }
+
+  // Full UUIDs, in the same face the table shows ids in: the point of opening
+  // the drawer is to carry an id somewhere else.
+  .audit-drawer__ids {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    font-size: 12px;
+
+    dt {
+      color: #8d99ae;
+    }
+
+    dd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: #2b2d42;
+      word-break: break-all;
+    }
+  }
+
+  .audit-drawer__meta {
+    margin-top: 10px;
+  }
+
+  .audit-drawer__meta-label {
+    margin-bottom: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8d99ae;
+  }
+
+  .audit-drawer__meta-empty {
+    font-size: 12px;
+    color: #8d99ae;
+  }
+
+  // Capped with its own scroll so a large payload cannot push the table off
+  // the screen being scanned.
+  .audit-drawer__meta-body {
+    max-height: 256px;
+    overflow: auto;
+    padding: 8px 10px;
+    background-color: #ffffff;
+    border: 1px solid #dedede;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #2b2d42;
+  }
+}

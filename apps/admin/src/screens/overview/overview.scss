@@ -1,0 +1,74 @@
+// The overview's own layout: the tile row and the two-column region under it.
+//
+// Gaps are the console's 10px (`.agent-content { gap: 10px }`), and the block
+// rhythm between the tiles and the panels is the 20px `.ads-list-content` uses
+// between a header bar and its list.
+@import "../../responsive.scss";
+
+// FIVE TILES THAT WRAP. `auto-fit` rather than a fixed five columns: three
+// readable tiles per row beats five squeezed numerals, and "1,284" must not
+// break onto a second line at 1366px.
+.overview-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+
+  @include sm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+// The wide signups column and the narrow stacked pair beside it. `align-items:
+// start` so the two breakdown panels keep their own height instead of being
+// stretched to match a five-row table.
+.overview-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+  gap: 10px;
+
+  // One column below 1024px, where 340px of the row is most of it.
+  @include md {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview-columns__stack {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+}
+
+// "Newest first" — the plain statement in the panel head's tools slot. Same
+// size and grey as `.page-head__note`, because it is the same kind of fact.
+.overview-signups__note {
+  font-size: 12px;
+  color: #8d99ae;
+}
+
+// The strip under the signups table, in both the populated and the empty case.
+// `1px solid #dddd` is apps/web's own hairline (the `.menu-list` divider).
+.overview-signups__foot {
+  padding: 10px 15px;
+  border-top: 1px solid #dddd;
+  font-size: 12px;
+  color: #8d99ae;
+
+  // apps/web strips link paint globally (`a { text-decoration: none; color:
+  // inherit }`), so the affordance has to be put back deliberately here.
+  .overview-signups__link {
+    font-weight: 700;
+    color: #2b2d42;
+
+    &:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #fece51;
+      outline-offset: 2px;
+    }
+  }
+}

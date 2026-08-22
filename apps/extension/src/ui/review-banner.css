@@ -1,0 +1,65 @@
+.lacasa-banner {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483647;
+  width: 320px;
+  background: #ffffff;
+  color: #1c1c1e;
+  border: 1px solid #d8d8de;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.lacasa-banner__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #ececf0;
+  font-weight: 600;
+}
+
+.lacasa-banner__close {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #8e8e93;
+}
+
+.lacasa-banner__body {
+  padding: 12px 14px;
+  white-space: pre-wrap;
+}
+
+.lacasa-banner__actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 12px;
+  flex-wrap: wrap;
+}
+
+.lacasa-banner__btn {
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: #ececf0;
+  color: #1c1c1e;
+}
+
+.lacasa-banner__btn--primary {
+  background: #ff7f1f;
+  color: #fff;
+}
+
+.lacasa-banner__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

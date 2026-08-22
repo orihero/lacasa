@@ -1,0 +1,117 @@
+// Global stylesheet — the port of apps/web/src/index.scss (plus the parts of
+// its index.css and its Tailwind layer that the CRM screens actually rely on).
+// Imported once, for its side effect, from src/main.tsx.
+//
+// THIS APP HAS NO TAILWIND. apps/web's index.scss opens with `@tailwind base;
+// @tailwind components; @tailwind utilities;` and a handful of its CRM screens
+// reach for utility classes. Those utilities are written out as real CSS at the
+// bottom of this file; nothing else from the Tailwind layer is reproduced,
+// because the CRM's own look lives in hand-written SCSS, not in utilities.
+
+// Font loading, verbatim from apps/web/src/index.scss. This single @import is
+// the one that matters: apps/web ALSO loads Lato and Poppins from its
+// index.html and declares two local Segoe @font-face rules in index.css, and
+// none of those three is referenced by any CRM rule. They are not ported.
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+
+// The rule that decides everything. `font-family` on the UNIVERSAL selector is
+// what makes MUI components in apps/web render in Plus Jakarta Sans rather
+// than Roboto, without a theme override — and it reaches portalled content
+// (MUI Dialog, Menu, Select popovers render into document.body) for free,
+// which is why apps/web has to restate the family by hand inside .kanban-modal
+// and this app does not. src/theme.ts states the same family in MUI's
+// typography so the two can never disagree; this rule is the one that wins.
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  scroll-behavior: smooth;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  // apps/web pins the body and scrolls an inner element instead (its App.jsx
+  // wraps the router in `<div style={{ overflow: "scroll", maxHeight:
+  // "100vh" }}>`). Same arrangement here — see the #root rule below — because
+  // the shell's rail and topbar are `position: sticky` and sticky resolves
+  // against the nearest scrolling ancestor. Scroll the body instead and the
+  // topbar would scroll away with the table underneath it.
+  overflow: hidden;
+  background-color: #f5f6fa;
+  color: #2b2d42;
+}
+
+// apps/web's App.jsx wrapper div, expressed as a rule rather than an inline
+// style: the component that would carry it (src/App.tsx) belongs to the shell,
+// and the scroll container has to exist whether or not that component chooses
+// to render a div of its own.
+#root {
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+// The spinner host. In apps/web `.loading` is an unstyled hook — the class is
+// used on every screen and has no rule anywhere in the codebase — so a
+// full-screen loading state renders top-left. Centring it is the one safe
+// improvement the design contract explicitly sanctions, and it is done once
+// here rather than re-typed into every screen's SCSS.
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  width: 100%;
+}
+
+// The overlay variant, ported from apps/web's .loading-kanban: an in-place
+// mutation that must not blank the records underneath it.
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.321);
+  backdrop-filter: blur(5px);
+}
+
+// The Tailwind utilities the CRM screens in apps/web genuinely use, written out
+// as real CSS. This is the whole list — dashboard headings, the stat-tile pair,
+// and the two greys — deliberately not a reimplementation of Tailwind. If a
+// screen here needs something else, it gets a rule in its own component SCSS.
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.text-5xl {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.text-black {
+  color: #000;
+}
+
+.text-gray-600 {
+  color: #4b5563;
+}

@@ -1,0 +1,25 @@
+{
+  // The build-tool half of the workspace: vite.config.ts and vitest.config.ts.
+  // Split out of tsconfig.json (see the comment there) so the app's own program
+  // is compiled with only the browser lib/types it really has, while these two
+  // files get Node's.
+  //
+  // `types` is narrowed to node alone on purpose — a stray `vite/client`
+  // reference here would let a config file believe it can touch
+  // `import.meta.env`, which at config-evaluation time does not exist yet.
+  "extends": "@lacasa/config-typescript/base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "src/test/config-vitest.d.ts"],
+  "exclude": ["node_modules", "dist", "coverage"]
+}

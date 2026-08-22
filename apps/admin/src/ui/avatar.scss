@@ -1,0 +1,27 @@
+// Avatar — apps/web's 40px record avatar (`.user img { width: 40px; height:
+// 40px; border-radius: 50%; object-fit: cover; }` in navbar.scss), with an
+// initials chip where apps/web falls back to /avatar.jpg.
+@import "../responsive.scss";
+
+.avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  background-color: #eeeeee;
+}
+
+.avatar--round {
+  border-radius: 50%;
+}
+
+.avatar--initials {
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  // The muted grey apps/web uses for the icons beside a person's name.
+  color: #8d99ae;
+  // Two letters, never wrapped or selected as if they were content.
+  user-select: none;
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@lacasa/config-typescript",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "files": [
+    "base.json",
+    "react-library.json",
+    "node-library.json"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@lacasa/config-vitest": "*",
+    "@vitest/coverage-v8": "^3.2.7",
+    "vitest": "^3.2.7"
+  }
+}

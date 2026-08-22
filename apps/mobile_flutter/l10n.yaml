@@ -1,0 +1,40 @@
+# Configures `flutter gen-l10n` (auto-run by `generate: true` in
+# pubspec.yaml on `pub get`/`run`/`build`/`test`/`analyze`, and runnable
+# directly for a manual regen after editing an ARB file).
+#
+# synthetic-package: false — the default puts `app_localizations.dart`
+# inside `.dart_tool/flutter_gen/`, invisible to plain grep/Read and to
+# anything that doesn't go through the `flutter:` package URI (e.g. running
+# `dart` directly against this package, or an editor that hasn't run `flutter
+# pub get` yet). Six agents are about to add keys concurrently; being able to
+# `grep -r someKey lib/l10n/generated` and get a hit is worth the one extra
+# line below pointing at a real directory instead.
+#
+# The generated directory IS committed (not gitignored). Rationale: with
+# `generate: true`, `flutter pub get` regenerates it automatically, so a
+# clean checkout is never stale in practice — but committing it means
+# `flutter test`/`analyze` also work correctly for anyone (or any CI step)
+# that runs them without a `pub get` in between, and PR review shows the
+# actual generated diff instead of hiding it. The cost is ARB-edit PRs
+# carrying a regenerated-code diff alongside; that's judged cheaper than a
+# six-agent pass hitting "AppLocalizations isn't generated yet" at different
+# times. Whoever edits an ARB file must re-run `flutter gen-l10n` (or `flutter
+# pub get`) and commit the resulting `lib/l10n/generated/*` changes in the
+# same PR.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+output-dir: lib/l10n/generated
+# synthetic-package is intentionally omitted: pointing `output-dir` at a real
+# path (above) already opts out of the synthetic-package default, and a
+# recent Flutter SDK flags the key itself as a no-op if present.
+#
+# `AppLocalizations.of(context)` returns `AppLocalizations` (not
+# `AppLocalizations?`) — every call site is inside `build()` under a
+# `MaterialApp`/`WidgetsApp` this project itself constructs (app.dart, or a
+# test harness that includes the delegate — see `lib/l10n/README.md`), so
+# the lookup can never actually miss; a non-nullable return means call sites
+# read `AppLocalizations.of(context).someKey` instead of every single one
+# needing a `!`.
+nullable-getter: false

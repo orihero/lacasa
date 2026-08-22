@@ -1,0 +1,48 @@
+// The user directory. Almost everything on this screen is already dressed by
+// the primitives (Panel, Table, Tag, LoadMore) and the theme; what is left is
+// the two toolbar control widths and the three quiet spans inside table cells.
+@import "../../responsive.scss";
+
+// Wide enough for a full name plus an email — the two things `q` matches
+// server-side — without pushing the realtor-status select off the toolbar row.
+.users-toolbar__search {
+  width: 250px;
+  flex: none;
+}
+
+// Sized to its longest option, "Any realtor status", so the control does not
+// resize as the filter changes.
+.users-toolbar__status {
+  width: 172px;
+  flex: none;
+}
+
+// The truncated UUID. Quieter than the record beside it: it is a handle for
+// cross-referencing a log line, not something to read.
+.users-uuid {
+  color: #8d99ae;
+}
+
+// The em dash in the "Realtor status" cell — quieter still, because it is the
+// absence of a value rather than a value. Never a "None" badge: `realtor` is
+// null for every account that has no realtorKind, which is NOT the same fact
+// as realtorStatus === "none".
+.users-blank {
+  color: #8d99ae;
+}
+
+.users-joined {
+  color: #8d99ae;
+}
+
+// The strip under a table that still has rows in it. Bordered off from the
+// last row and sitting above the LoadMore footer, so a failed "Load more"
+// cannot read as reaching the end of the directory.
+.users-error-strip {
+  padding: 10px 15px;
+  border-top: 1px solid #dedede;
+  background-color: #fcf5f3;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgb(216, 72, 53);
+}

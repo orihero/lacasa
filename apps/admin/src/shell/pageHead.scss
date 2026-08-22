@@ -1,0 +1,45 @@
+// The per-screen toolbar row — apps/web's `.ads-new` header bar.
+//
+// The screen column it opens is `.ads-list-content { display: flex;
+// flex-direction: column; gap: 20px; }`; that 20px rhythm is what the bottom
+// margin here stands in for, since each screen composes its own panels rather
+// than sharing one wrapper.
+@import "../responsive.scss";
+
+.ads-new.page-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+
+  .page-head__filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  // Pushes the note and the actions to the right, which is `space-between`
+  // when there are filters and right-alignment when there are not.
+  .page-head__spacer {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .page-head__note {
+    font-size: 12px;
+    color: #8d99ae;
+    flex: none;
+  }
+
+  // `.ads-tools { display: flex; gap: 10px; }`
+  .page-head__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+  }
+}

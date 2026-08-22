@@ -1,0 +1,148 @@
+// The login screen — apps/web's routes/login/login.scss, which the design
+// contract nominates verbatim for a rebuilt admin login (§8.3):
+//
+//   .login          { height: 100%; display: flex; }
+//   .formContainer  { flex: 3; centred; form is 50% wide, gap 20px }
+//   input           { padding: 20px; border: 1px solid gray; border-radius: 5px; }
+//   button          { padding: 20px; border-radius: 5px; background-color: teal;
+//                     color: white; font-weight: bold; }
+//   button:disabled { background-color: #bed9d8; cursor: not-allowed; }
+//   span            { color: rgba(255, 0, 0, 0.591); }
+//   .imgContainer   { flex: 2; background-color: #fcf5f3; }
+//
+// The one structural change: `.login` becomes a column so the environment
+// strip can run across the top of BOTH panes. It has to be readable before an
+// admin types production credentials, not after.
+@import "../../responsive.scss";
+
+.login.admin-login {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+
+  .admin-login__panes {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+  }
+
+  .formContainer {
+    flex: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 50%;
+      min-width: 280px;
+
+      @include md {
+        width: 100%;
+      }
+    }
+
+    // The auth-screen input treatment, which is deliberately NOT the CRM
+    // filter-bar box the rest of this app uses. It overrides ui/field.scss for
+    // this screen only, so `Field`'s implicit <label> wrapping survives while
+    // the control looks like the console's login.
+    .field__control {
+      padding: 20px;
+      border: 1px solid gray;
+      border-radius: 5px;
+      width: 100%;
+
+      &:focus {
+        border: 1px solid #fece51;
+      }
+    }
+
+    .field__label-text {
+      font-size: 12px;
+      color: #2b2d42;
+    }
+
+    button {
+      padding: 20px;
+      border-radius: 5px;
+      border: none;
+      background-color: teal;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+
+      &:disabled {
+        background-color: #bed9d8;
+        cursor: not-allowed;
+      }
+    }
+
+    // The error line. `role="alert"` is on the element itself (LoginScreen.tsx)
+    // — this is only its colour, which is login.scss's own.
+    span[role="alert"] {
+      color: rgba(255, 0, 0, 0.591);
+      font-size: 14px;
+    }
+  }
+
+  .admin-login__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .admin-login__mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    background-color: #fece51;
+    color: #000000;
+  }
+
+  .admin-login__wordmark {
+    display: flex;
+    flex-direction: column;
+
+    b {
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+
+    small {
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8d99ae;
+    }
+  }
+
+  .admin-login__intro {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #8d99ae;
+  }
+
+  .imgContainer {
+    flex: 2;
+    background-color: #fcf5f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fece51;
+
+    // apps/web hides nothing here at md, but a 40%-wide decorative pane on a
+    // laptop is 40% of the form's width; the console is desktop-first and so
+    // is this.
+    @include md {
+      display: none;
+    }
+  }
+}

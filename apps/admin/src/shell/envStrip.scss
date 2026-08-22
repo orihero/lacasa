@@ -1,0 +1,52 @@
+// The environment strip.
+//
+// apps/web has no equivalent surface, so the treatment is borrowed from the
+// closest thing it does have: `.user-role`, the small capitalised chip laid
+// over the sidebar avatar (`background-color: #fece51; padding: 3px;
+// text-transform: capitalize;`). Same idiom — a badge stating a standing fact
+// — at bar width.
+//
+// The remote variant is apps/web's `.delete-btn` red, rgb(216, 72, 53) on
+// white, which is the only colour in the console that means "this is the
+// destructive one". Tone is derived from the hostname, never configured; see
+// EnvStrip.tsx.
+@import "../responsive.scss";
+
+.env-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background-color: #fece51;
+  color: #000000;
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  // The strip is a bar across the top of whatever holds it (the rail, the
+  // login card, the crash screen), so it must not shrink away when the nav
+  // below it wants room.
+  flex: none;
+
+  .env-strip__sep {
+    opacity: 0.6;
+  }
+
+  // The one string on the strip that has to survive a glance, so it is the
+  // one allowed to run out of room — and it truncates rather than wrapping
+  // the bar onto a second line.
+  .env-strip__target {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 600;
+  }
+}
+
+.env-strip--remote {
+  background-color: rgb(216, 72, 53);
+  color: #ffffff;
+}

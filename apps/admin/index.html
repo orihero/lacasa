@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Desktop-only surface by design: the control room is read at a desk,
+         against a wide records table. Agents on the move get the Flutter app,
+         agents at work get apps/console, buyers get apps/web. -->
+    <!-- No `color-scheme: dark` meta any more. The previous build was a dark
+         surface and told the browser so, so its own chrome (scrollbars, form
+         controls, the flash before first paint) came up dark to match. This
+         rebuild is apps/web's console: white panels on the #f5f6fa canvas, so
+         the browser's light defaults are now the correct ones and forcing dark
+         would put a black scrollbar down the side of a white app. -->
+    <title>La Casa — Control Room</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

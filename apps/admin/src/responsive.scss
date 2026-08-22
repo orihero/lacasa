@@ -1,0 +1,33 @@
+// Breakpoint mixins, ported verbatim from apps/web/src/responsive.scss so a
+// media query written here reads identically to one written there.
+//
+// MAX-DOWN, NOT MIN-UP. Every consumer in apps/web is `@include sm { ... }`
+// meaning "at 738px and below", and mixing in a min-up set would silently
+// invert half the rules a copy-paste brings over.
+//
+// Every component SCSS file in this app opens with `@import
+// "../../responsive.scss";` — even when it uses no mixin — which is the habit
+// apps/web keeps, and which means adding a breakpoint later never involves
+// touching the import block.
+//
+// The control room is a desktop-only surface by design (see index.html), so
+// these are here for the same reason apps/web imports them everywhere: a
+// records table that has to survive a 1366px laptop, not a phone layout.
+
+@mixin sm {
+  @media (max-width: 738px) {
+    @content;
+  }
+}
+
+@mixin md {
+  @media (max-width: 1024px) {
+    @content;
+  }
+}
+
+@mixin lg {
+  @media (max-width: 1366px) {
+    @content;
+  }
+}
