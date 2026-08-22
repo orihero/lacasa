@@ -1,29 +1,36 @@
 /**
  * src/shell/EnvStrip — the permanent environment strip: the first thing in
- * the rail, above the wordmark, on every single screen including /login.
+ * the rail, above the wordmark, on every single screen including /login, the
+ * forbidden screen and the crash screen. Not dismissible, not collapsible,
+ * never scrolls away.
  *
- * It answers one question — WHICH DATABASE DOES THIS TAB WRITE TO? — and it
- * is not dismissible, not collapsible and never scrolls away. The failure it
- * exists to prevent is an admin with a local tab and a production tab open
- * side by side approving an application in the wrong one; by the time that
- * mistake is visible in the data it has already promoted the wrong account.
+ * It answers one question — WHICH DATABASE DOES THIS TAB WRITE TO? — and the
+ * failure it exists to prevent is an admin with a local tab and a production
+ * tab open side by side approving an application in the wrong one. By the time
+ * that mistake is visible in the data it has already promoted the wrong
+ * account.
  *
- * The strip reads `import.meta.env` and nothing else. It does NOT ask the API
- * which environment it is, deliberately: that answer would arrive after first
+ * The strip reads `import.meta.env` and nothing else. It deliberately does NOT
+ * ask the API which environment it is: that answer would arrive after first
  * paint, and a strip that says the wrong thing for 200ms is worse than one
- * that is derived, synchronously, from the same variable the requests
- * themselves are built from (`VITE_API_URL`, see lib/apiClient.ts).
+ * derived synchronously from the same variable the requests themselves are
+ * built from (`VITE_API_URL`, see lib/apiClient.ts).
  *
- * TONE IS DERIVED, NOT CONFIGURED. Anything that isn't localhost renders
- * magenta — the one colour this app reserves for irreversible consequences —
- * because a deployment can be misconfigured but a hostname cannot lie about
- * where the bytes are going. An operator can label the environment
- * (`VITE_ENV_NAME`, `VITE_DB_LABEL`) but cannot label a remote database as
- * safe.
+ * TONE IS DERIVED, NOT CONFIGURED. Anything that is not localhost renders in
+ * apps/web's destructive red, because a deployment can be misconfigured but a
+ * hostname cannot lie about where the bytes are going. An operator can *label*
+ * the environment (`VITE_ENV_NAME`, `VITE_DB_LABEL`) but cannot label a remote
+ * database as safe.
+ *
+ * The local treatment is apps/web's `.user-role` chip verbatim — a small caps
+ * badge in accent yellow with black text, the same idiom the console already
+ * uses to state a standing fact about who you are looking at.
  */
-import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 import { API_BASE_URL } from "@/lib/apiClient";
-import { DatabaseIcon, WarningCircleIcon } from "@/ui/icons";
+import type { Translate } from "@/lib/labels";
+import { CircleAlert, Database } from "@/ui/icons";
+import "./envStrip.scss";
 
 export interface EnvDescription {
   /** "Production", "Staging", "Local" — the loud half. */
@@ -37,30 +44,33 @@ export interface EnvDescription {
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "0.0.0.0"]);
 
 /**
- * Pure so it can be tested against every combination of "operator labelled
- * it" and "we had to derive it" without rendering anything.
+ * Pure, so it can be tested against every combination of "an operator labelled
+ * it" and "we had to derive it" without rendering anything. `t` comes first,
+ * matching every resolver in @/lib/labels.
  *
  * An unparseable base URL is treated as REMOTE, not local: the whole point of
- * the strip is that it fails loud. A relative `/api` base (same-origin
- * deployment) is the one case that legitimately has no host of its own, and
- * it resolves against the page's own origin, which is what the caller passes
- * as `origin`.
+ * the strip is that it fails loud. A relative `/api` base (a same-origin
+ * deployment) is the one case that legitimately has no host of its own, and it
+ * resolves against the page's own origin, which the caller passes as `origin`.
  */
-// Co-located with the only component that calls it (and the comment block
-// that explains its policy) rather than split into its own module purely to
+// Co-located with the only component that calls it, and with the comment block
+// that explains its policy, rather than split into its own module purely to
 // satisfy fast refresh.
 // eslint-disable-next-line react-refresh/only-export-components
-export function describeEnvironment({
-  apiBaseUrl,
-  origin,
-  envName,
-  dbLabel,
-}: {
-  apiBaseUrl: string;
-  origin?: string;
-  envName?: string;
-  dbLabel?: string;
-}): EnvDescription {
+export function describeEnvironment(
+  t: Translate,
+  {
+    apiBaseUrl,
+    origin,
+    envName,
+    dbLabel,
+  }: {
+    apiBaseUrl: string;
+    origin?: string;
+    envName?: string;
+    dbLabel?: string;
+  },
+): EnvDescription {
   let host: string | null = null;
   try {
     host = new URL(apiBaseUrl, origin).hostname;
@@ -69,9 +79,10 @@ export function describeEnvironment({
   }
 
   const isLocal = host !== null && LOCAL_HOSTS.has(host);
+
   return {
-    name: envName?.trim() || (isLocal ? "Local" : "Remote"),
-    // The host, not the full URL: "lacasa-prod.example.com" is what an
+    name: envName?.trim() || t(isLocal ? "environmentLocal" : "environmentRemote"),
+    // The HOST, not the full URL: "lacasa-prod.example.com" is what an
     // operator recognises, and the "/api" suffix every base URL shares is
     // noise in a strip this small.
     target: dbLabel?.trim() || host || apiBaseUrl,
@@ -80,36 +91,36 @@ export function describeEnvironment({
 }
 
 export function EnvStrip() {
-  const env = describeEnvironment({
+  const { t } = useTranslation();
+
+  const env = describeEnvironment(t, {
     apiBaseUrl: API_BASE_URL,
     origin: typeof window === "undefined" ? undefined : window.location.origin,
     envName: import.meta.env.VITE_ENV_NAME,
     dbLabel: import.meta.env.VITE_DB_LABEL,
   });
 
-  const Icon = env.isLocal ? DatabaseIcon : WarningCircleIcon;
+  const Icon = env.isLocal ? Database : CircleAlert;
 
   return (
     <div
-      // role=status rather than a plain div: the strip is a standing
-      // statement about the session, and a screen-reader user gets it
-      // announced with the page rather than having to go hunting for it.
+      // role="status" rather than a plain div: the strip is a standing
+      // statement about the session, so a screen-reader user gets it announced
+      // with the page rather than having to go hunting for it.
+      //
+      // It is also the ONE role="status" on the crash screen — the error
+      // boundary's test selects it with getByRole("status"), which throws on
+      // multiple matches. Nothing in that fallback may claim the role too.
       role="status"
-      aria-label={`Environment: ${env.name}, writing to ${env.target}`}
-      className={clsx(
-        "flex items-center gap-1.5 px-3.5 py-1 text-micro font-bold uppercase tracking-caps-widest",
-        env.isLocal ? "bg-acc text-on-acc" : "bg-danger text-on-acc",
-      )}
+      aria-label={t("environmentAriaLabel", { name: env.name, target: env.target })}
+      className={env.isLocal ? "env-strip" : "env-strip env-strip--remote"}
     >
-      <Icon size={12} weight="fill" className="flex-none" />
-      <span>{env.name}</span>
-      <span aria-hidden="true" className="opacity-60">
+      <Icon size={12} aria-hidden="true" />
+      <span className="env-strip__name">{env.name}</span>
+      <span aria-hidden="true" className="env-strip__sep">
         ·
       </span>
-      {/* Not `font-mono`: at 9px the mono family loses more legibility than
-          the "this is a record" signal is worth, and this string is the one
-          thing on the strip that must survive a glance. */}
-      <span className="truncate normal-case tracking-normal">{env.target}</span>
+      <span className="env-strip__target">{env.target}</span>
     </div>
   );
 }

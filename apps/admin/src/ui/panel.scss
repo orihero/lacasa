@@ -1,0 +1,57 @@
+// Panel / PanelHead.
+//
+// The split this app keeps everywhere in src/ui: an MUI component's own
+// colours and geometry are overridden through `sx` (MUI injects its styles at
+// runtime, so a plain class of ours is a coin toss against them), and the
+// elements WE render — wrappers, headings, our own spans — are styled here, in
+// hand-written SCSS, the way apps/web does it. Colours are literal hex retyped
+// at each use site, per web-design-contract.md §15.1: there is no token layer.
+@import "../responsive.scss";
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  // The list-row hairline, `.ads-item { border: 0.5px solid #dedede }`, used
+  // here as the rule under a panel's heading.
+  border-bottom: 1px solid #dedede;
+
+  .panel-head__heading {
+    // So a long title truncates inside the row instead of pushing the tools
+    // slot off the right edge.
+    min-width: 0;
+  }
+
+  // apps/web's dashboard section heading, verbatim:
+  // `.chart-header h2 { font-size: 1.5rem; font-weight: 700; }`.
+  .panel-head__title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2b2d42;
+    line-height: 1.2;
+  }
+
+  .panel-head__sub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #8d99ae;
+  }
+
+  .panel-head__tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    // The `.ads-tools` gap from apps/web's list-screen header bar.
+    gap: 10px;
+    flex: none;
+  }
+
+  @include sm {
+    flex-wrap: wrap;
+
+    .panel-head__tools {
+      margin-left: 0;
+    }
+  }
+}

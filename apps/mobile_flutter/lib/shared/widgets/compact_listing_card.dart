@@ -68,38 +68,69 @@ class CompactListingCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // `.vcard__ph .fav{top:8px;right:8px}` /
+                  // `.vcard__ph .ppill{left:8px;bottom:8px}`.
+                  //
+                  // The heart is positioned by its 48dp hit box, so the
+                  // inset that keeps the painted 28px chip on the mockup's
+                  // 8px is -2 (see [FavouriteButton.cornerInset]). The
+                  // earlier hand-picked 4 was a compromise that satisfied
+                  // neither number: it painted the glyph 14px in — 6px off
+                  // `.vcard__ph .fav{top:8px;right:8px}` on the tightest
+                  // cell in the app — to save 2px of hit box that is not
+                  // reachable anyway, since nothing dispatches a tap past
+                  // the photo's own rect.
                   Positioned(
-                    right: 6,
-                    top: 6,
+                    right: FavouriteButton.cornerInset(8, size: 28),
+                    top: FavouriteButton.cornerInset(8, size: 28),
                     child: FavouriteButton(adId: ad.id, size: 28),
                   ),
-                  Positioned(left: 6, bottom: 6, child: PricePill(ad: ad)),
+                  Positioned(
+                    left: 8,
+                    bottom: 8,
+                    // The grid override of the pill — see [PricePill.compact].
+                    child: PricePill(ad: ad, compact: true),
+                  ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.xs),
+          // `.vcard__b{padding:8px 2px 0}`.
+          const SizedBox(height: AppSpacing.md),
           Text(
             ad.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: type.rowTitle.copyWith(color: colors.ink, fontSize: 11.5),
+            // `.vcard__t{font-size:11.5px;font-weight:600;
+            // letter-spacing:-.1px}` + `.clamp2{line-height:1.35}`.
+            style: type.rowTitle.copyWith(
+              color: colors.ink,
+              fontSize: 11.5,
+              letterSpacing: -0.1,
+              height: 1.35,
+            ),
           ),
-          const SizedBox(height: 3),
+          // `.vcard__b .spec{margin-top:4px}`.
+          const SizedBox(height: AppSpacing.xs),
           Text(
             _specLine(ad, context),
             style: type.specMeta.copyWith(color: colors.muted),
           ),
-          const SizedBox(height: 3),
+          // `.where{margin-top:2px}`, weight 400 in `--faint` — see
+          // `FullListingCard`, which carries the same rule.
+          const SizedBox(height: 2),
           Row(
             children: [
-              Icon(Icons.location_on_rounded, size: 11, color: colors.muted),
+              Icon(Icons.location_on_rounded, size: 11, color: colors.faint),
               const SizedBox(width: 3),
               Expanded(
                 child: Text(
                   ad.district,
                   overflow: TextOverflow.ellipsis,
-                  style: type.specMeta.copyWith(color: colors.muted),
+                  style: type.specMeta.copyWith(
+                    fontWeight: FontWeight.w400,
+                    color: colors.faint,
+                  ),
                 ),
               ),
             ],

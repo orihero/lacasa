@@ -13,31 +13,37 @@
  * and error ones, where the wrong conclusion is easiest to reach.
  *
  * NOT ui/States' `Notice`, deliberately, even though the shape matches.
- * Notice is amber or magenta, and on this surface amber means WAITING ON YOU
- * (see lib/labels.ts's tone rules): a permanently amber banner that never
- * resolves would spend the one signal colour on something no admin can ever
- * act on, and after a week of seeing it here they would stop reading amber
- * on the applications queue too. This is a neutral, sunk-surface note — the
- * same visual weight as a table header, which is what a permanent caveat
- * should be.
+ * Notice is the accent-yellow (or danger-red) banner, and on this surface
+ * yellow means WAITING ON YOU (see lib/labels.ts's tone rules): a permanently
+ * yellow banner that never resolves would spend the one signal colour on
+ * something no admin can ever act on, and after a week of seeing it here they
+ * would stop reading yellow on the applications queue too. This is a neutral
+ * note on apps/web's app canvas (`#f5f6fa`) inside the white panel column,
+ * with the same hairline (`#dedede`) the list rows take — the visual weight
+ * of a table header, which is what a permanent caveat should be.
+ *
+ * The paragraph is split across three keys rather than a <Trans>: apps/web
+ * uses no <Trans> anywhere, and the bolded fragment in the middle of the
+ * sentence has to survive translation intact.
  */
-import { InfoIcon } from "@/ui/icons";
+import { useTranslation } from "react-i18next";
+import { Info } from "@/ui/icons";
+import "./audit.scss";
 
 export function AuditScopeNote() {
+  const { t } = useTranslation();
+
   return (
-    <div className="mb-3.5 flex items-start gap-2.5 rounded-panel border border-line bg-sunk px-3 py-2.5">
-      <InfoIcon size={15} className="mt-px flex-none text-muted" />
-      <div className="min-w-0">
-        <b className="block text-small font-bold text-ink-2">
-          Agent and coworker activity only — not a complete audit trail
-        </b>
-        <p className="mt-1 text-record leading-relaxed text-muted">
-          These are business events an agent or one of their coworkers caused: ads created,
-          marked sold or drafted, leads created and moved, and OLX / Instagram crosspost
-          sessions. Sign-ins, admin decisions taken in this control room, and background jobs
-          are <b className="font-semibold text-ink-2">not recorded anywhere</b> and will never
-          appear below. Events carry no severity either: the colour on each row is this app
-          reading the event type&apos;s outcome, not a level the server stored.
+    <div className="audit-scope">
+      <span className="audit-scope__icon">
+        <Info size={15} aria-hidden="true" />
+      </span>
+      <div className="audit-scope__text">
+        <b className="audit-scope__title">{t("auditScopeTitle")}</b>
+        <p className="audit-scope__body">
+          {t("auditScopeBodyStart")}
+          <b className="audit-scope__emphasis">{t("auditScopeBodyEmphasis")}</b>
+          {t("auditScopeBodyEnd")}
         </p>
       </div>
     </div>

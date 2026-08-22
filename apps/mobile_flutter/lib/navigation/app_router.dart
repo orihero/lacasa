@@ -1,8 +1,8 @@
-/// The single [GoRouter] for the whole app: one
-/// `StatefulShellRoute.indexedStack` for the 5-branch tab experience, plus
-/// a handful of top-level routes declared with `parentNavigatorKey:
-/// rootNavigatorKey` so they paint on the *root* [Navigator], above the
-/// shell's [Scaffold] — including its bottom tab bar. That placement in the
+/// The single [GoRouter] for the whole app: **two**
+/// `StatefulShellRoute.indexedStack`s — a buyer shell and an agent shell —
+/// plus a handful of top-level routes declared with `parentNavigatorKey:
+/// rootNavigatorKey` so they paint on the *root* [Navigator], above whichever
+/// shell is mounted, including its bottom tab bar. That placement in the
 /// route tree, not a per-route "hide tab bar" flag, is the whole
 /// tab-bar-hiding mechanism (build spec, "Tab bar hiding mechanism").
 ///
@@ -11,20 +11,55 @@
 /// made from within a branch screen, per the build spec. Nothing in this
 /// file wires them; there is nothing to wire.
 ///
-/// **Why the Work branch is declared unconditionally** (build spec, "Why
-/// the Work branch always exists"): [StatefulShellRoute]'s branch list is
-/// fixed at construction time. Conditionally adding/removing branches would
-/// mean rebuilding this whole [GoRouter], destroying every other branch's
-/// [Navigator] and the "own back stack, own scroll position" guarantee.
-/// So branch 2 (`/work`) always exists; role-gating happens two other ways
-/// instead:
-/// 1. Visually — [GlassTabBar] just omits the Work item from the row it
-///    draws when role isn't agent/coworker (see `shell/glass_tab_bar.dart`).
-/// 2. As a guard — [_redirect] below bounces `/work*` to `/home` when the
-///    session isn't agent/coworker, and [_AuthRouterRefresh] re-runs that
-///    redirect the instant the signed-in *identity* changes — not just
-///    role, so one agent account being swapped for another counts too —
-///    without an app restart.
+/// ## Two shells, not one shell with a conditional tab
+///
+/// The **buyer shell** owns `/home`, `/search`, `/agents`, `/profile` — four
+/// tabs. The **agent shell** owns everything under `/work` — five tabs
+/// (`dashboard`, `my-listings`, `leads`, `coworkers`, `profile`), i.e. the
+/// whole CRM (SCREENS.md §21–§38) promoted out of the single crowded "Work"
+/// tab it used to hide behind. The two are never mounted at the same time:
+/// an agent is not "the buyer app plus a tab", their screen set, their tab
+/// bar and their entire back-stack space are different.
+///
+/// This replaces the previous design, in which one 5-branch shell declared
+/// `/work` unconditionally and role-gating happened by (1) omitting the Work
+/// item from the drawn tab row and (2) a redirect guard. That design existed
+/// because [StatefulShellRoute]'s branch list is fixed at construction and
+/// mutating it would have meant rebuilding this [GoRouter], destroying every
+/// branch's [Navigator] and the "own back stack, own scroll position"
+/// guarantee. Declaring two sibling shell *routes* sidesteps that constraint
+/// entirely: each keeps its own fixed branch list, and go_router mounts
+/// whichever one the current location belongs to. The cost is that crossing
+/// between them discards the other side's remembered stacks — which is the
+/// wanted behaviour here (see [_redirect]'s M5 note) rather than a
+/// regression.
+///
+/// ## Who ends up in which shell
+///
+/// [_redirect] decides, from two inputs:
+///
+/// - **role** — only `agent`/`coworker` may be in the agent shell at all;
+///   any other session (buyer, signed-out, a forward-compat role this build
+///   doesn't recognize) is bounced out of `/work*` to `/home`, exactly as
+///   before.
+/// - **workspace mode** — an agent's own Browse/Work switch
+///   (`workspace_mode.dart`), because realtors still need the buyer surfaces
+///   to search comparables and read competitors' listings. In
+///   [WorkspaceMode.work] a buyer-shell location redirects to `/work`; in
+///   [WorkspaceMode.browse] a `/work*` location redirects to `/home`. The
+///   switch itself only sets the mode — [_AuthRouterRefresh] listens to that
+///   provider, so flipping it re-runs this redirect and the shell swap
+///   follows on its own, with no restart.
+///
+/// `/work` itself is redirect-only and is deliberately **not** a declared
+/// route in either shell: every arrival is redirected before matching
+/// (coworker → `my-listings`, agent → `dashboard`). That is what lets the
+/// back-arrow fallbacks scattered across the Work screens
+/// (`context.go(RoutePaths.work)`) stay correct without knowing the role —
+/// and it is why the self-correcting `_WorkPlaceholder` widget that used to
+/// live here is gone: there is no blank parent page left to strand anyone
+/// on (M7). Every agent-shell route now nests under a branch root that
+/// renders a real screen.
 library;
 
 import 'package:flutter/material.dart';
@@ -45,129 +80,78 @@ import '../features/my_listings/my_listings.dart';
 import '../features/onboarding/onboarding.dart';
 import '../features/permissions/permissions.dart';
 import '../features/photo_gallery/photo_gallery.dart';
+import '../features/profile/profile.dart';
 import '../features/saved_listings/saved_listings.dart';
 import '../features/search/search.dart';
 import '../features/settings/settings.dart';
 import '../features/work_dashboard/work_dashboard.dart';
 import '../features/work_misc/work_misc.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'auth_session.dart';
 import 'placeholder_screen.dart';
 import 'profile_role_screen.dart';
 import 'route_paths.dart';
+import 'shell/glass_tab_bar.dart';
 import 'shell/tab_shell_scaffold.dart';
+import 'workspace_mode.dart';
 
 /// The root [Navigator]'s key. Top-level routes below are pushed on this
 /// navigator explicitly via `parentNavigatorKey: rootNavigatorKey`, which
-/// is what lifts them above the shell's own [Scaffold]/tab bar.
+/// is what lifts them above the mounted shell's own [Scaffold]/tab bar.
 final rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-/// Builds a placeholder [GoRoute] body. Later agents replace individual
-/// routes' `builder:` with the real screen — this helper (and the routes
-/// still pointing at it) should shrink over time.
+/// Builds a placeholder [GoRoute] body. Only the two untyped-`extra:` guards
+/// at the bottom of the route tree still reach for it — every branch route
+/// points at a real screen.
 Widget _placeholder(String name) => PlaceholderScreen(name: name);
 
-/// The `/work` route's own builder (M7). `edit-listing/:id` and
-/// `publish-status/:id` are declared as direct children of `/work` (see the
-/// route tree below), so this placeholder is *always* built as their
-/// Navigator stack's parent page whenever either is open — go_router's
-/// `Navigator` gets the *entire* matched page stack (`[_WorkPlaceholder,
-/// PublishStatusPage]`, say), not just the top one, so this widget's
-/// `initState` genuinely fires on every such nested navigation, not only
-/// through the pop-bypass path below. It just isn't the *visible*
-/// (`ModalRoute.isCurrent`) page in that case — see [build]'s guard, which
-/// is why this can't unconditionally self-correct in `initState`.
-///
-/// The scenario this widget exists for: a hardware/OS Back gesture from
-/// either child pops straight to this placeholder, becoming the *current*
-/// route — go_router only runs `redirect` on its own navigation events
-/// (`go`/`push`/`restore`/…), **not** when a nested branch [Navigator] pops
-/// imperatively, which is exactly what that gesture does
-/// (`GoRouterDelegate.popRoute` calls `NavigatorState.maybePop()` directly,
-/// bypassing `GoRouter.pop()`'s own `restore()` call that would otherwise
-/// re-run `redirect`). Without this widget, that pop would strand the user
-/// on a permanently blank screen — with nothing else left on that branch's
-/// stack to pop to, a *second* Back would exit the app outright.
-///
-/// The fix: make the placeholder self-correcting, but only when it is
-/// actually the one on screen (`ModalRoute.isCurrent` — see [build]). It
-/// then `go`es to `/work` itself, landing squarely back in [_redirect]'s
-/// existing `loc == RoutePaths.work` branch, which picks the correct
-/// role-based Work screen exactly as it would for a fresh `/work`
-/// navigation. Deferred to a post-frame callback because navigating away
-/// from a route is unsafe to do mid-build/`initState`. See the call site
-/// below for why [GoRouter.refresh] — the first thing tried here — does
-/// not actually work for this.
-class _WorkPlaceholder extends StatefulWidget {
-  const _WorkPlaceholder();
+/// The buyer shell's four branch roots. A location under one of these is
+/// what an agent in [WorkspaceMode.work] gets redirected *out of*; anything
+/// else — a root-navigator modal (`/login`, `/create-listing`), a no-chrome
+/// full-screen page (`/photo-gallery`, `/map-view`, `/tour-3d-view`) — is
+/// left alone, because those belong to no shell at all and are opened
+/// deliberately from wherever the user already is. An agent in work mode
+/// must still be able to open the photo gallery from a listing.
+const List<String> _buyerShellRoots = [
+  RoutePaths.home,
+  RoutePaths.search,
+  RoutePaths.agents,
+  RoutePaths.profile,
+];
 
-  @override
-  State<_WorkPlaceholder> createState() => _WorkPlaceholderState();
-}
-
-class _WorkPlaceholderState extends State<_WorkPlaceholder> {
-  /// Guards against re-firing `go()` on every subsequent rebuild while
-  /// this placeholder stays current (e.g. a theme/locale change) — only
-  /// the transition *into* being current should trigger the correction.
-  bool _lastIsCurrent = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // `initState` alone is not enough: this widget is *always* built as
-    // the Navigator-stack parent of an open `edit-listing/:id` or
-    // `publish-status/:id` (see the class doc comment), so its first
-    // build/`initState` typically happens while it is *not* the visible
-    // route — self-correcting then would wrongly bounce a perfectly live
-    // nested navigation back to `/work`'s role-based default. And because
-    // `initState` runs exactly once per `State`, it can't be the hook for
-    // the pop-bypass scenario either: popping the child reuses this same
-    // `State` object rather than remounting it, so `initState` never runs
-    // again at the moment this placeholder actually *becomes* current.
-    // `didChangeDependencies`, in contrast, re-fires whenever
-    // `ModalRoute.of(context)` — an `InheritedWidget` dependency — changes,
-    // which includes exactly this route's `isCurrent` flipping to `true`
-    // after the child above it is popped.
-    final isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
-    final becameCurrent = isCurrent && !_lastIsCurrent;
-    _lastIsCurrent = isCurrent;
-    if (!becameCurrent) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      // `GoRouter.refresh()` was tried first and does *not* work here: it
-      // re-notifies `routeInformationProvider` but re-parses whatever URI
-      // that provider still holds — and a raw `NavigatorState.maybePop()`
-      // (what a hardware Back does) only updates
-      // `GoRouterDelegate.currentConfiguration` (the Navigator-facing
-      // state), never `GoRouteInformationProvider`'s own `_value`, which
-      // stays stuck on the pre-pop `/work/publish-status/ad-1001`. `refresh`
-      // re-running `redirect` against that stale value never reaches the
-      // `loc == RoutePaths.work` branch, so nothing changes and the app is
-      // left showing this same blank placeholder — confirmed by instrumenting
-      // both: `currentConfiguration.uri` reads `/work` immediately after the
-      // pop while `_redirect`'s own `loc` on the `refresh()`-triggered pass
-      // still read `/work/publish-status/ad-1001`.
-      // `go(RoutePaths.work)` doesn't have that problem: it targets
-      // `routeInformationProvider` directly and unconditionally overwrites
-      // its `_value` to `/work` before deciding whether to notify — since
-      // that stale value differs from `/work`, it always notifies, and
-      // *that* re-parse's `loc` genuinely is `/work`, landing in
-      // `_redirect`'s `loc == RoutePaths.work` branch as intended.
-      GoRouter.of(context).go(RoutePaths.work);
-    });
+bool _isBuyerShellLocation(String loc) {
+  for (final root in _buyerShellRoots) {
+    if (loc == root || loc.startsWith('$root/')) return true;
   }
-
-  @override
-  Widget build(BuildContext context) => _placeholder('Work');
+  return false;
 }
 
-/// The onboarding gate (SCREENS.md §3.1: "App first launch") + `/work*`
-/// guard + `/work` initial-screen-by-role redirect (build spec, "Work's
-/// initial screen by role" and "Why the Work branch always exists",
-/// point 2) + the M5 stale-session guard (see [refresh]'s
-/// `consumeWorkBranchReset` doc comment).
+/// The agent shell's five branch roots, in branch order. Used to answer
+/// "which branch does this location belong to?" for the per-branch M5 reset
+/// — see [_AuthRouterRefresh.consumeStaleBranch].
+const List<String> _agentBranchRoots = [
+  RoutePaths.workDashboard,
+  RoutePaths.workMyListings,
+  RoutePaths.workLeads,
+  RoutePaths.workCoworkers,
+  RoutePaths.workProfile,
+];
+
+String? _agentBranchRootFor(String loc) {
+  for (final root in _agentBranchRoots) {
+    if (loc == root || loc.startsWith('$root/')) return root;
+  }
+  return null;
+}
+
+/// The onboarding gate (SCREENS.md §3.1: "App first launch") + the role/mode
+/// rules that decide which shell a session lives in (see this library's doc
+/// comment) + the M5 stale-session guard (see [_AuthRouterRefresh]'s
+/// [consumeWorkBranchReset] doc comment).
 String? _redirect(
   GoRouterState state,
   AuthSessionState authState, {
+  required WorkspaceMode mode,
   required bool hasSeenOnboarding,
   required _AuthRouterRefresh refresh,
 }) {
@@ -183,65 +167,80 @@ String? _redirect(
   // And once it's done, `/onboarding` is not somewhere to go back to.
   if (loc == RoutePaths.onboarding) return RoutePaths.home;
 
-  final onWorkBranch =
+  final onAgentShell =
       loc == RoutePaths.work || loc.startsWith('${RoutePaths.work}/');
-  if (!onWorkBranch) return null;
-
-  // Consumed unconditionally, the instant any /work* location is
-  // (re-)evaluated — whether that settles the pending reset below (the
-  // `!canAccessWork` and bare-`/work` branches both already recompute the
-  // right destination from the *current* `authState` on every call, so
-  // consuming here is enough for them) or has to force it (the final
-  // `pendingIdentityReset` check). See `consumeWorkBranchReset`'s doc
-  // comment for why it must be read exactly once, right here, rather than
-  // only in that final branch.
-  final pendingIdentityReset = refresh.consumeWorkBranchReset();
 
   if (!authState.canAccessWork) {
     // Signed-out or buyer session landing on any /work* location (e.g. a
-    // stale deep link) is bounced straight to Home — never shown a Work
-    // screen it isn't allowed to see, even transiently.
-    return RoutePaths.home;
+    // stale deep link) is bounced straight to Home — never shown an agent
+    // screen it isn't allowed to see, even transiently. Everywhere else is
+    // this session's own shell, so there is nothing to do.
+    return onAgentShell ? RoutePaths.home : null;
+  }
+
+  // Agent/coworker from here down; the mode switch picks the shell.
+  if (mode == WorkspaceMode.browse) {
+    return onAgentShell ? RoutePaths.home : null;
+  }
+
+  if (!onAgentShell) {
+    // Work mode, but the location belongs to the buyer shell. Two ordinary
+    // cases land here: a cold start (`initialLocation` is `/home`, and the
+    // role only arrives once `AuthSessionNotifier`'s startup restore
+    // resolves — this redirect re-runs then, via `_AuthRouterRefresh`), and
+    // a fresh sign-in from `/login`. Anything belonging to no shell is left
+    // alone; see [_buyerShellRoots].
+    return _isBuyerShellLocation(loc) ? RoutePaths.work : null;
   }
 
   if (loc == RoutePaths.work) {
     // `/work` itself is redirect-only: coworkers skip straight to
-    // my-listings (skipping dashboard), agents land on dashboard.
+    // my-listings (skipping the dashboard, matching the web's
+    // Statistics-hidden-for-coworkers rule), agents land on the dashboard.
     return authState.isCoworker
         ? RoutePaths.workMyListings
         : RoutePaths.workDashboard;
   }
 
-  // M5: a sign-in/sign-out that changed *who* is signed in, since this
-  // deep `/work/...` location was last validated, must not let whatever
-  // the previous session had pushed here (a coworker's detail page, an
-  // edit-listing form, ...) carry over into the new one — even when both
-  // sessions share a role that would otherwise sail through the checks
-  // above unchanged (the exact case that slipped past before: two agent
-  // accounts). Bouncing to the bare `/work` re-enters the two branches
-  // above on the *next* pass of go_router's redirect loop, landing the new
-  // session on its own correct initial screen — and because that
-  // recomputes the match list from `/work` outward instead of keeping
-  // today's nested matches, it also collapses the branch Navigator's stack
-  // back to that one fresh entry, discarding whatever the old session had
-  // pushed on top of it.
-  if (pendingIdentityReset) {
-    return RoutePaths.work;
+  // M5: a sign-in/sign-out that changed *who* is signed in must not let
+  // whatever the previous session had pushed into a branch (a coworker's
+  // detail page, an edit-listing form, …) carry over into the new one —
+  // even when both sessions share a role that would otherwise sail through
+  // the checks above unchanged (the exact case that slipped past before:
+  // two agent accounts).
+  //
+  // The two-shell split covers half of this structurally: an identity
+  // change that costs the session its agent role (a sign-out, or a swap to
+  // a buyer) unmounts the entire agent shell, so no remembered stack
+  // survives to leak. What is left is an agent→agent swap, where the shell
+  // stays mounted with all five branches' stacks intact — and *that* is why
+  // the reset is tracked per branch root rather than as one flag. One flag
+  // could only ever fix the branch that happened to be on screen when the
+  // swap landed; the other four would keep their stale stacks until the new
+  // agent tapped into them. Each root is consumed the first time its own
+  // branch is (re-)entered, and bouncing to the root collapses that
+  // branch's Navigator stack back to a single fresh entry.
+  final branchRoot = _agentBranchRootFor(loc);
+  if (branchRoot != null && refresh.consumeStaleBranch(branchRoot)) {
+    // Already sitting on the root: nothing was pushed on top of it, so
+    // there is nothing to collapse — and returning the current location
+    // from a redirect is what go_router reports as a redirect loop.
+    return loc == branchRoot ? null : branchRoot;
   }
 
   return null;
 }
 
-/// Bridges [authSessionProvider] to [GoRouter]'s `refreshListenable`, so
-/// [_redirect] is re-evaluated the instant the signed-in *identity*
-/// changes — with no restart and, importantly, without rebuilding
-/// [GoRouter] itself (which would destroy every branch's [Navigator] and
-/// its back stack). The tab bar's own visible-item-set reactivity goes
-/// through [WidgetRef.watch] directly in `GlassTabBar`, not through this
-/// class — this class exists purely to drive [_redirect] re-evaluation,
-/// plus (see [_workBranchNeedsReset]) to flag the one thing re-evaluating
-/// `_redirect` on its own can't fix: a *deep* `/work/...` location that was
-/// pushed by a now-gone session.
+/// Bridges [authSessionProvider] and [workspaceModeProvider] to [GoRouter]'s
+/// `refreshListenable`, so [_redirect] is re-evaluated the instant the
+/// signed-in *identity* or the Browse/Work choice changes — with no restart
+/// and, importantly, without rebuilding [GoRouter] itself (which would
+/// destroy the mounted shell's [Navigator]s and their back stacks).
+///
+/// Listening to the mode here is what lets the switch be a one-liner at its
+/// call site: `setMode(...)` alone moves the session into the other shell,
+/// with no navigation call of its own racing this redirect to the same
+/// destination.
 class _AuthRouterRefresh extends ChangeNotifier {
   _AuthRouterRefresh(Ref ref) {
     _subscription = ref.listen<AuthSessionState>(authSessionProvider, (
@@ -255,13 +254,13 @@ class _AuthRouterRefresh extends ChangeNotifier {
       // "who", so it has to be part of this comparison; `role` stays in
       // the OR because a role change with the same id (rare, but
       // theoretically a server-side promotion mid-session) is exactly the
-      // same category of "the Work branch's current content might no
+      // same category of "the agent shell's current content might no
       // longer be valid" as an id change.
       final identityChanged =
           previous?.user?.id != next.user?.id || previous?.role != next.role;
       if (identityChanged) {
         // Only flag a reset when the *outgoing* session could actually
-        // have populated the Work branch (was signed in as agent/coworker)
+        // have populated the agent shell (was signed in as agent/coworker)
         // — only that session could have left anything behind worth
         // invalidating. Gating on this matters: without it, a brand-new
         // session's very first navigation — e.g. a deep link straight into
@@ -270,13 +269,23 @@ class _AuthRouterRefresh extends ChangeNotifier {
         // `_redirect` would incorrectly bounce that legitimate, live
         // navigation to the bare-`/work` default instead of honouring it.
         if (previous?.canAccessWork ?? false) {
-          // See this field's own doc comment for why setting it here isn't
-          // enough by itself — `_redirect` has to consume it too.
-          _workBranchNeedsReset = true;
+          // Every branch at once: the outgoing session could have left a
+          // pushed page in any of them. See [_staleAgentBranches].
+          _staleAgentBranches.addAll(_agentBranchRoots);
         }
         notifyListeners();
       }
     });
+
+    // The Browse/Work switch. Re-running `_redirect` on a mode change is
+    // the entire mechanism by which the switch moves the session between
+    // shells — see this class's doc comment.
+    _workspaceModeSubscription = ref.listen<WorkspaceMode>(
+      workspaceModeProvider,
+      (previous, next) {
+        if (previous != next) notifyListeners();
+      },
+    );
 
     // The onboarding flag flips exactly once per install, when the carousel
     // is finished or skipped. Re-running [_redirect] on that flip is what
@@ -291,44 +300,41 @@ class _AuthRouterRefresh extends ChangeNotifier {
   }
 
   late final ProviderSubscription<AuthSessionState> _subscription;
+  late final ProviderSubscription<WorkspaceMode> _workspaceModeSubscription;
   late final ProviderSubscription<bool> _onboardingSubscription;
 
-  /// Set the instant [identityChanged] above fires, cleared the next time
-  /// [_redirect] consults it via [consumeWorkBranchReset] — a one-shot
-  /// flag, not a running "is the session stale" bit.
+  /// Agent-shell branch roots whose remembered stack still belongs to a
+  /// previous identity. Filled with all five the instant `identityChanged`
+  /// above fires for a session that could reach them, and drained one root
+  /// at a time as each branch is next entered.
   ///
-  /// Why this can't just be "notify, and let `_redirect` re-run": firing
-  /// [notifyListeners] makes go_router re-evaluate `_redirect` against
-  /// whatever location is *current right now* (see `GoRouter.refresh`) —
-  /// which is exactly what fixes an agent who is signed out/in while
-  /// sitting on `/work/leads`. But M5's repro leaves the Work branch on
-  /// `coworkers-list`/`coworker-detail` and then signs out **from
-  /// somewhere else** (e.g. Profile's Settings) — at the moment identity
-  /// changes, the *current* location isn't under `/work*` at all, so that
-  /// immediate re-evaluation has nothing to bounce. The Work branch's own
-  /// remembered stack sits untouched in memory until the user taps the
-  /// Work tab again — and *that* re-entry (a go_router `restore`, not a
-  /// fresh `redirect`-bearing navigation) is the moment this flag has to
-  /// still be around to catch.
-  bool _workBranchNeedsReset = false;
+  /// Why a set of roots and not one flag: firing [notifyListeners] makes
+  /// go_router re-evaluate `_redirect` against whatever location is
+  /// *current right now* (see `GoRouter.refresh`), which resets exactly one
+  /// branch — the one on screen when the swap landed. The other four keep
+  /// their stacks in memory until the new agent taps into them, and that
+  /// re-entry is a go_router `restore`, not a fresh `redirect`-bearing
+  /// navigation, so it is only this bookkeeping that can catch it. One
+  /// `bool` consumed on the first `/work*` evaluation — the previous
+  /// single-branch design — would have been spent on the on-screen branch
+  /// and left the rest stale.
+  ///
+  /// Draining rather than "compare identity on every pass" is what keeps a
+  /// legitimate deep navigation by the *new* session from being bounced: a
+  /// root is only ever reset once per identity change, on first entry.
+  final Set<String> _staleAgentBranches = <String>{};
 
-  /// Called by [_redirect] on every `/work*` evaluation. Returns whether an
-  /// identity change is still pending a Work-branch bounce, and clears the
-  /// flag either way — see [_workBranchNeedsReset]'s doc comment for why a
-  /// single read-and-clear, done unconditionally rather than only when the
-  /// bounce actually fires, is the correct contract: leaving it set after a
-  /// `/work` bare/`!canAccessWork` pass already fully re-resolved things
-  /// would make the *next*, unrelated deep Work navigation this session
-  /// takes get incorrectly bounced too.
-  bool consumeWorkBranchReset() {
-    if (!_workBranchNeedsReset) return false;
-    _workBranchNeedsReset = false;
-    return true;
-  }
+  /// Called by [_redirect] for the branch a `/work*` location belongs to.
+  /// Returns whether that branch is still carrying a previous identity's
+  /// stack, and marks it handled either way — a single read-and-clear, so
+  /// the *next* navigation into the same branch is left alone.
+  bool consumeStaleBranch(String branchRoot) =>
+      _staleAgentBranches.remove(branchRoot);
 
   @override
   void dispose() {
     _subscription.close();
+    _workspaceModeSubscription.close();
     _onboardingSubscription.close();
     super.dispose();
   }
@@ -336,7 +342,7 @@ class _AuthRouterRefresh extends ChangeNotifier {
 
 /// The app's one [GoRouter] instance. Backed by a plain (non-autoDispose)
 /// [Provider], so it is created once, lazily, on first read, and lives for
-/// the app's lifetime — never rebuilt on auth changes (see
+/// the app's lifetime — never rebuilt on auth or mode changes (see
 /// [_AuthRouterRefresh] for how those are handled instead).
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRouterRefresh(ref);
@@ -349,13 +355,17 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) => _redirect(
       state,
       ref.read(authSessionProvider),
+      mode: ref.read(workspaceModeProvider),
       hasSeenOnboarding: ref.read(onboardingSeenProvider),
       refresh: refresh,
     ),
     routes: [
+      // ======== BUYER SHELL — 4 branches ==================================
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            TabShellScaffold(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) => TabShellScaffold(
+          navigationShell: navigationShell,
+          items: buyerTabItems(AppLocalizations.of(context)),
+        ),
         branches: [
           // Branch 0: Home ---------------------------------------------
           StatefulShellBranch(
@@ -420,116 +430,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 2: Work — always declared; gated by `_redirect` above and
-          // by GlassTabBar's item list, never by removing this branch.
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: RoutePaths.work,
-                // Never actually renders under a normal GoRouter-driven
-                // navigation: `_redirect` always sends `/work` itself on to
-                // a concrete sub-route or bounces it to `/home` first. It
-                // *can* still get built via a hardware-Back pop, though —
-                // see `_WorkPlaceholder`'s doc comment (M7) for why that
-                // needs its own self-correcting widget rather than the bare
-                // `_placeholder('Work')` every other placeholder route uses.
-                builder: (context, state) => const _WorkPlaceholder(),
-                routes: [
-                  GoRoute(
-                    path: 'dashboard',
-                    builder: (context, state) => const DashboardScreen(),
-                  ),
-                  GoRoute(
-                    path: 'my-listings',
-                    builder: (context, state) => const MyListingsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'leads',
-                    builder: (context, state) => const LeadsListScreen(),
-                    routes: [
-                      GoRoute(
-                        path: 'kanban',
-                        builder: (context, state) =>
-                            const LeadsKanbanScreen(),
-                      ),
-                      // §33, pushed. `lead-detail`/`kanban-move-sheet`
-                      // (§32/§34) are bottom sheets — deliberately no
-                      // route for either, see `route_paths.dart`'s
-                      // `workCreateLead` note.
-                      GoRoute(
-                        path: 'create',
-                        builder: (context, state) => const CreateLeadScreen(),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: 'coworkers',
-                    builder: (context, state) => const CoworkersListScreen(),
-                    routes: [
-                      // Declared before `:id` so the static `create`
-                      // segment is matched first — same reasoning as
-                      // `agentsListingDetail`'s note in `route_paths.dart`.
-                      GoRoute(
-                        path: 'create',
-                        builder: (context, state) =>
-                            const AddCoworkerScreen(),
-                      ),
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) => CoworkerDetailScreen(
-                          coworkerId: state.pathParameters['id']!,
-                        ),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: 'settings',
-                    builder: (context, state) =>
-                        const SettingsScreen(branchPrefix: RoutePaths.work),
-                  ),
-                  GoRoute(
-                    path: 'connected-accounts',
-                    builder: (context, state) =>
-                        const ConnectedAccountsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'edit-listing/:id',
-                    builder: (context, state) => EditListingScreen(
-                      adId: state.pathParameters['id']!,
-                    ),
-                  ),
-                  GoRoute(
-                    path: 'publish-status/:id',
-                    builder: (context, state) => PublishStatusScreen(
-                      adId: state.pathParameters['id']!,
-                    ),
-                  ),
-                  // Work's own copies of `notifications`/`messages` — see
-                  // `route_paths.dart`'s `workNotifications` note for why
-                  // these are separate from Home's/Profile's.
-                  GoRoute(
-                    path: 'notifications',
-                    builder: (context, state) => const NotificationsScreen(),
-                  ),
-                  GoRoute(
-                    path: 'messages',
-                    builder: (context, state) => const MessagesScreen(),
-                  ),
-                  // `my-listings`' own copy of `listing-detail` — see
-                  // `route_paths.dart`'s `workListingDetail` note.
-                  GoRoute(
-                    path: 'listing/:id',
-                    builder: (context, state) => ListingDetailScreen(
-                      adId: state.pathParameters['id']!,
-                      branchPrefix: RoutePaths.work,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Branch 3: Agents ------------------------------------------------
+          // Branch 2: Agents ----------------------------------------------
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -568,8 +469,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
-          // Branch 4: Profile — one route; ProfileRoleScreen switches its
+          // Branch 3: Profile — one route; ProfileRoleScreen switches its
           // own content on role via ref.watch (see profile_role_screen.dart).
+          // An agent in browse mode gets `profile-agent` here, carrying the
+          // switch back into the agent shell.
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -589,11 +492,6 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) =>
                         const SettingsScreen(branchPrefix: RoutePaths.profile),
                   ),
-                  // Neither screen exists yet — `profile-agent`'s Connected
-                  // Accounts/Messages rows and `settings`'s own Connected
-                  // Accounts row (agent-only) push these so they at least
-                  // resolve instead of 404ing; see `route_paths.dart`'s
-                  // `profileConnectedAccounts`/`profileMessages` notes.
                   GoRoute(
                     path: 'connected-accounts',
                     builder: (context, state) =>
@@ -603,10 +501,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                     path: 'messages',
                     builder: (context, state) => const MessagesScreen(),
                   ),
-                  // Same convention as `/home`, `/search`, `/agents`'
-                  // own copies — see `route_paths.dart`'s
-                  // `agentsListingDetail` note — this branch needs its own
-                  // because `saved-listings`'s grid pushes into it.
+                  // Same convention as `/home`, `/search`, `/agents`' own
+                  // copies — see `route_paths.dart`'s `agentsListingDetail`
+                  // note — this branch needs its own because
+                  // `saved-listings`'s grid pushes into it.
                   GoRoute(
                     path: 'listing/:id',
                     builder: (context, state) => ListingDetailScreen(
@@ -621,8 +519,176 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // ======== AGENT SHELL — 5 branches ==================================
+      // Entered only by an agent/coworker session in WorkspaceMode.work;
+      // `_redirect` is the only way in or out. Every route nests under the
+      // branch root that owns it, so a deep link — or a hardware Back —
+      // resolves to a stack with a real screen underneath the top page.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => TabShellScaffold(
+          navigationShell: navigationShell,
+          items: agentTabItems(AppLocalizations.of(context)),
+        ),
+        branches: [
+          // Branch 0: Dashboard --------------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.workDashboard,
+                builder: (context, state) => const DashboardScreen(),
+                routes: [
+                  // §22 — reached from the bell in this branch's own header,
+                  // which is what it should go back to.
+                  GoRoute(
+                    path: 'notifications',
+                    builder: (context, state) => const NotificationsScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 1: My Ads -----------------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.workMyListings,
+                builder: (context, state) => const MyListingsScreen(),
+                routes: [
+                  // `my-listings`' row *is* the only in-app entry point to
+                  // each of these three, so it is what a Back from them
+                  // should reveal — with the filters and paged scroll
+                  // position of that already-built screen still in place.
+                  GoRoute(
+                    path: 'listing/:id',
+                    builder: (context, state) => ListingDetailScreen(
+                      adId: state.pathParameters['id']!,
+                      branchPrefix: RoutePaths.workMyListings,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'edit-listing/:id',
+                    builder: (context, state) =>
+                        EditListingScreen(adId: state.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: 'publish-status/:id',
+                    builder: (context, state) =>
+                        PublishStatusScreen(adId: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 2: Leads ------------------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.workLeads,
+                builder: (context, state) => const LeadsListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'kanban',
+                    builder: (context, state) => const LeadsKanbanScreen(),
+                  ),
+                  // §33, pushed. `lead-detail`/`kanban-move-sheet`
+                  // (§32/§34) are bottom sheets — deliberately no route for
+                  // either, see `route_paths.dart`'s `workCreateLead` note.
+                  GoRoute(
+                    path: 'create',
+                    builder: (context, state) => const CreateLeadScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 3: Coworkers --------------------------------------------
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.workCoworkers,
+                builder: (context, state) => const CoworkersListScreen(),
+                routes: [
+                  // Declared before `:id` so the static `create` segment is
+                  // matched first — same reasoning as `agentsListingDetail`'s
+                  // note in `route_paths.dart`.
+                  GoRoute(
+                    path: 'create',
+                    builder: (context, state) => const AddCoworkerScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => CoworkerDetailScreen(
+                      coworkerId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 4: Profile ----------------------------------------------
+          // The same `ProfileAgentScreen` the buyer shell shows an agent on
+          // its own Profile tab, handed this shell's prefix so its rows push
+          // into this tree instead of that one — and carrying the switch
+          // *out* to browse mode.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.workProfile,
+                builder: (context, state) => const ProfileAgentScreen(
+                  branchPrefix: RoutePaths.workProfile,
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(
+                      branchPrefix: RoutePaths.workProfile,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    builder: (context, state) => const SettingsScreen(
+                      branchPrefix: RoutePaths.workProfile,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'connected-accounts',
+                    builder: (context, state) =>
+                        const ConnectedAccountsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'messages',
+                    builder: (context, state) => const MessagesScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // `/work` — a builder-less, redirect-only route. It renders nothing
+      // and belongs to no shell; it exists so the path *matches*, which the
+      // top-level `_redirect` alone does not guarantee: a location matching
+      // no route at all resolves to go_router's error match, and
+      // `GoRouterState.matchedLocation` for that is not the `/work` the
+      // `loc == RoutePaths.work` branch above is looking for — so a
+      // refresh-driven redirect that lands here (an agent signing in, say)
+      // would stop on an unmatched `/work` instead of continuing to the
+      // role-based screen. Declaring it makes the hop resolve every time,
+      // and this route-level redirect is the one that finishes the job.
+      GoRoute(
+        path: RoutePaths.work,
+        redirect: (context, state) => ref.read(authSessionProvider).isCoworker
+            ? RoutePaths.workMyListings
+            : RoutePaths.workDashboard,
+      ),
+
       // ---- Top-level routes: pushed on the root Navigator, above the
-      // shell's Scaffold (and therefore above its tab bar). ------------
+      // mounted shell's Scaffold (and therefore above its tab bar). ------
 
       // Modal / fullscreen-dialog pages.
       GoRoute(
@@ -691,11 +757,33 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // or wrong-typed `extra` is not a degraded case worth a placeholder:
       // the screen simply reads the provider, which is what it does on
       // every normal entry anyway.
+      //
+      // **`MapViewArgs` is the branch that makes "where is *this* flat?"
+      // work.** A bare `List<Ad>` cannot distinguish the two callers —
+      // `listing-search`'s map toggle passing its result set, and
+      // `listing-detail`'s Location section passing the one ad the user
+      // asked about — so reading only `List<Ad>` forced both into search
+      // mode. The screen then watched `searchResultsProvider`, and that
+      // watch *starts* the fetch: a buyer tapping one listing's map got
+      // their ad for a beat and then 20 unrelated listings, their own
+      // deselected, under a Filters button for a search they never ran.
+      // The typed payload carries `focusAd` and `branchPrefix` through, so
+      // this builder is a cast rather than a re-decision.
       GoRoute(
         path: RoutePaths.mapView,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
           final extra = state.extra;
+          if (extra is MapViewArgs) {
+            return MapViewScreen(
+              fallbackAds: extra.ads,
+              focusAd: extra.focusAd,
+              branchPrefix: extra.branchPrefix,
+            );
+          }
+          // Still honoured below the typed branch: a deep link or a
+          // restored route stack reaches this route with a bare list or
+          // with nothing at all, and neither is an error.
           return MapViewScreen(
             fallbackAds: extra is List<Ad> ? extra : const [],
           );

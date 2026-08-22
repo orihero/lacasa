@@ -25,6 +25,15 @@
 ///   fetched independently so a coworkers-endpoint failure degrades the
 ///   Author cell alone (see [resolveAdAuthorName]) rather than blanking
 ///   the whole ads list.
+/// - [myListingsStageCountsProvider] — the header strip's
+///   All/Active/Sold/Draft counts, a genuinely separate endpoint (see
+///   `MyListingsRepository.fetchStageCounts` for why it is not a fold of
+///   the loaded page). Independently failable for the same §6 reason: a
+///   counts failure hides the strip, never the ads.
+/// - [myListingsPublishStatusesProvider] — the row-level channel badges,
+///   one batched request for whatever ad ids are on screen right now.
+///   Keyed off [myListingsLoadedAdIdsProvider] so it refires when the list
+///   grows and *only* then.
 ///
 /// There is deliberately no more "displayed vs. fetched" split, and no more
 /// client-side paging window — both were built around the old
@@ -274,6 +283,92 @@ final myListingsCoworkersProvider =
       MyListingsCoworkersNotifier.new,
     );
 
+/// The header strip's All/Active/Sold/Draft counts (UX audit §1 "Relocate"
+/// / §5.6). Backed by `GET /my/ads/stage-counts`, which before this had
+/// **zero call sites in `lib/`** — the one aggregate an agent acts on daily
+/// ("how many of my listings are still unpublished drafts?") existed only
+/// as an 11px subtitle on a dashboard link, three scrolls away from the
+/// listings it describes.
+///
+/// A separate fetch from [myListingsResultsProvider] on purpose — see
+/// `MyListingsRepository.fetchStageCounts`'s doc comment for why folding
+/// the loaded page would print a number that is wrong by construction on a
+/// keyset-paged list.
+///
+/// Deliberately does **not** watch filters/sort/status. The endpoint takes
+/// no query params, and more importantly the strip's job is to be the thing
+/// that tells you a stage filter is currently on — a strip whose own counts
+/// collapsed to the filtered set would leave "3 drafts" reading "3 drafts"
+/// forever with nothing to compare against. It watches the signed-in user
+/// id for the same session-swap reason [MyListingsResultsNotifier.build]
+/// documents.
+class MyListingsStageCountsNotifier extends AsyncNotifier<AdStageCounts> {
+  @override
+  Future<AdStageCounts> build() {
+    ref.watch(authSessionProvider.select((s) => s.user?.id));
+    return ref.read(myListingsRepositoryProvider).fetchStageCounts();
+  }
+}
+
+final myListingsStageCountsProvider =
+    AsyncNotifierProvider<MyListingsStageCountsNotifier, AdStageCounts>(
+      MyListingsStageCountsNotifier.new,
+    );
+
+/// The ad ids currently loaded into [myListingsResultsProvider], as one
+/// comma-joined string, capped at [publishStatusBatchLimit].
+///
+/// **A `String`, not a `List<String>`, so that Riverpod can tell "the same
+/// ads" from "new ads".** A derived `Provider` only notifies its listeners
+/// when its new value `!=` the old one, and `List` has identity equality in
+/// Dart — a `Provider<List<String>>` would report a change on every single
+/// rebuild of the results provider (each `isLoadingMore` flip, each
+/// `loadMoreFailed` flip), and [myListingsPublishStatusesProvider] would
+/// fire a fresh batch request for each of them. A joined `String` has value
+/// equality, so the batch refires exactly when the set of visible ads
+/// actually changes.
+///
+/// The cap is `GET /publish/status`'s documented 200-id ceiling
+/// ([PublishResource.statusForAds]). At [myListingsPageSize] per page an
+/// agent has to scroll 20 pages to reach it; past that the badges stop
+/// updating for the tail rather than the whole request 400ing and every
+/// badge on screen disappearing.
+const int publishStatusBatchLimit = 200;
+
+final myListingsLoadedAdIdsProvider = Provider<String>((ref) {
+  final ads = ref.watch(myListingsResultsProvider).value?.ads;
+  if (ads == null || ads.isEmpty) return '';
+  final capped = ads.length <= publishStatusBatchLimit
+      ? ads
+      : ads.sublist(0, publishStatusBatchLimit);
+  return capped.map((ad) => ad.id).join(',');
+});
+
+/// Row-level publish state for the channel badges (UX audit §9.2), keyed by
+/// ad id. `null` for an ad id absent from the map, and an **empty list**
+/// for an ad the server knows about but has no publish attempt for — see
+/// `MyListingsRepository.fetchPublishStatuses` for that distinction, which
+/// is what lets a badge render "never attempted" honestly.
+///
+/// Why this exists at all: publishing to Instagram/Telegram is an
+/// irreversible public post whose only feedback today is a 2.5s toast, and
+/// finding a FAILED channel afterwards meant opening the row for edit,
+/// scrolling past the whole form, and tapping "Publish Status". The state
+/// belongs on the row.
+///
+/// Independently failable (build contract §6): a batch failure leaves the
+/// rows without badges, never without rows. The badge widget treats "no
+/// entry" as "say nothing", never as "not published" — see
+/// `my_listing_channel_strip.dart`.
+final myListingsPublishStatusesProvider =
+    FutureProvider<Map<String, List<ChannelStatus>>>((ref) async {
+      final joined = ref.watch(myListingsLoadedAdIdsProvider);
+      if (joined.isEmpty) return const <String, List<ChannelStatus>>{};
+      return ref
+          .read(myListingsRepositoryProvider)
+          .fetchPublishStatuses(joined.split(','));
+    });
+
 /// Finding M4's fix. The one seam every ad create/update/delete mutation
 /// must call on success (`create_listing_screen.dart`'s `_submit`,
 /// `edit_listing_screen.dart`'s `_save`/`_delete`) — one function call
@@ -299,6 +394,22 @@ final myListingsCoworkersProvider =
 /// - [adsSeriesProvider] — the "Ads statistics" chart, same underlying
 ///   server data as [adsStatisticsProvider] but a genuinely separate
 ///   fetch/endpoint (that provider's own doc comment).
+/// - [myListingsStageCountsProvider] — the My Ads header strip. Added with
+///   the strip itself: a created ad, a stage changed from Draft to Active,
+///   or a deleted ad all move exactly the number this prints, and the strip
+///   sits directly above the list that *did* update, so a stale count there
+///   is more obviously wrong than a stale one on a screen away.
+/// - [myListingsPublishStatusesProvider] — the row-level channel badges.
+///   Included because a delete removes an ad id the batch was keyed on and
+///   a create adds one; **publish itself is the one mutation this function
+///   cannot cover**, because the publish call sites live in
+///   `features/listing_editor/` (`publish_channels_sheet.dart`'s own submit
+///   handler) rather than in the two editor screens that call this. Those
+///   sites need their own `ref.invalidate(myListingsPublishStatusesProvider)`
+///   on success — until they have it, a badge that just went PUBLISHED
+///   still reads "Not published" until the list is refreshed (pull-to-
+///   refresh, a filter change, or coming back to the screen after a
+///   create/delete).
 ///
 /// listing_editor's mutations are deliberately not routed through a
 /// notifier of their own (`listing_editor_providers.dart`'s doc comment:
@@ -317,9 +428,67 @@ final myListingsCoworkersProvider =
 /// between them, even though both expose an identical `invalidate`.
 void invalidateAdCaches(WidgetRef ref) {
   ref.invalidate(myListingsResultsProvider);
+  ref.invalidate(myListingsStageCountsProvider);
+  ref.invalidate(myListingsPublishStatusesProvider);
   ref.invalidate(dashboardAdsProvider);
   ref.invalidate(adsStatisticsProvider);
   ref.invalidate(adsSeriesProvider);
+}
+
+/// Everything `my-listings` reads, re-fetched — the one function
+/// `my_listings_list.dart`'s `RefreshIndicator` hands to `onRefresh` (UX
+/// audit §9.3).
+///
+/// **Why a function and not four `ref.invalidate` calls at the call site**:
+/// the same reason [invalidateAdCaches] is one. This screen reads four
+/// independent caches, and "pull down to refresh" means all four, not the
+/// one the author happened to remember — a strip still showing yesterday's
+/// draft count above a freshly-refetched list is exactly the kind of
+/// half-refresh a user cannot see and cannot fix.
+///
+/// Returns the ads future specifically, because that is the fetch the
+/// spinner is standing in for: `RefreshIndicator` keeps spinning until the
+/// returned future completes, and completing on the counts or the coworker
+/// roster instead would retract the spinner while the rows underneath were
+/// still shimmering. It deliberately does **not** `Future.wait` all four:
+/// a coworker-roster or stage-counts failure would then reject this future
+/// and the ads list — which loaded fine — would look like it failed too,
+/// undoing the independent-failure split this file's doc comment describes.
+/// The failure is swallowed on purpose, and this is the one place in this
+/// file where swallowing one is right: a rejected `onRefresh` future is an
+/// *unhandled* async error — it reaches no user and crashes a test run —
+/// while the very same failure is already `myListingsResultsProvider`'s
+/// error state, which `my_listings_list.dart` renders with real copy
+/// ("No connection…" or "Couldn't load your ads.") and a Retry. Rethrowing
+/// would report the error twice, once uselessly.
+Future<void> refreshMyListings(WidgetRef ref) async {
+  ref.invalidate(myListingsCoworkersProvider);
+  ref.invalidate(myListingsStageCountsProvider);
+  ref.invalidate(myListingsPublishStatusesProvider);
+  try {
+    // `refresh`, not `invalidate` + `read`, on this one: it is the future
+    // the spinner is waiting on, and `refresh` is the same idiom every
+    // other pull-to-refresh in this build uses
+    // (`saved_listings_grid.dart`, `agents_directory_screen.dart`,
+    // `search_screen.dart`).
+    final refetched = ref.refresh(myListingsResultsProvider.future);
+    await refetched;
+  } catch (_) {
+    // See this function's doc comment.
+  }
+}
+
+/// Clears every CRM filter this screen applies — the empty state's "Clear
+/// filters" action (UX audit §9.4) and the stage strip's "All" segment both
+/// land here.
+///
+/// **Sort is deliberately untouched.** [activeMyListingsFilterCountProvider]
+/// already excludes it for badge purposes ("a sort choice is never a
+/// filter"), and clearing it would silently reorder a list the user never
+/// asked to reorder while they were trying to widen it.
+void clearMyListingsFilters(WidgetRef ref) {
+  ref.read(appliedMyListingsFiltersProvider.notifier).apply(const AdFilters());
+  ref.read(myListingsStatusProvider.notifier).setStatus(null);
 }
 
 /// Resolves the row-level "Author" text (SCREENS.md §25). Mirrors

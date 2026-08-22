@@ -45,25 +45,37 @@ class AdditionalInfoField extends StatelessWidget {
               onChanged();
             },
           ),
-          const SizedBox(height: AppSpacing.sm),
+          // `.kv{margin-bottom:8px}`
+          const SizedBox(height: AppSpacing.md),
         ],
-        GestureDetector(
-          key: const ValueKey('additionalInfo-add'),
-          onTap: () {
-            rows.add(AdditionalInfoRow());
-            onChanged();
-          },
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.sunk,
-              borderRadius: BorderRadius.circular(AppRadii.control),
-            ),
-            child: Text(
-              l10n.listingEditorAdditionalInfoAddButtonLabel,
-              style: type.rowTitle.copyWith(color: colors.ink),
+        // `<button class="btn btn--sm btn--ghost glf" style="margin-top:9px">
+        // <i class="i" data-i="plus"></i>Add</button>` —
+        // `.btn--sm{height:44px;border-radius:22px;font-size:12.5px;
+        // width:auto;padding:0 18px}`, `.btn .i{font-size:17px}`.
+        Padding(
+          padding: const EdgeInsets.only(top: 9),
+          child: GestureDetector(
+            key: const ValueKey('additionalInfo-add'),
+            onTap: () {
+              rows.add(AdditionalInfoRow());
+              onChanged();
+            },
+            child: GlassSurface(
+              variant: GlassVariant.flatForm,
+              borderRadius: AppRadii.pill,
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_rounded, size: 17, color: colors.ink),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    l10n.listingEditorAdditionalInfoAddButtonLabel,
+                    style: type.rowTitle.copyWith(color: colors.ink),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -88,74 +100,94 @@ class _Row extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: _cell(
-            context,
-            hintText: l10n.listingEditorAdditionalInfoKeyHint,
-            initialText: row.key,
-            onChanged: (v) {
-              row.key = v;
-              onChanged();
-            },
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: _cell(
-            context,
-            hintText: l10n.listingEditorAdditionalInfoValueHint,
-            initialText: row.value,
-            onChanged: (v) {
-              row.value = v;
-              onChanged();
-            },
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        GestureDetector(
-          onTap: onDelete,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.xs),
-            child: Icon(
-              Icons.delete_outline_rounded,
-              size: 18,
-              color: AppStatusColors.errorText,
+    // `.kv{display:flex;align-items:center;gap:8px;border-radius:16px;
+    // padding:7px 8px 7px 14px}` — key, value *and* the delete button share
+    // **one** row surface; they are not three separate boxes.
+    return GlassSurface(
+      variant: GlassVariant.flatForm,
+      borderRadius: BorderRadius.circular(AppRadii.md),
+      padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // `.kv__k{max-width:38%;font-weight:600}` — expressed as a flex
+          // weight rather than a hard cap, so a long Russian/Uzbek key
+          // still gets its ~38% share without being truncated by a
+          // pixel-exact ceiling.
+          Expanded(
+            flex: 38,
+            child: _input(
+              context,
+              hintText: l10n.listingEditorAdditionalInfoKeyHint,
+              initialText: row.key,
+              bold: true,
+              onChanged: (v) {
+                row.key = v;
+                onChanged();
+              },
             ),
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            flex: 62,
+            child: _input(
+              context,
+              hintText: l10n.listingEditorAdditionalInfoValueHint,
+              initialText: row.value,
+              onChanged: (v) {
+                row.value = v;
+                onChanged();
+              },
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // `.kv__x{width:32px;height:32px;border-radius:16px;font-size:15px;
+          // color:#e0355f}`
+          GestureDetector(
+            onTap: onDelete,
+            behavior: HitTestBehavior.opaque,
+            child: const SizedBox(
+              width: 32,
+              height: 32,
+              child: Center(
+                child: Icon(
+                  Icons.delete_outline_rounded,
+                  size: 15,
+                  color: AppStatusColors.errorText,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _cell(
+  /// `.kv input{flex:1;min-width:0;border:0;background:none;font-size:12px}`
+  /// — a bare field on the shared `.kv` surface, not a nested input box.
+  Widget _input(
     BuildContext context, {
     required String hintText,
     required String initialText,
     required ValueChanged<String> onChanged,
+    bool bold = false,
   }) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final style = bold
+        ? type.body.copyWith(fontWeight: FontWeight.w600)
+        : type.body;
 
-    return GlassSurface(
-      variant: GlassVariant.flatForm,
-      borderRadius: BorderRadius.circular(AppRadii.control),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.base,
-        vertical: 4,
-      ),
-      child: TextFormField(
-        initialValue: initialText,
-        onChanged: onChanged,
-        style: type.body.copyWith(color: colors.ink),
-        decoration: InputDecoration(
-          isDense: true,
-          border: InputBorder.none,
-          hintText: hintText,
-          hintStyle: type.body.copyWith(color: colors.faint),
-        ),
+    return TextFormField(
+      initialValue: initialText,
+      onChanged: onChanged,
+      style: style.copyWith(color: colors.ink),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.zero,
+        border: InputBorder.none,
+        hintText: hintText,
+        hintStyle: style.copyWith(color: colors.faint),
       ),
     );
   }

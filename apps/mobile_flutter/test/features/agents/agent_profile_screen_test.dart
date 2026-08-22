@@ -140,15 +140,16 @@ void main() {
 
       expect(find.text('Agent Information'), findsOneWidget);
 
-      // The labels are quoted from §3.10 exactly, casing included. RichText
-      // splits label and value into spans, so assert on the rendered text.
-      final infoText = tester
-          .widgetList<RichText>(find.byType(RichText))
-          .map((w) => w.text.toPlainText())
-          .toList();
-      expect(infoText, contains('Full name: Javlon Rustamov'));
-      expect(infoText, contains('E-mail: javlon@lacasa.uz'));
-      expect(infoText, contains('Phone: +998901234567'));
+      // The labels are still §3.10's exact strings in the ARB; the identity
+      // card renders each as a `.idcard__dl` dt/dd pair, so the label is
+      // uppercased and its trailing colon dropped at render time, with the
+      // value on its own line beneath it.
+      expect(find.text('FULL NAME'), findsOneWidget);
+      expect(find.text('Javlon Rustamov'), findsOneWidget);
+      expect(find.text('E-MAIL'), findsOneWidget);
+      expect(find.text('javlon@lacasa.uz'), findsOneWidget);
+      expect(find.text('PHONE'), findsOneWidget);
+      expect(find.text('+998901234567'), findsOneWidget);
     });
 
     testWidgets('an agent with no phone shows a dash, not a missing row', (
@@ -164,11 +165,8 @@ void main() {
 
       await pumpProfile(tester, repository: repo);
 
-      final infoText = tester
-          .widgetList<RichText>(find.byType(RichText))
-          .map((w) => w.text.toPlainText())
-          .toList();
-      expect(infoText, contains('Phone: —'));
+      expect(find.text('PHONE'), findsOneWidget);
+      expect(find.text('—'), findsOneWidget);
     });
 
     testWidgets('Call copies the number when there is one', (tester) async {
@@ -249,8 +247,12 @@ void main() {
 
       await pumpProfile(tester, repository: repo);
 
-      expect(find.text('Ads List (2)'), findsOneWidget);
-      expect(find.text('Ads List (24)'), findsNothing);
+      // A `.sec` row: the heading and its trailing "{n} active" count are
+      // two strings, and the count is the *loaded* one, never the agent's
+      // self-reported total.
+      expect(find.text('Ads List'), findsOneWidget);
+      expect(find.text('2 active'), findsOneWidget);
+      expect(find.text('24 active'), findsNothing);
       expect(find.text('Bright two-room near the metro'), findsOneWidget);
       expect(find.text('Quiet corner flat with a balcony'), findsOneWidget);
     });
@@ -276,7 +278,15 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byKey(const ValueKey('exploreCard-ad-1')));
+      // The identity card and rating block above the grid are taller than
+      // they were, so on the 800x600 default surface the first ad card now
+      // sits below the fold. Scroll it in rather than tapping a point that
+      // is off-screen (which silently misses and asserts nothing).
+      final card = find.byKey(const ValueKey('exploreCard-ad-1'));
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+
+      await tester.tap(card);
       await tester.pumpAndSettle();
 
       // Resolved from branchPrefix — `/agents/listing/ad-1`, not a
@@ -307,11 +317,8 @@ void main() {
         findsOneWidget,
       );
       // ...and the contact details the user came for are still there.
-      final infoText = tester
-          .widgetList<RichText>(find.byType(RichText))
-          .map((w) => w.text.toPlainText())
-          .toList();
-      expect(infoText, contains('Phone: +998901234567'));
+      expect(find.text('PHONE'), findsOneWidget);
+      expect(find.text('+998901234567'), findsOneWidget);
       expect(find.text('Agent Information'), findsOneWidget);
     });
 

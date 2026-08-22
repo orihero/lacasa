@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
+import 'listing_text_field.dart';
 
 class NearbyPlacesField extends StatefulWidget {
   const NearbyPlacesField({
@@ -87,30 +88,36 @@ class _NearbyPlacesFieldState extends State<NearbyPlacesField> {
               child: GlassSurface(
                 variant: GlassVariant.flatForm,
                 borderRadius: BorderRadius.circular(AppRadii.control),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: 4,
-                ),
+                // Same fixed `.inp` height as every other control on this
+                // form (see `listing_text_field.dart`).
+                height: kListingControlHeight,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: TextField(
                   key: const ValueKey('nearbyPlace-input'),
                   controller: _controller,
                   onSubmitted: (_) => _add(),
-                  style: type.body.copyWith(color: colors.ink),
+                  style: listingControlTextStyle(
+                    type,
+                  ).copyWith(color: colors.ink),
                   decoration: InputDecoration(
                     isDense: true,
+                    contentPadding: EdgeInsets.zero,
                     border: InputBorder.none,
                     hintText: l10n.listingEditorNearbyPlacesHint,
-                    hintStyle: type.body.copyWith(color: colors.faint),
+                    hintStyle: listingControlTextStyle(
+                      type,
+                    ).copyWith(color: colors.faint),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.base),
+            const SizedBox(width: kListingFieldPairGap),
             GestureDetector(
               key: const ValueKey('nearbyPlace-add'),
               onTap: _add,
               child: Container(
-                height: 44,
+                height: kListingControlHeight,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(

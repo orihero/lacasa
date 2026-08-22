@@ -164,7 +164,7 @@ class PublishResource {
   /// [ApiErrorException.code], never treat this as one generic failure:
   ///  - `code: unknownChannel` (404) — [channel] isn't a real publish
   ///    channel at all.
-  ///  - `code: notRetryable` (400) — [channel] is youtube/olx/realting.
+  ///  - `code: notRetryable` (400) — [channel] is youtube or olx.
   ///  - `code: forbidden` (403) / `code: adNotFound` (404) — ownership. For
   ///    a real (non-draft) ad this is the same `Ad.agentId` check every
   ///    other `/publish/*` route uses; for a still-open `draft-<uuid>` ad
@@ -241,7 +241,7 @@ class PublishResource {
 }
 
 /// The retry route's `:channel` path segment is the raw lower-case word
-/// (`telegram`/`instagram`/`youtube`/`olx`/`realting`) —
+/// (`telegram`/`instagram`/`youtube`/`olx`) —
 /// `apps/api/src/services/publishService.js`'s `RETRYABLE_CHANNELS`/
 /// `NON_RETRYABLE_REASONS` are keyed on exactly this set — NOT
 /// [Channel.wire]'s upper-case Postgres-enum form every other publish
@@ -251,6 +251,22 @@ String _retryChannelSegment(Channel channel) => switch (channel) {
   Channel.instagram => 'instagram',
   Channel.youtube => 'youtube',
   Channel.olx => 'olx',
-  Channel.realting => 'realting',
   Channel.unknown => 'unknown',
+  // The four display-only channels ([Channel.threads] and friends) throw
+  // rather than degrade to a string, and the difference from the
+  // `Channel.unknown` arm directly above is the whole point:
+  // `Channel.unknown` is a value the server can genuinely produce (a
+  // channel this build's [Channel.fromWire] doesn't recognize yet), so
+  // sending it and letting the route reject it with `code: unknownChannel`
+  // is an honest outcome. These four can never come off the wire at all —
+  // [Channel.fromWire] has no case for them — so a caller that reached this
+  // function with one is a client bug, and it is worth failing loudly here
+  // instead of firing a request that is guaranteed to 404.
+  Channel.threads ||
+  Channel.facebookMarketplace ||
+  Channel.x ||
+  Channel.linkedin => throw StateError(
+    'Channel.${channel.name} is display-only — it has no retry route '
+    'because it has no publish route (WORK_TAB_CONTRACT.md ruling 7.13)',
+  ),
 };

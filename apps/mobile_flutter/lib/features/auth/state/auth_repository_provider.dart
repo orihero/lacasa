@@ -13,14 +13,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/auth_mode.dart';
 import '../data/auth_repository.dart';
-import '../data/fixture_auth_repository.dart';
 import '../data/live_auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  if (useLiveAuthApi) {
-    return LiveAuthRepository(LaCasaApi.create());
-  }
-  return FixtureAuthRepository(tokenStorage: SecureTokenStorage());
+  return LiveAuthRepository(LaCasaApi.create());
 });

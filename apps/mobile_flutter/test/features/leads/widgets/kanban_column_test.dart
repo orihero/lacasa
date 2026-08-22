@@ -17,10 +17,13 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/coworkers/state/coworkers_repository_provider.dart';
 import 'package:lacasa_mobile/features/leads/widgets/kanban_card.dart';
 import 'package:lacasa_mobile/features/leads/widgets/kanban_column.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../coworkers/support/coworker_test_data.dart';
 import '../../coworkers/support/fake_coworkers_repository.dart';
+import '../../../shared/support/fake_link_launcher.dart';
 import '../support/lead_fixtures.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 
@@ -46,11 +49,13 @@ void main() {
     required List<Lead> leads,
     LeadStatus status = LeadStatus.newLead,
     Set<String> pendingLeadIds = const {},
-    Set<String> failedLeadIds = const {},
+    Map<String, LeadStatus> failedDestinations = const {},
     Locale locale = const Locale('en'),
     List<Coworker> coworkers = const [],
     Object? coworkersError,
     Completer<void>? coworkersHold,
+    LinkLauncher? linkLauncher,
+    List<({Lead lead, LeadStatus destination})>? retries,
   }) {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -62,6 +67,12 @@ void main() {
             hold: coworkersHold,
           ),
         ),
+        // `KanbanCard`'s phone line dials through `dialOrCopyPhone`, which
+        // reads `linkLauncherProvider`. Left at the real implementation for
+        // every test that never taps it — see `agent_profile_screen_test.dart`
+        // for the same arrangement.
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
       ],
     );
     addTearDown(container.dispose);
@@ -79,9 +90,11 @@ void main() {
               status: status,
               leads: leads,
               pendingLeadIds: pendingLeadIds,
-              failedLeadIds: failedLeadIds,
+              failedDestinations: failedDestinations,
               onCardTap: (_) {},
               onCardLongPress: (_) {},
+              onCardRetry: (lead, destination) =>
+                  retries?.add((lead: lead, destination: destination)),
             ),
           ),
         ),
@@ -95,7 +108,10 @@ void main() {
       await pumpColumn(tester, leads: [lead], pendingLeadIds: {'lead-1'});
 
       expect(
-        find.descendant(of: cardFinder('lead-1'), matching: find.byType(CircularProgressIndicator)),
+        find.descendant(
+          of: cardFinder('lead-1'),
+          matching: find.byType(CircularProgressIndicator),
+        ),
         findsOneWidget,
       );
     });
@@ -118,12 +134,18 @@ void main() {
         expect(find.byKey(const ValueKey('kanbanCard-lead-2')), findsOneWidget);
 
         expect(
-          find.descendant(of: cardFinder('lead-1'), matching: find.byType(CircularProgressIndicator)),
+          find.descendant(
+            of: cardFinder('lead-1'),
+            matching: find.byType(CircularProgressIndicator),
+          ),
           findsOneWidget,
           reason: 'lead-1 is the one in pendingLeadIds',
         );
         expect(
-          find.descendant(of: cardFinder('lead-2'), matching: find.byType(CircularProgressIndicator)),
+          find.descendant(
+            of: cardFinder('lead-2'),
+            matching: find.byType(CircularProgressIndicator),
+          ),
           findsNothing,
           reason:
               'lead-2 is not pending — the spinner must not leak onto a '
@@ -142,6 +164,284 @@ void main() {
     });
   });
 
+  group('call the lead (SCREENS.md §31 — the phone line is a tap target)', () {
+    testWidgets('tapping the phone dials it', (tester) async {
+      final launcher = FakeLinkLauncher();
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpColumn(tester, leads: [lead], linkLauncher: launcher);
+
+      await tester.tap(find.byKey(const ValueKey('kanbanCardCall-lead-1')));
+      await tester.pumpAndSettle();
+
+      expect(launcher.dialed, ['+998901234501']);
+    });
+
+    testWidgets('the phone target announces itself as "Call {phone}"', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpColumn(tester, leads: [lead]);
+
+      final target = tester.widget<TapTarget>(
+        find.byKey(const ValueKey('kanbanCardCall-lead-1')),
+      );
+      expect(target.semanticsLabel, 'Call +998901234501');
+    });
+
+    testWidgets('an idle card exposes the phone as a labelled button node', (
+      tester,
+    ) async {
+      // Disposed inline rather than via addTearDown — see
+      // `tap_target_test.dart` for why `_endOfTestVerifications` forces that.
+      final handle = tester.ensureSemantics();
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpColumn(tester, leads: [lead]);
+
+      expect(
+        tester.getSemantics(
+          find.byKey(const ValueKey('kanbanCardCall-lead-1')),
+        ),
+        isSemantics(
+          label: 'Call +998901234501',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets(
+      'a pending card still announces the number but stops claiming to be a '
+      'button',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final lead = makeLead(
+          id: 'lead-1',
+          fullName: 'Dilnoza Yusupova',
+          phone: '+998901234501',
+        );
+        // Deliberately not settling: the in-flight overlay's
+        // `CircularProgressIndicator` never stops animating.
+        await pumpColumn(tester, leads: [lead], pendingLeadIds: {'lead-1'});
+
+        // A move in flight mutes the card behind a 55%-alpha overlay and the
+        // tap is a no-op — so a screen reader must not still be offered a
+        // "Call …" button that does nothing.
+        expect(find.semantics.byLabel('Call +998901234501'), findsNothing);
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey('kanbanCardCall-lead-1')),
+          ),
+          isSemantics(
+            label: '+998901234501',
+            isButton: false,
+            hasTapAction: false,
+          ),
+          reason:
+              'the number is real content and stays readable; only the '
+              'button/action claim goes away while the move is in flight',
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets('a lead with no phone has no call target at all', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: null,
+      );
+      await pumpColumn(tester, leads: [lead]);
+
+      expect(find.byKey(const ValueKey('kanbanCardCall-lead-1')), findsNothing);
+    });
+
+    testWidgets('a card tap still opens the detail sheet — the phone target '
+        'claims only its own line', (tester) async {
+      final tapped = <String>[];
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final container = ProviderContainer(
+        retry: (retryCount, error) => null,
+        overrides: [
+          coworkersRepositoryProvider.overrideWithValue(
+            FakeCoworkersRepository(coworkers: const []),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.light(),
+            home: Scaffold(
+              body: KanbanColumn(
+                status: LeadStatus.newLead,
+                leads: [lead],
+                pendingLeadIds: const {},
+                failedDestinations: const {},
+                onCardTap: (l) => tapped.add(l.id),
+                onCardLongPress: (_) {},
+                onCardRetry: (_, _) {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // The card's own title — well clear of the phone's tap box.
+      await tester.tap(find.text('Dilnoza Yusupova'));
+      await tester.pumpAndSettle();
+
+      expect(tapped, ['lead-1']);
+    });
+  });
+
+  group('failed move — the Retry row (kanban_move_providers.dart)', () {
+    testWidgets('a failed destination renders the tappable Retry row', (
+      tester,
+    ) async {
+      final retries = <({Lead lead, LeadStatus destination})>[];
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      await pumpColumn(
+        tester,
+        leads: [lead],
+        failedDestinations: const {'lead-1': LeadStatus.accepted},
+        retries: retries,
+      );
+
+      expect(find.text("Couldn't move"), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('kanbanCardRetry-lead-1')));
+      await tester.pumpAndSettle();
+
+      expect(retries.length, 1);
+      expect(retries.single.lead.id, 'lead-1');
+      expect(
+        retries.single.destination,
+        LeadStatus.accepted,
+        reason:
+            'Retry must re-attempt the column the failed move was aiming for, '
+            'not the column the card is sitting in',
+      );
+    });
+
+    testWidgets('the Retry row names its destination for a screen reader', (
+      tester,
+    ) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      await pumpColumn(
+        tester,
+        leads: [lead],
+        failedDestinations: const {'lead-1': LeadStatus.needToCallBack},
+      );
+
+      // The ValueKey sits on the private `_MoveFailedRow`; the TapTarget it
+      // builds is one level down, so this reads through the keyed row rather
+      // than casting it.
+      final target = tester.widget<TapTarget>(
+        find.descendant(
+          of: find.byKey(const ValueKey('kanbanCardRetry-lead-1')),
+          matching: find.byType(TapTarget),
+        ),
+      );
+      expect(target.semanticsLabel, 'Retry moving to Need To Call Back');
+    });
+
+    testWidgets('a card with no failed entry shows no failure row', (
+      tester,
+    ) async {
+      final failed = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final fine = makeLead(id: 'lead-2', fullName: 'Aziz Karimov');
+      await pumpColumn(
+        tester,
+        leads: [failed, fine],
+        failedDestinations: const {'lead-1': LeadStatus.rejected},
+      );
+
+      expect(
+        find.byKey(const ValueKey('kanbanCardRetry-lead-1')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('kanbanCardRetry-lead-2')),
+        findsNothing,
+        reason: 'the failure row must not leak onto a sibling card',
+      );
+    });
+  });
+
+  group('timezone (SCREENS.md §31 — the call-back pill is a wall clock)', () {
+    // `Lead.callbackDate` is decoded by `DateTime.tryParse`, so a `Z`-suffixed
+    // wire value carries the UTC flag and `Formatters.date` would read UTC
+    // calendar/clock fields straight off it. The expectation is derived rather
+    // than hardcoded because a test process's local zone is whatever the
+    // machine running it is set to (Dart fixes it at process start; there is
+    // no override) — under UTC this assertion is a tautology, but under every
+    // other zone, including this app's own UTC+5 market, it fails the moment
+    // the `.toLocal()` conversion is dropped.
+    testWidgets('the call-back pill renders the instant in local time', (
+      tester,
+    ) async {
+      final due = DateTime.utc(2026, 8, 10, 4);
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        status: LeadStatus.needToCallBack,
+        callbackDate: due,
+      );
+      await pumpColumn(
+        tester,
+        leads: [lead],
+        status: LeadStatus.needToCallBack,
+      );
+
+      expect(
+        find.text('Call back ${Formatters.date(due.toLocal())}'),
+        findsOneWidget,
+        reason: 'the raw UTC clock fields must not reach the pill',
+      );
+    });
+
+    testWidgets('the created-at footer renders the instant in local time', (
+      tester,
+    ) async {
+      const seconds = 1754784000;
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        createdAtSeconds: seconds,
+      );
+      await pumpColumn(tester, leads: [lead]);
+
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(
+        seconds * 1000,
+        isUtc: true,
+      );
+      expect(find.text(Formatters.date(createdAt.toLocal())), findsOneWidget);
+    });
+  });
+
   group('coworker footer (WORK_TAB_CONTRACT.md ruling 7.8 — closed)', () {
     testWidgets(
       'a resolved coworkerId renders that coworker\'s name in the footer',
@@ -154,7 +454,9 @@ void main() {
         await pumpColumn(
           tester,
           leads: [lead],
-          coworkers: [coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev')],
+          coworkers: [
+            coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev'),
+          ],
         );
         await tester.pumpAndSettle();
 
@@ -170,7 +472,9 @@ void main() {
         await pumpColumn(
           tester,
           leads: [lead],
-          coworkers: [coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev')],
+          coworkers: [
+            coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev'),
+          ],
         );
         await tester.pumpAndSettle();
 
@@ -194,7 +498,9 @@ void main() {
         await pumpColumn(
           tester,
           leads: [lead],
-          coworkers: [coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev')],
+          coworkers: [
+            coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev'),
+          ],
           coworkersHold: hold,
         );
         // Deliberately not `pumpAndSettle` — `hold` never completes here,
@@ -224,7 +530,9 @@ void main() {
         await pumpColumn(
           tester,
           leads: [lead],
-          coworkers: [coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev')],
+          coworkers: [
+            coworker(id: 'coworker-1', fullName: 'Sardor Abdullayev'),
+          ],
           coworkersError: const NetworkException('offline'),
         );
         await tester.pumpAndSettle();

@@ -113,13 +113,28 @@ class _NavRow extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
+              // `.nav .rnd.gl` — a 38px round glass chip inside the 44px
+              // tap target, not a bare glyph on the screen background.
               child: SizedBox(
                 width: 44,
                 height: 44,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: colors.ink,
+                child: Center(
+                  child: GlassSurface(
+                    variant: GlassVariant.onSurface,
+                    borderRadius: AppRadii.pill,
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    // The lens's default band is tuned for a card and would
+                    // swallow a 38px disc — the same override every other
+                    // hand-built copy of this control uses.
+                    distortionWidth: 8,
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 22,
+                      color: colors.ink,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -208,6 +223,16 @@ class _ErrorState extends ConsumerWidget {
   }
 }
 
+/// The first-load placeholder. It stands in for the *whole* body, not just
+/// the identity card: the mockup's profile is an idcard, a `.sec` "Ads List"
+/// heading and a 2-column `.grid`, so a one-card skeleton would promise a
+/// screen that is about to grow by several hundred pixels. The grid half
+/// repeats `AgentAdsGrid`'s own loading branch (same 2 columns, same 13px
+/// gaps, same 0.66 aspect ratio) because that widget isn't mounted until
+/// [agentDetailProvider] resolves.
+///
+/// Scrolls for the same reason [_ProfileBody] does — on a short viewport the
+/// placeholder is now tall enough to need it.
 class _ProfileSkeleton extends StatelessWidget {
   const _ProfileSkeleton();
 
@@ -215,54 +240,96 @@ class _ProfileSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.card,
-              borderRadius: BorderRadius.circular(AppRadii.cardXl),
+    return ScrollConfiguration(
+      behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.screenGutter,
+          0,
+          AppSpacing.screenGutter,
+          // Clears the floating glass tab bar (`extendBody: true`).
+          MediaQuery.of(context).padding.bottom + 100,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: colors.card,
+                borderRadius: BorderRadius.circular(AppRadii.cardXl),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ShimmerBox(
+                          width: 180,
+                          height: 12,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: AppSpacing.base),
+                        ShimmerBox(
+                          width: 200,
+                          height: 12,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        const SizedBox(height: AppSpacing.base),
+                        ShimmerBox(
+                          width: 150,
+                          height: 12,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Matches `AgentInfoBlock`'s `.av--84` avatar, so the
+                  // placeholder doesn't jump on load.
+                  const ShimmerBox(
+                    width: 84,
+                    height: 84,
+                    borderRadius: AppRadii.pill,
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShimmerBox(
-                        width: 180,
-                        height: 12,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: AppSpacing.base),
-                      ShimmerBox(
-                        width: 200,
-                        height: 12,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: AppSpacing.base),
-                      ShimmerBox(
-                        width: 150,
-                        height: 12,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ],
+            // The `.sec` row `AgentAdsGrid._Shell` draws once it mounts: the
+            // "Ads List" heading, with no trailing count — a number here
+            // would be a claim the placeholder can't back up either.
+            const SizedBox(height: AppSpacing.section),
+            ShimmerBox(
+              width: 90,
+              height: 14,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: AppSpacing.base),
+            GridView.count(
+              crossAxisCount: 2,
+              // Matches [AgentAdsGrid]'s own zero padding — without it this
+              // skeleton inherits the ambient vertical insets and settles at a
+              // different height than the grid it stands in for.
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 13,
+              crossAxisSpacing: 13,
+              childAspectRatio: 0.66,
+              children: List.generate(
+                2,
+                (index) => AspectRatio(
+                  aspectRatio: 0.66,
+                  child: ShimmerBox(
+                    borderRadius: BorderRadius.circular(AppRadii.control),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.base),
-                const ShimmerBox(
-                  width: 64,
-                  height: 64,
-                  borderRadius: AppRadii.pill,
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

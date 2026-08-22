@@ -63,7 +63,30 @@ class FeaturedListingsRail extends ConsumerWidget {
           child: RailRetryCard(
             width: _cardWidth,
             message: l10n.homeFeaturedListingsRetryMessage,
-            onRetry: () => ref.invalidate(homeFeedAdsProvider),
+            // `asReload: true`, and the flag is the entire point of this
+            // line. A plain `ref.invalidate` is a *refresh*: Riverpod
+            // rebuilds with `AsyncError.copyWithPrevious(isRefresh: true)`,
+            // whose runtime type is still `AsyncError`, so `isRefreshing`
+            // is true, `when`'s `skipLoadingOnRefresh` (which defaults to
+            // **true**) skips the `loading:` arm, and the `error:` arm
+            // above re-renders byte-identically. [RailRetryCard] carries no
+            // in-flight state of its own, so the screen stayed pixel-perfect
+            // still from the tap until the network answered — the user's
+            // only evidence that Retry did anything was that it eventually
+            // stopped being broken.
+            //
+            // `asReload: true` marks the rebuild as a *reload* instead,
+            // which yields a real `AsyncLoading`; `isReloading` is then true
+            // and `skipLoadingOnReload` defaults to **false**, so the three
+            // shimmer cards above run and the rail visibly goes to work.
+            //
+            // This is deliberately the opposite of what pull-to-refresh
+            // does with the same provider — see
+            // `HomeFeedScreen._refresh`, which must *not* reload, because
+            // blanking a list the user is looking at into skeletons is a
+            // regression, not feedback. Retry has no list to preserve: the
+            // previous state is an error, so there is nothing to lose.
+            onRetry: () => ref.invalidate(homeFeedAdsProvider, asReload: true),
           ),
         ),
       ),
@@ -71,13 +94,23 @@ class FeaturedListingsRail extends ConsumerWidget {
         if (ads.isEmpty) {
           // Whole-feed empty: the canonical centered state lives here, in
           // Featured Listings' position (build spec: "below the chips").
+          //
+          // Which of the two messages depends on whether a category chip
+          // narrowed the request. "No listings available yet." states that
+          // the catalogue is empty; with a chip active that is simply
+          // false — clearing the chip brings listings straight back — and
+          // it would send the user away from a screen that still has plenty
+          // on it, one tap up.
+          final filtered = ref.watch(selectedCategoryChipProvider).type != null;
           return Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.screenGutter,
             ),
             child: FullWidthState(
               icon: Icons.home_work_outlined,
-              message: l10n.homeFeedEmptyMessage,
+              message: filtered
+                  ? l10n.homeFeedCategoryEmptyMessage
+                  : l10n.homeFeedEmptyMessage,
             ),
           );
         }

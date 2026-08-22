@@ -19,26 +19,28 @@ flutter test         # 944 passing, 0 failing (verified 2026-08-11) — the
                       # is gone: whatever produced it has been fixed upstream
 ```
 
-**Live by default.** Every feature's `data/*_mode.dart` switch resolves through
-`lib/api/app_mode.dart#resolveUseLiveApi`: with no `--dart-define`s at all, the
-app talks to a real `apps/api` (default `http://localhost:4200/api`, see
-`lib/api/env.dart` to point it elsewhere) instead of bundled fixtures. This
-was inverted from the old fixtures-by-default posture once every feature had
-a live implementation to fall back on — `flutter test` is unaffected either
-way, since `app_mode.dart`'s own `FLUTTER_TEST` check forces fixtures for
-every widget test regardless of any `--dart-define`, so no test ever fires
-real HTTP.
+**Live, and only live.** Every repository provider constructs its
+`Live<Feature>Repository` around a real `apps/api` (default
+`http://localhost:4200/api`, see `lib/api/env.dart` to point it elsewhere).
+There is no bundled fixture data and no fixtures/live switch: the app has one
+data source.
 
-**To run against fixtures instead** (no server needed, deterministic seed
-data):
-```bash
-flutter run --dart-define=LACASA_USE_FIXTURES=true
-# or, from the repo root:
-npm run dev:mobile-flutter:fixtures
-```
-A single feature can also be forced to fixtures on its own — e.g.
-`--dart-define=LACASA_CONTACT_LIVE_API=false` — while everything else stays
-live; each `*_mode.dart` file documents its own flag name.
+This replaced an earlier arrangement in which each feature carried a
+`data/<feature>_mode.dart` switch and a `Fixture<Feature>Repository` full of
+hand-written seed rows, selected by `LACASA_USE_FIXTURES` or a per-feature
+`LACASA_<FEATURE>_LIVE_API` define. Those files are deleted and those defines
+no longer exist — passing them has no effect. **The app needs a running API to
+show anything**; start one with `npm run dev:api`, and seed it with real
+listings via `npm run seed:olx -w @lacasa/api` (see `apps/api/prisma/
+seed-olx.js`).
+
+Widget tests are unaffected by the removal, but the reason they are safe
+changed. `flutter test` used to be handed fixtures automatically by
+`app_mode.dart`'s `FLUTTER_TEST` guard, so a test could pump a screen with no
+repository override and still not touch the network. That fallback is gone: a
+test that pumps a screen **must** override that feature's repository provider
+with a fake from `test/features/<feature>/support/`, or the screen will fire
+real HTTP out of the test process.
 
 ## Layout
 
@@ -50,6 +52,7 @@ live; each `*_mode.dart` file documents its own flag name.
 | `lib/shared/` | Widgets and formatters used by more than one feature — including cross-feature-promoted ones like `NavRow`, `LabelledFormField`/`VisibilityToggle`, `FieldLabel`, `ChoiceChipGroup<T>`, `dialOrCopyPhone`, `RatingStars` and `LoadMoreFooter` (see the consolidation note under Known gaps); `shared/platform/` holds the seams onto real device capabilities — `LinkLauncher` (`url_launcher`/`share_plus`) and `MediaPicker` (`image_picker`), alongside `features/permissions/data/permission_gateway.dart`'s `PermissionGateway`, which stayed in its feature folder rather than moving here since `permissions-primer` is its only caller |
 | `lib/features/<name>/` | One directory per feature: `data/` (repository + fixture/live impls), `state/` (Riverpod), `widgets/`, `formatters/` |
 | `lib/l10n/` | Localization: `app_{en,uz,ru}.arb` (source of truth for every string + its `@key` description), `generated/` (committed `flutter gen-l10n` output), `README.md` (extraction conventions) and `GLOSSARY.md` (agreed en/uz/ru domain-term renderings). See Known gaps for status |
+| `assets/promos/` | The app's only bundled images: Home's two `.promo` banner photographs, decoded out of the canonical mockup's own `window.PHOTOS` registry. Bundled because a promo has to be right on the first frame of a cold start and with no connection — listing photos stay remote, since those are content and change per ad |
 
 `lib/features/home/` is the reference implementation of that layout — copy its
 patterns rather than inventing new ones.
@@ -80,17 +83,17 @@ whole tree, so every tab navigates somewhere. Screens not yet built render
 | 16 | `profile-agent` | **Built** — the Profile tab root for `role: "agent"`/`"coworker"`; Connected Accounts/Messages rows now push the real `connected-accounts`/`messages` screens (§21/§23, built this pass) |
 | 17 | `saved-listings` | **Built** — `/profile/saved` |
 | 18 | `edit-profile` | **Built** — `/profile/edit` |
-| 19 | `settings` | **Built** — `/profile/settings` and `/work/settings` |
+| 19 | `settings` | **Built** — `/profile/settings` and `/work/profile/settings` |
 | 20 | `language-sheet` | **Built** — a bottom sheet, not a route; opened from every Language row |
-| 21 | `connected-accounts` | **Built** — `/work/connected-accounts` and `/profile/connected-accounts` (one screen, two routes); Instagram is fully live-shaped (media/follower/following counts, "Connect Instagram" now opens the OAuth URL in the external browser via `LinkLauncher`, per Meta's own restriction against an in-app WebView — falling back to copy-and-toast only if nothing on the device can open it), Telegram is a count-only row (no per-channel API), YouTube is a visibly-disabled "Beta" pair (see gaps) |
-| 22 | `notifications` | **Built** — `/work/notifications` and `/home/notifications`; `GET /notifications` backs live mode for real now (see Known gaps for what closed), contextual taps route to `lead-detail`/`edit-listing`/`publish-status`/`coworker-detail` per §22 |
-| 23 | `messages` | **Built** — `/work/messages` and `/profile/messages`; renders §23's own "coming soon, contact leads by phone" banner rather than a chat UI, exactly as specified |
+| 21 | `connected-accounts` | **Built** — `/work/profile/connected-accounts` and `/profile/connected-accounts` (one screen, two routes); Instagram is fully live-shaped (media/follower/following counts, "Connect Instagram" now opens the OAuth URL in the external browser via `LinkLauncher`, per Meta's own restriction against an in-app WebView — falling back to copy-and-toast only if nothing on the device can open it), Telegram is a count-only row (no per-channel API), YouTube is a visibly-disabled "Beta" pair (see gaps) |
+| 22 | `notifications` | **Built** — `/work/dashboard/notifications` and `/home/notifications`; `GET /notifications` backs live mode for real now (see Known gaps for what closed), contextual taps route to `lead-detail`/`edit-listing`/`publish-status`/`coworker-detail` per §22 |
+| 23 | `messages` | **Built** — `/work/profile/messages` and `/profile/messages`; renders §23's own "coming soon, contact leads by phone" banner rather than a chat UI, exactly as specified |
 | 24 | `dashboard` | **Built** — `/work/dashboard`, the Work tab's landing screen for `role: "agent"` (coworker sessions skip it, landing on `my-listings` instead, per §24's own note); the "Ads statistics" chart plots a real server-bucketed series and the coworker table's Sale count is a real number in both modes now (see gaps for what closed) |
 | 25 | `my-listings` | **Built** — `/work/my-listings`, the Work tab's landing screen for `role: "coworker"`; wires `filter-sheet`'s CRM (`isCrm`) variant for Sort + Status; "infinite scroll" is real `GET /my/ads` keyset paging, and Status is a real server filter too |
 | 26 | `create-listing` | **Built** — `/create-listing`, a root-navigator modal from `my-listings`' "+"; the full §26 field set (Address, Reference, Nearby chips, Additional Info, video) rather than `apps/console`'s reduced one; photo/video pickers are real (camera or gallery, via `MediaPicker`), with a client-side size check ahead of upload |
-| 27 | `edit-listing` | **Built** — `/work/edit-listing/:id`, from `my-listings`' edit icon; same field set as `create-listing`, pre-filled, plus the publish section and Delete |
+| 27 | `edit-listing` | **Built** — `/work/my-listings/edit-listing/:id`, **pushed** from `my-listings`' edit icon; nested under My Ads so a Back press (or a discard) reveals that list with its filters and paged scroll position intact, rather than a blank `/work`; same field set as `create-listing`, pre-filled, plus the publish section and Delete |
 | 28 | `publish-channels-sheet` | **Built** — a bottom sheet, not a route; opened from `create-listing`/`edit-listing`'s per-channel publish buttons |
-| 29 | `publish-status` | **Built** — `/work/publish-status/:id`, from `edit-listing`'s "Publish Status" link; Retry on a failed Telegram/Instagram row is wired for real, distinguishing every server rejection reason on screen; YouTube/OLX/Realting stay visibly disabled with their reason (see gaps) |
+| 29 | `publish-status` | **Built** — `/work/my-listings/publish-status/:id`, **pushed** from `edit-listing`'s "Publish Status" link (a `go` would have replaced the branch stack and torn down a dirty form without its "Discard changes?" prompt — `PopScope` is a pop-only hook); Retry on a failed Telegram/Instagram row is wired for real, distinguishing every server rejection reason on screen; YouTube/OLX stay visibly disabled with their reason (see gaps) |
 | 30 | `leads-list` | **Built** — `/work/leads` |
 | 31 | `leads-kanban` | **Built** — `/work/leads/kanban`, from `leads-list`'s view toggle; card footer resolves and shows the assigned coworker's name whenever `Lead.coworkerId` is set (see Known gaps for what closed and why the old refusal was wrong) |
 | 32 | `lead-detail` | **Built** — a bottom sheet, not a route; opened from `leads-list`/`leads-kanban` row taps and from a lead `notification` tap |
@@ -356,14 +359,13 @@ scheme check independent of the server's own — see
   survives would sign the account back in on next launch, so the failure is
   surfaced to the user rather than swallowed. See `AuthSessionNotifier.signOut`.
 - ~~`contact-sheet` reports success without sending unless the live switch is
-  on~~ **Closed by the live-by-default inversion.** Every feature's default
-  flipped from fixtures to live this run (see "Running it" above) — `contact`
-  included, so the dangerous case ("Message sent successfully." for a
-  message that reached nobody) now needs deliberately opting *into*
-  fixtures (`--dart-define=LACASA_CONTACT_LIVE_API=false`, or the global
-  `LACASA_USE_FIXTURES=true`) rather than out of them. `flutter test` still
-  always gets fixtures regardless, so no widget test can send a real
-  message. Live, the server still answers 503 `contact_unconfigured` unless
+  on~~ **Closed by deleting the fixture repositories.** The dangerous case
+  ("Message sent successfully." for a message that reached nobody) needed
+  fixture mode, and there is no longer any such mode to be in — `contact`,
+  like every other feature, has exactly one implementation and it posts to
+  the API (see "Running it" above). Widget tests inject an explicit fake, so
+  no test can send a real message. Live, the server still answers 503
+  `contact_unconfigured` unless
   `TG_CONTACT_CHAT_ID` is set — the sheet surfaces that distinctly rather
   than as a generic failure, since no amount of retrying fixes it.
 - ~~The message field is capped at 200 characters, the server allows 2000~~
@@ -483,9 +485,7 @@ scheme check independent of the server's own — see
   message, not one generic "failed" toast. YouTube (no server-side publish
   call at all — only a report-back for a browser upload) and OLX (needs the
   desktop browser extension, no mobile equivalent) stay visibly disabled
-  with their stated reason, same as `apps/console`; Realting (a scheduled
-  feed sync, no per-ad call) would too, if a FAILED row for it were ever
-  reachable, which nothing in this app currently produces.
+  with their stated reason, same as `apps/console`.
 - ~~Coworkers' "listings count"/"last active"/"Sale count" are derived
   client-side, and one of them is a permanent em dash~~ **Closed.**
   `Coworker` still carries only 5 fields on the wire (no count, no activity

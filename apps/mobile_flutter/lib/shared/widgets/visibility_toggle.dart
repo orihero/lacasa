@@ -34,12 +34,23 @@ class VisibilityToggle extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(left: AppSpacing.sm),
-          child: Icon(
-            obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-            size: 18,
-            color: colors.muted,
+        // `.pw .eye{width:40px;height:40px;border-radius:20px;
+        // font-size:17px;color:var(--muted)}` — the mockup gives the eye a
+        // button-sized box, not a bare glyph. Stated as a [SizedBox] because
+        // `HitTestBehavior.opaque` makes the child's own box the whole
+        // tappable region, and an 18px icon alone is under half the 48dp
+        // minimum target.
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: Center(
+            child: Icon(
+              obscured
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 18,
+              color: colors.muted,
+            ),
           ),
         ),
       ),

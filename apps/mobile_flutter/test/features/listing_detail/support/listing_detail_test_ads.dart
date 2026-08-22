@@ -29,6 +29,11 @@ Ad testAd({
   double? lng,
   String agentId = 'agent-javlon',
   List<String> photos = const [],
+  // The richer photo/video source. Defaults to empty so `photos` stays the
+  // resolved slide list for every test that doesn't care — `resolveGalleryItems`
+  // prefers `media` whenever it has anything at all, so a test that states
+  // media is stating the *whole* carousel.
+  List<Map<String, dynamic>> media = const [],
   String? tour3dLink,
 }) {
   return Ad.fromJson({
@@ -58,7 +63,7 @@ Ad testAd({
     'agentId': agentId,
     'coworkerId': '',
     'photos': photos,
-    'media': const <Map<String, dynamic>>[],
+    'media': media,
     'createdAt': {'seconds': 1700000000},
     'updatedAt': {'seconds': 1700000000},
     // Absent-not-null is the wire's own shape for these two (see
@@ -75,6 +80,11 @@ AgentDetail testAgent({
   String? phoneNumber = '+998901112233',
   int adsCount = 24,
   int dealsClosedCount = 9,
+  // Defaults to an agent with no reviews, because that is the state the
+  // null-vs-zero rule exists for — see [AgentSummary.ratingAverage]. Pass
+  // a value to exercise the star row.
+  double? ratingAverage,
+  int ratingCount = 0,
 }) {
   return AgentDetail.fromJson({
     'id': id,
@@ -84,5 +94,7 @@ AgentDetail testAgent({
     'avatar': null,
     'adsCount': adsCount,
     'dealsClosedCount': dealsClosedCount,
+    'ratingAverage': ratingAverage,
+    'ratingCount': ratingCount,
   });
 }

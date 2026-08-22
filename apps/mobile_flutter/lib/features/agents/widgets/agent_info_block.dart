@@ -8,14 +8,25 @@
 /// against this spec and the point of quoting is that they agree; silently
 /// tidying the copy in one of them defeats it.
 ///
-/// **Address and the `"Review: {rating}/5"` star row are this task's
-/// addition** — §3.10's own text doesn't list them (only §3.9's directory
-/// card does), but a profile that carries less identity than the card that
-/// opened it would be a strange asymmetry, so both render here too, in the
-/// same honest-absence shape `agent_card.dart` uses: address only when set,
-/// the rating row always present and reading `RatingStars`' "No reviews
-/// yet" text rather than a zero-star row when [AgentDetail.ratingAverage]
-/// is `null`.
+/// **The rating is a fourth `dt`/`dd` row, and it is deliberate.** §3.10
+/// does not list it (only §3.9's directory card does), and it was removed
+/// from this block once for exactly that reason — but that left the buyer
+/// journey saying two different things about the same agent: the directory
+/// card and `listing-detail`'s agent block both print the aggregate, and
+/// tapping either of them *through* to the profile made it disappear. An
+/// aggregate that vanishes at the moment the user acts on it reads as a
+/// retraction. It is rendered by the shared [RatingStars] — same widget,
+/// same copy ("Review: {rating}/5"), same `ratingAverage == null` → "No
+/// reviews yet" rule (never a zero-star row, see that widget's own doc
+/// comment) — so the three surfaces cannot drift. `ratingAverage` is
+/// passed straight through, never `?? 0`.
+///
+/// The reviews themselves still live in `AgentReviewsSection` further down
+/// the screen; this row is the summary, not a second copy of the list.
+///
+/// **Address used to render here too** and is still gone — §3.10 does not
+/// list it either, and unlike the rating nothing else on the buyer's path
+/// promises it.
 ///
 /// **The call button dials via [dialOrCopyPhone]** — §3.10's "call icon →
 /// `tel:` link", now real. When there's no dialer on the device (or the OS
@@ -67,7 +78,9 @@ class AgentInfoBlock extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _InfoRow(
-                      label: AppLocalizations.of(context).agentsInfoFullNameLabel,
+                      label: AppLocalizations.of(
+                        context,
+                      ).agentsInfoFullNameLabel,
                       value: agent.fullName,
                     ),
                     _InfoRow(
@@ -85,31 +98,42 @@ class AgentInfoBlock extends ConsumerWidget {
                       label: AppLocalizations.of(context).agentsInfoPhoneLabel,
                       value: hasPhone ? phone : '—',
                     ),
-                    if (agent.address?.trim() case final address? when address.isNotEmpty)
-                      _InfoRow(
-                        label: AppLocalizations.of(context).agentsInfoAddressLabel,
-                        value: address,
+                    // Last, not first: the three §3.10 rows are the ones
+                    // the spec quotes and they keep their order and their
+                    // position exactly. See this file's doc comment for
+                    // why the rating is here at all.
+                    _InfoRow(
+                      label: AppLocalizations.of(context).agentsInfoRatingLabel,
+                      valueWidget: RatingStars(
+                        key: const ValueKey('agentInfoRating'),
+                        average: agent.ratingAverage,
+                        count: agent.ratingCount,
                       ),
+                      isLast: true,
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: AppSpacing.base),
+              // `.idcard__row{gap:14px}`.
+              const SizedBox(width: 14),
               AgentAvatar(
                 avatarUrl: agent.avatar,
                 fullName: agent.fullName,
-                size: 64,
+                // `.av--84`.
+                size: 84,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          RatingStars(average: agent.ratingAverage, count: agent.ratingCount),
-          const SizedBox(height: AppSpacing.lg),
+          // `.btns{margin-top:14px;gap:10px}`.
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: _ActionButton(
                   icon: Icons.phone_rounded,
                   label: AppLocalizations.of(context).agentsInfoCallButtonLabel,
+                  // `.btn--ink` — the primary of the pair.
+                  primary: true,
                   // Disabled rather than hidden, so the row's shape is the
                   // same for every agent and "this one has no number" reads
                   // as a fact about them, not a layout variant.
@@ -118,16 +142,16 @@ class AgentInfoBlock extends ConsumerWidget {
                       : null,
                 ),
               ),
-              const SizedBox(width: AppSpacing.base),
+              const SizedBox(width: 10),
               Expanded(
                 child: _ActionButton(
                   icon: Icons.chat_bubble_outline_rounded,
-                  label: AppLocalizations.of(context).agentsInfoMessageButtonLabel,
+                  label: AppLocalizations.of(
+                    context,
+                  ).agentsInfoMessageButtonLabel,
                   onTap: () => showContactSheet(
                     context,
-                    prefill: ContactPrefill.forAgent(
-                      agentName: agent.fullName,
-                    ),
+                    prefill: ContactPrefill.forAgent(agentName: agent.fullName),
                   ),
                 ),
               ),
@@ -137,47 +161,91 @@ class AgentInfoBlock extends ConsumerWidget {
       ),
     );
   }
-
 }
 
+/// One `.idcard__dl>div` — a hairline-separated `dt`/`dd` pair: a 10px
+/// uppercase muted label over a 12.5/600 ink value, `7px 0` padding, with
+/// the rule omitted on the last row.
+///
+/// The label arrives exactly as SCREENS.md §3.10 quotes it ("Full name:",
+/// "E-mail:", "Phone:") and is uppercased — and its trailing colon dropped —
+/// at *render* time only. The ARB strings stay verbatim so the three
+/// implementations building against that spec still agree on the copy.
+///
+/// Exactly one of [value] / [valueWidget] is supplied. The plain-string
+/// form is the `dd` this card is made of; [valueWidget] exists for the one
+/// row whose value is not a string at all (the rating's star row), so that
+/// row still gets the same label treatment, the same vertical rhythm and
+/// the same hairline rule rather than being hand-rebuilt beside the list.
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.label,
+    this.value,
+    this.valueWidget,
+    this.isLast = false,
+  }) : assert(
+         (value == null) != (valueWidget == null),
+         'Supply exactly one of value / valueWidget.',
+       );
 
   final String label;
-  final String value;
+  final String? value;
+  final Widget? valueWidget;
+  final bool isLast;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: RichText(
-        text: TextSpan(
-          style: type.body.copyWith(color: colors.ink),
-          children: [
-            TextSpan(
-              text: '$label ',
-              style: type.body.copyWith(color: colors.muted),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: isLast
+          ? null
+          : BoxDecoration(
+              border: Border(bottom: BorderSide(color: colors.line)),
             ),
-            TextSpan(text: value),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.replaceAll(':', '').toUpperCase(),
+            style: type.caption.copyWith(
+              color: colors.muted,
+              fontSize: 10,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 2),
+          if (valueWidget case final widget?)
+            widget
+          else
+            Text(
+              value!,
+              overflow: TextOverflow.ellipsis,
+              style: type.rowTitle.copyWith(color: colors.ink, fontSize: 12.5),
+            ),
+        ],
       ),
     );
   }
 }
 
+/// One half of the identity card's `.btns` pair — a 54px pill. [primary] is
+/// `.btn--ink` (the filled dark Call button with its ink glow); the default
+/// is `.btn--ghost glf`, a flat-glass button with ink-coloured content.
 class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.primary = false,
   });
 
   final IconData icon;
   final String label;
+  final bool primary;
 
   /// Null renders the button in its disabled look and swallows taps.
   final VoidCallback? onTap;
@@ -187,7 +255,22 @@ class _ActionButton extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final enabled = onTap != null;
-    final tint = enabled ? AppAccent.color : colors.faint;
+    final tint = enabled
+        ? (primary ? colors.pillInk : colors.ink)
+        : colors.faint;
+
+    // `.btn{height:54px;border-radius:27px;gap:8px;font-size:13.5/600}`.
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 17, color: tint),
+        const SizedBox(width: AppSpacing.md),
+        Text(
+          label,
+          style: type.cardTitle.copyWith(color: tint, letterSpacing: 0.1),
+        ),
+      ],
+    );
 
     return Semantics(
       button: true,
@@ -195,22 +278,24 @@ class _ActionButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.sunk,
-            borderRadius: AppRadii.pill,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: tint),
-              const SizedBox(width: AppSpacing.sm),
-              Text(label, style: type.label.copyWith(color: tint)),
-            ],
-          ),
-        ),
+        child: primary
+            ? Container(
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.pill,
+                  borderRadius: AppRadii.pill,
+                  boxShadow: enabled ? AppShadows.selectedPillLarge : null,
+                ),
+                child: content,
+              )
+            : GlassSurface(
+                variant: GlassVariant.flatForm,
+                borderRadius: AppRadii.pill,
+                height: 54,
+                alignment: Alignment.center,
+                child: content,
+              ),
       ),
     );
   }

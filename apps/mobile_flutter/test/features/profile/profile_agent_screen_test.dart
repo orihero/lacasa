@@ -1,8 +1,12 @@
 // Widget tests for `profile-agent` (SCREENS.md §3.16). Pumped inside a real
-// GoRouter — its rows push branch-relative routes (two of them literal,
-// not-yet-`RoutePaths` strings — see `profile_agent_screen.dart`'s doc
-// comment) and the Logout flow drives `authSessionProvider` — same shape as
+// GoRouter — every row pushes `'$branchPrefix/…'` and the Logout flow drives
+// `authSessionProvider` — same shape as
 // `test/features/settings/settings_screen_test.dart`.
+//
+// The screen is mounted in both shells (see `app_router.dart`), so
+// [pumpScreen] takes a `branchPrefix` and the Workspace-row group below
+// pumps it once per shell: the row is the Browse/Work switch and its
+// direction is read off that prefix.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +20,7 @@ import 'package:lacasa_mobile/features/language/language.dart';
 import 'package:lacasa_mobile/features/profile/profile.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/navigation/workspace_mode.dart';
 import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
@@ -49,6 +54,7 @@ void main() {
     required AuthUser user,
     FakeAuthRepository? authRepository,
     LinkLauncher? linkLauncher,
+    String branchPrefix = RoutePaths.profile,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -70,11 +76,12 @@ void main() {
     container.read(authSessionProvider.notifier).signIn(user);
 
     final router = GoRouter(
-      initialLocation: RoutePaths.profile,
+      initialLocation: branchPrefix,
       routes: [
         GoRoute(
-          path: RoutePaths.profile,
-          builder: (context, state) => const ProfileAgentScreen(),
+          path: branchPrefix,
+          builder: (context, state) =>
+              ProfileAgentScreen(branchPrefix: branchPrefix),
           routes: [
             GoRoute(
               path: 'edit',
@@ -117,6 +124,20 @@ void main() {
     return container;
   }
 
+  /// Scrolls [finder] into view from the bottom of the list. The rows below
+  /// Language (the Workspace switch, the Session group, Logout) are past the
+  /// fold on the 800x600 default test surface *and unbuilt* — a lazy
+  /// [ListView] never creates them — so `ensureVisible` alone throws "No
+  /// element". Dragging is what builds them.
+  Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+    await tester.dragUntilVisible(
+      finder,
+      find.byType(ListView),
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+  }
+
   final agent = authUser(
     id: 'agent-1',
     fullName: 'Javlon Rustamov',
@@ -151,6 +172,7 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Messages'), findsOneWidget);
       expect(find.text('Language'), findsOneWidget);
+      await scrollTo(tester, find.text('Logout'));
       expect(find.text('Logout'), findsOneWidget);
     });
 
@@ -237,8 +259,7 @@ void main() {
 
       // Logout is the last row — below the fold on the 800x600 default test
       // surface, unlike every row tapped above it.
-      await tester.ensureVisible(find.text('Logout'));
-      await tester.pumpAndSettle();
+      await scrollTo(tester, find.text('Logout'));
       await tester.tap(find.text('Logout'));
       await tester.pumpAndSettle();
       expect(find.text('Log out?'), findsOneWidget);
@@ -263,7 +284,69 @@ void main() {
       expect(find.text('Settings'), findsOneWidget);
       expect(find.text('Messages'), findsOneWidget);
       expect(find.text('Language'), findsOneWidget);
+      await scrollTo(tester, find.text('Logout'));
       expect(find.text('Logout'), findsOneWidget);
+    });
+  });
+
+  // The Browse/Work switch (`navigation/workspace_mode.dart`). The row only
+  // sets the mode — the shell swap is `app_router.dart`'s redirect, which
+  // this scoped stub router deliberately does not have, so these assert the
+  // mode and the copy rather than a navigation.
+  group('workspace mode switch', () {
+    testWidgets('in the agent shell it offers Browse and sets browse mode', (
+      tester,
+    ) async {
+      final container = await pumpScreen(
+        tester,
+        user: agent,
+        branchPrefix: RoutePaths.workProfile,
+      );
+      expect(container.read(workspaceModeProvider), WorkspaceMode.work);
+
+      final row = find.byKey(const ValueKey('profileAgentWorkspaceModeRow'));
+      await scrollTo(tester, row);
+      expect(find.text('Browse listings'), findsOneWidget);
+      expect(find.text('Go to workspace'), findsNothing);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(container.read(workspaceModeProvider), WorkspaceMode.browse);
+    });
+
+    testWidgets('in the buyer shell it offers the way back to the workspace', (
+      tester,
+    ) async {
+      final container = await pumpScreen(tester, user: agent);
+      container
+          .read(workspaceModeProvider.notifier)
+          .setMode(WorkspaceMode.browse);
+      await tester.pumpAndSettle();
+
+      final row = find.byKey(const ValueKey('profileAgentWorkspaceModeRow'));
+      await scrollTo(tester, row);
+      expect(find.text('Go to workspace'), findsOneWidget);
+      expect(find.text('Browse listings'), findsNothing);
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(container.read(workspaceModeProvider), WorkspaceMode.work);
+    });
+
+    testWidgets('a coworker gets the switch too', (tester) async {
+      await pumpScreen(
+        tester,
+        user: coworker,
+        branchPrefix: RoutePaths.workProfile,
+      );
+
+      await scrollTo(
+        tester,
+        find.byKey(const ValueKey('profileAgentWorkspaceModeRow')),
+      );
+      expect(find.text('Browse listings'), findsOneWidget);
     });
   });
 

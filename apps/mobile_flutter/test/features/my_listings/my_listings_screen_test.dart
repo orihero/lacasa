@@ -1,8 +1,9 @@
 // Widget tests for `my-listings` (lib/features/my_listings/). Pumped inside
 // a real GoRouter, not a bare MaterialApp: the header's back control
 // branches on `context.canPop()`, a row tap pushes a Work-branch listing
-// route, the edit icon `context.go`es to `edit-listing`, and "+" pushes the
-// top-level `create-listing` modal — none of which exist without a router
+// route, the edit icon pushes `edit-listing` (a child route of this screen,
+// so this screen stays underneath it), and "+" pushes the top-level
+// `create-listing` modal — none of which exist without a router
 // in the tree, same reasoning as
 // `test/features/saved_listings/saved_listings_screen_test.dart`.
 
@@ -58,18 +59,38 @@ void main() {
             GoRoute(
               path: 'my-listings',
               builder: (context, state) => const MyListingsScreen(),
-            ),
-            GoRoute(
-              path: 'listing/:id',
-              builder: (context, state) => Scaffold(
-                body: Text('listing-stub-${state.pathParameters['id']}'),
-              ),
-            ),
-            GoRoute(
-              path: 'edit-listing/:id',
-              builder: (context, state) => Scaffold(
-                body: Text('edit-listing-stub-${state.pathParameters['id']}'),
-              ),
+              // Both stubs are nested here, not on `/work`, because that is
+              // where `app_router.dart` declares the real routes: this
+              // screen is the page a Back out of either has to reveal, so
+              // it has to be the page underneath them here too.
+              routes: [
+                GoRoute(
+                  path: 'listing/:id',
+                  builder: (context, state) => Scaffold(
+                    body: Text('listing-stub-${state.pathParameters['id']}'),
+                  ),
+                ),
+                GoRoute(
+                  path: 'edit-listing/:id',
+                  builder: (context, state) => Scaffold(
+                    body: Text(
+                      'edit-listing-stub-${state.pathParameters['id']}',
+                    ),
+                  ),
+                ),
+                // Same nesting as `RoutePaths.workPublishStatus`
+                // (`/work/my-listings/publish-status/:id`) — the row's
+                // channel badges push here, so this screen has to be the
+                // page underneath it exactly as it is for `edit-listing`.
+                GoRoute(
+                  path: 'publish-status/:id',
+                  builder: (context, state) => Scaffold(
+                    body: Text(
+                      'publish-status-stub-${state.pathParameters['id']}',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -179,9 +200,11 @@ void main() {
     });
 
     testWidgets('a load failure shows Retry and re-fetches', (tester) async {
-      final repo = FakeMyListingsRepository(
-        adsError: const NetworkException('offline'),
-      );
+      // A server-side failure, not a connectivity one — the per-screen
+      // string is the better copy exactly here, where "which screen failed"
+      // is the most specific thing the app knows (see
+      // `shared/widgets/read_error.dart`).
+      final repo = FakeMyListingsRepository(adsError: StateError('boom'));
 
       await pumpScreen(tester, repository: repo);
 
@@ -193,6 +216,32 @@ void main() {
 
       expect(repo.fetchMyAdsCallCount, 2);
     });
+
+    testWidgets(
+      'a connectivity failure names itself instead of blaming this screen '
+      '(UX audit §9.5)',
+      (tester) async {
+        // Before this, every read path in the app rendered its own fixed
+        // "Couldn't load X." for a request that never reached the server —
+        // a dozen anonymous cards for one condition, each offering a Retry
+        // that could not possibly succeed. The screen-specific sentence is
+        // now the fallback, not the answer.
+        final repo = FakeMyListingsRepository(
+          adsError: const NetworkException('offline'),
+        );
+
+        await pumpScreen(tester, repository: repo);
+
+        expect(
+          find.text('No connection. Check your network and try again.'),
+          findsOneWidget,
+        );
+        expect(find.text("Couldn't load your ads."), findsNothing);
+        // The glyph carries the same fact — a generic error triangle over
+        // "No connection" wastes the half of the state a user reads first.
+        expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+      },
+    );
 
     testWidgets('shows a shimmer skeleton while loading, then settles', (
       tester,
@@ -247,7 +296,7 @@ void main() {
       expect(find.text('listing-stub-ad-1001'), findsOneWidget);
     });
 
-    testWidgets('tapping the edit icon goes to edit-listing, not detail', (
+    testWidgets('tapping the edit icon opens edit-listing, not detail', (
       tester,
     ) async {
       final ad = myListingAd(id: 'ad-1001');
@@ -260,6 +309,40 @@ void main() {
       expect(find.text('edit-listing-stub-ad-1001'), findsOneWidget);
       expect(find.text('listing-stub-ad-1001'), findsNothing);
     });
+
+    testWidgets(
+      'the edit icon pushes, leaving this very screen on the stack below',
+      (tester) async {
+        final ad = myListingAd(id: 'ad-1001');
+
+        await pumpScreen(
+          tester,
+          repository: FakeMyListingsRepository(ads: [ad]),
+        );
+        // `context.go` used to be used here (build contract §2.2 read
+        // literally), which replaced the branch stack: this screen — its
+        // applied filters, its paged scroll position — was disposed on
+        // every edit-icon tap, and `edit-listing` had nothing to pop back
+        // to. Comparing the `State` object across the navigation is what
+        // catches a regression to that; the route being reachable is not
+        // enough.
+        final before = tester.state<State>(find.byType(MyListingsScreen));
+
+        await tester.tap(find.byKey(const ValueKey('myListingEdit-ad-1001')));
+        await tester.pumpAndSettle();
+        expect(find.text('edit-listing-stub-ad-1001'), findsOneWidget);
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        expect(find.text('edit-listing-stub-ad-1001'), findsNothing);
+        // Back landed on My Ads — the same instance, not a rebuild — rather
+        // than falling through to the route below it.
+        expect(find.byType(MyListingsScreen), findsOneWidget);
+        expect(tester.state<State>(find.byType(MyListingsScreen)), same(before));
+        expect(find.text('work-root'), findsNothing);
+      },
+    );
   });
 
   group(
@@ -393,20 +476,19 @@ void main() {
       expect(find.byKey(const ValueKey('myListingRow-ad-1005')), findsNothing);
       // Sort is a real server param — the repository saw it.
       expect(repo.lastSort, AdSort.highestPrice);
-      // Badge count: Status (1) *plus* the two fields `filter_sheet.dart`'s
-      // `_seedDefaults` silently pre-selects on every fresh open —
-      // Furniture ("With furniture") and Repair ("Not repaired"), per
-      // SCREENS.md §3.5's own stated defaults. Those seeded chips are
-      // genuinely selected in the sheet's UI, not a blank/"any" state, so
-      // `activeMyListingsFilterCount` correctly counts them — exactly the
-      // same convention `features/search`'s own `activeFilterCount` uses
-      // for the buyer-facing sheet (same shared `FilterSheet`,
-      // `_seedDefaults` doc comment). Sort itself stays excluded either
-      // way. 1 (status) + 1 (furniture) + 1 (repairment) = 3.
+      // Badge count: Status, and Status only. A fresh open of the shared
+      // `FilterSheet` now pre-selects nothing — it used to seed Furniture
+      // ("With furniture") and Repair ("Not repaired") into any null
+      // incoming value, so this very flow (tap Sort, tap Status, Apply)
+      // walked out with two constraints the agent never chose and a badge
+      // reading 3. `activeMyListingsFilterCount` counts whatever the user
+      // genuinely selected, which here is the one Status chip; Sort is
+      // excluded from the count by design, same as on the buyer-facing
+      // sheet. 1 (status) = 1.
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('myListingsFiltersBadge')),
-          matching: find.text('3'),
+          matching: find.text('1'),
         ),
         findsOneWidget,
       );
@@ -431,6 +513,21 @@ void main() {
 
         final listFinder = find.byKey(const ValueKey('myListingsListView'));
 
+        // The paging window, read straight off the list rather than
+        // inferred from which rows happen to be built: `ListView.separated`
+        // reports its item count (excluding separators) as
+        // `semanticChildCount`, and the window is one page of ads plus the
+        // load-more sentinel. Asserted *before* any drag, because the rows
+        // are shorter than they used to be, so the very scroll that brings
+        // the first page's last row into view can also cross the
+        // near-bottom threshold and legitimately reveal page two — a row
+        // finder can no longer tell "not paged in yet" from "just
+        // off-screen" here.
+        expect(
+          tester.widget<ListView>(listFinder).semanticChildCount,
+          myListingsPageSize + 1,
+        );
+
         // `ListView.separated` is a real virtualized list — unlike the
         // filter sheet's `SingleChildScrollView`, it only *builds* rows
         // that fall within its viewport plus a small cache extent, so the
@@ -454,12 +551,6 @@ void main() {
           find.byKey(ValueKey('myListingRow-ad-${myListingsPageSize - 1}')),
           findsOneWidget,
         );
-        // Not just off-screen — genuinely absent from the paging window's
-        // `itemCount` until the scroll listener reveals the next page.
-        expect(
-          find.byKey(ValueKey('myListingRow-ad-$myListingsPageSize')),
-          findsNothing,
-        );
 
         // Drag the list up repeatedly until the scroll listener's
         // near-bottom threshold fires and reveals the rest. Plain `pump()`
@@ -467,32 +558,533 @@ void main() {
         // window's own "load more" sentinel (an indeterminate
         // `CircularProgressIndicator`) is on screen, its ticker never
         // settles on its own, so `pumpAndSettle` would hang.
-        for (var i = 0; i < 6; i++) {
-          await tester.drag(listFinder, const Offset(0, -400));
-          await tester.pump();
-        }
-        await tester.pump();
-
-        // The newly-revealed row also needs scrolling into view before the
-        // finder sees it, for the same virtualization reason as above.
-        for (var i = 0; i < 10; i++) {
-          if (find
-              .byKey(ValueKey('myListingRow-ad-$myListingsPageSize'))
-              .evaluate()
-              .isNotEmpty) {
+        for (var i = 0; i < 12; i++) {
+          if (tester.widget<ListView>(listFinder).semanticChildCount ==
+              myListingsPageSize + 5) {
             break;
           }
           await tester.drag(listFinder, const Offset(0, -400));
           await tester.pump();
         }
 
+        // The window grew to hold every ad, and the sentinel is gone
+        // because there is no next page left.
         expect(
-          find.byKey(ValueKey('myListingRow-ad-$myListingsPageSize')),
-          findsOneWidget,
+          tester.widget<ListView>(listFinder).semanticChildCount,
+          myListingsPageSize + 5,
         );
+
+        // The revealed rows also have to be scrolled into view before a
+        // finder sees them, for the same virtualization reason as above.
+        // The assertion targets the *last* ad rather than the first of
+        // page two: by the time the list has been dragged to its end, row
+        // `pageSize` has scrolled back off the top and been recycled, so
+        // it would be absent for a reason that has nothing to do with
+        // paging.
+        const lastAdKey = ValueKey(
+          'myListingRow-ad-${myListingsPageSize + 4}',
+        );
+        for (var i = 0; i < 12; i++) {
+          if (find.byKey(lastAdKey).evaluate().isNotEmpty) break;
+          await tester.drag(listFinder, const Offset(0, -400));
+          await tester.pump();
+        }
+
+        expect(find.byKey(lastAdKey), findsOneWidget);
       });
     },
   );
+
+  group('stage-count strip (UX audit §1 "Relocate" / §5.6)', () {
+    testWidgets(
+      'renders the endpoint\'s counts, not a fold of the loaded page',
+      (tester) async {
+        // The distinction is the whole point: `GET /my/ads` is keyset-paged
+        // here, so folding the one page in memory would print "1 active"
+        // for an agent who has twelve — a number that is wrong by
+        // construction and grows as they scroll.
+        final repo = FakeMyListingsRepository(
+          ads: [myListingAd(id: 'ad-1001')],
+          stageCounts: const AdStageCounts(active: 12, sold: 3, draft: 2),
+        );
+
+        await pumpScreen(tester, repository: repo);
+
+        expect(
+          find.byKey(const ValueKey('myListingsStageStrip')),
+          findsOneWidget,
+        );
+        expect(find.text('All'), findsOneWidget);
+        expect(find.text('12 active'), findsOneWidget);
+        expect(find.text('3 sold'), findsOneWidget);
+        expect(find.text('2 drafts'), findsOneWidget);
+        expect(repo.fetchStageCountsCallCount, 1);
+      },
+    );
+
+    testWidgets('a segment is a filter shortcut and re-fetches by stage', (
+      tester,
+    ) async {
+      final repo = FakeMyListingsRepository(
+        ads: [
+          myListingAd(id: 'ad-1001', stage: '1'),
+          myListingAd(id: 'ad-1005', stage: '2'),
+        ],
+        stageCounts: const AdStageCounts(active: 1, sold: 1, draft: 0),
+      );
+
+      final container = await pumpScreen(tester, repository: repo);
+      expect(find.byKey(const ValueKey('myListingRow-ad-1005')), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const ValueKey('myListingsStageSegment-sold')),
+      );
+      await tester.pumpAndSettle();
+
+      // A real server param, not a client-side narrowing of what was
+      // already fetched.
+      expect(repo.lastStage, AdStage.sold);
+      expect(container.read(myListingsStatusProvider), AdStage.sold);
+      expect(find.byKey(const ValueKey('myListingRow-ad-1001')), findsNothing);
+      expect(find.byKey(const ValueKey('myListingRow-ad-1005')), findsOneWidget);
+    });
+
+    testWidgets(
+      'the sticky stage filter stays visible, and All clears it in one tap '
+      '(UX audit §5.7)',
+      (tester) async {
+        // `myListingsStatusProvider` is a non-autoDispose global: a stage
+        // filter set once survives the whole session. That is only
+        // acceptable because the strip states it on the surface it affects
+        // and offers the undo right beside it.
+        final repo = FakeMyListingsRepository(
+          ads: [myListingAd(id: 'ad-1001', stage: '1')],
+          stageCounts: const AdStageCounts(active: 1, sold: 0, draft: 0),
+        );
+
+        final container = await pumpScreen(tester, repository: repo);
+
+        // The painted fill is what says "this filter is on" — read it off
+        // the segment's own decoration rather than hard-coding a palette
+        // value, so the assertion survives a theme change and still fails
+        // if selection stops moving.
+        Color fillOf(String suffix) {
+          final box = tester.widget<Container>(
+            find.descendant(
+              of: find.byKey(ValueKey('myListingsStageSegment-$suffix')),
+              matching: find.byType(Container),
+            ),
+          );
+          return (box.decoration! as BoxDecoration).color!;
+        }
+
+        final selectedFill = fillOf('all');
+        final unselectedFill = fillOf('draft');
+        expect(selectedFill, isNot(unselectedFill));
+
+        await tester.tap(
+          find.byKey(const ValueKey('myListingsStageSegment-draft')),
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(myListingsStatusProvider), AdStage.draft);
+        // Stated twice, and both statements are on the surface the filter
+        // affects: the selected segment moved, and the header's filter
+        // badge appeared (it counts Status —
+        // `activeMyListingsFilterCount`).
+        expect(fillOf('draft'), selectedFill);
+        expect(fillOf('all'), unselectedFill);
+        expect(
+          find.byKey(const ValueKey('myListingsFiltersBadge')),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Show Draft ads'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey('myListingsStageSegment-all')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(container.read(myListingsStatusProvider), isNull);
+        expect(
+          find.byKey(const ValueKey('myListingsFiltersBadge')),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('a counts failure hides the strip and nothing else', (
+      tester,
+    ) async {
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        stageCountsError: StateError('stage-counts is down'),
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      expect(find.byKey(const ValueKey('myListingsStageStrip')), findsNothing);
+      // Build contract §6 — the ads list is a separate provider and is
+      // unaffected.
+      expect(find.byKey(const ValueKey('myListingRow-ad-1001')), findsOneWidget);
+    });
+  });
+
+  group('publish-channel badges (UX audit §9.2)', () {
+    testWidgets('a FAILED channel is visible on the row itself', (
+      tester,
+    ) async {
+      // Before this, the only record of a failed public post lived two
+      // levels deep: edit the ad, scroll past the whole form, tap "Publish
+      // Status".
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        publishStatuses: {
+          'ad-1001': [
+            myListingsChannelStatus(
+              channel: Channel.telegram,
+              status: PublishStatus.published,
+            ),
+            myListingsChannelStatus(
+              channel: Channel.instagram,
+              status: PublishStatus.failed,
+            ),
+          ],
+        },
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      expect(
+        find.byKey(const ValueKey('myListingChannel-ad-1001-telegram')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('myListingChannel-ad-1001-instagram')),
+        findsOneWidget,
+      );
+      // The tint is what a sighted user reads; this is the same fact for a
+      // screen reader, in `Channel.allChannels` order.
+      expect(
+        find.bySemanticsLabel('Telegram — Published, Instagram — Failed'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an ad with no attempts says so, rather than saying nothing', (
+      tester,
+    ) async {
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      // The batch route answers one key per requested id with an empty
+      // list, and an empty list is a real answer: never attempted.
+      expect(
+        find.bySemanticsLabel('Telegram — Not published, Instagram — '
+            'Not published'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a channel published from elsewhere still gets a badge', (
+      tester,
+    ) async {
+      // YouTube has no publish button in this app (`hasServerPublishPath`
+      // is false), but the server can still report a publication for it —
+      // reported channels are additive to the two always-shown ones.
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        publishStatuses: {
+          'ad-1001': [
+            myListingsChannelStatus(
+              channel: Channel.youtube,
+              status: PublishStatus.published,
+            ),
+          ],
+        },
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      expect(
+        find.byKey(const ValueKey('myListingChannel-ad-1001-youtube')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('one batched request for the whole page, never one per row', (
+      tester,
+    ) async {
+      // `PublishResource.statusForAds` exists for exactly this; the
+      // singular `statusForAd` would be one request per visible row.
+      final repo = FakeMyListingsRepository(
+        ads: [
+          myListingAd(id: 'ad-1'),
+          myListingAd(id: 'ad-2'),
+          myListingAd(id: 'ad-3'),
+        ],
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      expect(repo.fetchPublishStatusesCallCount, 1);
+      expect(repo.lastPublishStatusAdIds, ['ad-1', 'ad-2', 'ad-3']);
+    });
+
+    testWidgets('tapping the badges opens publish-status for that ad', (
+      tester,
+    ) async {
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        publishStatuses: {
+          'ad-1001': [
+            myListingsChannelStatus(
+              channel: Channel.instagram,
+              status: PublishStatus.failed,
+            ),
+          ],
+        },
+      );
+
+      await pumpScreen(tester, repository: repo);
+      final before = tester.state<State>(find.byType(MyListingsScreen));
+
+      await tester.tap(
+        find.byKey(const ValueKey('myListingChannel-ad-1001-instagram')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('publish-status-stub-ad-1001'), findsOneWidget);
+
+      // Pushed, not `go`ne — My Ads survives underneath, same as for
+      // `edit-listing`. Asserted by popping back rather than by looking for
+      // `MyListingsScreen` next to the stub: a completed push leaves the
+      // route below it offstage, so the default `find.byType` would miss it
+      // whether it survived or not. Coming back to the *same* `State` is
+      // the thing that separates a push from a `go` (see the edit-icon test
+      // above, which this mirrors).
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text('publish-status-stub-ad-1001'), findsNothing);
+      expect(find.byType(MyListingsScreen), findsOneWidget);
+      expect(tester.state<State>(find.byType(MyListingsScreen)), same(before));
+    });
+
+    testWidgets('a batch failure costs the badges and nothing else', (
+      tester,
+    ) async {
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        publishStatusesError: StateError('publish status is down'),
+      );
+
+      await pumpScreen(tester, repository: repo);
+
+      expect(find.byKey(const ValueKey('myListingRow-ad-1001')), findsOneWidget);
+      // No badge asserts "not published" on an unknown — the strip renders
+      // nothing at all rather than a grey pill the app cannot back up.
+      expect(
+        find.byKey(const ValueKey('myListingChannels-ad-1001')),
+        findsNothing,
+      );
+    });
+  });
+
+  group('pull-to-refresh (UX audit §9.3)', () {
+    testWidgets('a pull re-fetches the ads, the counts and the badges', (
+      tester,
+    ) async {
+      // `myListingsResultsProvider` is not `autoDispose`, so before this the
+      // only thing that ever re-fetched this screen was a filter change or
+      // killing the app — an ad added by a coworker or the web console
+      // simply never appeared.
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001')],
+        stageCounts: const AdStageCounts(active: 1, sold: 0, draft: 0),
+      );
+
+      await pumpScreen(tester, repository: repo);
+      expect(repo.fetchMyAdsCallCount, 1);
+      expect(repo.fetchStageCountsCallCount, 1);
+      expect(repo.fetchPublishStatusesCallCount, 1);
+
+      await tester.fling(
+        find.byKey(const ValueKey('myListingsListView')),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.fetchMyAdsCallCount, 2);
+      expect(repo.fetchStageCountsCallCount, 2);
+      expect(repo.fetchPublishStatusesCallCount, 2);
+      expect(repo.fetchCoworkersCallCount, 2);
+    });
+
+    testWidgets('a refresh that fails lands in the list, not in the console', (
+      tester,
+    ) async {
+      // A rejected `onRefresh` future is an unhandled async error: it
+      // reaches no user and takes the test run down with it. The same
+      // failure is already the list's own error state, which has copy and a
+      // Retry — see `refreshMyListings`.
+      final repo = FakeMyListingsRepository(ads: [myListingAd(id: 'ad-1001')]);
+
+      await pumpScreen(tester, repository: repo);
+
+      repo.adsError = const NetworkException('offline');
+      await tester.fling(
+        find.byKey(const ValueKey('myListingsListView')),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('No connection. Check your network and try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the empty state can be pulled too', (tester) async {
+      // The state most worth refreshing is the one with nothing on it —
+      // which is also the one a default `ListView` refuses to overscroll.
+      final repo = FakeMyListingsRepository(ads: const []);
+
+      await pumpScreen(tester, repository: repo);
+      expect(repo.fetchMyAdsCallCount, 1);
+
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 300),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.fetchMyAdsCallCount, 2);
+    });
+  });
+
+  group('empty states (UX audit §9.4)', () {
+    testWidgets(
+      'a brand-new agent gets §25\'s copy and a way forward',
+      (tester) async {
+        // The only affordance on this screen used to be an unlabelled 38px
+        // "+" in the header.
+        await pumpScreen(
+          tester,
+          repository: FakeMyListingsRepository(ads: const []),
+        );
+
+        expect(
+          find.byKey(const ValueKey('myListingsEmptyState')),
+          findsOneWidget,
+        );
+        expect(find.text('Ads not found.'), findsOneWidget);
+
+        await tester.tap(find.text('Create New Post'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('create-listing-stub'), findsOneWidget);
+      },
+    );
+
+    testWidgets('"filtered out" is a different sentence from "none"', (
+      tester,
+    ) async {
+      // Identical copy for both used to make an agent with a Status=Sold
+      // filter believe they had no ads at all.
+      final repo = FakeMyListingsRepository(
+        ads: [myListingAd(id: 'ad-1001', stage: '1')],
+      );
+      final container = await pumpScreen(tester, repository: repo);
+
+      container.read(myListingsStatusProvider.notifier).setStatus(AdStage.sold);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('myListingsFilteredEmptyState')),
+        findsOneWidget,
+      );
+      expect(find.text('No ads match your filters.'), findsOneWidget);
+      expect(find.text('Ads not found.'), findsNothing);
+
+      await tester.tap(find.text('Clear filters'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(myListingsStatusProvider), isNull);
+      expect(find.byKey(const ValueKey('myListingRow-ad-1001')), findsOneWidget);
+    });
+  });
+
+  group('row details', () {
+    testWidgets('Created At is rendered in local time, not UTC', (
+      tester,
+    ) async {
+      // `Ad.createdAt` is decoded `isUtc: true` (`wire_timestamp.dart`), and
+      // `Formatters.date` reads the fields straight off whatever it is
+      // handed — so without `.toLocal()` an ad created at 09:30 in Tashkent
+      // printed 04:30, and one created after 05:00 local printed the
+      // previous day's date on a list sorted newest-first.
+      const seconds = 1700000800;
+      final utc = DateTime.fromMillisecondsSinceEpoch(
+        seconds * 1000,
+        isUtc: true,
+      );
+
+      await pumpScreen(
+        tester,
+        repository: FakeMyListingsRepository(
+          ads: [myListingAd(id: 'ad-1001', createdAtSeconds: seconds)],
+        ),
+      );
+
+      expect(
+        find.textContaining(Formatters.date(utc.toLocal())),
+        findsOneWidget,
+      );
+      // The negative half only says anything on a machine that is not
+      // already on UTC; asserting it unconditionally would fail there for a
+      // reason that has nothing to do with this code.
+      if (utc.toLocal().timeZoneOffset != Duration.zero) {
+        expect(find.textContaining(Formatters.date(utc)), findsNothing);
+      }
+    });
+
+    testWidgets('the edit affordance clears the 48dp touch floor', (
+      tester,
+    ) async {
+      // The circle still paints at the mockup's 34dp — only the transparent
+      // hit box around it grew (UX audit §10.2).
+      await pumpScreen(
+        tester,
+        repository: FakeMyListingsRepository(
+          ads: [myListingAd(id: 'ad-1001')],
+        ),
+      );
+
+      final size = tester.getSize(
+        find.byKey(const ValueKey('myListingEdit-ad-1001')),
+      );
+      expect(size.width, greaterThanOrEqualTo(TapTarget.minimumSize));
+      expect(size.height, greaterThanOrEqualTo(TapTarget.minimumSize));
+      // …and the mockup's `.trow__act` circle is still painted at exactly
+      // 34: the hit box grew, the paint did not.
+      expect(
+        tester.getSize(
+          find.descendant(
+            of: find.byKey(const ValueKey('myListingEdit-ad-1001')),
+            matching: find.byType(Container),
+          ),
+        ),
+        const Size(34, 34),
+      );
+    });
+  });
 
   group('layout holds at real phone widths', () {
     for (final size in const [

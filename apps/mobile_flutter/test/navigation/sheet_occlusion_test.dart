@@ -22,9 +22,17 @@ import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../support/ambient_repository_overrides.dart';
+
 void main() {
   Future<GoRouter> pumpApp(WidgetTester tester) async {
-    final container = ProviderContainer();
+    // Pumping the real router mounts the whole app shell, which touches
+    // nearly every repository in the app; without these the un-overridden
+    // providers fire real HTTP and `pumpAndSettle` times out. This file
+    // overrides none of them itself, so every ambient flag stays on.
+    final container = ProviderContainer(
+      overrides: ambientRepositoryOverrides(),
+    );
     addTearDown(container.dispose);
     final router = container.read(goRouterProvider);
 
@@ -49,9 +57,11 @@ void main() {
     (tester) async {
       await pumpApp(tester);
 
-      // Signed out -> Profile is branchIndex 4 (Work is hidden, but every
-      // branchIndex is fixed regardless — see glass_tab_bar.dart).
-      await tester.tap(find.byKey(const ValueKey('navTab-4')));
+      // Signed out -> the buyer shell, whose four branches are
+      // 0=Home, 1=Search, 2=Agents, 3=Profile (glass_tab_bar.dart's
+      // `buyerTabItems`). The agent shell is a separate route entirely and
+      // is not mounted for this session at all.
+      await tester.tap(find.byKey(const ValueKey('navTab-3')));
       await tester.pumpAndSettle();
       expect(find.byType(ProfileSignedOutScreen), findsOneWidget);
 

@@ -1,5 +1,8 @@
-/// "Reset" (text) / "Apply Filters" (filled, live count) — SCREENS.md
-/// §3.5's footer buttons. The Apply label reads the same live
+/// "Reset" (ghost glass) / "Apply Filters" (filled, live count) —
+/// SCREENS.md §3.5's footer buttons. SCREENS.md calls Reset "(text)", but
+/// the mockup gives both halves the same `.btn` shape (`.btns .btn{flex:1}`,
+/// 54px, pill) with Reset as `.btn--ghost glf`; visual form is the mockup's
+/// call. The Apply label reads the same live
 /// result-count preview §5's interaction contract describes for the
 /// sheet body ("Apply Filters (3)" — read as "your current filters match
 /// 3 listings, tap to apply them", the one number both spec lines can
@@ -95,31 +98,36 @@ class _FooterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `.btns{display:flex;gap:10px}` + `.btns .btn{flex:1}` — two equal
+    // 54px pills, Reset as a `.btn--ghost glf` glass button rather than a
+    // bare text hit area.
     return Row(
       children: [
         Expanded(
           child: GestureDetector(
             key: const ValueKey('filterSheet-reset'),
+            behavior: HitTestBehavior.opaque,
             onTap: onReset,
-            child: Container(
+            child: GlassSurface(
+              variant: GlassVariant.flatForm,
+              borderRadius: AppRadii.pill,
+              height: 54,
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
               child: Text(
                 AppLocalizations.of(context).filterResetButtonLabel,
-                style: type.rowTitle.copyWith(color: colors.ink2),
+                style: type.rowTitle.copyWith(color: colors.ink),
               ),
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.base),
+        const SizedBox(width: 10),
         Expanded(
-          flex: 2,
           child: GestureDetector(
             key: const ValueKey('filterSheet-apply'),
             onTap: onApply,
             child: Container(
+              height: 54,
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.base),
               decoration: BoxDecoration(
                 gradient: AppAccent.gradient,
                 borderRadius: AppRadii.pill,

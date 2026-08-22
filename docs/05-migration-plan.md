@@ -141,14 +141,6 @@ Accounts screen should say so rather than implying it works.
        still describes the old SPA-only deploy. Out of scope for the local-dev
        milestone, but it is the thing standing between `main` and a real deploy.
 
-## Phase H (backlog, not scheduled) — Realting.uz feed sync
-
-Passive batch sync via a generated XML/YML feed, not a per-ad click. Needs its
-own design pass (field-mapping to Realting's schema, feed hosting, cron
-cadence) before it becomes a real phase. The `REALTING` value is reserved in
-`PublishChannel` today (see `06-cross-posting.md` §4) so this doesn't require
-a second migration once it starts.
-
 ## Beyond the migration — the surfaces that grew out of it
 
 Not part of the Firebase migration, but tracked here because they share the

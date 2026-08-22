@@ -19,6 +19,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../theme/theme.dart';
+import 'tap_target.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -26,7 +27,9 @@ class SectionHeader extends StatelessWidget {
     required this.title,
     this.linkLabel,
     this.onLink,
-    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.screenGutter,
+    ),
   });
 
   final String title;
@@ -61,11 +64,32 @@ class SectionHeader extends StatelessWidget {
           ),
           if (linkLabel != null && onLink != null) ...[
             const SizedBox(width: AppSpacing.sm),
-            GestureDetector(
-              onTap: onLink,
+            // [TapTarget], not a bare [GestureDetector]: this link is
+            // 11.5px type, so a detector wrapped straight around the Text
+            // gave it a ~17dp-tall hit box with no padding at all — under
+            // half the 48dp floor, on a control that sits at the very edge
+            // of the screen where thumbs are least accurate. The link keeps
+            // its type and colour exactly; only the transparent box around
+            // it grows, which does raise the header row to 48dp tall
+            // wherever a link is present (headers without one are
+            // unchanged) — see `tap_target.dart` for why that layout cost
+            // is the right side of the trade.
+            TapTarget(
+              semanticsLabel: linkLabel!,
+              onTap: onLink!,
               child: Text(
                 linkLabel!,
-                style: type.rowTitle.copyWith(color: AppAccent.color),
+                // `.link{font-size:11.5px;font-weight:500;color:var(--muted)}`
+                // — muted, not accent. The source's accent variant is a
+                // separate class (`.link--acc`, used by login/register and
+                // publish-status), and no `.sec` header in the mockup uses
+                // it, so this widget renders the base rule only. No size
+                // role is exactly 11.5/500; `specMeta` (10.5/500, no
+                // letter-spacing) is the nearest and needs only the size.
+                style: type.specMeta.copyWith(
+                  fontSize: 11.5,
+                  color: colors.muted,
+                ),
               ),
             ),
           ],

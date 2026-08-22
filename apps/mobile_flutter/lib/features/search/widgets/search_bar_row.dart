@@ -1,11 +1,17 @@
 /// SCREENS.md §3.4's header: "search input, placeholder 'Search city,
 /// district, or title', cancel button." Debounces text input 300ms before
 /// updating [searchQueryProvider] — build spec: "Debounce the query; do not
-/// fire a request per keystroke." There is no actual network request behind
-/// free-text search (see `search_repository.dart`), but debouncing still
-/// avoids re-filtering/re-sorting the results list on every keystroke, and
-/// matches the 300ms figure SCREENS.md §5 already uses for `filter-sheet`'s
-/// field changes.
+/// fire a request per keystroke." Each committed query is a real server
+/// round trip (`GET /ads?q=`, page 1 — see `search_repository.dart` and
+/// `search_providers.dart`'s [searchQueryProvider] note), so the debounce
+/// is what keeps that to one request per pause rather than one per
+/// keystroke; it also matches the 300ms figure SCREENS.md §5 already uses
+/// for `filter-sheet`'s field changes.
+///
+/// This header used to claim the opposite — "there is no actual network
+/// request behind free-text search" — from back when the query re-filtered
+/// an already-fetched page in Dart. Nothing does that any more; the query
+/// reaches `applySearch` in `apps/api/src/services/adService.js`.
 ///
 /// On a debounced *non-empty* commit, the query is also recorded into
 /// [recentSearchesProvider] — "Recent Searches" persists what the user
@@ -26,7 +32,11 @@ import '../../../theme/theme.dart';
 import '../state/search_providers.dart';
 
 class SearchBarRow extends ConsumerStatefulWidget {
-  const SearchBarRow({super.key, required this.controller, required this.focusNode});
+  const SearchBarRow({
+    super.key,
+    required this.controller,
+    required this.focusNode,
+  });
 
   /// Owned by the parent screen, not this widget — a "Recent Searches" chip
   /// tap needs to write into the same field this row edits, which requires
@@ -42,9 +52,33 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
   Timer? _debounce;
 
   @override
+  void initState() {
+    super.initState();
+    // `.srch__x` only exists while the field has text (mockup's field is
+    // rendered with a value), so this row has to rebuild on edits it did
+    // not originate — a "Recent Searches" chip tap writes straight into
+    // this controller from the parent screen.
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(SearchBarRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      widget.controller.addListener(_onControllerChanged);
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onChanged(String value) {
@@ -55,6 +89,14 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
         ref.read(recentSearchesProvider.notifier).addQuery(value);
       }
     });
+  }
+
+  /// `.srch__x` — empties the field but keeps the keyboard up, so the user
+  /// can retype. Dropping focus is "Cancel"'s distinct job below.
+  void _onClear() {
+    _debounce?.cancel();
+    widget.controller.clear();
+    ref.read(searchQueryProvider.notifier).clear();
   }
 
   void _onCancel() {
@@ -70,19 +112,27 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final l10n = AppLocalizations.of(context);
 
+    final hasText = widget.controller.text.isNotEmpty;
+
     return Row(
       children: [
         Expanded(
+          // `.srch{height:50px;border-radius:25px;gap:9px;padding:0 8px 0 16px}`
+          // — a true pill with asymmetric padding, so the clear button sits
+          // 8px from the trailing edge.
           child: GlassSurface(
             key: const ValueKey('searchInputSurface'),
             variant: GlassVariant.flatForm,
-            borderRadius: BorderRadius.circular(AppRadii.control),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-            height: 44,
+            borderRadius: AppRadii.pill,
+            padding: const EdgeInsets.only(
+              left: AppSpacing.lg,
+              right: AppSpacing.md,
+            ),
+            height: 50,
             child: Row(
               children: [
                 Icon(Icons.search_rounded, size: 18, color: colors.muted),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: 9),
                 Expanded(
                   child: TextField(
                     key: const ValueKey('searchInputField'),
@@ -98,17 +148,41 @@ class _SearchBarRowState extends ConsumerState<SearchBarRow> {
                     ),
                   ),
                 ),
+                if (hasText)
+                  GestureDetector(
+                    key: const ValueKey('searchClearButton'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _onClear,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.sunk,
+                        borderRadius: AppRadii.pill,
+                      ),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 14,
+                        color: colors.muted,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
-        const SizedBox(width: AppSpacing.base),
+        // `.nav--stack{gap:11px}`.
+        const SizedBox(width: 11),
         GestureDetector(
           key: const ValueKey('searchCancelButton'),
           onTap: _onCancel,
+          // `.link--btn{font-weight:600;color:var(--ink-2)}` — the accent
+          // variant (`.link--acc`) is a different class this screen never
+          // uses.
           child: Text(
             l10n.searchCancelButtonLabel,
-            style: type.rowTitle.copyWith(color: AppAccent.color),
+            style: type.rowTitle.copyWith(color: colors.ink2),
           ),
         ),
       ],

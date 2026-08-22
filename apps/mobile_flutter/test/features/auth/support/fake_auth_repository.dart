@@ -47,6 +47,13 @@ class FakeAuthRepository implements AuthRepository {
   final Object? signOutError;
 
   int loginCallCount = 0;
+
+  /// The credentials of the most recent [login]. Recorded because the login
+  /// screen has a caller that supplies them itself rather than reading them
+  /// off the form — the debug-only seeded-account shortcut on the hero icon
+  /// — and "which account did that sign in as" is the whole point of it.
+  String? lastLoginEmail;
+  String? lastLoginPassword;
   int registerCallCount = 0;
   int currentUserCallCount = 0;
   int updateProfileCallCount = 0;
@@ -58,6 +65,8 @@ class FakeAuthRepository implements AuthRepository {
     required String password,
   }) async {
     loginCallCount++;
+    lastLoginEmail = email;
+    lastLoginPassword = password;
     if (loginError != null) throw loginError!;
     return loginResult!;
   }

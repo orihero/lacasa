@@ -42,9 +42,13 @@ class LeadsNavActions extends StatelessWidget {
             key: toggleKey,
             behavior: HitTestBehavior.opaque,
             onTap: onToggleView,
-            child: SizedBox(
-              width: 40,
-              height: 40,
+            // `.nav .rnd.gl` — a 38px glass circle, not a bare icon.
+            child: GlassSurface(
+              variant: GlassVariant.onSurface,
+              borderRadius: AppRadii.pill,
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
               child: Icon(toggleIcon, size: 20, color: colors.ink2),
             ),
           ),
@@ -57,11 +61,24 @@ class LeadsNavActions extends StatelessWidget {
             key: addKey,
             behavior: HitTestBehavior.opaque,
             onTap: onAddLead,
+            // `.nav .rnd.acc` — 38px, filled with `--pill`, and carrying the
+            // source's own drop shadow (`0 8px 18px -8px rgba(21,21,27,.6)`).
             child: Container(
-              width: 36,
-              height: 36,
+              width: 38,
+              height: 38,
               alignment: Alignment.center,
-              decoration: BoxDecoration(color: colors.pill, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: colors.pill,
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x9915151B),
+                    blurRadius: 18,
+                    spreadRadius: -8,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
               child: Icon(Icons.add_rounded, size: 20, color: colors.pillInk),
             ),
           ),

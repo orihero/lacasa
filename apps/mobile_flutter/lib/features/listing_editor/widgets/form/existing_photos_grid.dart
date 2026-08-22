@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
+import 'photos_step.dart';
 
 class ExistingPhotosGrid extends StatelessWidget {
   const ExistingPhotosGrid({
@@ -40,41 +41,30 @@ class ExistingPhotosGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: photos.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: AppSpacing.sm,
-        mainAxisSpacing: AppSpacing.sm,
+        crossAxisCount: kListingPhotoGridColumns,
+        crossAxisSpacing: kListingPhotoGridGap,
+        mainAxisSpacing: kListingPhotoGridGap,
         childAspectRatio: 1,
       ),
       itemBuilder: (context, index) {
         return Stack(
           key: ValueKey('existingPhoto-$index'),
-          clipBehavior: Clip.none,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-              child: ListingPhoto(url: photos[index]),
-            ),
-            Positioned(
-              top: -6,
-              right: -6,
-              child: GestureDetector(
-                key: ValueKey('existingPhoto-remove-$index'),
-                onTap: () {
-                  final next = List.of(photos)..removeAt(index);
-                  onChanged(next);
-                },
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: colors.card,
-                    shape: BoxShape.circle,
-                    boxShadow: AppShadows.card,
-                  ),
-                  child: Icon(Icons.close_rounded, size: 15, color: colors.ink),
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadii.md),
+                child: ColoredBox(
+                  color: colors.sunk,
+                  child: ListingPhoto(url: photos[index]),
                 ),
               ),
+            ),
+            ListingPhotoRemoveBadge(
+              badgeKey: ValueKey('existingPhoto-remove-$index'),
+              onTap: () {
+                final next = List.of(photos)..removeAt(index);
+                onChanged(next);
+              },
             ),
           ],
         );

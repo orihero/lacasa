@@ -2,16 +2,21 @@
  * src/data/useUsers — the user directory's reads and its one write.
  *
  * Modelled on apps/console/src/data/useLeads.ts (typed resource in, query key
- * from ./queryKeys, mutation invalidates by key), with the one structural
+ * from @/lib/queryKeys, mutation invalidates by key), with the one structural
  * difference the admin API forces: `GET /api/admin/users` is keyset-paged, so
  * the list is a `useInfiniteQuery` rather than a `useQuery`. There is no
  * "fetch them all" call to fall back on — the endpoint caps `limit` at 100 —
  * and inventing a client-side loop over cursors here would just hide the
  * paging from the screen while making the first paint wait for every page.
  *
- * `cursor` never enters the query key (see ./queryKeys' own comment): it is
+ * `cursor` never enters the query key (see @/lib/queryKeys' own comment): it is
  * `pageParam`, owned by react-query, and folding it in would give every page
  * its own cache entry and defeat the pagination entirely.
+ *
+ * NO `placeholderData: keepPreviousData` (PRECEDENCE.md). Changing a filter
+ * must drop the table to its skeleton rather than hold the previous filter's
+ * rows under the new filter's controls — that is how an admin acts on the
+ * wrong row.
  */
 import {
   useInfiniteQuery,
@@ -24,15 +29,14 @@ import {
 import type { AdminPage, AdminUserResponse, AdminUserRow } from "@lacasa/api-client";
 import type { ApiError, RealtorStatusKey, UserRoleKey } from "@lacasa/domain";
 import { apiClient } from "@/lib/apiClient";
-import { queryKeys } from "./queryKeys";
+import { queryKeys } from "@/lib/queryKeys";
 
 /**
- * 50, not the server's default of 25. The directory is a scanning surface at
- * 38px a row (tailwind.config.js rule 4), so 25 rows is barely a screenful on
- * the monitors this app is used on and an admin would be clicking "Load more"
- * before they had read anything. Still well under the endpoint's cap of 100,
- * which is where the row-count-times-two-aggregate-queries cost per page
- * starts to show.
+ * 50, not the server's default of 25. The directory is a dense scanning
+ * surface, so 25 rows is barely a screenful on the monitors this app is used
+ * on and an admin would be clicking "Load more" before they had read anything.
+ * Still well under the endpoint's cap of 100, which is where the
+ * row-count-times-two-aggregate-queries cost per page starts to show.
  */
 export const USERS_PAGE_SIZE = 50;
 
@@ -53,7 +57,7 @@ export interface UsersQueryFilters {
  * "no filter", and sending `?q=` would ask the server to match everything
  * against the empty string.
  */
-function normalizeFilters(filters: UsersQueryFilters) {
+function normalizeFilters(filters: UsersQueryFilters): UsersQueryFilters {
   return {
     q: filters.q?.trim() || undefined,
     role: filters.role,
@@ -76,7 +80,7 @@ export function useUsers(
     // `?? undefined` rather than passing `null` on: react-query treats a
     // null/undefined next page param as "there is no next page", but only
     // `undefined` also stops it from calling queryFn with a literal null.
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    getNextPageParam: (lastPage: AdminPage<AdminUserRow>) => lastPage.nextCursor ?? undefined,
   });
 }
 

@@ -1,5 +1,5 @@
 /**
- * src/lib/queryClient — the one QueryClient instance for the app (wired in
+ * src/lib/queryClient — the one QueryClient instance for the app (wired into
  * App.tsx's QueryClientProvider).
  *
  * `staleTime: 0` — the opposite of apps/console's 30s. Two admins can be
@@ -22,6 +22,13 @@
  * admin out over a scoped 403 would be a worse failure mode than the refusal
  * screen it replaces — and on this surface it would also throw away whatever
  * half-finished decision they were making.
+ *
+ * NOTE what is deliberately absent: no `placeholderData: keepPreviousData`.
+ * Changing a filter or a tab must show the skeleton rather than keep the
+ * previous rows on screen under new filter chips, because on an approvals
+ * queue "these 4 rows" and "these 4 rows, for the filter you just left" are
+ * opposite facts. Every filter combination is its own cache entry and loading
+ * is keyed on `isPending`.
  */
 import { QueryCache, QueryClient, MutationCache } from "@tanstack/react-query";
 import { ApiError } from "@lacasa/domain";
@@ -31,10 +38,12 @@ function isAuthError(error: unknown): boolean {
   return ApiError.isApiError(error) && (error.status === 401 || error.status === 403);
 }
 
-// Exported so its one real branch (401 -> emit, everything else -> silent) is
-// directly unit-testable without instantiating a QueryClient or mounting any
-// React — QueryCache/MutationCache's `onError` just needs *a* function with
-// this signature, not this exact one wired up to observe.
+/**
+ * Exported so its one real branch (401 -> emit, everything else -> silent) is
+ * directly unit-testable without instantiating a QueryClient or mounting any
+ * React — QueryCache/MutationCache's `onError` just needs *a* function with
+ * this signature, not this exact one wired up to observe.
+ */
 export function notifyIfSessionExpired(error: unknown): void {
   if (ApiError.isApiError(error) && error.status === 401) {
     emitSessionExpired();

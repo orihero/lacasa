@@ -14,6 +14,7 @@ import 'package:lacasa_mobile/features/language/language.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../support/ambient_repository_overrides.dart';
 import 'support/fake_language_repository.dart';
 
 void main() {
@@ -27,7 +28,12 @@ void main() {
       // auto-retries a thrown Exception, which would make
       // repository.saved / call-count assertions non-deterministic.
       retry: (retryCount, error) => null,
-      overrides: [languageRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        // `languageRepositoryProvider` is not one of the ambient entries, so
+        // no opt-out flag is needed alongside this file's own override.
+        ...ambientRepositoryOverrides(),
+        languageRepositoryProvider.overrideWithValue(repository),
+      ],
     );
     addTearDown(container.dispose);
 
@@ -84,7 +90,13 @@ void main() {
       final repository = FakeLanguageRepository();
       final container = ProviderContainer(
         retry: (retryCount, error) => null,
-        overrides: [languageRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          // This one pumps the *real* [App], which mounts the whole router
+          // shell and touches nearly every repository in the app — so the
+          // ambient overrides matter here even more than above.
+          ...ambientRepositoryOverrides(),
+          languageRepositoryProvider.overrideWithValue(repository),
+        ],
       );
       addTearDown(container.dispose);
 

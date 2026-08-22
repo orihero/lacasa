@@ -83,15 +83,17 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    container.read(authSessionProvider.notifier).signIn(
-      authUser(
-        id: 'agent-1',
-        fullName: 'Javlon Rustamov',
-        email: 'agent@lacasa.uz',
-        role: 'agent',
-        tgChatIds: tgChatIds,
-      ),
-    );
+    container
+        .read(authSessionProvider.notifier)
+        .signIn(
+          authUser(
+            id: 'agent-1',
+            fullName: 'Javlon Rustamov',
+            email: 'agent@lacasa.uz',
+            role: 'agent',
+            tgChatIds: tgChatIds,
+          ),
+        );
 
     final router = GoRouter(
       initialLocation: RoutePaths.work,
@@ -113,7 +115,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -130,18 +138,12 @@ void main() {
 
   group('header', () {
     testWidgets('shows the §3.21 title', (tester) async {
-      await pumpScreen(
-        tester,
-        repository: FakeConnectedAccountsRepository(),
-      );
+      await pumpScreen(tester, repository: FakeConnectedAccountsRepository());
       expect(find.text('Connected Accounts'), findsOneWidget);
     });
 
     testWidgets('back pops to the route below', (tester) async {
-      await pumpScreen(
-        tester,
-        repository: FakeConnectedAccountsRepository(),
-      );
+      await pumpScreen(tester, repository: FakeConnectedAccountsRepository());
 
       await tester.tap(find.bySemanticsLabel('Back'));
       await tester.pumpAndSettle();
@@ -174,17 +176,21 @@ void main() {
 
       final container = ProviderContainer(
         retry: (retryCount, error) => null,
-        overrides: [connectedAccountsRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          connectedAccountsRepositoryProvider.overrideWithValue(repo),
+        ],
       );
       addTearDown(container.dispose);
-      container.read(authSessionProvider.notifier).signIn(
-        authUser(
-          id: 'agent-1',
-          fullName: 'Javlon Rustamov',
-          email: 'agent@lacasa.uz',
-          role: 'agent',
-        ),
-      );
+      container
+          .read(authSessionProvider.notifier)
+          .signIn(
+            authUser(
+              id: 'agent-1',
+              fullName: 'Javlon Rustamov',
+              email: 'agent@lacasa.uz',
+              role: 'agent',
+            ),
+          );
 
       await tester.pumpWidget(
         UncontrolledProviderScope(
@@ -227,21 +233,17 @@ void main() {
       expect(repo.fetchCallCount, 2);
     });
 
-    testWidgets(
-      'no connected accounts: toggle is off and no cards render',
-      (tester) async {
-        await pumpScreen(
-          tester,
-          repository: FakeConnectedAccountsRepository(accounts: const []),
-        );
+    testWidgets('no connected accounts: toggle is off and no cards render', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        repository: FakeConnectedAccountsRepository(accounts: const []),
+      );
 
-        expect(
-          find.bySemanticsLabel('Not connected'),
-          findsAtLeastNWidgets(1),
-        );
-        expect(find.textContaining('Posts '), findsNothing);
-      },
-    );
+      expect(find.bySemanticsLabel('Not connected'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('Posts '), findsNothing);
+    });
 
     testWidgets(
       'ruling 7.9: renders the real Posts/Followers/Following fields',
@@ -254,29 +256,28 @@ void main() {
         );
 
         expect(find.text('lacasa.javlon'), findsOneWidget);
-        expect(find.text('Posts 40'), findsOneWidget);
-        expect(find.text('Followers 900'), findsOneWidget);
-        expect(find.text('Following 120'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'a field the Graph API omitted is not fabricated as zero',
-      (tester) async {
-        await pumpScreen(
-          tester,
-          repository: FakeConnectedAccountsRepository(
-            accounts: [
-              instagramAccount(mediaCount: null, followersCount: null),
-            ],
-          ),
+        // `.chan__st` is one dot-joined line, not three chips.
+        expect(
+          find.text('Posts 40 · Followers 900 · Following 120'),
+          findsOneWidget,
         );
-
-        expect(find.textContaining('Posts'), findsNothing);
-        expect(find.textContaining('Followers'), findsNothing);
-        expect(find.text('Following 120'), findsOneWidget);
       },
     );
+
+    testWidgets('a field the Graph API omitted is not fabricated as zero', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        repository: FakeConnectedAccountsRepository(
+          accounts: [instagramAccount(mediaCount: null, followersCount: null)],
+        ),
+      );
+
+      expect(find.textContaining('Posts'), findsNothing);
+      expect(find.textContaining('Followers'), findsNothing);
+      expect(find.text('Following 120'), findsOneWidget);
+    });
 
     testWidgets('Disconnect removes the card and shows a success toast', (
       tester,
@@ -308,11 +309,7 @@ void main() {
         );
         final launcher = FakeLinkLauncher(result: true);
 
-        await pumpScreen(
-          tester,
-          repository: repo,
-          linkLauncher: launcher,
-        );
+        await pumpScreen(tester, repository: repo, linkLauncher: launcher);
 
         await tester.tap(find.text('Connect Instagram'));
         await tester.pumpAndSettle();
@@ -340,11 +337,7 @@ void main() {
         final repo = FakeConnectedAccountsRepository();
         final launcher = FakeLinkLauncher(result: false);
 
-        await pumpScreen(
-          tester,
-          repository: repo,
-          linkLauncher: launcher,
-        );
+        await pumpScreen(tester, repository: repo, linkLauncher: launcher);
 
         await tester.tap(find.text('Connect Instagram'));
         await tester.pumpAndSettle();
@@ -379,39 +372,36 @@ void main() {
     );
   });
 
-  group('Telegram section (ruling 7.10 — count-only, no per-channel cards)', () {
-    testWidgets('no connected channels: toggle off, honest empty copy', (
-      tester,
-    ) async {
-      await pumpScreen(
+  group(
+    'Telegram section (ruling 7.10 — count-only, no per-channel cards)',
+    () {
+      testWidgets('no connected channels: toggle off, honest empty copy', (
         tester,
-        repository: FakeConnectedAccountsRepository(),
-      );
+      ) async {
+        await pumpScreen(tester, repository: FakeConnectedAccountsRepository());
 
-      expect(find.text('No Telegram channels connected'), findsOneWidget);
-    });
+        expect(find.text('No Telegram channels connected'), findsOneWidget);
+      });
 
-    testWidgets('connected channels: toggle on, real count rendered', (
-      tester,
-    ) async {
-      await pumpScreen(
+      testWidgets('connected channels: toggle on, real count rendered', (
         tester,
-        repository: FakeConnectedAccountsRepository(),
-        tgChatIds: const [111, 222, 333],
-      );
+      ) async {
+        await pumpScreen(
+          tester,
+          repository: FakeConnectedAccountsRepository(),
+          tgChatIds: const [111, 222, 333],
+        );
 
-      expect(find.text('3 channels connected'), findsOneWidget);
-    });
-  });
+        expect(find.text('3 channels connected'), findsOneWidget);
+      });
+    },
+  );
 
   group('YouTube section (ruling 7.10 — no backing data at all)', () {
     testWidgets('is always shown as disconnected, with disabled controls', (
       tester,
     ) async {
-      await pumpScreen(
-        tester,
-        repository: FakeConnectedAccountsRepository(),
-      );
+      await pumpScreen(tester, repository: FakeConnectedAccountsRepository());
 
       expect(find.text('Beta — not available in this build.'), findsOneWidget);
       // Visible text is enough proof these render; neither has an `onTap`

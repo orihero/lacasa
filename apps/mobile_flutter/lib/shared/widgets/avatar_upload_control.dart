@@ -93,7 +93,8 @@ class AvatarUploadControl extends ConsumerStatefulWidget {
   final String? semanticsLabel;
 
   @override
-  ConsumerState<AvatarUploadControl> createState() => _AvatarUploadControlState();
+  ConsumerState<AvatarUploadControl> createState() =>
+      _AvatarUploadControlState();
 }
 
 class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
@@ -146,13 +147,15 @@ class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
     // moving.
     widget.onUploadStateChanged(true);
 
-    final handle = ref.read(uploadsRepositoryProvider).upload(
-      media: media,
-      scope: 'avatars',
-      onProgress: (p) {
-        if (mounted) setState(() => _progress = p);
-      },
-    );
+    final handle = ref
+        .read(uploadsRepositoryProvider)
+        .upload(
+          media: media,
+          scope: 'avatars',
+          onProgress: (p) {
+            if (mounted) setState(() => _progress = p);
+          },
+        );
     _handle = handle;
 
     try {
@@ -183,7 +186,9 @@ class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
 
     return Semantics(
       button: true,
-      label: widget.semanticsLabel ?? AppLocalizations.of(context).sharedChangePhotoLabel,
+      label:
+          widget.semanticsLabel ??
+          AppLocalizations.of(context).sharedChangePhotoLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _pick,
@@ -213,7 +218,10 @@ class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
             if (_progress != null)
               Positioned.fill(
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.black38),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.black38,
+                  ),
                   child: Center(
                     child: SizedBox(
                       width: widget.size * 0.4,
@@ -227,12 +235,14 @@ class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
                   ),
                 ),
               ),
+            // `.upl__b{right:-4px;bottom:-4px;width:32px;height:32px;
+            // border-radius:16px;font-size:15px}`.
             Positioned(
-              right: -2,
-              bottom: -2,
+              right: -4,
+              bottom: -4,
               child: Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: colors.sunk,
@@ -242,7 +252,11 @@ class _AvatarUploadControlState extends ConsumerState<AvatarUploadControl> {
                 // Accent-colored now — see this file's doc comment; this
                 // badge starts a real upload, unlike the muted badge the
                 // stand-in it replaced used to render.
-                child: const Icon(Icons.photo_camera_outlined, size: 14, color: AppAccent.color),
+                child: const Icon(
+                  Icons.photo_camera_outlined,
+                  size: 15,
+                  color: AppAccent.color,
+                ),
               ),
             ),
           ],

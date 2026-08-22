@@ -42,15 +42,17 @@ class FilterTextField extends StatelessWidget {
       child: GlassSurface(
         variant: GlassVariant.flatForm,
         borderRadius: BorderRadius.circular(AppRadii.control),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: 4,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        // `.inp,.ta,.selbox{height:52px}` — the same height as this sheet's
+        // picker fields, which an `isDense` TextField collapses well under
+        // on its own.
+        height: 52,
         child: TextField(
           enabled: enabled,
           controller: controller,
           onChanged: onChanged,
           keyboardType: keyboardType,
+          textAlignVertical: TextAlignVertical.center,
           style: type.body.copyWith(color: colors.ink),
           decoration: InputDecoration(
             isDense: true,

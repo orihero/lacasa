@@ -67,9 +67,15 @@ class FullListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Overlay insets are per-overlay in the source
+                    // (`.fcard__ph .badge{top:11px;left:10px}`,
+                    // `.fcard__ph .fav{top:9px;right:9px}`,
+                    // `.fcard__ph .ppill{left:10px;bottom:10px}`), not one
+                    // uniform gutter — the heart sits slightly tighter to
+                    // the corner than the badge it optically balances.
                     Positioned(
-                      left: AppSpacing.sm,
-                      top: AppSpacing.sm,
+                      left: 10,
+                      top: 11,
                       child: GlassSurface(
                         variant: GlassVariant.onPhoto,
                         borderRadius: AppRadii.pill,
@@ -89,42 +95,63 @@ class FullListingCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // 2, not the rule's 9: [FavouriteButton] centres its
+                    // painted 34px chip inside a 48dp hit box, so the inset
+                    // that positions the *box* has to give back the 7px of
+                    // transparent margin for the *chip* to keep landing
+                    // where `.fcard__ph .fav{top:9px;right:9px}` puts it.
+                    // Left at 9 the heart painted ~16px in — the drift this
+                    // arithmetic exists to prevent. See
+                    // [FavouriteButton.cornerInset].
                     Positioned(
-                      right: AppSpacing.sm,
-                      top: AppSpacing.sm,
+                      right: FavouriteButton.cornerInset(9),
+                      top: FavouriteButton.cornerInset(9),
                       child: FavouriteButton(adId: ad.id),
                     ),
-                    Positioned(
-                      left: AppSpacing.sm,
-                      bottom: AppSpacing.sm,
-                      child: PricePill(ad: ad),
-                    ),
+                    Positioned(left: 10, bottom: 10, child: PricePill(ad: ad)),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            // `.fcard__b{padding:9px 3px 0}`.
+            const SizedBox(height: 9),
             Text(
               ad.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: type.cardTitle.copyWith(color: colors.ink),
+              // `.fcard__t{font-size:12.5px;font-weight:600;
+              // letter-spacing:-.1px}` + `.clamp2{line-height:1.35}`. Not
+              // the `cardTitle` role (13.5/700) — that one is
+              // `agents-directory`'s `.acard__n`, a different rule.
+              style: type.rowTitle.copyWith(
+                fontSize: 12.5,
+                letterSpacing: -0.1,
+                height: 1.35,
+                color: colors.ink,
+              ),
             ),
-            const SizedBox(height: 3),
+            // `.fcard__b .spec{margin-top:5px}`.
+            const SizedBox(height: 5),
             Text(
               _specLine(ad, context),
               style: type.specMeta.copyWith(color: colors.muted),
             ),
-            const SizedBox(height: 3),
+            // `.where{margin-top:2px}` — and `.where` is weight 400 in
+            // `--faint` with an 11px glyph, one step quieter than the
+            // `.spec` line above it, not a second copy of it.
+            const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.location_on_rounded, size: 12, color: colors.muted),
+                Icon(Icons.location_on_rounded, size: 11, color: colors.faint),
                 const SizedBox(width: 3),
                 Expanded(
                   child: Text(
                     '${ad.district}, ${ad.city}',
                     overflow: TextOverflow.ellipsis,
-                    style: type.specMeta.copyWith(color: colors.muted),
+                    style: type.specMeta.copyWith(
+                      fontWeight: FontWeight.w400,
+                      color: colors.faint,
+                    ),
                   ),
                 ),
               ],

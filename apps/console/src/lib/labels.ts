@@ -116,7 +116,6 @@ export const PUBLISH_CHANNEL_LABEL: Record<Channel, string> = {
   INSTAGRAM: 'Instagram',
   YOUTUBE: 'YouTube',
   OLX: 'OLX',
-  REALTING: 'Realting',
 };
 
 export const PUBLISH_CHANNEL_ORDER: readonly Channel[] = ALL_CHANNELS;

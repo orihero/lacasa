@@ -52,9 +52,42 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       fontFamily: GoogleFonts.poppins().fontFamily,
       textTheme: _textTheme(colors, typography),
+      snackBarTheme: _snackBarTheme(colors, typography),
       splashFactory: NoSplash.splashFactory,
       highlightColor: Colors.transparent,
       extensions: <ThemeExtension<dynamic>>[colors, glass, typography],
+    );
+  }
+
+  /// The §5 toast look as a *fallback*, so that a [SnackBar] built anywhere
+  /// outside `shared/widgets/toast.dart` still lands on the app's floating
+  /// `--card` bar instead of Material's docked dark-grey one.
+  ///
+  /// `LaCasaToast` sets these same three values explicitly on every bar it
+  /// shows and remains the way to raise a toast (it owns the status glyph,
+  /// the durations and the pending → settled sequence this theme knows
+  /// nothing about). The theme exists for the handful of bare
+  /// `ScaffoldMessenger.showSnackBar(SnackBar(...))` sites that still linger
+  /// in `features/` (auth, settings, edit-profile, `sign_out_confirm`): they
+  /// were shipping a visibly different component next to the real toast, and
+  /// a default is the only fix that also covers the next one someone writes.
+  ///
+  /// [SnackBarThemeData.contentTextStyle] is not decoration here, it is
+  /// required: Material derives a bar's text colour from
+  /// `colorScheme.onInverseSurface`, which is near-white — legible on its own
+  /// dark bar, invisible on `colors.card`. Its metrics are deliberately the
+  /// ones the default already resolved to (`textTheme.bodyMedium`, i.e.
+  /// [LaCasaTypography.bodySmall]) so that only the colour changes and no
+  /// existing toast shifts size.
+  static SnackBarThemeData _snackBarTheme(
+    LaCasaColors colors,
+    LaCasaTypography t,
+  ) {
+    return SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: colors.card,
+      contentTextStyle: t.bodySmall.copyWith(color: colors.ink),
+      actionTextColor: AppAccent.color,
     );
   }
 

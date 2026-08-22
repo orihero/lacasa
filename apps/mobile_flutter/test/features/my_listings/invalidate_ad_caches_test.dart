@@ -64,11 +64,13 @@ void main() {
       // `my-listings` and `dashboard` are both already-visited screens in
       // the scenario this bug describes.
       await container.read(myListingsResultsProvider.future);
+      await container.read(myListingsStageCountsProvider.future);
       await container.read(dashboardAdsProvider.future);
       await container.read(adsStatisticsProvider.future);
       await container.read(adsSeriesProvider.future);
 
       expect(myListingsRepo.fetchMyAdsCallCount, 1);
+      expect(myListingsRepo.fetchStageCountsCallCount, 1);
       expect(dashboardRepo.adsCallCount, 1);
       expect(dashboardRepo.adsStatisticsCallCount, 1);
       expect(dashboardRepo.adsSeriesCallCount, 1);
@@ -88,6 +90,7 @@ void main() {
       // one `dashboardAdsProvider` call site that used to be the only one
       // invalidated.
       await container.read(myListingsResultsProvider.future);
+      await container.read(myListingsStageCountsProvider.future);
       await container.read(dashboardAdsProvider.future);
       await container.read(adsStatisticsProvider.future);
       await container.read(adsSeriesProvider.future);
@@ -96,6 +99,15 @@ void main() {
         myListingsRepo.fetchMyAdsCallCount,
         2,
         reason: 'my-listings itself was never invalidated before this fix',
+      );
+      expect(
+        myListingsRepo.fetchStageCountsCallCount,
+        2,
+        reason:
+            'the My Ads header strip sits directly above the list that did '
+            'update — a create/delete moves exactly the number it prints, '
+            'so a stale count there is more obviously wrong than a stale '
+            'one on a screen away',
       );
       expect(dashboardRepo.adsCallCount, 2);
       expect(

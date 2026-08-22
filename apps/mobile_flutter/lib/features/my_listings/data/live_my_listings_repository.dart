@@ -1,6 +1,7 @@
 /// The real, network-backed [MyListingsRepository] — thin adapter over
 /// [LaCasaApi], adding no wire shapes of its own (same rule
-/// `live_search_repository.dart` follows). [AgentAdsResource.myListPage]/
+/// `live_search_repository.dart` follows). [AgentAdsResource.myListPage],
+/// [AgentAdsResource.stageCounts], [PublishResource.statusForAds] and
 /// [CoworkersResource.list] are already exactly the shapes this feature
 /// needs, so this file has nothing to translate.
 library;
@@ -29,6 +30,14 @@ class LiveMyListingsRepository implements MyListingsRepository {
       cursor: cursor,
     );
   }
+
+  @override
+  Future<AdStageCounts> fetchStageCounts() => _api.agentAds.stageCounts();
+
+  @override
+  Future<Map<String, List<ChannelStatus>>> fetchPublishStatuses(
+    List<String> adIds,
+  ) => _api.publish.statusForAds(adIds);
 
   @override
   Future<List<Coworker>> fetchCoworkers() => _api.coworkers.list();

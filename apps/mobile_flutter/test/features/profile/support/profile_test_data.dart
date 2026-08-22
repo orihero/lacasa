@@ -13,6 +13,7 @@ AuthUser authUser({
   String? phoneNumber,
   String? avatar,
   String? agentId,
+  Map<String, dynamic>? realtor,
 }) {
   return AuthUser.fromJson({
     'id': id,
@@ -25,6 +26,31 @@ AuthUser authUser({
     'tgChatIds': <int>[],
     'igAccounts': <Map<String, dynamic>>[],
     'igAssistConsentAt': null,
-    'realtor': null,
+    'realtor': realtor,
   });
+}
+
+/// The `realtor` block `POST /auth/register`'s realtor branch hangs off a
+/// brand-new `role: "user"` account (`serializeUser.js`) — the shape
+/// `profile-buyer` now branches its Account group on (audit §7.5). Built as
+/// wire JSON and decoded by the real [RealtorProfile.fromJson] rather than
+/// constructed directly, same rationale as [authUser] itself.
+Map<String, dynamic> realtorApplication({
+  required String status,
+  String kind = 'solo',
+  String? agencyName,
+  String? officePhone,
+  String? teamSize,
+  String? appliedAt,
+  String? decidedAt,
+}) {
+  return {
+    'kind': kind,
+    'status': status,
+    'agencyName': agencyName,
+    'officePhone': officePhone,
+    'teamSize': teamSize,
+    'appliedAt': appliedAt,
+    'decidedAt': decidedAt,
+  };
 }

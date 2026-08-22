@@ -190,7 +190,7 @@ abstract class AppLocalizations {
   /// **'Tashkent, Uzbekistan'**
   String get homeLocationPillLabel;
 
-  /// Screen-reader semantics label on the Home header's notification bell icon, stating how many notifications are unread. The count is fixture-only today (no notifications-count endpoint exists — see home_header_row.dart's doc comment) but is still routed through a real ICU plural since a screen reader must announce it correctly regardless of value.
+  /// Screen-reader semantics label on the Home header's notification bell icon, stating how many notifications are unread. The count is the real unread count from GET /notifications, which is agent/coworker-only, so it is 0 for a buyer or a signed-out visitor — the plural must read correctly for every value including zero.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, one{Notifications, {count} unread} other{Notifications, {count} unread}}'**
@@ -250,6 +250,12 @@ abstract class AppLocalizations {
   /// **'Retail'**
   String get homeCategoryRetailLabel;
 
+  /// Semantics label (screen-reader only) on a chip in Home's category chip row, now that tapping one navigates to search carrying an AdFilters payload rather than only repainting itself. {category} is the chip's own visible label — homeCategoryApartmentLabel and friends.
+  ///
+  /// In en, this message translates to:
+  /// **'Show {category} listings'**
+  String homeCategoryChipSemanticsLabel(String category);
+
   /// Section-header title above the Explore Nearby grid on Home (explore_nearby_grid.dart).
   ///
   /// In en, this message translates to:
@@ -279,6 +285,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No listings available yet.'**
   String get homeFeedEmptyMessage;
+
+  /// Empty-state message in the Featured Listings rail's position on Home when the feed is empty *because* a category chip is active — distinct from homeFeedEmptyMessage, which claims the whole catalogue is empty and would be wrong here, since clearing the chip would bring listings back.
+  ///
+  /// In en, this message translates to:
+  /// **'No listings in this category yet.'**
+  String get homeFeedCategoryEmptyMessage;
 
   /// Two-line heading on the first hardcoded promo card in Home's promo carousel (promo_carousel.dart) — the literal newline reproduces the original two-element titleLines list joined for display.
   ///
@@ -328,6 +340,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} ad} other{{count} ads}}'**
   String homeAgentAdsCount(int count);
 
+  /// Caption under an agent's avatar in Home's Top Agents rail, replacing the ad-count caption (homeAgentAdsCount) so the rail reports the endorsement its "Top Agents" heading implies rather than raw volume. {rating} is the server's one-decimal aggregate printed as-is (never rounded, never defaulted to 0) and {count} is how many reviews it averages; when ratingAverage is null the rail renders sharedNoReviewsYetLabel instead and never a zero-star row. The star glyph is punctuation, identical in all three locales.
+  ///
+  /// In en, this message translates to:
+  /// **'★ {rating} ({count})'**
+  String homeAgentRatingCaption(String rating, int count);
+
   /// Section-header title above the Top Districts rail on Home (top_districts_rail.dart).
   ///
   /// In en, this message translates to:
@@ -340,29 +358,17 @@ abstract class AppLocalizations {
   /// **'Explore'**
   String get homeTopDistrictsExploreLinkLabel;
 
-  /// Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name (this rail has no backing entity/endpoint; see the file's own doc comment).
+  /// Secondary line on a tile in Home's Top Districts rail: how many active listings the browse feed carries for that district, which is what "top" means on this rail (there is no other popularity signal in the system). Deliberately a new key rather than a reuse: homeAgentAdsCount says "ad" (the API's word, right under an agent's avatar) where this surface says "listing" (the buyer-facing word), and profileBuyerSavedListingsRowSubtitle carries a =0 branch this tile can never reach — a district with no listings is never in the rail.
   ///
   /// In en, this message translates to:
-  /// **'Chilonzor'**
-  String get homeDistrictChilonzorName;
+  /// **'{count, plural, one{{count} listing} other{{count} listings}}'**
+  String homeDistrictListingsCount(int count);
 
-  /// Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name.
+  /// Semantics hint (screen-reader only) on a tile in Home's Top Districts rail, stating what activating it does: tapping navigates to the Search tab carrying an AdFilters(district:) payload rather than running an unfiltered search. Announced after the tile's own merged label (district name + homeDistrictListingsCount). {district} is the tile's caption — the verbatim Ad.district string from the feed, not a translated name.
   ///
   /// In en, this message translates to:
-  /// **'Yunusobod'**
-  String get homeDistrictYunusobodName;
-
-  /// Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name.
-  ///
-  /// In en, this message translates to:
-  /// **'Sergeli'**
-  String get homeDistrictSergeliName;
-
-  /// Caption on one of Home's four hardcoded Top Districts tiles — a real Tashkent district name.
-  ///
-  /// In en, this message translates to:
-  /// **'Mirobod'**
-  String get homeDistrictMirobodName;
+  /// **'Show listings in {district}'**
+  String homeDistrictTapSemanticsLabel(String district);
 
   /// Nav-bar title on the listing-search screen (search_screen.dart), the Search tab's root page.
   ///
@@ -412,11 +418,17 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load listings.'**
   String get searchResultsRetryMessage;
 
-  /// Full-width empty-state message on listing-search's results list when a search returns zero results.
+  /// Full-width empty-state message on listing-search's results list when a search returns zero results (SCREENS.md §4, quoted verbatim). §1's convention (3) is not the governing rule here: it corrects the web app's misspelled "Not fount post" to "No listings found", which is what §10's Ads List empty state (agentsAdsGridEmptyMessage) shows — but §4 names its own screen-specific copy, and every other empty state in this file quotes its own section the same way. Deliberately a separate key from mapNoResultsMessage despite the identical English: map-view is the same search rendered on a map and must read the same today, but the two screens own their own copy and a future wording change to one must not silently move the other.
   ///
   /// In en, this message translates to:
-  /// **'No listings found.'**
+  /// **'No listings match your search.'**
   String get searchResultsEmptyMessage;
+
+  /// Empty-state message on listing-search when filters are applied, replacing searchResultsEmptyMessage so 'your filters are too narrow' is distinguishable from 'nothing matches this query'. Paired with the shared 'Clear filters' action.
+  ///
+  /// In en, this message translates to:
+  /// **'No listings match your filters.'**
+  String get searchResultsFilteredEmptyMessage;
 
   /// Section-header title above the Recent Searches chip row on listing-search (recent_searches_row.dart).
   ///
@@ -436,6 +448,12 @@ abstract class AppLocalizations {
   /// **'Filters'**
   String get filterSheetTitle;
 
+  /// Semantics label (screen-reader only, no visible text) on the filter-sheet header's round close ("X") button, following the same per-sheet-owned close-label pattern as contactSheetCloseLabel and reviewsSheetCloseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get filterSheetCloseLabel;
+
   /// Inline warning row on filter-sheet (buyer variant only) shown when the live result-count preview fails to load.
   ///
   /// In en, this message translates to:
@@ -454,7 +472,7 @@ abstract class AppLocalizations {
   /// **'Apply Filters ({count})'**
   String filterApplyButtonWithCountLabel(int count);
 
-  /// Footer button on filter-sheet that clears every field back to its SCREENS.md-stated defaults.
+  /// Footer button on filter-sheet that clears every field to empty — a bare `const AdFilters()`, with no exceptions and nothing re-seeded. It does not restore SCREENS.md-stated defaults: the sheet no longer pre-selects Furniture/Repair on a fresh open, so 'reset' and 'fresh open' are now the same empty state.
   ///
   /// In en, this message translates to:
   /// **'Reset'**
@@ -682,6 +700,12 @@ abstract class AppLocalizations {
   /// **'Storey'**
   String get filterStoreyFieldLabel;
 
+  /// Heading of the Overview panel that opens listing-detail's body (the mockup's `.panel__h h3`), above the fact rail and the 3-up photo grid. The only new string that panel needs: its fact lines are built from the Sizes section's existing row labels (listingSizesRoomsLabel/FloorLabel/AreaLabel) and Formatters, so the panel and the Sizes pane cannot word the same figure two ways.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get listingOverviewSectionTitle;
+
   /// Section heading on listing-detail (SCREENS.md §3.7) above the ad's free-text description.
   ///
   /// In en, this message translates to:
@@ -777,6 +801,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share'**
   String get listingNavShareSemanticsLabel;
+
+  /// Label on the small badge marking a video slide in listing-detail's hero carousel. Replaces the play glyph that read as 'this plays here' — the gallery cannot play it, so the badge names the medium instead of promising playback.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get listingHeroVideoBadgeLabel;
 
   /// Toast on listing-detail's share button when the OS share sheet was dismissed without a target and the app falls back to copying the listing's public link.
   ///
@@ -934,6 +964,18 @@ abstract class AppLocalizations {
   /// **'This media type can\'t be previewed.'**
   String get galleryUnsupportedMediaMessage;
 
+  /// Button label under the video placeholder in photo-gallery, opening the video's URL in the system browser/player. The interim exit from a slide the gallery itself cannot play.
+  ///
+  /// In en, this message translates to:
+  /// **'Open video'**
+  String get galleryOpenVideoExternallyLabel;
+
+  /// Toast shown from photo-gallery when the system has nothing registered to open the video URL, so the app copied it to the clipboard instead — the same copy-and-toast fallback shape as the dialer and the Instagram sign-in link.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the video — link copied instead. Paste it into your browser to watch.'**
+  String get galleryVideoLinkCopiedToastMessage;
+
   /// Semantics label on photo-gallery's page-dot row, read by a screen reader instead of the (visual-only) dots themselves. {current}/{total} are 1-indexed positions, not a pluralizing count — no noun in this string inflects on them.
   ///
   /// In en, this message translates to:
@@ -976,17 +1018,23 @@ abstract class AppLocalizations {
   /// **'Show list'**
   String get mapShowListSemanticsLabel;
 
-  /// Footer chip on map-view when every search result could be plotted (pinned count == total count). No noun inflects here — it's a fixed "on the map" tag after a bare number, not a counted noun phrase.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} on the map'**
-  String mapPinnedAllCountLabel(int count);
-
   /// Footer chip on map-view when some search results lack coordinates and could not be plotted (pinned count < total count) — the honest "n of m" form, e.g. "6 of 8 on the map".
   ///
   /// In en, this message translates to:
   /// **'{pinned} of {total} on the map'**
   String mapPinnedPartialCountLabel(int pinned, int total);
+
+  /// Honesty caption above map-view's Filters button when the search has more pages than the map has plotted: says how many of the matched listings are actually on screen. Pairs with sharedLoadMoreLabel as the way to plot the rest.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Showing the first {count} match} other{Showing the first {count} matches}}'**
+  String mapPartialResultsLabel(int count);
+
+  /// Spinner chip above map-view's Filters button while a filter change's re-fetch is still in flight. The map deliberately keeps drawing the previous filter set's pins during that window (blanking a map the user has panned and zoomed would throw their orientation away), so this is the only thing on screen saying those pins are not the answer yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating…'**
+  String get mapUpdatingResultsLabel;
 
   /// Floating button label on map-view (SCREENS.md §3.6) — opens filter-sheet.
   ///
@@ -1120,11 +1168,11 @@ abstract class AppLocalizations {
   /// **'No reviews yet'**
   String get sharedNoReviewsYetLabel;
 
-  /// The star row's trailing label on RatingStars (shared/widgets/rating_stars.dart), quoting SCREENS.md §3.9's 'Review: {rating}/5' plus a parenthesized review count. {rating} arrives pre-formatted to one decimal place (rating.toStringAsFixed(1), the server's own aggregate precision) rather than a locale-aware number placeholder, matching settingsAboutRowSubtitle's precedent for a client-formatted numeric string. {count} does not drive any word choice in this string (no accompanying noun like "reviews"), so it is a plain int placeholder, not an ICU plural.
+  /// The star row's trailing label on RatingStars (shared/widgets/rating_stars.dart), quoting SCREENS.md §3.9's 'Review: {rating}/5' exactly. {rating} arrives pre-formatted to one decimal place. No review count: neither the spec nor any `.acard__r` string in the mockup carries a parenthetical, and the count already has its own place in the surrounding line.
   ///
   /// In en, this message translates to:
-  /// **'Review: {rating}/5 ({count})'**
-  String sharedRatingLabel(String rating, int count);
+  /// **'Review: {rating}/5'**
+  String sharedRatingLabel(String rating);
 
   /// Fallback StatusPill label (shared/widgets/status_pill.dart) shown when an AdStage/LeadStatus/PublishStatus value from the server is not one this build recognizes yet. Reused across all three status vocabularies rather than three separate keys, since the role — "this build doesn't know what to call it" — is identical in all three.
   ///
@@ -1180,28 +1228,28 @@ abstract class AppLocalizations {
   /// **'Accepted'**
   String get sharedLeadStatusAcceptedLabel;
 
-  /// PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status for a listing not yet sent to that channel.
+  /// PublishStatusPill label (shared/widgets/status_pill.dart). SCREENS.md §29 and the mockup both quote the raw wire enum in caps, so this string is the wire value itself and is NOT translated in uz/ru.
   ///
   /// In en, this message translates to:
-  /// **'Not published'**
+  /// **'PENDING'**
   String get sharedPublishStatusPendingLabel;
 
-  /// PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status while a draft awaits review before going live.
+  /// PublishStatusPill label (shared/widgets/status_pill.dart). SCREENS.md §29 and the mockup both quote the raw wire enum in caps, so this string is the wire value itself and is NOT translated in uz/ru.
   ///
   /// In en, this message translates to:
-  /// **'Awaiting review'**
+  /// **'DRAFTED_AWAITING_REVIEW'**
   String get sharedPublishStatusAwaitingReviewLabel;
 
-  /// PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status once a listing is live on that channel.
+  /// PublishStatusPill label (shared/widgets/status_pill.dart). SCREENS.md §29 and the mockup both quote the raw wire enum in caps, so this string is the wire value itself and is NOT translated in uz/ru.
   ///
   /// In en, this message translates to:
-  /// **'Published'**
+  /// **'PUBLISHED'**
   String get sharedPublishStatusPublishedLabel;
 
-  /// PublishStatusPill label (shared/widgets/status_pill.dart), SCREENS.md §29's per-channel status when publishing to that channel failed.
+  /// PublishStatusPill label (shared/widgets/status_pill.dart). SCREENS.md §29 and the mockup both quote the raw wire enum in caps, so this string is the wire value itself and is NOT translated in uz/ru.
   ///
   /// In en, this message translates to:
-  /// **'Failed'**
+  /// **'FAILED'**
   String get sharedPublishStatusFailedLabel;
 
   /// Fallback error-toast message (shared/widgets/toast.dart's LaCasaToast._defaultErrorMessage) shown when LaCasaToast.run's action throws something other than an ApiException (which instead shows that exception's own server-authored message verbatim, never wrapped in an ARB lookup — see lib/l10n/README.md's ApiErrorBody.message rule).
@@ -1209,6 +1257,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong.'**
   String get sharedGenericErrorMessage;
+
+  /// The one message every *read* surface shows in place of its own per-screen 'Couldn't load X' string when the failure was a NetworkException. Rendered by `shared/widgets/read_error.dart`'s describeReadError into FullWidthState/RailRetryCard on search, my-listings, coworkers, notifications, saved-listings, the agents directory, publish-status and both leads views — deliberately the same wording every form already uses, so one connectivity failure reads as one fact rather than a dozen unrelated ones.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection. Check your network and try again.'**
+  String get sharedOfflineErrorMessage;
 
   /// Semantics label on VisibilityToggle (shared/widgets/visibility_toggle.dart) when the password field is currently obscured — tapping it will reveal the text.
   ///
@@ -1270,11 +1324,47 @@ abstract class AppLocalizations {
   /// **'Couldn\'t update favourites'**
   String get sharedFavouriteUpdateFailedMessage;
 
+  /// Semantics label and tooltip on FavouriteButton (shared/widgets/favourite_button.dart) and listing-detail's bottom-bar heart while the listing is NOT saved — the state the tap would change it out of. Its sibling sharedFavouriteRemoveSemanticsLabel covers the saved state.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to favourites'**
+  String get sharedFavouriteAddSemanticsLabel;
+
+  /// Semantics label and tooltip on FavouriteButton (shared/widgets/favourite_button.dart) and listing-detail's bottom-bar heart while the listing IS saved. Paired with sharedFavouriteAddSemanticsLabel, which covers the unsaved state.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from favourites'**
+  String get sharedFavouriteRemoveSemanticsLabel;
+
+  /// Snackbar shown by FavouriteButton (shared/widgets/favourite_button.dart) when a SIGNED-OUT session taps the heart on a listing card. Replaces sharedFavouriteUpdateFailedMessage on that path, which was a lie: nothing was wrong with the network or the server, the request simply requires a session. Worded as an invitation, not an error — the same voice as profileSignedOutPromptMessage (SCREENS.md §3.14), narrowed to the one thing the tap was actually trying to do. Pairs with sharedSignInActionLabel as the snackbar's action button.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to save listings'**
+  String get sharedSignInToSaveMessage;
+
+  /// SnackBarAction label on the shared signed-out prompts raised from lib/shared/widgets/ (today: FavouriteButton's sharedSignInToSaveMessage snackbar); pushes the login screen. Shared-group sibling of the per-screen savedListingsSignInButtonLabel/reviewsSectionSignInButtonLabel/profileSignedOutSignInButtonLabel/coworkersSignInActionLabel, which each stay screen-owned; a shared widget needs a shared-prefixed key rather than borrowing another feature's. Wording matches authLoginSubmitButtonLabel's sentence case because this is a snackbar action, not a title-cased screen CTA.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get sharedSignInActionLabel;
+
+  /// Action-pill label on a FullWidthState empty state that exists only because filters excluded everything — listing-search's results list and My Ads. Tapping it resets the applied filters (not the search query, which is its own visible affordance). Distinct from filter-sheet's own 'Reset' button, which clears the sheet's in-progress selection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get sharedClearFiltersActionLabel;
+
   /// Tappable retry label on LoadMoreFooter (shared/widgets/load_more_footer.dart) — the trailing sentinel row on a server-paged infinite-scroll list (search, my-listings, agents' review list) when the next page fails to load.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t load more — Retry'**
   String get sharedLoadMoreFailedLabel;
+
+  /// Label on an explicit fetch-the-next-page control, for a surface with no scroll to trigger the automatic loader — today map-view's 'Showing the first N matches' strip. The paged lists auto-load and use sharedLoadMoreLoadingLabel instead.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get sharedLoadMoreLabel;
 
   /// Tappable retry label inside RailRetryCard (shared/widgets/list_states.dart) — a compact, scoped failure card for a secondary/scoped list section.
   ///
@@ -1300,6 +1390,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} room} other{{count} rooms}}'**
   String sharedRoomsCount(int count);
 
+  /// Rental-period suffix appended directly onto an already-formatted price, with no space, wherever a rent-category ad's price is rendered — e.g. "5 000 000 so'm/month". The three sites that still hardcode the English "/month" and should read this key instead are shared/formatters/formatters.dart:73 (Formatters.price), shared/widgets/price_pill.dart:80 and shared/widgets/row_listing_card.dart:216. Kept as its own key rather than folded into the price template because the amount and its currency are pre-formatted data (see listingEditorPriceValuePreview) while this is the one translatable word in the string. Note the constraint documented at formatters.dart:55-66: many Formatters.price call sites (map-view, listing-detail's hero/footer/share text) have no BuildContext, so its AppLocalizations argument is optional and this key can only be routed in where a context is actually available — the widget sites can read it directly. Deliberately the abbreviated form each language uses in classifieds (ru "/мес", uz "/oyiga"): it sits hard against a long digit group in a narrow card, so a spelled-out month noun would wrap the price line.
+  ///
+  /// In en, this message translates to:
+  /// **'/month'**
+  String get sharedPricePerMonthSuffix;
+
   /// Bottom tab bar label/semantics label for the Home branch (lib/navigation/shell/glass_tab_bar.dart), always visible.
   ///
   /// In en, this message translates to:
@@ -1312,11 +1408,35 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get navTabSearchLabel;
 
-  /// Bottom tab bar label/semantics label for the Work branch (lib/navigation/shell/glass_tab_bar.dart), visible only for agent/coworker sessions.
+  /// Name of the agent-side workspace as a whole. No longer a tab label — the agent shell has five tabs of its own (navTabDashboardLabel and friends) — but still the word register's realtor copy uses for the thing an approved realtor gets.
   ///
   /// In en, this message translates to:
   /// **'Work'**
   String get navTabWorkLabel;
+
+  /// Agent shell tab bar label/semantics label for branch 0, the dashboard (lib/navigation/shell/glass_tab_bar.dart). Deliberately the same word as dashboardScreenHeaderTitle, the header of the screen it opens, rather than a second name for one screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get navTabDashboardLabel;
+
+  /// Agent shell tab bar label/semantics label for branch 1, my-listings (lib/navigation/shell/glass_tab_bar.dart). Shorter than dashboardWorkspaceMyAdsRowTitle where the two differ — a tab label has less room than a list row.
+  ///
+  /// In en, this message translates to:
+  /// **'My Ads'**
+  String get navTabMyAdsLabel;
+
+  /// Agent shell tab bar label/semantics label for branch 2, the leads list (lib/navigation/shell/glass_tab_bar.dart).
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get navTabLeadsLabel;
+
+  /// Agent shell tab bar label/semantics label for branch 3, the coworkers list (lib/navigation/shell/glass_tab_bar.dart). Uses the app's established 'coworker' vocabulary (dashboardWorkspaceCoworkersRowTitle, coworkers-list) rather than introducing 'team' as a second word for the same people.
+  ///
+  /// In en, this message translates to:
+  /// **'Coworkers'**
+  String get navTabCoworkersLabel;
 
   /// Bottom tab bar label/semantics label for the Agents branch (lib/navigation/shell/glass_tab_bar.dart), always visible.
   ///
@@ -1498,6 +1618,12 @@ abstract class AppLocalizations {
   /// **'Create'**
   String get listingEditorWizardCreateLabel;
 
+  /// Inline reason rendered beside create-listing's footer button when it is disabled, so the control that gates listing creation says why it cannot be pressed rather than only looking slightly dimmer.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the required fields to continue.'**
+  String get listingEditorWizardDisabledReasonMessage;
+
   /// Step-indicator dot label on create-listing, step 1 of 4 (SCREENS.md §26).
   ///
   /// In en, this message translates to:
@@ -1522,17 +1648,47 @@ abstract class AppLocalizations {
   /// **'Publish'**
   String get listingEditorStepPublishLabel;
 
+  /// Semantics label (screen-reader only) on a completed dot in create/edit-listing's step indicator (step_indicator.dart), which is tappable so a typo on step 1 can be fixed from step 4 without walking Back three times. {step} is the step's own dot label — listingEditorStepBasicsLabel and friends.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to {step}'**
+  String listingEditorStepGoToSemanticsLabel(String step);
+
   /// Body text of create-listing's Step 4 stand-in notice — an honest explainer for why the real per-channel publish buttons aren't shown yet (the ad doesn't exist server-side until Create is tapped).
   ///
   /// In en, this message translates to:
   /// **'Publishing is available once this listing is created — tap Create, then use the per-channel buttons on the listing\'s own edit screen.'**
   String get listingEditorCreatePublishNoticeMessage;
 
+  /// Heading of the read-only recap card on create-listing's Step 4, above the publish rows: it reprints what the wizard is about to submit (title, city/district, price, rooms/area, photo count) so Create is pressed against visible facts rather than three collapsed steps.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get listingEditorSummaryCardTitle;
+
+  /// Value of the photo-count row on create-listing's Step 4 summary card (its label is listingEditorStepPhotosLabel). Counts successfully uploaded photos only, video excluded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} photo} other{{count} photos}}'**
+  String listingEditorSummaryPhotosCount(int count);
+
+  /// Placeholder value on a create-listing Step 4 summary row whose field was left empty (an optional field such as Rooms or Area) — shown in place of the value, never in place of the label.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get listingEditorSummaryNotSetLabel;
+
   /// Error toast shown by create-listing's Create and edit-listing's Save when a picked photo/video is still mid-upload and has no URL yet to submit.
   ///
   /// In en, this message translates to:
   /// **'Please wait for photos/video to finish uploading.'**
   String get listingEditorPendingUploadsMessage;
+
+  /// Error toast shown by create-listing's Create and edit-listing's Save when a picked photo's or video's upload FAILED (as opposed to listingEditorPendingUploadsMessage's still-in-flight case), blocking submit. Without this block the wizard submits the ad with the failed media silently dropped and still shows the success toast, so the agent believes photos they can see in the picker were published. Says 'photos/video' like its sibling listingEditorPendingUploadsMessage because photo and video share one media list and one failure path (_startUpload takes `required bool isVideo` and its catchError marks the item failed either way), so a failed video would otherwise be reported as a photo. Names remove-and-re-add as the ONLY way out: the failed tile renders a remove badge and nothing else (photos_step.dart's _PhotoTile and _VideoTile), with no affordance anywhere that re-fires the upload for a failed item, so the copy must not promise a retry. If a per-tile retry ever lands (listingEditorRetryUploadLabel), this sentence's remove-and-re-add instruction needs revisiting with the spec owner — it is deliberately unchanged for now.
+  ///
+  /// In en, this message translates to:
+  /// **'Some photos/video didn\'t upload. Remove them and add them again before saving.'**
+  String get listingEditorFailedUploadsMessage;
 
   /// Transient pending-toast label while create-listing's Create request is in flight.
   ///
@@ -1888,17 +2044,23 @@ abstract class AppLocalizations {
   /// **'Add Photos'**
   String get listingEditorAddPhotosLabel;
 
-  /// Both the semantics label and the visible label on the dashed "add photos" tap target in the Photos step's picker (create-listing Step 3 and edit-listing's new-upload picker).
+  /// Both the semantics label and the visible label on the in-grid "add photo" tile that closes the Photos step's picker grid (create-listing Step 3 and edit-listing's new-upload picker).
   ///
   /// In en, this message translates to:
   /// **'Add photos'**
   String get listingEditorAddPhotosButtonLabel;
 
-  /// Both the semantics label and the visible label on the dashed "add video" tap target in the Photos step's picker.
+  /// Both the semantics label and the title of the "add video" list row under the Photos step's picker grid.
   ///
   /// In en, this message translates to:
   /// **'Add video'**
   String get listingEditorAddVideoButtonLabel;
+
+  /// Subtitle of the Photos step's "add video" list row — the video is optional and capped at 70 MB (SCREENS.md §26).
+  ///
+  /// In en, this message translates to:
+  /// **'Optional · up to 70 MB'**
+  String get listingEditorAddVideoOptionalHint;
 
   /// Caption under the Photos step's photo tiles stating the size/count limits (SCREENS.md §26).
   ///
@@ -1942,6 +2104,12 @@ abstract class AppLocalizations {
   /// **'Uploading… {percent}%'**
   String listingEditorUploadingProgressLabel(int percent);
 
+  /// Action label on a failed photo/video tile in the Photos step that re-fires the upload for that one item. Distinct from sharedRetryLabel's bare "Retry" because it sits directly under an error line on a 100dp tile and has to name what is being retried.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry upload'**
+  String get listingEditorRetryUploadLabel;
+
   /// Field label above the per-channel publish buttons (create-listing's Step 4 notice sits below this same label; edit-listing shows the real buttons under it).
   ///
   /// In en, this message translates to:
@@ -1972,11 +2140,29 @@ abstract class AppLocalizations {
   /// **'OLX'**
   String get listingEditorChannelOlxLabel;
 
-  /// Channel name shown as one of publish-status's per-channel row titles — Realting never appears as a publish button (no ad-authoring UI targets it), only as a status row.
+  /// Channel name, reused as: the (visibly-disabled) publish-button label on the Publish section, create-listing's Step 4 row title, and the always-disabled row on publish-channels-sheet. Never a publish-status row title — Channel.fromWire cannot produce Channel.threads, so the server never returns one.
   ///
   /// In en, this message translates to:
-  /// **'Realting'**
-  String get listingEditorChannelRealtingLabel;
+  /// **'Threads'**
+  String get listingEditorChannelThreadsLabel;
+
+  /// Channel name, reused the same way as listingEditorChannelThreadsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Facebook Marketplace'**
+  String get listingEditorChannelFacebookMarketplaceLabel;
+
+  /// Channel name, reused the same way as listingEditorChannelThreadsLabel. The brand is the single letter X (formerly Twitter) — a bare glyph, not an abbreviation to expand.
+  ///
+  /// In en, this message translates to:
+  /// **'X'**
+  String get listingEditorChannelXLabel;
+
+  /// Channel name, reused the same way as listingEditorChannelThreadsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'LinkedIn'**
+  String get listingEditorChannelLinkedinLabel;
 
   /// Fallback channel-name row title on publish-status for a Channel value this build doesn't otherwise recognize.
   ///
@@ -1996,6 +2182,30 @@ abstract class AppLocalizations {
   /// **'OLX cross-posting is only available from the desktop app (requires a browser extension).'**
   String get listingEditorOlxUnavailableHint;
 
+  /// Hint line under the visibly-disabled Threads row on the Publish section, create-listing's Step 4, and publish-channels-sheet (ruling 7.10's visibly-disabled treatment). Client-authored: apps/api has no Threads publish route in this build, so there is no server copy to quote.
+  ///
+  /// In en, this message translates to:
+  /// **'Threads posting needs a Threads profile linked to an Instagram professional account — this build never requests that permission.'**
+  String get listingEditorThreadsUnavailableHint;
+
+  /// Hint line under the visibly-disabled Facebook Marketplace row on the same three surfaces as listingEditorThreadsUnavailableHint. States SCREENS.md §5's own reason for the channel (no compliant automation path on any platform), which publish_section.dart's doc comment already recorded back when the channel was omitted outright.
+  ///
+  /// In en, this message translates to:
+  /// **'Facebook Marketplace has no compliant automation path on any platform — its listings have to be posted by hand.'**
+  String get listingEditorFacebookMarketplaceUnavailableHint;
+
+  /// Hint line under the visibly-disabled X row on the same three surfaces as listingEditorThreadsUnavailableHint. Client-authored: apps/api has no X publish route in this build, so there is no server copy to quote.
+  ///
+  /// In en, this message translates to:
+  /// **'X posting needs its own X API app on a paid write tier — neither is set up in this build.'**
+  String get listingEditorXUnavailableHint;
+
+  /// Hint line under the visibly-disabled LinkedIn row on the same three surfaces as listingEditorThreadsUnavailableHint. Client-authored: apps/api has no LinkedIn publish route in this build, so there is no server copy to quote.
+  ///
+  /// In en, this message translates to:
+  /// **'LinkedIn posting needs an approved LinkedIn Marketing API app — this build has no LinkedIn credentials.'**
+  String get listingEditorLinkedinUnavailableHint;
+
   /// Trailing link label on edit-listing's Publish section (SCREENS.md §27) that pushes publish-status.
   ///
   /// In en, this message translates to:
@@ -2013,6 +2223,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load connected Instagram accounts.'**
   String get listingEditorInstagramLoadErrorMessage;
+
+  /// Subtitle of an Instagram row on publish-channels-sheet, under the account's username. The follower count is pre-grouped by Formatters.groupedNumber, and the label word never inflects with it (SCREENS.md §28). Only shown when the wire actually carries a follower count; the bare channel name is used otherwise.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram · {count} followers'**
+  String listingEditorInstagramFollowersSubtitle(String count);
 
   /// Message on publish-channels-sheet's Instagram section when the caller has no connected Instagram account at all.
   ///
@@ -2110,12 +2326,6 @@ abstract class AppLocalizations {
   /// **'OLX posting happens through the browser extension with a human reviewing and clicking Publish. Retry the cross-post from the extension instead.'**
   String get listingEditorOlxNonRetryableReason;
 
-  /// Explanatory caption under publish-status's disabled Retry pill for a FAILED Realting row — quoted verbatim from the live server's NON_RETRYABLE_REASONS.
-  ///
-  /// In en, this message translates to:
-  /// **'Realting listings sync through a scheduled feed, not a per-ad publish call. There is nothing here to retry.'**
-  String get listingEditorRealtingNonRetryableReason;
-
   /// Explanatory caption fallback for a FAILED row on a Channel value this build doesn't otherwise recognize.
   ///
   /// In en, this message translates to:
@@ -2206,11 +2416,83 @@ abstract class AppLocalizations {
   /// **'Ads not found.'**
   String get myListingsEmptyStateMessage;
 
+  /// Empty-state message on My Ads when the agent does have ads but the active status/stage filter hid all of them. The unfiltered case keeps myListingsEmptyStateMessage; showing one string for both made a filtered-out list indistinguishable from an empty account.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads match your filters.'**
+  String get myListingsFilteredEmptyStateMessage;
+
+  /// Action-pill label on My Ads' empty state, opening the create-listing wizard. A visible button label, unlike myListingsCreateButtonSemanticsLabel which is the screen-reader-only name of the header's '+' glyph.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Post'**
+  String get myListingsEmptyStateActionLabel;
+
   /// Semantics label on each my-listings row's edit icon, which pushes edit-listing for that ad.
   ///
   /// In en, this message translates to:
   /// **'Edit'**
   String get myListingsEditButtonSemanticsLabel;
+
+  /// First segment of the stage-count strip in the My Ads header — selecting it clears the stage filter and shows every ad. Exists so a segment-as-filter shortcut always has a visible way back out.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get myListingsStageAllLabel;
+
+  /// Active segment of the stage-count strip in the My Ads header, backed by GET /my/ads/stage-counts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} active} other{{count} active}}'**
+  String myListingsStageCountActiveLabel(int count);
+
+  /// Sold segment of the stage-count strip in the My Ads header, backed by GET /my/ads/stage-counts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} sold} other{{count} sold}}'**
+  String myListingsStageCountSoldLabel(int count);
+
+  /// Draft segment of the stage-count strip in the My Ads header — the one aggregate an agent acts on daily, backed by GET /my/ads/stage-counts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} draft} other{{count} drafts}}'**
+  String myListingsStageCountDraftLabel(int count);
+
+  /// Screen-reader name for one segment of the My Ads stage-count strip when the segment doubles as a filter shortcut; {stage} is an already-localized stage word (Active/Sold/Draft/All).
+  ///
+  /// In en, this message translates to:
+  /// **'Show {stage} ads'**
+  String myListingsStageFilterSemanticsLabel(String stage);
+
+  /// Published state of one channel badge in a My Ads row's channel strip. A human word, unlike the raw wire enums publish-status quotes verbatim.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get myListingsChannelPublishedLabel;
+
+  /// Failed state of one channel badge in a My Ads row's channel strip — the state that today is only findable two screens deep.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get myListingsChannelFailedLabel;
+
+  /// In-flight state of one channel badge in a My Ads row's channel strip.
+  ///
+  /// In en, this message translates to:
+  /// **'Publishing…'**
+  String get myListingsChannelPendingLabel;
+
+  /// Never-attempted state of one channel badge in a My Ads row's channel strip — distinct from Failed, which is an attempt that came back with an error.
+  ///
+  /// In en, this message translates to:
+  /// **'Not published'**
+  String get myListingsChannelNotPublishedLabel;
+
+  /// Screen-reader name for one channel badge in a My Ads row: the channel name (Instagram/Telegram/…) followed by its already-localized publish state, since the badge itself is a tinted glyph with no readable text.
+  ///
+  /// In en, this message translates to:
+  /// **'{channel} — {status}'**
+  String myListingsChannelBadgeSemanticsLabel(String channel, String status);
 
   /// Nav-bar title on the Agents directory screen (SCREENS.md §3.9).
   ///
@@ -2290,6 +2572,12 @@ abstract class AppLocalizations {
   /// **'Address:'**
   String get agentsInfoAddressLabel;
 
+  /// Field label in agent-profile's identity block, on the row carrying the agent's aggregate star rating. Same label:value shape as the name/e-mail/phone/address rows beside it.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating:'**
+  String get agentsInfoRatingLabel;
+
   /// Action-button label in the agent-profile identity block that dials the agent's phone number.
   ///
   /// In en, this message translates to:
@@ -2319,12 +2607,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ads List'**
   String get agentsAdsGridHeading;
-
-  /// Heading above agent-profile's Ads List grid once the count of loaded active listings is known — a heading with a parenthetical count, not an inflecting noun phrase, so a plain placeholder rather than an ICU plural (same idiom as agentsCardAdsCountLabel / reviewsSectionHeading).
-  ///
-  /// In en, this message translates to:
-  /// **'Ads List ({count})'**
-  String agentsAdsGridHeadingWithCount(int count);
 
   /// Inline form error in the review sheet when Submit is tapped with no star selected.
   ///
@@ -2530,6 +2812,36 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get profileAgentLanguageRowTitle;
 
+  /// Group-label heading on profile-agent above the single Browse/Work mode-switch row.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace'**
+  String get profileAgentWorkspaceGroupLabel;
+
+  /// Mode-switch row on profile-agent shown while the agent is in the 5-tab work shell; leaves it for the 4-tab buyer shell (Home/Search/Agents/Profile). See lib/navigation/workspace_mode.dart.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse listings'**
+  String get profileAgentBrowseModeRowTitle;
+
+  /// Subtitle under profileAgentBrowseModeRowTitle, saying what the buyer shell is for an agent (comparables, competitors' listings).
+  ///
+  /// In en, this message translates to:
+  /// **'Search and view ads like a client'**
+  String get profileAgentBrowseModeRowSubtitle;
+
+  /// Mode-switch row on profile-agent shown while the agent is in the buyer shell; returns them to the 5-tab work shell.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to workspace'**
+  String get profileAgentWorkModeRowTitle;
+
+  /// Subtitle under profileAgentWorkModeRowTitle, naming the four work tabs it leads back to.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics, ads, leads and coworkers'**
+  String get profileAgentWorkModeRowSubtitle;
+
   /// Group-label heading on profile-agent above the Logout row.
   ///
   /// In en, this message translates to:
@@ -2560,6 +2872,12 @@ abstract class AppLocalizations {
   /// **'Saved Listings'**
   String get profileBuyerSavedListingsRowTitle;
 
+  /// `.lrow__s` subtitle under profile-buyer's Saved Listings row, stating how many listings are saved — the mockup shows '4 listings' there. Unlike every other row's subtitle on this screen, which is static copy, this one is live data: it reads the length of the app-wide favourited-ad-id set, so it costs no fetch of its own. The =0 case is spelled out because an empty set is the ordinary first-run state, and '0 listings' reads worse than 'No listings'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No listings} one{{count} listing} other{{count} listings}}'**
+  String profileBuyerSavedListingsRowSubtitle(int count);
+
   /// Row title on profile-buyer that pushes edit-profile.
   ///
   /// In en, this message translates to:
@@ -2577,6 +2895,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Register as Agent'**
   String get profileBuyerRegisterAsAgentRowTitle;
+
+  /// Title of the non-tappable status card that replaces the 'Register as Agent' row on buyer-profile while the signed-in user's realtor application is pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtor application under review'**
+  String get profileBuyerRealtorPendingRowTitle;
+
+  /// Subtitle of buyer-profile's pending-realtor card, naming the number the office will ring (RealtorProfile.officePhone, or the account's own phone).
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll call {phone} — usually within one business day.'**
+  String profileBuyerRealtorPendingRowSubtitle(String phone);
+
+  /// Subtitle of buyer-profile's pending-realtor card when neither an office phone nor an account phone is known, so there is no number to name.
+  ///
+  /// In en, this message translates to:
+  /// **'We\'ll call you — usually within one business day.'**
+  String get profileBuyerRealtorPendingNoPhoneSubtitle;
+
+  /// Title of the status card that replaces the 'Register as Agent' row on buyer-profile when the user's realtor application was rejected — the outcome the app never told them about.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtor application not approved'**
+  String get profileBuyerRealtorRejectedRowTitle;
+
+  /// Subtitle of buyer-profile's rejected-realtor card, pointing at the card's own Contact Us action.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact us and we\'ll go through it with you.'**
+  String get profileBuyerRealtorRejectedRowSubtitle;
+
+  /// Action label on buyer-profile's rejected-realtor card, opening the Contact Us sheet. Same words as the signed-out profile's row title, different control.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get profileBuyerRealtorRejectedActionLabel;
+
+  /// Trailing line on buyer-profile's pending/rejected realtor card showing when the application was submitted (RealtorProfile.appliedAt, pre-formatted in local time by Formatters.date).
+  ///
+  /// In en, this message translates to:
+  /// **'Applied {date}'**
+  String profileBuyerRealtorAppliedAtLabel(String date);
 
   /// Group-label heading on profile-buyer above the Logout row.
   ///
@@ -2656,6 +3016,12 @@ abstract class AppLocalizations {
   /// **'Invalid email or password'**
   String get authLoginInvalidCredentialsError;
 
+  /// Second line rendered under the invalid-credentials error on login, pointing at the Forgot password link. Kept as its own key so §3.12's quoted 'Invalid email or password' stays byte-identical.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot it? Tap Forgot password.'**
+  String get authLoginForgotPasswordHintMessage;
+
   /// Form-level error banner on login when sign-in fails with no server response (NetworkException).
   ///
   /// In en, this message translates to:
@@ -2691,6 +3057,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in'**
   String get authLoginSubmitButtonLabel;
+
+  /// Link under the Password field on login. Until POST /auth/forgot-password exists it opens the Contact Us sheet pre-filled with the typed email.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get authLoginForgotPasswordLinkLabel;
+
+  /// Pre-filled message body the login screen hands the Contact Us sheet when the user taps Forgot password with an email already typed.
+  ///
+  /// In en, this message translates to:
+  /// **'I forgot the password for {email} and can\'t sign in. Please help me reset it.'**
+  String authLoginForgotPasswordContactMessage(String email);
+
+  /// Pre-filled message body the login screen hands the Contact Us sheet when Forgot password is tapped with the email field still empty.
+  ///
+  /// In en, this message translates to:
+  /// **'I forgot my password and can\'t sign in. Please help me reset it.'**
+  String get authLoginForgotPasswordContactMessageNoEmail;
 
   /// The entire tappable footer link on login that pushes register — SCREENS.md §3.12's exact phrase, with no separate "Sign up" word appended (see AuthFooterLink's own doc comment for why).
   ///
@@ -2859,6 +3243,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid phone number format'**
   String get authRegisterInvalidPhoneError;
+
+  /// Per-field error under Sign Up's Full name field, replacing the single unnamed 'Required fields are not filled' banner for this field.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name is required'**
+  String get authRegisterFullNameRequiredError;
+
+  /// Per-field error under Sign Up's Phone number field (and the Agency branch's Office phone) when it is left empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone number is required'**
+  String get authRegisterPhoneRequiredError;
+
+  /// Per-field error under Sign Up's Email field when it is left empty. Distinct from the server's emailTaken message, which the same errorText slot also renders.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get authRegisterEmailRequiredError;
+
+  /// Per-field error under Sign Up's Email field when what was typed isn't an email address at all.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email address format'**
+  String get authRegisterEmailInvalidError;
+
+  /// Per-field error under Sign Up's Password field when it is left empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is required'**
+  String get authRegisterPasswordRequiredError;
+
+  /// Per-field error under Sign Up's Password field when it is shorter than the six characters authRegisterPasswordHint promises.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get authRegisterPasswordTooShortError;
+
+  /// Per-field error under Sign Up's Agency name field on the Agency branch — the field whose emptiness was previously reported only by a banner seven fields below it.
+  ///
+  /// In en, this message translates to:
+  /// **'Agency name is required'**
+  String get authRegisterAgencyNameRequiredError;
 
   /// Snackbar shown after a successful realtor sign-up on register, right after navigating to home-feed.
   ///
@@ -3130,6 +3556,12 @@ abstract class AppLocalizations {
   /// **'Message'**
   String get contactMessageFieldLabel;
 
+  /// Placeholder inside contact-sheet's Message textarea (SCREENS.md §11), quoted from the mockup's own `<textarea class="ta glf" placeholder="I&rsquo;d like to view this apartment this week.">`. A sample of what to write rather than an instruction, so the empty textarea shows the expected length and tone; "apartment" is the sample's own noun (homeCategoryApartmentLabel's word), not a claim that the sheet only ever contacts about apartments. Straight apostrophe, matching every other string in this file.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'d like to view this apartment this week.'**
+  String get contactMessageFieldHintText;
+
   /// Submit-button label on contact-sheet (SCREENS.md §3.11, quoted).
   ///
   /// In en, this message translates to:
@@ -3196,6 +3628,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t move — try again.'**
   String get leadsCardMoveFailedMessage;
 
+  /// Short form of leadsCardMoveFailedMessage for the tappable retry row on a Kanban card: the row pairs this with sharedRetryLabel, so the sentence must not also end in "try again". Use the full leadsCardMoveFailedMessage wherever the note is not actionable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t move'**
+  String get leadsCardMoveFailedLabel;
+
+  /// Semantics label (screen-reader only) on the retry row of a Kanban card whose last move failed. {status} is the destination column's own label — one of the sharedLeadStatus* strings — so the reader hears where the retry would send the card.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry moving to {status}'**
+  String leadsCardMoveRetrySemanticsLabel(String status);
+
   /// Nav-bar title on the create-lead screen (SCREENS.md §33).
   ///
   /// In en, this message translates to:
@@ -3241,7 +3685,7 @@ abstract class AppLocalizations {
   /// Hint text inside create-lead's Commit field before anything has been typed.
   ///
   /// In en, this message translates to:
-  /// **'What is this lead looking for?'**
+  /// **'What are they looking for?'**
   String get leadsCreateCommitHint;
 
   /// Validation error under create-lead's Full name field when left empty — SCREENS.md §33's own quoted copy says "First name" even though the field label reads "Full name"; this mismatch is preserved rather than silently corrected (see create_lead_screen.dart's doc comment).
@@ -3370,6 +3814,18 @@ abstract class AppLocalizations {
   /// **'Close'**
   String get leadsDetailCloseLabel;
 
+  /// Label/tooltip on the call action in lead-detail's sheet header, beside the close ("X") button; hidden when the lead has no phone number. Same wording as agentsInfoCallButtonLabel but owned by the leads prefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Call'**
+  String get leadsCallButtonLabel;
+
+  /// Semantics label (screen-reader only) on every tap-to-call target in the leads CRM: the detail sheet's header call button and the bold phone line on both the list row and the Kanban card. Mirrors listingAgentCallSemanticsLabel's shape, with the number itself rather than a name because that is the only identifier those two rows print.
+  ///
+  /// In en, this message translates to:
+  /// **'Call {phone}'**
+  String leadsCallSemanticsLabel(String phone);
+
   /// Error message shown inside lead-detail's sheet when the single-lead fetch fails.
   ///
   /// In en, this message translates to:
@@ -3379,7 +3835,7 @@ abstract class AppLocalizations {
   /// Destructive text button at the foot of lead-detail (agent-only — hidden for a coworker session).
   ///
   /// In en, this message translates to:
-  /// **'Delete lead'**
+  /// **'Delete'**
   String get leadsDeleteLeadButtonLabel;
 
   /// Validation hint under kanban-move-sheet's Commit textarea while its length is below the minimum. {min} is the fixed minimum-length constant (10, SCREENS.md §34).
@@ -3400,10 +3856,10 @@ abstract class AppLocalizations {
   /// **'Write briefly about the conversation'**
   String get leadsConversationSheetTitle;
 
-  /// Hint text inside kanban-move-sheet's Commit textarea (the Rejected/Accepted note field).
+  /// Hint text inside kanban-move-sheet's Commit textarea (the Rejected/Accepted note field). States the minimum length up front rather than surfacing it only after a failed save (leadsCommitMinLengthError).
   ///
   /// In en, this message translates to:
-  /// **'What did you discuss?'**
+  /// **'At least 10 characters'**
   String get leadsConversationHint;
 
   /// Title on leads-kanban's long-press "Move to…" action sheet listing the other four columns.
@@ -3430,16 +3886,22 @@ abstract class AppLocalizations {
   /// **'No coworkers yet.'**
   String get coworkersEmptyMessage;
 
+  /// Action label on coworkers-list's empty state (the FullWidthState under coworkersEmptyMessage), shown only when the session may actually create one — the same solo-realtor/coworker predicate that gates coworkersAddNewButtonLabel, since the server 403s the others. Drops that button's leading "+" and its "new", which read as list-header chrome rather than as the one way forward on an otherwise blank screen. Deliberately a second key with the same value as dashboardAddCoworkerButtonLabel rather than a shared one: the two live on different screens owned by different features, and consolidating them means renaming a shipped key plus its work_dashboard call site, which is out of scope for this pass — recorded here so the next integration sweep can fold both onto one shared key on purpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Add coworker'**
+  String get coworkersEmptyStateActionLabel;
+
   /// Full-width button label on coworkers-list (SCREENS.md §35's own quoted copy, including the leading "+"); hidden for a solo agent or a coworker session that would 403 creating one.
   ///
   /// In en, this message translates to:
   /// **'+ Add new coworker'**
   String get coworkersAddNewButtonLabel;
 
-  /// Ads-created count shown on a coworkers-list row's trailing label and coworker-detail's activity summary line — real data from CoworkerSummary.adsCreatedCount.
+  /// Ads-created count shown on a coworkers-list row's subtitle line — real data from CoworkerSummary.adsCreatedCount. The noun is "ads", matching SCREENS.md §35 and the mockup ('11 ads · …'), not "listings".
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{{count} listing} other{{count} listings}}'**
+  /// **'{count, plural, one{{count} ad} other{{count} ads}}'**
   String coworkersListingsCount(int count);
 
   /// Nav-bar title on the add-coworker screen (SCREENS.md §37).
@@ -3556,10 +4018,10 @@ abstract class AppLocalizations {
   /// **'At least 6 characters'**
   String get coworkersPasswordHint;
 
-  /// Hint text inside coworker-detail's Password field, where the password is optional on edit.
+  /// Hint text inside coworker-detail's Password field, where the password is optional on edit. Wording per the mockup's own placeholder.
   ///
   /// In en, this message translates to:
-  /// **'Leave blank to keep the current password'**
+  /// **'Leave blank to keep current'**
   String get coworkersPasswordHintKeepCurrent;
 
   /// Validation error under the Full name field (both add-coworker and coworker-detail) when left empty — SCREENS.md §37's own capitalisation ("Full Name", capital N) is preserved verbatim.
@@ -3670,12 +4132,6 @@ abstract class AppLocalizations {
   /// **'Only agents can edit or delete coworkers.'**
   String get coworkersReadOnlyNoteMessage;
 
-  /// Read-only summary line on coworker-detail, above the form fields: an already-formatted listings-count phrase (coworkersListingsCount, or "—"/"…" when the figure can't be determined yet/at all) and an already-formatted relative-activity phrase (or the same dash/ellipsis fallback).
-  ///
-  /// In en, this message translates to:
-  /// **'{listings} · Active {active}'**
-  String coworkersActivitySummaryLine(String listings, String active);
-
   /// coworker_metrics.dart's coworkerActivityLabel: relative-time label for an activity timestamp under a minute old.
   ///
   /// In en, this message translates to:
@@ -3760,6 +4216,12 @@ abstract class AppLocalizations {
   /// **'Sold'**
   String get dashboardLegendSold;
 
+  /// Semantics label wrapping dashboard's Ads statistics CustomPaint chart, which paints two bare paths and otherwise exposes nothing to a screen reader. {range} is the panel's own caption (dashboardCaptionDaysRange and friends); {created}/{sold} are the totals summed over the plotted buckets.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads statistics, {range}: {created} created, {sold} sold'**
+  String dashboardChartSemanticsLabel(String range, int created, int sold);
+
   /// Ads statistics panel's date-range caption for a single hour-granularity bucket. {hour} is an already-formatted "HH:00" string, passed through untranslated (a formatted time, not UI wording).
   ///
   /// In en, this message translates to:
@@ -3784,6 +4246,12 @@ abstract class AppLocalizations {
   /// **'Days {start}–{end}'**
   String dashboardCaptionDaysRange(int start, int end);
 
+  /// Ads statistics panel's caption when the "All" chip is selected: the tiles above genuinely report all time, but the series endpoint has no all-time mode so live_dashboard_repository.dart rewrites the request to this month (documented there). {range} is the ordinary caption this wraps — dashboardCaptionDaysRange and friends — so the panel names the plotted span AND admits it is narrower than the chip.
+  ///
+  /// In en, this message translates to:
+  /// **'{range} · chart shows this month'**
+  String dashboardCaptionAllTimeChartNote(String range);
+
   /// Retry-card message inside the Coworker statistics section when its fetch fails.
   ///
   /// In en, this message translates to:
@@ -3795,6 +4263,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No coworkers yet.'**
   String get dashboardNoCoworkersMessage;
+
+  /// Action button inside dashboard's empty Coworker statistics panel, shown only for an AGENCY realtor (a solo realtor never sees the panel at all, since the server 403s their add-coworker call). Pushes the same create-coworker screen as coworkersAddNewButtonLabel, whose "+ " prefix and "new" this drops because it sits in an empty state rather than a list header.
+  ///
+  /// In en, this message translates to:
+  /// **'Add coworker'**
+  String get dashboardAddCoworkerButtonLabel;
 
   /// Legend-dot label under the Coworker statistics bar chart for the "Ads count" series.
   ///
@@ -3814,28 +4288,39 @@ abstract class AppLocalizations {
   /// **'Sale count'**
   String get dashboardLegendSaleCount;
 
-  /// Column-header label above the Coworker statistics list (already uppercase in source, not run through a text-transform).
+  /// Semantics label on one coworker's three-bar group in the Coworker statistics chart, which paints three unlabelled lengths and exposes nothing to a screen reader. {name} is the coworker's own name as printed in the table below the chart.
   ///
   /// In en, this message translates to:
-  /// **'COWORKERS'**
+  /// **'{name}: {ads} ads, {leads} leads, {sales} sales'**
+  String dashboardCoworkerBarsSemanticsLabel(
+    String name,
+    int ads,
+    int leads,
+    int sales,
+  );
+
+  /// Column-header label above the Coworker statistics list's coworker-name column. Stored sentence case: _HeaderCell uppercases at the call site (`.tbl__h{text-transform:uppercase}`), the same rule _StatTile's label follows, so the ru/uz values stay human-readable.
+  ///
+  /// In en, this message translates to:
+  /// **'Coworkers'**
   String get dashboardHeaderCoworkers;
 
-  /// Column-header label above the Coworker statistics list's Ads figures — already uppercase in source.
+  /// Column-header label above the Coworker statistics list's Ads figures. Stored sentence case: _HeaderCell uppercases at the call site (`.tbl__h{text-transform:uppercase}`), the same rule _StatTile's label follows, so the ru/uz values stay human-readable.
   ///
   /// In en, this message translates to:
-  /// **'ADS'**
+  /// **'Ads'**
   String get dashboardHeaderAds;
 
-  /// Column-header label above the Coworker statistics list's Leads figures — already uppercase in source.
+  /// Column-header label above the Coworker statistics list's Leads figures. Stored sentence case: _HeaderCell uppercases at the call site (`.tbl__h{text-transform:uppercase}`), the same rule _StatTile's label follows, so the ru/uz values stay human-readable.
   ///
   /// In en, this message translates to:
-  /// **'LEADS'**
+  /// **'Leads'**
   String get dashboardHeaderLeads;
 
-  /// Column-header label above the Coworker statistics list's Sales figures — already uppercase in source.
+  /// Column-header label above the Coworker statistics list's Sales figures. Stored sentence case: _HeaderCell uppercases at the call site (`.tbl__h{text-transform:uppercase}`), the same rule _StatTile's label follows, so the ru/uz values stay human-readable.
   ///
   /// In en, this message translates to:
-  /// **'SALES'**
+  /// **'Sales'**
   String get dashboardHeaderSales;
 
   /// Label on dashboard's 2×2 stat-tile grid, first tile.
@@ -3867,6 +4352,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'tap to manage'**
   String get dashboardTileTapToManageSubtitle;
+
+  /// Subtitle on dashboard's Ads sold stat tile, hinting that the tile is tappable. "view" rather than dashboardTileTapToManageSubtitle's "manage" because the tap opens My Ads pre-filtered to the sold stage — a read-only shortcut, not a management screen.
+  ///
+  /// In en, this message translates to:
+  /// **'tap to view'**
+  String get dashboardTileTapToViewSubtitle;
 
   /// Subtitle text on the Ads created/Ads sold stat tiles when the All time-range filter is selected.
   ///
@@ -3970,11 +4461,65 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your notifications.'**
   String get notificationsLoadErrorMessage;
 
+  /// Header action on notifications that clears every row's unread dot.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark all read'**
+  String get notificationsMarkAllReadLabel;
+
+  /// Toast confirming the notifications header's Mark all read action succeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'All notifications marked read'**
+  String get notificationsMarkedAllReadToastMessage;
+
+  /// Pending toast shown while 'Mark all read' is in flight on the notifications screen — the first state of LaCasaToast.run's pending → success/error sequence.
+  ///
+  /// In en, this message translates to:
+  /// **'Marking all read'**
+  String get notificationsMarkAllReadPendingLabel;
+
+  /// Error toast when 'Mark all read' fails on the notifications screen. Previously the failure produced no feedback at all — the success toast fired unconditionally and the exception escaped as an unhandled zone error.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t mark your notifications read.'**
+  String get notificationsMarkAllReadErrorMessage;
+
   /// Empty-state message on notifications when the feed is empty.
   ///
   /// In en, this message translates to:
   /// **'No notifications yet.'**
   String get notificationsEmptyMessage;
+
+  /// Second line of the notifications empty state, saying what the feed is for instead of leaving 'No notifications yet.' to stand alone.
+  ///
+  /// In en, this message translates to:
+  /// **'New leads, ad approvals and publish results show up here.'**
+  String get notificationsEmptyStateDetailMessage;
+
+  /// Action-pill label on the notifications empty state, re-fetching the feed. The only useful action on a feed the user cannot add to themselves.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get notificationsEmptyStateActionLabel;
+
+  /// Screen-level message shown instead of the feed when a signed-in buyer reaches the notifications screen by a deep link or a stale back-stack entry — GET /notifications 403s for a non-agent, so the feed can only ever fail for them.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are available to agents only.'**
+  String get notificationsAgentOnlyMessage;
+
+  /// Screen-level message shown instead of the feed when a signed-out visitor reaches the notifications screen; paired with the shared 'Sign in' action.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to see your notifications.'**
+  String get notificationsSignInPromptMessage;
+
+  /// Action label on the notifications screen's agent-only state, popping back to wherever the user came from.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get notificationsGoBackLabel;
 
   /// Semantics label on an unread notification row (notification_row.dart). {title} is the notification's own already-authored title text (server/fixture content, not app UI copy), passed through untranslated — only the ", unread" suffix is this app's own wording.
   ///
@@ -4018,11 +4563,23 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get messagesScreenTitle;
 
-  /// The entire content of the messages screen, a permanent placeholder banner — SCREENS.md §23's own quoted copy, verbatim (messaging is intentionally never implemented in this build).
+  /// Heading of the messages screen's permanent placeholder banner — the first half of SCREENS.md §23's quoted copy, split out so it can carry the mockup's `.empty h3` weight.
   ///
   /// In en, this message translates to:
-  /// **'Messaging is coming soon. For now, contact leads by phone.'**
-  String get messagesComingSoonBanner;
+  /// **'Messaging is coming soon'**
+  String get messagesComingSoonTitle;
+
+  /// Paragraph of the messages screen's permanent placeholder banner — SCREENS.md §23's second sentence plus the mockup's `.empty p` follow-up (messaging is intentionally never implemented in this build).
+  ///
+  /// In en, this message translates to:
+  /// **'For now, contact leads by phone. Every lead card carries a tap-to-call number.'**
+  String get messagesComingSoonBody;
+
+  /// Label on the messages screen's one action — a pill that routes to the Leads list, where the tap-to-call numbers live.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Leads'**
+  String get messagesOpenLeadsAction;
 
   /// Nav-bar title on the connected-accounts screen (SCREENS.md §21).
   ///
@@ -4036,17 +4593,53 @@ abstract class AppLocalizations {
   /// **'Create Instagram post'**
   String get connectedAccountsInstagramToggleTitle;
 
+  /// Subtitle under connected-accounts' Instagram channel header, explaining what the read-only status switch reflects.
+  ///
+  /// In en, this message translates to:
+  /// **'Status — on when at least one account is linked'**
+  String get connectedAccountsInstagramToggleSubtitle;
+
   /// Title text beside connected-accounts' read-only Telegram status switch.
   ///
   /// In en, this message translates to:
   /// **'Create Telegram post'**
   String get connectedAccountsTelegramToggleTitle;
 
+  /// Subtitle under connected-accounts' Telegram channel header, explaining what the read-only status switch reflects.
+  ///
+  /// In en, this message translates to:
+  /// **'Status — on when a channel is linked'**
+  String get connectedAccountsTelegramToggleSubtitle;
+
   /// Title text beside connected-accounts' read-only YouTube status switch.
   ///
   /// In en, this message translates to:
   /// **'Create Youtube post'**
   String get connectedAccountsYoutubeToggleTitle;
+
+  /// Title text beside connected-accounts' read-only Threads status switch, which is permanently off (ruling 7.10's treatment). Same shape as connectedAccountsYoutubeToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Threads post'**
+  String get connectedAccountsThreadsToggleTitle;
+
+  /// Title text beside connected-accounts' read-only Facebook Marketplace status switch, which is permanently off.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Facebook Marketplace post'**
+  String get connectedAccountsFacebookMarketplaceToggleTitle;
+
+  /// Title text beside connected-accounts' read-only X status switch, which is permanently off.
+  ///
+  /// In en, this message translates to:
+  /// **'Create X post'**
+  String get connectedAccountsXToggleTitle;
+
+  /// Title text beside connected-accounts' read-only LinkedIn status switch, which is permanently off.
+  ///
+  /// In en, this message translates to:
+  /// **'Create LinkedIn post'**
+  String get connectedAccountsLinkedinToggleTitle;
 
   /// Retry-card message on connected-accounts' Instagram section when the account-list fetch fails.
   ///
@@ -4168,6 +4761,30 @@ abstract class AppLocalizations {
   /// **'Beta — not available in this build.'**
   String get connectedAccountsYoutubeBetaNoteMessage;
 
+  /// `.lrow__s` sub-line under connected-accounts' Threads channel header, explaining why the section carries no connect control at all. Same sentence as listingEditorThreadsUnavailableHint but a separate key for a separate surface — the same two-key split connectedAccountsYoutubeBetaNoteMessage and listingEditorYoutubeUnavailableHint already use.
+  ///
+  /// In en, this message translates to:
+  /// **'Threads posting needs a Threads profile linked to an Instagram professional account — this build never requests that permission.'**
+  String get connectedAccountsThreadsUnavailableNoteMessage;
+
+  /// `.lrow__s` sub-line under connected-accounts' Facebook Marketplace channel header. Same two-key split as connectedAccountsThreadsUnavailableNoteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Facebook Marketplace has no compliant automation path on any platform — its listings have to be posted by hand.'**
+  String get connectedAccountsFacebookMarketplaceUnavailableNoteMessage;
+
+  /// `.lrow__s` sub-line under connected-accounts' X channel header. Same two-key split as connectedAccountsThreadsUnavailableNoteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'X posting needs its own X API app on a paid write tier — neither is set up in this build.'**
+  String get connectedAccountsXUnavailableNoteMessage;
+
+  /// `.lrow__s` sub-line under connected-accounts' LinkedIn channel header. Same two-key split as connectedAccountsThreadsUnavailableNoteMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'LinkedIn posting needs an approved LinkedIn Marketing API app — this build has no LinkedIn credentials.'**
+  String get connectedAccountsLinkedinUnavailableNoteMessage;
+
   /// Semantics label on a read-only channel-status switch (Instagram/Telegram/YouTube) when it reads on/connected.
   ///
   /// In en, this message translates to:
@@ -4179,6 +4796,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Not connected'**
   String get connectedAccountsNotConnectedStatusLabel;
+
+  /// Hint under connected-accounts' Connect Instagram button, explaining why the sign-in leaves the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens your system browser — Meta does not permit OAuth inside an in-app WebView.'**
+  String get connectedAccountsInstagramBrowserHint;
+
+  /// Footer hint at the bottom of connected-accounts, explaining why OLX has no channel block of its own. Facebook Marketplace was named here too until it gained its own visibly-disabled block (ruling 7.10's treatment) — do not re-add it.
+  ///
+  /// In en, this message translates to:
+  /// **'OLX has no persistent account to connect — OLX cross-posting runs from the desktop app only.'**
+  String get connectedAccountsOtherChannelsHint;
 
   /// Section label above kanban-move-sheet Commit textarea (the Rejected/Accepted note field) — already uppercase in source, a different widget from the leadsFieldCommitLabel title-case label used on create-lead/lead-detail forms.
   ///
@@ -4197,6 +4826,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get languageSheetCloseLabel;
+
+  /// Semantics label on photo-gallery's previous-photo round button in the top overlay (mockup `.gv__top` `data-gal-step`). Disabled on the first photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous photo'**
+  String get galleryPreviousPhotoSemanticsLabel;
+
+  /// Semantics label on photo-gallery's next-photo round button in the top overlay (mockup `.gv__top` `data-gal-step`). Disabled on the last photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Next photo'**
+  String get galleryNextPhotoSemanticsLabel;
+
+  /// Persistent `.hint` line under contact-sheet's Phone field, stating the validity rule before a failed submit rather than only after one.
+  ///
+  /// In en, this message translates to:
+  /// **'Uzbekistan numbers only — +998 and nine digits.'**
+  String get contactPhoneFieldHint;
+
+  /// Persistent `.hint` line under create-lead's Phone field. Deliberately a separate key from contactPhoneFieldHint despite the identical English: the two screens own their own copy, and a future wording change to one must not silently move the other.
+  ///
+  /// In en, this message translates to:
+  /// **'Uzbekistan numbers only — +998 and nine digits.'**
+  String get leadsPhoneFormatHint;
+
+  /// Placeholder on an unset Min/Max price field, and the label of the leading "clear" row inside its option-picker sheet — the price counterpart to filterCityAnyOptionLabel/filterDistrictAnyOptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Any price'**
+  String get filterPriceAnyOptionLabel;
+
+  /// Trailing count on agent-profile's "Ads List" section header — the `.sec` row's muted `.link` slot, replacing the old parenthesized-heading form. Russian inflects on the count, so it is a plural message there; Uzbek does not inflect (CLDR other-only) and English reads the same at every count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} active'**
+  String agentsAdsGridActiveCountLabel(int count);
+
+  /// The `.lead__p` paragraph under permissions-primer's "Allow La Casa to…" heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Two permissions, asked once. You can change either of them later in Settings.'**
+  String get permissionsPrimerLeadBody;
+
+  /// The `.lead__p` paragraph under login's "Welcome back" heading. Deliberately its own key rather than reusing the character-identical profileSignedOutPromptMessage: the two screens own their own copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to save listings, message agents, and manage your business.'**
+  String get authLoginLeadBody;
+
+  /// The `.lead__p` paragraph under register's "Create your account" heading, explaining what a realtor account adds. "Work" is the same tab name as navTabWorkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing, saving and messaging work on any account. A realtor account adds the Work tab — listings, leads and publishing.'**
+  String get authRegisterLeadBody;
+
+  /// Placeholder inside register's Full name field. A person's name, so it is the same in all three locales — the mockup's own sample value.
+  ///
+  /// In en, this message translates to:
+  /// **'Dilnoza Yusupova'**
+  String get authRegisterFullNameHint;
+
+  /// Placeholder inside the Email field on BOTH login and register (the mockup shows the same one on each). An address literal, identical in all three locales.
+  ///
+  /// In en, this message translates to:
+  /// **'you@example.com'**
+  String get authEmailHint;
+
+  /// `.lrow__s` sub-line under profile-signed-out's Contact Us row.
+  ///
+  /// In en, this message translates to:
+  /// **'Questions, issues and suggestions'**
+  String get profileSignedOutContactUsRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-agent's Edit Profile row — what the screen behind it edits.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar, name, phone, email'**
+  String get profileAgentEditProfileRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-agent's Connected Accounts row. Three product names, so identical in all three locales. A static descriptor, deliberately not a live "n connected" count — this screen watches no connected-accounts provider.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram, Telegram, YouTube'**
+  String get profileAgentConnectedAccountsRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-agent's Settings row.
+  ///
+  /// In en, this message translates to:
+  /// **'Language, notifications, about'**
+  String get profileAgentSettingsRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-agent's Messages row — the screen exists but has no server-backed conversation list yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get profileAgentMessagesRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-buyer's Update Profile row.
+  ///
+  /// In en, this message translates to:
+  /// **'Name, phone, email, password'**
+  String get profileBuyerUpdateProfileRowSubtitle;
+
+  /// `.lrow__s` sub-line under profile-buyer's Register as Agent row — says where the tap goes, since it leaves the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Opens a Google Form in your browser'**
+  String get profileBuyerRegisterAsAgentRowSubtitle;
+
+  /// `.lrow__s` sub-line under settings' Connected Accounts row — the same static channel list profileAgentConnectedAccountsRowSubtitle carries, kept as a separate key because the two screens own their own copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Instagram, Telegram, YouTube'**
+  String get settingsConnectedAccountsRowSubtitle;
+
+  /// `.lrow__s` sub-line under settings' Logout row while it is at rest; settingsLoggingOutLabel replaces it while the sign-out is in flight.
+  ///
+  /// In en, this message translates to:
+  /// **'You will need to sign in again'**
+  String get settingsLogoutRowSubtitle;
+
+  /// `.hint` line under edit-profile's Password field: the field is optional on edit and only validated when filled in.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 6 characters. Only needed if you are changing it.'**
+  String get editProfilePasswordHelper;
+
+  /// The `.endnote` caption under LoadMoreFooter's spinner (shared/widgets/load_more_footer.dart) — a scroll-triggered page fetch, so the sentinel says what it is doing rather than spinning unlabelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more…'**
+  String get sharedLoadMoreLoadingLabel;
+
+  /// The floating `.kbhint` pill above leads-kanban's tab bar, naming the (otherwise invisible) gesture that moves a card between columns.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press a card to move it'**
+  String get leadsKanbanLongPressHint;
+
+  /// The red `.kcard__flag` pill on a leads-kanban card in "Need to Call Back". {when} is an already-formatted date/time (Formatters.date), not a value that inflects the sentence.
+  ///
+  /// In en, this message translates to:
+  /// **'Call back {when}'**
+  String leadsCallBackFlagLabel(String when);
+
+  /// Placeholder inside create-lead's optional Email and Budget fields — the mockup labels both that way rather than showing a sample value.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get leadsOptionalFieldHint;
+
+  /// The `.sh__p` context line under kanban-move-sheet's "Move to…" title, naming which lead is being moved and where it currently sits. {status} is an already-localized LeadStatus label.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is in {status}.'**
+  String leadsMoveToContextLine(String name, String status);
 }
 
 class _AppLocalizationsDelegate

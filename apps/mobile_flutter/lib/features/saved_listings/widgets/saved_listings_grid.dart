@@ -1,8 +1,9 @@
 /// `saved-listings`'s (SCREENS.md §3.17) whole body: a 2-column grid of
-/// [CompactListingCard]s bound to [savedListingsProvider], same grid
-/// geometry as `features/agents/widgets/agent_ads_grid.dart` (2 columns, 13px
-/// gutters, 0.66 aspect ratio) since §3.17 reuses the same "Shared Listing
-/// Card component" that screen does.
+/// [CompactListingCard]s bound to [savedListingsProvider]. §3.17 reuses the
+/// same "Shared Listing Card component" home and `agent-profile` do, and the
+/// mockup gives all three the one `.grid` rule — so the cell geometry is
+/// derived from that rule here rather than copied from a sibling widget
+/// (see [_cellAspectRatio]).
 ///
 /// Unlike `AgentAdsGrid`, this *is* the whole screen's content rather than
 /// one section of a longer page, so a failed fetch gets the full-width
@@ -22,6 +23,15 @@ import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/saved_listings_providers.dart';
 
+/// `.grid{margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:13px}`
+/// with a fixed `.vcard__ph{height:116px}` photo band over
+/// `.vcard__b{padding:8px 2px 0}` — at the mockup's 390px viewport that is a
+/// 168.5x189 cell. The photo stays [Expanded] rather than fixed-height (see
+/// [CompactListingCard]), so the band is reproduced by the cell ratio
+/// instead. Same value `features/home/widgets/explore_nearby_grid.dart`
+/// derives from the same rule.
+const double _cellAspectRatio = 0.88;
+
 class SavedListingsGrid extends ConsumerWidget {
   const SavedListingsGrid({super.key, required this.onOpenListing});
 
@@ -37,7 +47,7 @@ class SavedListingsGrid extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () => ref.refresh(savedListingsProvider.future),
       child: saved.when(
-        loading: () => const _SkeletonGrid(),
+        loading: () => const SavedListingsSkeletonGrid(),
         error: (error, stackTrace) => _ScrollableState(
           child: FullWidthState(
             icon: Icons.cloud_off_rounded,
@@ -95,7 +105,7 @@ class _Grid extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 13,
           crossAxisSpacing: 13,
-          childAspectRatio: 0.66,
+          childAspectRatio: _cellAspectRatio,
         ),
         itemCount: children.length,
         itemBuilder: (context, index) => children[index],
@@ -104,17 +114,26 @@ class _Grid extends StatelessWidget {
   }
 }
 
-class _SkeletonGrid extends StatelessWidget {
-  const _SkeletonGrid();
+/// The four-cell shimmer placeholder this grid shows while
+/// [savedListingsProvider] is in flight.
+///
+/// Public, unlike this file's other private parts, because
+/// `saved_listings_screen.dart` needs the identical placeholder for a
+/// *different* pending state: the cold-start window in which
+/// `AuthSessionState.isRestoring` is true and the app does not yet know
+/// whether anyone is signed in (this run's audit §7.6). Both are "we don't
+/// have the answer yet", and rendering two different-looking waits for them
+/// would say they were different questions.
+class SavedListingsSkeletonGrid extends StatelessWidget {
+  const SavedListingsSkeletonGrid({super.key});
 
   @override
   Widget build(BuildContext context) {
     return _Grid(
       children: List.generate(
         4,
-        (index) => ShimmerBox(
-          borderRadius: BorderRadius.circular(AppRadii.control),
-        ),
+        (index) =>
+            ShimmerBox(borderRadius: BorderRadius.circular(AppRadii.control)),
       ),
     );
   }

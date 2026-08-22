@@ -70,3 +70,6 @@ presentation/shots/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local settings (personal, not team config)
+.claude/settings.local.json

@@ -33,6 +33,8 @@ import '../state/leads_providers.dart';
 import 'kanban_column.dart';
 import 'kanban_move_sheet.dart';
 import 'lead_detail_sheet.dart';
+import 'lead_form_controls.dart';
+import 'leads_list_screen.dart' show refreshLeads;
 import 'leads_nav_actions.dart';
 
 class LeadsKanbanScreen extends ConsumerStatefulWidget {
@@ -67,20 +69,24 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
   }
 
   Future<void> _handleLongPress(Lead lead) async {
-    final destination = await _showMoveToSheet(context, current: lead.status);
+    final destination = await _showMoveToSheet(context, lead: lead);
     if (destination == null || !mounted) return;
     await _attemptMove(lead, destination);
   }
 
   Future<void> _attemptMove(Lead lead, LeadStatus destination) async {
     final immediate =
-        destination == LeadStatus.newLead || destination == LeadStatus.couldNotConnect;
+        destination == LeadStatus.newLead ||
+        destination == LeadStatus.couldNotConnect;
 
     LeadWriteInput input;
     if (immediate) {
       input = LeadWriteInput(status: OptionalField(destination));
     } else {
-      final result = await showKanbanMoveSheet(context, destination: destination);
+      final result = await showKanbanMoveSheet(
+        context,
+        destination: destination,
+      );
       if (result == null || !mounted) return;
       input = result;
     }
@@ -98,10 +104,12 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
           .read(kanbanMoveProvider.notifier)
           .move(lead: lead, input: input, destination: destination);
     } catch (_) {
-      // The card's own "Couldn't move — try again." note (driven by
-      // `KanbanMoveState.failed`) already carries this — nothing further
-      // to do here, matching `apps/console`'s identical choice not to also
-      // pop a toast for the same failure. A failed move clears the
+      // The card's own "Couldn't move · Retry" row (driven by
+      // `KanbanMoveState.failed`, rendered by `kanban_card.dart`'s
+      // `_MoveFailedRow`) already carries this *and* offers the way back
+      // into the same move — nothing further to do here, matching
+      // `apps/console`'s identical choice not to also pop a toast for the
+      // same failure. A failed move clears the
       // optimistic override (`KanbanMoveNotifier.move`'s catch clause), so
       // the card — and that note — actually reappear back in [lead]'s own
       // original column; follow it back there too.
@@ -145,7 +153,10 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
     if (leadsAsync.hasValue) {
       final leads = leadsAsync.value!;
       if (leads.isEmpty) {
-        return Center(
+        // Scrollable so the pull gesture still reaches the indicator — see
+        // [_LeadsKanbanScreenState.build]. An empty board is the state a
+        // manual refresh is most often reached for.
+        return RefreshableFill(
           child: FullWidthState(
             icon: Icons.groups_outlined,
             message: l10n.leadsEmptyMessage,
@@ -161,36 +172,85 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
         (columns[displayStatus] ??= <Lead>[]).add(lead);
       }
 
-      return Column(
+      return Stack(
         children: [
-          _ColumnStrip(
-            selectedIndex: _page,
-            counts: [
-              for (final status in LeadStatus.kanbanOrder) columns[status]!.length,
+          Column(
+            children: [
+              _ColumnStrip(
+                selectedIndex: _page,
+                counts: [
+                  for (final status in LeadStatus.kanbanOrder)
+                    columns[status]!.length,
+                ],
+                onSelect: (index) => _pageController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOut,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.base),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: LeadStatus.kanbanOrder.length,
+                  onPageChanged: (index) => setState(() => _page = index),
+                  itemBuilder: (context, index) {
+                    final status = LeadStatus.kanbanOrder[index];
+                    return KanbanColumn(
+                      status: status,
+                      leads: columns[status]!,
+                      pendingLeadIds: moveState.pending,
+                      failedDestinations: moveState.failedDestinations,
+                      onCardTap: (lead) =>
+                          showLeadDetailSheet(context, leadId: lead.id),
+                      onCardLongPress: _handleLongPress,
+                      // Retry replays the whole move, gate sheet included:
+                      // for `need_to_call_back`/`rejected`/`accepted` the
+                      // failed attempt's call time / conversation note lives
+                      // in a `LeadWriteInput` this screen never kept (the
+                      // sheet builds it and hands it straight to
+                      // `KanbanMoveNotifier.move`), and re-asking is the
+                      // honest way to get it back — silently re-sending a
+                      // remembered note would also be re-sending it under a
+                      // timestamp the agent never saw.
+                      onCardRetry: _attemptMove,
+                    );
+                  },
+                ),
+              ),
             ],
-            onSelect: (index) => _pageController.animateToPage(
-              index,
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeOut,
-            ),
           ),
-          const SizedBox(height: AppSpacing.base),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: LeadStatus.kanbanOrder.length,
-              onPageChanged: (index) => setState(() => _page = index),
-              itemBuilder: (context, index) {
-                final status = LeadStatus.kanbanOrder[index];
-                return KanbanColumn(
-                  status: status,
-                  leads: columns[status]!,
-                  pendingLeadIds: moveState.pending,
-                  failedLeadIds: moveState.failed,
-                  onCardTap: (lead) => showLeadDetailSheet(context, leadId: lead.id),
-                  onCardLongPress: _handleLongPress,
-                );
-              },
+          // `.kbhint gl` — the floating hint pill. The gesture that moves a
+          // card between columns (long-press) is invisible otherwise; this
+          // is the only place the app names it.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: MediaQuery.of(context).padding.bottom + 68,
+            child: Center(
+              child: GlassSurface(
+                variant: GlassVariant.onSurface,
+                borderRadius: AppRadii.pill,
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Align(
+                  alignment: Alignment.center,
+                  widthFactor: 1,
+                  child: Text(
+                    l10n.leadsKanbanLongPressHint,
+                    style: Theme.of(context)
+                        .extension<LaCasaTypography>()!
+                        .bodySmall
+                        .copyWith(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(
+                            context,
+                          ).extension<LaCasaColors>()!.ink2,
+                        ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -198,7 +258,7 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
     }
 
     if (leadsAsync.hasError) {
-      return Center(
+      return RefreshableFill(
         child: FullWidthState(
           icon: Icons.error_outline_rounded,
           message: l10n.leadsLoadErrorMessage,
@@ -208,7 +268,7 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
       );
     }
 
-    return const Center(child: CircularProgressIndicator());
+    return const _LoadingBoard();
   }
 
   @override
@@ -240,7 +300,34 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
                 ),
               ],
             ),
-            Expanded(child: _buildBody(context, leadsAsync, moveState)),
+            Expanded(
+              // Pull-to-refresh, on the same [refreshLeads] the list view
+              // runs — the two are one toggle tap apart over one provider
+              // and must not disagree about what the gesture does.
+              //
+              // **`notificationPredicate` is load-bearing here, unlike on
+              // `leads-list`.** The board's vertical scrollers are the
+              // per-column `ListView`s inside [KanbanColumn], and each one
+              // sits under the horizontal `PageView` that pages between
+              // columns. Every `Scrollable` a notification passes through
+              // increments its `depth`, so those `ListView`s report at
+              // depth 1 and the default predicate (`depth == 0`) would
+              // discard every one of them — the indicator would exist and
+              // never arm. Accepting depth 1 picks them up. The `PageView`'s
+              // own depth-0 notifications are horizontal, and
+              // [RefreshIndicator] already refuses to start on a horizontal
+              // axis, so widening the predicate cannot make a sideways swipe
+              // trigger a refetch.
+              child: RefreshIndicator(
+                key: const ValueKey('leadsKanban-refresh'),
+                onRefresh: () => refreshLeads(ref),
+                notificationPredicate: (notification) =>
+                    notification.depth <= 1,
+                color: AppAccent.color,
+                backgroundColor: colors.card,
+                child: _buildBody(context, leadsAsync, moveState),
+              ),
+            ),
           ],
         ),
       ),
@@ -248,12 +335,13 @@ class _LeadsKanbanScreenState extends ConsumerState<LeadsKanbanScreen> {
   }
 }
 
-/// SCREENS.md §31/§5's "Move to…" action sheet — lists the 4 columns other
-/// than [current]. Returns the chosen [LeadStatus], or `null` if the sheet
-/// was dismissed.
+/// SCREENS.md §31/§5's "Move to…" action sheet — a context line naming the
+/// lead and the column it is in now, then the 4 columns other than that
+/// one. Returns the chosen [LeadStatus], or `null` if the sheet was
+/// dismissed.
 Future<LeadStatus?> _showMoveToSheet(
   BuildContext context, {
-  required LeadStatus current,
+  required Lead lead,
 }) {
   return showModalBottomSheet<LeadStatus>(
     context: context,
@@ -265,12 +353,17 @@ Future<LeadStatus?> _showMoveToSheet(
     builder: (context) {
       final colors = Theme.of(context).extension<LaCasaColors>()!;
       final type = Theme.of(context).extension<LaCasaTypography>()!;
-      final options = LeadStatus.kanbanOrder.where((s) => s != current).toList();
+      final current = lead.status;
+      final options = LeadStatus.kanbanOrder
+          .where((s) => s != current)
+          .toList();
 
       return Container(
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.sheet)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppRadii.sheet),
+          ),
         ),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.xl,
@@ -287,29 +380,149 @@ Future<LeadStatus?> _showMoveToSheet(
                 width: 38,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-                decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
-              ),
-            ),
-            Text(
-              AppLocalizations.of(context).leadsMoveToSheetTitle,
-              style: type.sheetTitle.copyWith(color: colors.ink),
-            ),
-            const SizedBox(height: AppSpacing.base),
-            for (final status in options)
-              Material(
-                type: MaterialType.transparency,
-                child: ListTile(
-                  key: ValueKey('moveToSheet-${status.wire}'),
-                  contentPadding: EdgeInsets.zero,
-                  title: LeadStatusPill(status: status),
-                  onTap: () => Navigator.of(context).pop(status),
+                decoration: BoxDecoration(
+                  color: colors.line,
+                  borderRadius: AppRadii.pill,
                 ),
               ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context).leadsMoveToSheetTitle,
+                    style: type.sheetTitle.copyWith(color: colors.ink),
+                  ),
+                ),
+                LeadSheetCloseButton(
+                  semanticsLabel: AppLocalizations.of(
+                    context,
+                  ).sharedNavRowCloseLabel,
+                  // Pops with no value — the caller reads that as "cancelled",
+                  // same as a drag-dismiss.
+                  onTap: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            // `.sh__p` — which lead is moving, and where it sits now, so
+            // the four destination pills are not four unlabelled choices.
+            const SizedBox(height: 7),
+            Text(
+              AppLocalizations.of(context).leadsMoveToContextLine(
+                lead.fullName,
+                leadStatusLabel(AppLocalizations.of(context), current),
+              ),
+              style: type.bodySmall.copyWith(color: colors.muted, height: 1.62),
+            ),
+            const SizedBox(height: 14),
+            // `.opts{display:flex;flex-wrap:wrap;gap:7px}` — the destination
+            // columns are option pills wrapping two per line, not a stack of
+            // full-width rows.
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                for (final status in options)
+                  LeadOptionChip(
+                    key: ValueKey('moveToSheet-${status.wire}'),
+                    label: leadStatusLabel(
+                      AppLocalizations.of(context),
+                      status,
+                    ),
+                    isOn: false,
+                    onTap: () => Navigator.of(context).pop(status),
+                  ),
+              ],
+            ),
           ],
         ),
       );
     },
   );
+}
+
+/// The board's first-load skeleton — a strip of shimmer pills over three
+/// shimmer cards, in the same gutter and at the same rhythm the real board
+/// uses, so nothing jumps when the data lands.
+///
+/// This screen used to fall through to a bare [CircularProgressIndicator]
+/// while `leads-list` — the *same* [leadsProvider], one toggle tap away —
+/// showed six shimmer rows, as do coworkers, my-listings, search,
+/// notifications and publish-status. A spinner and a skeleton say different
+/// things ("something is happening" vs. "this shape of thing is about to
+/// appear"), and having the two views of one list disagree about which is
+/// the answer was the whole defect.
+///
+/// The pill widths are deliberately uneven: the real strip's pills are
+/// `"{n}/5 · {count}"`, whose width varies with the count, and a row of
+/// identical boxes reads as a progress bar rather than as content.
+class _LoadingBoard extends StatelessWidget {
+  const _LoadingBoard();
+
+  /// One per real column, so the strip doesn't change length when the data
+  /// arrives.
+  static const List<double> _pillWidths = [58, 74, 66, 62, 70];
+
+  /// Three cards, not a screenful: the board shows one column per
+  /// screen-width, and three `.kcard`-height boxes is about what sits above
+  /// the floating long-press hint on the shortest phone this app targets —
+  /// enough to say "cards go here", not so many that the skeleton claims a
+  /// column length it cannot know yet.
+  static const int _cardCount = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('leadsKanban-loading'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 34,
+          child: ScrollConfiguration(
+            behavior: const MaterialScrollBehavior().copyWith(
+              overscroll: false,
+            ),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenGutter,
+              ),
+              itemCount: _pillWidths.length,
+              separatorBuilder: (context, _) =>
+                  const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) => ShimmerBox(
+                width: _pillWidths[index],
+                height: 34,
+                borderRadius: AppRadii.pill,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.base),
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenGutter,
+          ),
+          child: Column(
+            // Stretch so each `ShimmerBox` — which carries a height but no
+            // width — fills the column instead of collapsing to zero.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < _cardCount; index++)
+                Padding(
+                  // `.kb__cards{gap:9px}` — the real card list's own gap.
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: ShimmerBox(
+                    height: 96,
+                    borderRadius: BorderRadius.circular(AppRadii.card),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ColumnStrip extends StatelessWidget {
@@ -335,9 +548,12 @@ class _ColumnStrip extends StatelessWidget {
         behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenGutter),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenGutter,
+          ),
           itemCount: statuses.length,
-          separatorBuilder: (context, _) => const SizedBox(width: AppSpacing.sm),
+          separatorBuilder: (context, _) =>
+              const SizedBox(width: AppSpacing.sm),
           itemBuilder: (context, index) {
             final isSelected = index == selectedIndex;
             return GestureDetector(

@@ -19,17 +19,19 @@
  * The meta panel is a raw `<tr>`/`<td colSpan>` rather than ui/Table's TR/TD:
  * those primitives model a ledger row of fixed cells and expose no colSpan,
  * which is exactly right for them and exactly wrong for a full-width drawer.
- * It borrows their spacing and hairline tokens so the drawer still reads as
- * part of the table.
+ * It borrows the same hairline and spacing so the drawer still reads as part
+ * of the table.
  */
 import { Fragment } from "react";
 import type { AdminAuditRow } from "@lacasa/api-client";
+import { useTranslation } from "react-i18next";
 import { Avatar } from "@/ui/Avatar";
 import { Tag } from "@/ui/Tag";
 import { CellMain, RowAction, RowActions, TD, TR } from "@/ui/Table";
-import { EyeIcon, FunnelIcon } from "@/ui/icons";
+import { Eye, Filter } from "@/ui/icons";
 import { EM_DASH, formatDate, formatTimeOfDay, shortId } from "@/lib/format";
 import { auditTypeLabel, auditTypeTone } from "@/lib/labels";
+import "./audit.scss";
 
 /** Column count, so the drawer's colSpan cannot drift away from the header. */
 export const AUDIT_COLUMN_COUNT = 5;
@@ -43,7 +45,9 @@ export const AUDIT_COLUMN_COUNT = 5;
  * contract types it honestly as unknown. Stringifying is the only thing this
  * screen can truthfully do with a value whose shape depends on the event
  * type; the fallbacks below cover a payload that somehow will not serialise
- * rather than letting one bad row throw the whole table off the screen.
+ * (a circular structure, a BigInt) rather than letting one bad row throw the
+ * whole table off the screen. There is deliberately NO per-type renderer —
+ * the JSON is the presentation.
  */
 function formatMeta(meta: unknown): string | null {
   if (meta === null || meta === undefined) return null;
@@ -58,82 +62,96 @@ function formatMeta(meta: unknown): string | null {
  * The record the event touched. An event can point at an ad, a lead, or —
  * once that ad or lead is deleted, since both references are ON DELETE SET
  * NULL — at neither. The third case renders as an em dash with the reason
- * spelled out, never as a blank cell: "nothing here" and "the thing this
- * event was about no longer exists" are answers to different questions.
+ * spelled out in its `title`, never as a blank cell: "nothing here" and "the
+ * thing this event was about no longer exists" are answers to different
+ * questions.
  */
 function SubjectCell({ row }: { row: AdminAuditRow }) {
+  const { t } = useTranslation();
+
   if (row.ad) {
-    return <CellMain title={row.ad.title} sub={`ad · ${shortId(row.ad.id)}`} />;
+    return (
+      <CellMain title={row.ad.title} sub={t("auditSubjectAd", { id: shortId(row.ad.id) })} />
+    );
   }
   if (row.lead) {
-    return <CellMain title={row.lead.fullName} sub={`lead · ${shortId(row.lead.id)}`} />;
+    return (
+      <CellMain
+        title={row.lead.fullName}
+        sub={t("auditSubjectLead", { id: shortId(row.lead.id) })}
+      />
+    );
   }
   return (
-    <span className="text-faint" title="The ad or lead this event referred to has been deleted">
+    <span className="audit-faint" title={t("subjectDeletedTitle")}>
       {EM_DASH}
     </span>
   );
 }
 
 function ActorCell({ row }: { row: AdminAuditRow }) {
+  const { t } = useTranslation();
   const actor = row.coworker ?? row.agent;
+
   if (!actor) {
     // Not reachable through the current schema (agentId is required), but the
     // contract types `agent` as nullable and a row that arrives without one
     // must still render as a readable record rather than crash the table.
-    return <span className="text-faint">unattributed</span>;
+    return <span className="audit-faint">{t("unattributed")}</span>;
   }
+
   const sub = row.coworker
-    ? `coworker · for ${row.agent?.fullName ?? EM_DASH}`
-    : `agent · ${shortId(actor.id)}`;
+    ? t("auditActorCoworker", { name: row.agent?.fullName ?? EM_DASH })
+    : t("auditActorAgent", { id: shortId(actor.id) });
+
   return (
     <CellMain thumb={<Avatar name={actor.fullName} round />} title={actor.fullName} sub={sub} />
   );
 }
 
 function MetaPanel({ row }: { row: AdminAuditRow }) {
+  const { t } = useTranslation();
   const meta = formatMeta(row.meta);
+
   return (
-    <tr className="bg-sunk">
-      <td colSpan={AUDIT_COLUMN_COUNT} className="border-b border-line-2 px-[13px] py-3">
+    <tr className="audit-drawer">
+      <td colSpan={AUDIT_COLUMN_COUNT} className="audit-drawer__cell">
         {/* Full UUIDs, not the table's truncated prefixes: the reason to open
             this drawer is to carry an id somewhere else (a database query, a
             support thread), and a copied "a3f21e08…" is worse than useless. */}
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-record">
-          <dt className="text-faint">event</dt>
-          <dd className="font-mono text-record text-ink-2">{row.id}</dd>
-          <dt className="text-faint">agent</dt>
-          <dd className="font-mono text-record text-ink-2">{row.agent?.id ?? EM_DASH}</dd>
+        <dl className="audit-drawer__ids">
+          <dt>{t("metaLabelEvent")}</dt>
+          <dd>{row.id}</dd>
+          <dt>{t("metaLabelAgent")}</dt>
+          <dd>{row.agent?.id ?? EM_DASH}</dd>
           {row.coworker ? (
             <>
-              <dt className="text-faint">coworker</dt>
-              <dd className="font-mono text-record text-ink-2">{row.coworker.id}</dd>
+              <dt>{t("metaLabelCoworker")}</dt>
+              <dd>{row.coworker.id}</dd>
             </>
           ) : null}
           {row.ad ? (
             <>
-              <dt className="text-faint">ad</dt>
-              <dd className="font-mono text-record text-ink-2">{row.ad.id}</dd>
+              <dt>{t("metaLabelAd")}</dt>
+              <dd>{row.ad.id}</dd>
             </>
           ) : null}
           {row.lead ? (
             <>
-              <dt className="text-faint">lead</dt>
-              <dd className="font-mono text-record text-ink-2">{row.lead.id}</dd>
+              <dt>{t("metaLabelLead")}</dt>
+              <dd>{row.lead.id}</dd>
             </>
           ) : null}
         </dl>
 
-        <div className="mt-2.5">
-          <div className="mb-1 text-caps font-bold uppercase tracking-caps-wide text-faint">
-            meta
-          </div>
+        <div className="audit-drawer__meta">
+          <div className="audit-drawer__meta-label">{t("metaLabelMeta")}</div>
           {meta === null ? (
-            <p className="text-record text-muted">This event recorded no meta.</p>
+            <p className="audit-drawer__meta-empty">{t("metaEmpty")}</p>
           ) : (
-            <pre className="max-h-64 overflow-auto rounded-control border border-line bg-app px-2.5 py-2 font-mono text-record leading-relaxed text-ink-2">
-              {meta}
-            </pre>
+            // Capped height with its own scroll, so a huge payload cannot
+            // push the rest of the table off the screen being scanned.
+            <pre className="audit-drawer__meta-body">{meta}</pre>
           )}
         </div>
       </td>
@@ -155,7 +173,9 @@ export function AuditRow({
   /** True when the log is already narrowed to this row's agent. */
   agentFilterActive: boolean;
 }) {
+  const { t } = useTranslation();
   const agent = row.agent;
+
   return (
     <Fragment>
       <TR selected={expanded}>
@@ -163,14 +183,12 @@ export function AuditRow({
             in bursts and the order of three inside the same minute is often
             the whole question, so the seconds get the prominent line. */}
         <TD mono>
-          <span className="block leading-tight text-ink">{formatTimeOfDay(row.createdAt)}</span>
-          <span className="block text-mini leading-tight text-faint">
-            {formatDate(row.createdAt)}
-          </span>
+          <span className="audit-time">{formatTimeOfDay(row.createdAt)}</span>
+          <span className="audit-time__date">{formatDate(row.createdAt)}</span>
         </TD>
         <TD>
           <Tag tone={auditTypeTone(row.type)} dot>
-            {auditTypeLabel(row.type)}
+            {auditTypeLabel(t, row.type)}
           </Tag>
         </TD>
         <TD>
@@ -182,11 +200,11 @@ export function AuditRow({
         <TD align="right">
           <RowActions>
             <RowAction
-              icon={FunnelIcon}
+              icon={Filter}
               label={
                 agent
-                  ? `Filter the log to ${agent.fullName}`
-                  : "No agent recorded on this event"
+                  ? t("filterLogTo", { name: agent.fullName })
+                  : t("noAgentRecorded")
               }
               disabled={!agent || agentFilterActive}
               onClick={agent ? () => onFilterAgent(agent) : undefined}
@@ -196,8 +214,8 @@ export function AuditRow({
                 accessible name instead — which is what a screen reader
                 announces on the press either way. */}
             <RowAction
-              icon={EyeIcon}
-              label={expanded ? "Hide event details" : "Inspect event details"}
+              icon={Eye}
+              label={expanded ? t("hideEventDetails") : t("inspectEventDetails")}
               onClick={onToggleMeta}
             />
           </RowActions>

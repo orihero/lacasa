@@ -240,8 +240,8 @@ describe("POST /api/publish/ads/:adId/:channel/retry", () => {
     expect(res.body.error.code).toBe("unknown_channel");
   });
 
-  it("400s not_retryable for youtube, olx, and realting, each naming why", async () => {
-    for (const channel of ["youtube", "olx", "realting"]) {
+  it("400s not_retryable for youtube and olx, each naming why", async () => {
+    for (const channel of ["youtube", "olx"]) {
       const res = await supertest(app)
         .post(`/api/publish/ads/draft-1/${channel}/retry`)
         .set("Authorization", authHeader(agent));

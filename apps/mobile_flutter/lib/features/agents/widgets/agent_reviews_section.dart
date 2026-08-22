@@ -237,7 +237,20 @@ class _ReviewTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      Formatters.date(review.createdAt),
+                      // `.toLocal()` is load-bearing, not defensive:
+                      // `AgentReview.createdAt` is decoded by
+                      // `dateTimeFromWireTimestamp`, which builds its
+                      // `DateTime` with `isUtc: true`, and `Formatters.date`
+                      // reads plain calendar/clock fields off whatever it is
+                      // handed. Without the conversion a review left at 09:00
+                      // Tashkent (UTC+5) rendered "04:00", and one left before
+                      // 05:00 local rendered on the *previous day* — next to
+                      // the reviewer's name, where a wrong date reads as a
+                      // stale review. Same conversion, same reason, as
+                      // `leads/widgets/kanban_card.dart` and
+                      // `work_dashboard/state/dashboard_providers.dart`'s
+                      // `isWithinTimeRange`.
+                      Formatters.date(review.createdAt.toLocal()),
                       style: type.micro.copyWith(color: colors.faint),
                     ),
                   ],

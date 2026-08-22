@@ -1,39 +1,48 @@
 /**
- * States — loading / empty / error / table skeleton, plus the amber `Notice`
- * banner the mockup uses to explain a consequence before an admin acts.
+ * States — loading, empty, error, the table skeleton, and the Notice banner
+ * that states a consequence above the controls that cause it.
  *
- * ErrorState surfaces the REAL error message rather than a generic
- * "something went wrong". This is an internal operations tool: a swallowed
- * error on the screen that approves accounts costs someone their afternoon,
- * and an admin is exactly the person who can act on "409 not_pending".
- * `error` is typed `unknown` (not `Error`) because it is whatever a
- * react-query hook's `.error` holds — a real `Error`, @lacasa/domain's
- * `ApiError`, or in the worst case something a non-fetch failure threw; the
- * extraction below degrades through all three rather than assuming a shape.
+ * This whole file is the part of the rebuild that the design contract would
+ * have deleted, and it is kept on purpose (PRECEDENCE.md, conflicts 2–4):
  *
- * EmptyState takes `title` AND `sub` because "no rows" is ambiguous on a
- * filtered surface: an empty applications queue ("nothing is waiting on
- * you") and an empty filter result ("no rejected applications in the last 30
- * days") are opposite facts that look identical without the second line.
+ *  · apps/web has NO error UI — every store catch logs and sets an empty list,
+ *    so a failed fetch is indistinguishable from an empty result. On a surface
+ *    where an empty list means "nobody is waiting on you", that is the single
+ *    most dangerous thing this rebuild could inherit. `ErrorState` therefore
+ *    shows the server's REAL message, the raw code in monospace, and a retry.
+ *  · apps/web's empty state is one centred row reading "Ads not found".
+ *    `EmptyState` keeps a title AND a sub, because the second line is the
+ *    entire information content: an empty queue ("nothing is waiting on you")
+ *    and an empty filter result ("no rejected applications") are opposite facts
+ *    that look identical without it.
+ *  · apps/web has no skeletons. The three list screens have them, with row
+ *    counts their tests assert (6×6 applications, 8×8 users, 8×5 audit), and
+ *    they are built from MUI's `<Skeleton>` so they still read as web-family.
+ *    The overview keeps the full-screen loading state instead — both documents
+ *    agree there.
+ *
+ * `EmptyState` and `ErrorState` titles are plain `<div>`s, NOT headings: the
+ * topbar owns the page's one `<h1>` and a panel head owns the `<h2>`, so a
+ * not-found screen contains no heading below the topbar at all.
  */
+import Skeleton from "@mui/material/Skeleton";
 import type { ReactNode } from "react";
-import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
-import type { IconComponent } from "./icons";
-import { InfoIcon, WarningCircleIcon } from "./icons";
+import { CircleAlert, Info, TriangleAlert, type IconComponent } from "./icons";
 import { TBody, TD, TR } from "./Table";
+import "./states.scss";
 
-export function LoadingState({ label = "Loading…" }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const { t } = useTranslation();
   return (
-    <div
-      role="status"
-      className="flex flex-col items-center justify-center gap-3 py-16 text-muted"
-    >
-      <span
-        aria-hidden="true"
-        className="h-5 w-5 animate-spin rounded-full border-2 border-line border-t-acc"
-      />
-      <span className="text-small">{label}</span>
+    // `.loading` is apps/web's spinner host — the class every screen there uses
+    // (given a real centring rule once, in index.scss). `role="status"` is
+    // this app's addition, so a screen reader is told the page is working
+    // rather than left on an empty region.
+    <div className="loading state-loading" role="status">
+      <span className="state-loading__spinner" aria-hidden="true" />
+      <span className="state-loading__label">{label ?? t("loading")}</span>
     </div>
   );
 }
@@ -41,6 +50,7 @@ export function LoadingState({ label = "Loading…" }: { label?: string }) {
 export function EmptyState({
   icon: Icon,
   title,
+  /** The line that says WHICH kind of empty this is. Almost always worth passing. */
   sub,
   action,
 }: {
@@ -50,20 +60,26 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+    <div className="state-empty">
       {Icon ? (
-        <span className="mb-1 grid h-11 w-11 place-items-center rounded-panel border border-line bg-sunk text-muted">
-          <Icon size={20} />
+        <span className="state-empty__icon">
+          <Icon size={22} aria-hidden="true" />
         </span>
       ) : null}
-      <div className="text-lg font-semibold text-ink">{title}</div>
-      {sub != null ? <div className="max-w-sm text-small text-muted">{sub}</div> : null}
-      {action != null ? <div className="mt-2">{action}</div> : null}
+      <div className="state-empty__title">{title}</div>
+      {sub != null ? <div className="state-empty__sub">{sub}</div> : null}
+      {action != null ? <div className="state-empty__action">{action}</div> : null}
     </div>
   );
 }
 
-function errorMessage(error: unknown): string {
+/**
+ * `error` is `unknown` because it is whatever a react-query hook's `.error`
+ * holds: a real `Error`, the api-client's `ApiError`, or in the worst case
+ * something a non-fetch failure threw. The extraction degrades through all
+ * three rather than assuming a shape.
+ */
+function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
   if (
@@ -74,14 +90,14 @@ function errorMessage(error: unknown): string {
   ) {
     return (error as { message: string }).message;
   }
-  return "Something went wrong.";
+  return fallback;
 }
 
 /**
- * The API's `{ error: { code, message } }` code, when the thrown value
- * carries one. Shown next to the message in monospace because an admin
- * reading "not_pending" can act on it (someone else already decided this
- * application) where the prose alone is just a wall.
+ * The API's `{ error: { code, message } }` code, when the thrown value carries
+ * one. Shown in monospace next to the prose because an admin reading
+ * `not_pending` can act on it — someone else already decided this application —
+ * where the sentence alone is a wall.
  */
 function errorCode(error: unknown): string | null {
   if (
@@ -96,42 +112,51 @@ function errorCode(error: unknown): string | null {
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const { t } = useTranslation();
   const code = errorCode(error);
+
   return (
-    <div role="alert" className="flex flex-col items-center justify-center gap-2.5 py-16 text-center">
-      <span className="grid h-11 w-11 place-items-center rounded-panel bg-err-soft text-err">
-        <WarningCircleIcon size={20} />
+    <div className="state-error" role="alert">
+      <span className="state-error__icon">
+        <CircleAlert size={22} aria-hidden="true" />
       </span>
-      <div className="text-lg font-semibold text-ink">Something went wrong</div>
-      <p className="max-w-md text-small text-ink-2">{errorMessage(error)}</p>
-      {code ? <p className="font-mono text-record text-muted">{code}</p> : null}
+      <div className="state-error__title">{t("somethingWentWrong")}</div>
+      <p className="state-error__message">
+        {errorMessage(error, t("somethingWentWrongFallback"))}
+      </p>
+      {code === null ? null : <p className="state-error__code">{code}</p>}
       {onRetry ? (
-        <Button onClick={onRetry} className="mt-1">
-          Try again
-        </Button>
+        <div className="state-error__action">
+          <Button onClick={onRetry}>{t("tryAgain")}</Button>
+        </div>
       ) : null}
     </div>
   );
 }
 
 /**
- * Renders as a `<tbody>` so it drops straight into `<Table><THead>…</THead>
- * <TableSkeleton /></Table>` while rows are loading, keeping the same column
- * rhythm and 38px row height the loaded table will snap into.
+ * Renders as the table's `<tbody>`, so it drops straight into
+ * `<Table><THead/><TableSkeleton/></Table>` and keeps the loaded table's column
+ * rhythm and row height rather than collapsing the layout while it waits.
+ *
+ * The screens pass their own counts, and those counts are asserted by their
+ * tests: applications 6×6, users 8×8, audit 8×5.
  */
 export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
   return (
     <TBody>
-      {Array.from({ length: rows }, (_, r) => (
-        <TR key={r}>
-          {Array.from({ length: cols }, (_, c) => (
-            <TD key={c}>
-              <span
+      {Array.from({ length: rows }, (_row, rowIndex) => (
+        <TR key={rowIndex}>
+          {Array.from({ length: cols }, (_col, colIndex) => (
+            <TD key={colIndex}>
+              <Skeleton
+                variant="text"
                 aria-hidden="true"
-                className={clsx(
-                  "block h-2.5 animate-pulse rounded-full bg-sunk",
-                  c === 0 ? "max-w-[170px]" : "max-w-[80px]",
-                )}
+                // The first column is the record itself (a name, a timestamp);
+                // the rest are short values. Two widths are enough to stop the
+                // placeholder reading as a solid block.
+                width={colIndex === 0 ? 170 : 80}
+                height={14}
               />
             </TD>
           ))}
@@ -142,12 +167,11 @@ export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: nu
 }
 
 /**
- * Notice — the mockup's `.warn` banner. Amber by default, magenta when the
- * thing being explained is irreversible. Used to state a CONSEQUENCE above
- * the controls that cause it ("approving promotes this account from USER to
- * AGENT and cannot be silently undone"), which is the one piece of the
- * mockup that is load-bearing rather than decorative: the admin reading it is
- * about to change someone else's account.
+ * Notice — a banner stating a CONSEQUENCE above the controls that cause it
+ * ("approving promotes this account from Buyer to Agent and cannot be silently
+ * undone"). Load-bearing rather than decorative: the admin reading it is about
+ * to change someone else's account. `danger` when the thing being explained is
+ * irreversible.
  */
 export function Notice({
   tone = "acc",
@@ -158,24 +182,19 @@ export function Notice({
   title: ReactNode;
   children?: ReactNode;
 }) {
-  const accent = tone === "danger";
+  const danger = tone === "danger";
   return (
-    <div
-      className={clsx(
-        "mb-3.5 flex items-start gap-2.5 rounded-panel border px-3 py-2.5",
-        accent ? "border-danger bg-danger-soft" : "border-acc-line bg-acc-soft",
-      )}
-    >
-      {accent ? (
-        <WarningCircleIcon size={16} className="mt-px flex-none text-danger" />
-      ) : (
-        <InfoIcon size={16} className="mt-px flex-none text-acc" />
-      )}
-      <div className="min-w-0">
-        <b className="block text-small font-bold text-ink">{title}</b>
-        {children != null ? (
-          <div className="mt-0.5 text-record leading-relaxed text-ink-2">{children}</div>
-        ) : null}
+    <div className={danger ? "notice notice--danger" : "notice"}>
+      <span className="notice__icon">
+        {danger ? (
+          <TriangleAlert size={16} aria-hidden="true" />
+        ) : (
+          <Info size={16} aria-hidden="true" />
+        )}
+      </span>
+      <div className="notice__text">
+        <b className="notice__title">{title}</b>
+        {children != null ? <div className="notice__body">{children}</div> : null}
       </div>
     </div>
   );

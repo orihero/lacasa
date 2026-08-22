@@ -7,18 +7,8 @@
  * fabricated per-ad number would: the thing being described is the
  * channel's own engineering, not a fact about a specific AdPublication row.
  *
- * REALTING is deliberately excluded from PUBLISH_STATUS_CHANNELS even
- * though @lacasa/domain's ALL_CHANNELS (and therefore the real
- * GET /publish/ads/:adId/status response) includes it: docs/06 §2 calls it
- * "passive batch, not a 'click' at all" — a scheduled feed job with zero
- * per-ad user action — and docs/08 §6 confirms no route writes an
- * AdPublication row for it yet (Phase H, still backlog). The Listing
- * editor's own Publish panel (mockups/f/PLAN.md §3.3) never offers Realting
- * as a channel to select either. Rendering a 5th row an agent can never act
- * on, sitting next to four they can, would read as a broken button rather
- * than an honest "not built yet" — so it's scoped out here the same way the
- * editor scopes it out of its own channel checklist. (Reported to the
- * orchestrator as a deliberate scoping call, not an oversight.)
+ * PUBLISH_STATUS_CHANNELS is every channel @lacasa/domain's ALL_CHANNELS
+ * carries.
  */
 import {
   InstagramLogoIcon,

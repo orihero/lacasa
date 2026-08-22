@@ -90,7 +90,9 @@ void main() {
 
   test('currentUser GETs /auth/me and does not touch TokenStorage', () async {
     tokenStorage = InMemoryTokenStorage('existing-token');
-    transport = FakeTransport((req) async => {'user': _userJson(role: 'agent')});
+    transport = FakeTransport(
+      (req) async => {'user': _userJson(role: 'agent')},
+    );
     repository = LiveAuthRepository(LaCasaApi(buildClient()));
 
     final user = await repository.currentUser();
@@ -101,22 +103,22 @@ void main() {
     expect(await tokenStorage.getToken(), 'existing-token');
   });
 
-  test('updateProfile PATCHes /users/me and returns the updated user', () async {
-    tokenStorage = InMemoryTokenStorage('existing-token');
-    transport = FakeTransport(
-      (req) async => {'user': _userJson()..['fullName'] = 'Updated'},
-    );
-    repository = LiveAuthRepository(LaCasaApi(buildClient()));
+  test(
+    'updateProfile PATCHes /users/me and returns the updated user',
+    () async {
+      tokenStorage = InMemoryTokenStorage('existing-token');
+      transport = FakeTransport(
+        (req) async => {'user': _userJson()..['fullName'] = 'Updated'},
+      );
+      repository = LiveAuthRepository(LaCasaApi(buildClient()));
 
-    final user = await repository.updateProfile(fullName: 'Updated');
+      final user = await repository.updateProfile(fullName: 'Updated');
 
-    expect(user.fullName, 'Updated');
-    expect(
-      transport.requests.single.url,
-      'https://api.example.com/users/me',
-    );
-    expect(transport.requests.single.method, 'PATCH');
-  });
+      expect(user.fullName, 'Updated');
+      expect(transport.requests.single.url, 'https://api.example.com/users/me');
+      expect(transport.requests.single.method, 'PATCH');
+    },
+  );
 
   test('signOut clears the stored token without calling the API', () async {
     tokenStorage = InMemoryTokenStorage('existing-token');

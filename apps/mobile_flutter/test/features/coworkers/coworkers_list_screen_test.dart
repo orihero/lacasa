@@ -151,10 +151,11 @@ void main() {
       await pumpScreen(tester, repository: repo);
 
       expect(find.text('Sardor Abdullayev'), findsOneWidget);
-      expect(find.text('+998901112233'), findsOneWidget);
-      // Only the 2 ads whose coworkerId matches — the 3rd (a different
-      // coworker) must not be counted.
-      expect(find.text('2 listings'), findsOneWidget);
+      // §35's row subtitle is one line joining count and phone — the mockup's
+      // `.lrow__s` ("11 ads · +998 90 444 55 66"). Only the 2 ads whose
+      // coworkerId matches — the 3rd (a different coworker) must not be
+      // counted.
+      expect(find.text('2 ads · +998901112233'), findsOneWidget);
     });
 
     testWidgets('a coworker with no phone shows a dash, not a blank row', (
@@ -168,7 +169,8 @@ void main() {
 
       await pumpScreen(tester, repository: repo);
 
-      expect(find.text('—'), findsOneWidget);
+      // The dash now sits in the joined `.lrow__s` subtitle line.
+      expect(find.textContaining('—'), findsOneWidget);
     });
 
     testWidgets('an ads-fetch failure degrades only the count, not the row', (
@@ -182,7 +184,11 @@ void main() {
       await pumpScreen(tester, repository: repo);
 
       expect(find.text('Kamola Rashidova'), findsOneWidget);
-      expect(find.text('—'), findsWidgets);
+      // Count and phone share one joined `.lrow__s` line now. Only the count
+      // degrades to an em dash — the phone came from the roster call, which
+      // succeeded, so it must still be printed. That is the whole point of
+      // this test: the failure is contained to the half it belongs to.
+      expect(find.text('— · +998901112233'), findsOneWidget);
     });
 
     testWidgets('empty state is §35 copy verbatim', (tester) async {
@@ -194,21 +200,140 @@ void main() {
       expect(find.text('No coworkers yet.'), findsOneWidget);
     });
 
-    testWidgets('a roster load failure shows Retry and re-fetches', (
+    testWidgets(
+      'an agency agent\'s empty state offers Add coworker, which pushes the '
+      'create screen',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          repository: FakeCoworkersRepository(coworkers: const []),
+          role: UserRole.agent,
+          realtorKind: RealtorKind.agency,
+        );
+
+        // Until this, the only way forward from an empty roster was an
+        // unlabelled 38px "+" in the header — the state named a fact and
+        // offered nothing to tap.
+        await tester.tap(find.text('Add coworker'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('add-coworker-stub'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'a solo agent\'s empty state offers no action — the create would 403',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          repository: FakeCoworkersRepository(coworkers: const []),
+          role: UserRole.agent,
+          realtorKind: RealtorKind.solo,
+        );
+
+        // Same predicate as the header's "+" (WORK_TAB_CONTRACT.md's
+        // solo_realtor ruling): an invitation into a wall is worse than no
+        // invitation.
+        expect(find.text('No coworkers yet.'), findsOneWidget);
+        expect(find.text('Add coworker'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a coworker session\'s empty state offers no action either',
+      (tester) async {
+        await pumpScreen(
+          tester,
+          repository: FakeCoworkersRepository(coworkers: const []),
+          role: UserRole.coworker,
+          realtorKind: null,
+        );
+
+        expect(find.text('Add coworker'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a roster load failure with no connection names the connection, not '
+      'the screen, and Retry re-fetches',
+      (tester) async {
+        final repo = FakeCoworkersRepository(
+          listError: const NetworkException('offline'),
+        );
+
+        await pumpScreen(tester, repository: repo);
+
+        // Was "Couldn't load your coworkers" — one of a dozen identical
+        // anonymous per-screen sentences an offline app used to fragment
+        // into. See `lib/shared/widgets/read_error.dart`.
+        expect(
+          find.text('No connection. Check your network and try again.'),
+          findsOneWidget,
+        );
+        expect(find.text("Couldn't load your coworkers"), findsNothing);
+        expect(repo.listCallCount, 1);
+
+        await tester.tap(find.text('Retry'));
+        await tester.pumpAndSettle();
+
+        expect(repo.listCallCount, 2);
+      },
+    );
+
+    testWidgets(
+      'a failure that did reach the server keeps this screen\'s own copy',
+      (tester) async {
+        // Not a NetworkException: the request got an answer, it was just a
+        // bad one, and "which screen failed" is then the most specific thing
+        // the app knows.
+        final repo = FakeCoworkersRepository(listError: Exception('boom'));
+
+        await pumpScreen(tester, repository: repo);
+
+        expect(find.text("Couldn't load your coworkers"), findsOneWidget);
+        expect(
+          find.text('No connection. Check your network and try again.'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('pull-to-refresh reloads the roster and the ads counts', (
       tester,
     ) async {
       final repo = FakeCoworkersRepository(
-        listError: const NetworkException('offline'),
+        coworkers: [coworker(id: 'coworker-a', fullName: 'Kamola Rashidova')],
       );
 
       await pumpScreen(tester, repository: repo);
-
-      expect(find.text("Couldn't load your coworkers"), findsOneWidget);
       expect(repo.listCallCount, 1);
+      expect(repo.summaryCallCount, 1);
 
-      await tester.tap(find.text('Retry'));
+      await tester.fling(find.byType(ListView), const Offset(0, 250), 1000);
       await tester.pumpAndSettle();
 
+      // `coworkersListProvider` is deliberately not `.autoDispose`, so
+      // before this gesture a roster change made from the console never
+      // reached an open screen. The counts come from a second provider and
+      // would otherwise stay at yesterday's numbers under a fresh list.
+      expect(repo.listCallCount, 2);
+      expect(repo.summaryCallCount, 2);
+    });
+
+    testWidgets('the pull gesture still works when the roster is empty', (
+      tester,
+    ) async {
+      final repo = FakeCoworkersRepository(coworkers: const []);
+
+      await pumpScreen(tester, repository: repo);
+      expect(repo.listCallCount, 1);
+
+      await tester.fling(find.byType(ListView), const Offset(0, 250), 1000);
+      await tester.pumpAndSettle();
+
+      // An empty roster is exactly when a user pulls to see whether an
+      // invite has landed — and exactly when a default-physics scroller is
+      // too short to overscroll at all.
       expect(repo.listCallCount, 2);
     });
 
@@ -263,6 +388,10 @@ void main() {
     });
   });
 
+  // The mockup's own affordance is `.nav .rnd.acc` — an icon-only circle in
+  // the header's trailing slot — so §35's "+ Add new coworker" copy now
+  // reaches the user through the button's semantics label rather than an
+  // on-screen text run. The visibility rule below is unchanged.
   group('"+ Add new coworker" (WORK_TAB_CONTRACT.md ruling on solo_realtor)', () {
     testWidgets('visible for an agency agent', (tester) async {
       await pumpScreen(
@@ -272,7 +401,7 @@ void main() {
         realtorKind: RealtorKind.agency,
       );
 
-      expect(find.text('+ Add new coworker'), findsOneWidget);
+      expect(find.bySemanticsLabel('+ Add new coworker'), findsOneWidget);
     });
 
     testWidgets('hidden for a solo agent', (tester) async {
@@ -283,7 +412,8 @@ void main() {
         realtorKind: RealtorKind.solo,
       );
 
-      expect(find.text('+ Add new coworker'), findsNothing);
+      expect(find.bySemanticsLabel('+ Add new coworker'), findsNothing);
+      expect(find.byKey(const ValueKey('addCoworkerButton')), findsNothing);
     });
 
     testWidgets('hidden for a coworker session', (tester) async {
@@ -294,7 +424,8 @@ void main() {
         realtorKind: null,
       );
 
-      expect(find.text('+ Add new coworker'), findsNothing);
+      expect(find.bySemanticsLabel('+ Add new coworker'), findsNothing);
+      expect(find.byKey(const ValueKey('addCoworkerButton')), findsNothing);
     });
 
     testWidgets('tapping it pushes add-coworker', (tester) async {

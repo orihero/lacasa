@@ -1,8 +1,8 @@
 {
-  // The build-tool half of the workspace: vite.config.ts and
-  // vitest.config.ts. Split out of tsconfig.json (see the comment there) so
-  // the app's own program is compiled with only the browser lib/types it
-  // really has, while these two files get Node's.
+  // The build-tool half of the workspace: vite.config.ts and vitest.config.ts.
+  // Split out of tsconfig.json (see the comment there) so the app's own program
+  // is compiled with only the browser lib/types it really has, while these two
+  // files get Node's.
   //
   // `types` is narrowed to node alone on purpose — a stray `vite/client`
   // reference here would let a config file believe it can touch

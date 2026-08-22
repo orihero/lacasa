@@ -39,7 +39,12 @@ class FakeSearchRepository implements SearchRepository {
   /// Thrown by the first page of a fetch (`cursor == null` — i.e. the
   /// `build()` fetch or a Retry after one). See [loadMoreError] for the
   /// separate knob that fails only a *subsequent* page.
-  final Object? error;
+  ///
+  /// Mutable (unlike [loadMoreError] and [pageSize]) so a test can change
+  /// what the *next* first-page fetch does: "the initial load failed, then
+  /// the Retry succeeded" is a two-outcome sequence through the one call
+  /// site, which a construction-time-only knob cannot express.
+  Object? error;
 
   /// Thrown by a page fetch that carries a cursor (i.e. one
   /// [SearchResultsNotifier.loadMore] issued), leaving [error] free to keep
@@ -56,7 +61,12 @@ class FakeSearchRepository implements SearchRepository {
   /// observe a loading state in a widget test, same reasoning as
   /// `FakeSavedListingsRepository.hold`. Applies to every call (first page
   /// or load-more), same as the fake this one replaced.
-  final Completer<void>? hold;
+  ///
+  /// Mutable for the same reason [error] is: holding *only the retry* open
+  /// (so the in-flight retry state can be inspected, while the initial load
+  /// still resolves promptly into its error) means installing the gate
+  /// after the screen has already been pumped.
+  Completer<void>? hold;
 
   /// How many (already filtered+sorted) ads go out per page. Defaults to 4
   /// — the same deliberately-small choice `FixtureSearchRepository` makes

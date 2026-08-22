@@ -1,51 +1,100 @@
 /**
- * src/lib/labels — wire-key -> human label (+ Tag tone) maps for every
- * enum-shaped field the control room displays. Every map is a
- * `Record<SomeKey, X>` keyed off a domain enum's *key* type (UserRoleKey,
- * RealtorStatusKey, …), never a hand-typed string union — adding a member to
- * an enum in @lacasa/domain without updating the matching map here is a
- * compile error, not a blank cell an admin finds while deciding someone's
- * account.
+ * src/lib/labels — wire-key -> i18n key (+ Tag tone) maps for every
+ * enum-shaped field the control room displays.
  *
- * TWO MAPS ARE THE EXCEPTION and are hand-maintained against
- * apps/api/prisma/schema.prisma instead, because @lacasa/domain has no key
- * type for either: `PUBLICATION_STATUS_*` (the overview's `publications`
- * block) and `AUDIT_TYPE_*` (ActivityEvent.type). Both are checked against
- * the schema by their own unit test, which is the closest thing to a compile
- * error available for a vocabulary the domain package does not own yet.
+ * TWO STRUCTURAL RULES, both load-bearing:
  *
- * HOW THE TONES ARE ALLOCATED — this is the rule the whole surface leans on:
- *   · `acc` (amber) means WAITING ON YOU. A pending application, a queue
- *     depth, an unreviewed item. Never decoration; the overview's queue
- *     counts are only scannable because nothing else is amber.
- *   · `danger` (magenta) means CAN DO SOMETHING IRREVERSIBLE. On a button
- *     that is the action itself; on the admin role badge it is the same
- *     warning read from the other direction.
+ * 1. EVERY MAP IS KEYED OFF A DOMAIN ENUM'S *KEY* TYPE (`UserRoleKey`,
+ *    `RealtorStatusKey`, …), never a hand-typed string union. Adding a member
+ *    to an enum in @lacasa/domain without updating the matching map here is a
+ *    COMPILE ERROR, not a blank cell an admin finds while deciding someone's
+ *    account. Two maps are the exception and are hand-maintained against
+ *    apps/api/prisma/schema.prisma, because @lacasa/domain has no key type for
+ *    either — `PUBLICATION_STATUS_*` (schema's `PublishStatus`) and
+ *    `AUDIT_TYPE_*` (schema's `EventType`). Both are pinned to the schema by
+ *    ./labels.test.ts, which is the closest thing to a compile error available
+ *    for a vocabulary the domain package does not own yet.
+ *
+ * 2. THE MAPS HOLD i18n KEYS, NOT ENGLISH. Labels are user-facing copy and
+ *    this app ships in en/ru/uz, so the map's value is the key
+ *    (`roleUser`, `auditTypeAdCreated`, …) and the resolver functions below
+ *    take the `t` from `useTranslation()`. The four `auditType*` families and
+ *    the record-prefix strings are identical in all three locale files ON
+ *    PURPOSE — a log is scanned by prefix ("everything olx.*") and translating
+ *    `olx.crosspost_aborted` destroys that.
+ *
+ * AND ONE BEHAVIOURAL RULE: **every lookup falls back to the raw wire value.**
+ * The reference was inconsistent here (overview and audit fell back, users and
+ * applications rendered an empty Tag); this widens all of them. A value this
+ * build does not know about still has to render as something an admin can read
+ * and search for — the API's enum can gain a member before this app is
+ * redeployed, and a blank cell where a role or an event type should be would
+ * hide exactly the row a new feature's first incident is about.
+ *
+ * HOW THE TONES ARE ALLOCATED — the rule the whole surface leans on:
+ *   · `acc` means WAITING ON YOU. A pending application, a queue depth, an
+ *     unreviewed item. Never decoration; the overview's queue counts are only
+ *     scannable because nothing else uses it.
+ *   · `danger` means CAN DO SOMETHING IRREVERSIBLE. On a button that is the
+ *     action itself; on the admin role badge it is the same warning read from
+ *     the other direction.
  *   · `ok`/`err` are settled outcomes, `info` is a neutral classification,
  *     `mute` is the absence of one.
  */
 import type {
-  AdStageKey,
   LeadStatusKey,
   RealtorKindKey,
   RealtorStatusKey,
   TeamSizeKey,
   UserRoleKey,
 } from "@lacasa/domain";
-import type { Tone } from "@/ui/Tag";
+
+/**
+ * The Tag vocabulary. Declared HERE rather than in `@/ui/Tag` because tone is
+ * allocated by the maps below — it is a statement about what a value means, not
+ * about how a pill is painted. `@/ui/Tag` imports (or re-exports) this type;
+ * it must not declare a second one.
+ */
+export type Tone = "ok" | "acc" | "err" | "info" | "mute" | "danger";
+
+/**
+ * The narrowest thing every resolver needs out of react-i18next: `t`.
+ * Structural rather than `TFunction` so a caller can pass a stub in a test
+ * without constructing an i18next instance.
+ */
+export type Translate = (key: string) => string;
+
+/**
+ * The shared shape of every resolver below: look the wire value up in a
+ * key map, translate it if it is known, and hand back the RAW VALUE if it is
+ * not. Nothing on this surface may render blank because a vocabulary grew.
+ */
+function resolveLabel(
+  keys: Record<string, string | undefined>,
+  t: Translate,
+  value: string | null | undefined,
+): string {
+  if (!value) return "";
+  const key = keys[value];
+  return key ? t(key) : value;
+}
+
+function resolveTone(tones: Record<string, Tone | undefined>, value: string | null | undefined): Tone {
+  if (!value) return "mute";
+  return tones[value] ?? "mute";
+}
 
 // ---------------------------------------------------------------------------
 // User.role. "Buyer" rather than "User" for the `user` key: on this surface
 // every row is a user, so the word carries no information — what an admin
 // needs to know is that this account browses listings rather than posting
-// them. The contract's overview payload counts them as `buyers` for the same
-// reason.
+// them. (The overview payload counts them as `buyers` for the same reason.)
 
-export const USER_ROLE_LABEL: Record<UserRoleKey, string> = {
-  user: "Buyer",
-  agent: "Agent",
-  coworker: "Coworker",
-  admin: "Admin",
+export const USER_ROLE_LABEL_KEY: Record<UserRoleKey, string> = {
+  user: "roleUser",
+  agent: "roleAgent",
+  coworker: "roleCoworker",
+  admin: "roleAdmin",
 };
 
 /**
@@ -61,19 +110,28 @@ export const USER_ROLE_TONE: Record<UserRoleKey, Tone> = {
   admin: "danger",
 };
 
-export const USER_ROLE_ORDER = Object.keys(USER_ROLE_LABEL) as UserRoleKey[];
+/** Derived from the label map so the order cannot drift from the labels. */
+export const USER_ROLE_ORDER = Object.keys(USER_ROLE_LABEL_KEY) as UserRoleKey[];
+
+export function userRoleLabel(t: Translate, role: string | null | undefined): string {
+  return resolveLabel(USER_ROLE_LABEL_KEY, t, role);
+}
+
+export function userRoleTone(role: string | null | undefined): Tone {
+  return resolveTone(USER_ROLE_TONE, role);
+}
 
 // ---------------------------------------------------------------------------
-// User.realtorStatus — the application, not the permission. `approved` here
+// User.realtorStatus — THE APPLICATION, NOT THE PERMISSION. `approved` here
 // and `role: "agent"` are two separate facts and this surface must never
 // conflate them: approving writes both, but a later role change does not
 // rewrite the application history.
 
-export const REALTOR_STATUS_LABEL: Record<RealtorStatusKey, string> = {
-  none: "None",
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
+export const REALTOR_STATUS_LABEL_KEY: Record<RealtorStatusKey, string> = {
+  none: "realtorStatusNone",
+  pending: "realtorStatusPending",
+  approved: "realtorStatusApproved",
+  rejected: "realtorStatusRejected",
 };
 
 export const REALTOR_STATUS_TONE: Record<RealtorStatusKey, Tone> = {
@@ -83,18 +141,28 @@ export const REALTOR_STATUS_TONE: Record<RealtorStatusKey, Tone> = {
   rejected: "err",
 };
 
+export const REALTOR_STATUS_ORDER = Object.keys(REALTOR_STATUS_LABEL_KEY) as RealtorStatusKey[];
+
+export function realtorStatusLabel(t: Translate, status: string | null | undefined): string {
+  return resolveLabel(REALTOR_STATUS_LABEL_KEY, t, status);
+}
+
+export function realtorStatusTone(status: string | null | undefined): Tone {
+  return resolveTone(REALTOR_STATUS_TONE, status);
+}
+
 // ---------------------------------------------------------------------------
 // User.realtorKind.
 //
-// The mockup draws Agency in amber and Solo in blue. This deviates: amber is
-// spoken for (see the file header), and an agency application is not more
-// urgent than a solo one — it is just a different shape. Both render as
-// neutral classifications, and the queue's amber stays the count of things
-// waiting on an admin.
+// Both render as neutral classifications, which is a deliberate deviation from
+// the mockup's amber Agency: amber is spoken for (see the file header), and an
+// agency application is not more URGENT than a solo one — it is just a
+// different shape. The queue's amber stays the count of things waiting on an
+// admin.
 
-export const REALTOR_KIND_LABEL: Record<RealtorKindKey, string> = {
-  solo: "Solo",
-  agency: "Agency",
+export const REALTOR_KIND_LABEL_KEY: Record<RealtorKindKey, string> = {
+  solo: "realtorKindSolo",
+  agency: "realtorKindAgency",
 };
 
 export const REALTOR_KIND_TONE: Record<RealtorKindKey, Tone> = {
@@ -102,64 +170,61 @@ export const REALTOR_KIND_TONE: Record<RealtorKindKey, Tone> = {
   agency: "info",
 };
 
-// ---------------------------------------------------------------------------
-// User.teamSize — self-reported buckets on an agency application. En dashes
-// (not hyphens) in the ranges: these are spans, and the mockup sets them that
-// way too ("6–10").
+export function realtorKindLabel(t: Translate, kind: string | null | undefined): string {
+  return resolveLabel(REALTOR_KIND_LABEL_KEY, t, kind);
+}
 
-export const TEAM_SIZE_LABEL: Record<TeamSizeKey, string> = {
-  just_me: "Just me",
-  two_to_five: "2–5",
-  six_to_fifteen: "6–15",
-  sixteen_plus: "16+",
-};
+export function realtorKindTone(kind: string | null | undefined): Tone {
+  return resolveTone(REALTOR_KIND_TONE, kind);
+}
 
 // ---------------------------------------------------------------------------
-// Ad.stage — "1" | "2" | "3" on the wire (@lacasa/domain's AD_STAGE), NOT
-// "ACTIVE"/"SOLD"/"DRAFT". The overview's `ads` block reports the same three
-// buckets under their spelled-out names.
+// User.teamSize — self-reported buckets on an agency application. The locale
+// files spell the ranges with EN DASHES (U+2013), not hyphens: these are
+// spans. No tone map — team size is a fact about a company, not a state.
 
-export const AD_STAGE_LABEL: Record<AdStageKey, string> = {
-  "1": "Active",
-  "2": "Sold",
-  "3": "Draft",
+export const TEAM_SIZE_LABEL_KEY: Record<TeamSizeKey, string> = {
+  just_me: "teamSizeJustMe",
+  two_to_five: "teamSizeTwoToFive",
+  six_to_fifteen: "teamSizeSixToFifteen",
+  sixteen_plus: "teamSizeSixteenPlus",
 };
 
-export const AD_STAGE_TONE: Record<AdStageKey, Tone> = {
-  "1": "ok",
-  "2": "info",
-  "3": "mute",
-};
+export function teamSizeLabel(t: Translate, size: string | null | undefined): string {
+  return resolveLabel(TEAM_SIZE_LABEL_KEY, t, size);
+}
 
 // ---------------------------------------------------------------------------
-// Lead.status — the five members of @lacasa/domain's LEAD_STATUS, in the
-// order that enum declares them, which doubles as the pipeline order the
-// overview's `leads.byStatus` block is read in.
+// Lead.status — the five members of @lacasa/domain's LEAD_STATUS, in the order
+// that enum declares them, which doubles as the pipeline order the overview's
+// `leads.byStatus` block is read in.
+//
+// No tone map: lead status renders as plain text inside the overview's counts
+// breakdown, never as a Tag, so a tone map here would be dead code that
+// invites someone to start colouring a second amber.
 
-export const LEAD_STATUS_LABEL: Record<LeadStatusKey, string> = {
-  new: "New",
-  could_not_connect: "Could not connect",
-  need_to_call_back: "Need to call back",
-  rejected: "Rejected",
-  accepted: "Accepted",
+export const LEAD_STATUS_LABEL_KEY: Record<LeadStatusKey, string> = {
+  new: "leadStatusNew",
+  could_not_connect: "leadStatusCouldNotConnect",
+  need_to_call_back: "leadStatusNeedToCallBack",
+  rejected: "leadStatusRejected",
+  accepted: "leadStatusAccepted",
 };
 
-export const LEAD_STATUS_TONE: Record<LeadStatusKey, Tone> = {
-  new: "info",
-  could_not_connect: "mute",
-  need_to_call_back: "acc",
-  rejected: "err",
-  accepted: "ok",
-};
+/** Derived rather than retyped, so order cannot drift from the labels. */
+export const LEAD_STATUS_ORDER = Object.keys(LEAD_STATUS_LABEL_KEY) as LeadStatusKey[];
 
-// Reusing Object.keys on the label map (rather than retyping the five keys)
-// keeps the order from drifting out of sync with the labels themselves.
-export const LEAD_STATUS_ORDER = Object.keys(LEAD_STATUS_LABEL) as LeadStatusKey[];
+export function leadStatusLabel(t: Translate, status: string | null | undefined): string {
+  return resolveLabel(LEAD_STATUS_LABEL_KEY, t, status);
+}
 
 // ---------------------------------------------------------------------------
 // AdPublication.status — hand-maintained against schema.prisma's
-// `PublishStatus` (see the file header for why). The overview's
-// `publications` block keys them lowercase, which is what these are.
+// `PublishStatus` (see the file header), lowercased the way the overview's
+// `publications` block keys them. Pinned to the schema by ./labels.test.ts.
+//
+// No tone map: publication status renders as plain text inside the counts
+// breakdown, never as a Tag.
 
 export const PUBLICATION_STATUS_KEYS = [
   "published",
@@ -170,27 +235,29 @@ export const PUBLICATION_STATUS_KEYS = [
 
 export type PublicationStatusKey = (typeof PUBLICATION_STATUS_KEYS)[number];
 
-export const PUBLICATION_STATUS_LABEL: Record<PublicationStatusKey, string> = {
-  published: "Published",
-  failed: "Failed",
-  pending: "Not published",
-  drafted_awaiting_review: "Awaiting review",
+export const PUBLICATION_STATUS_LABEL_KEY: Record<PublicationStatusKey, string> = {
+  published: "publicationStatusPublished",
+  failed: "publicationStatusFailed",
+  // "Not published", not "Pending": on a screen that also has a pending
+  // APPLICATIONS queue, a second "Pending" that means "nobody ever tried"
+  // reads as a second queue waiting on someone.
+  pending: "publicationStatusPending",
+  drafted_awaiting_review: "publicationStatusDraftedAwaitingReview",
 };
 
-export const PUBLICATION_STATUS_TONE: Record<PublicationStatusKey, Tone> = {
-  published: "ok",
-  failed: "err",
-  pending: "mute",
-  // The only publication state that is genuinely waiting on a human.
-  drafted_awaiting_review: "acc",
-};
+export function publicationStatusLabel(t: Translate, status: string | null | undefined): string {
+  return resolveLabel(PUBLICATION_STATUS_LABEL_KEY, t, status);
+}
 
 // ---------------------------------------------------------------------------
 // ActivityEvent.type — the audit log's vocabulary, hand-maintained against
 // schema.prisma's `EventType` (11 members) and lowercased the way the rest of
-// the wire format is. Labels are `noun.verb` in monospace-friendly form
-// rather than prose: the audit screen is a log, and a log is scanned by
-// prefix ("everything olx.*"), which sentence-case labels destroy.
+// the wire format is. Pinned to the schema by ./labels.test.ts.
+//
+// The labels themselves are `noun.verb` in monospace-friendly form rather than
+// prose, and are IDENTICAL IN ALL THREE LOCALES on purpose: the audit screen
+// is a log, and a log is scanned by prefix ("everything olx.*"), which
+// sentence-case — or translated — labels destroy.
 
 export const AUDIT_TYPE_KEYS = [
   "ad_created",
@@ -208,24 +275,24 @@ export const AUDIT_TYPE_KEYS = [
 
 export type AuditTypeKey = (typeof AUDIT_TYPE_KEYS)[number];
 
-export const AUDIT_TYPE_LABEL: Record<AuditTypeKey, string> = {
-  ad_created: "ad.created",
-  ad_sold: "ad.sold",
-  ad_draft_updated: "ad.draft_updated",
-  lead_created: "lead.created",
-  lead_status_changed: "lead.status_changed",
-  olx_crosspost_started: "olx.crosspost_started",
-  olx_crosspost_completed: "olx.crosspost_completed",
-  olx_crosspost_aborted: "olx.crosspost_aborted",
-  ig_assist_started: "ig.assist_started",
-  ig_assist_completed: "ig.assist_completed",
-  ig_assist_aborted: "ig.assist_aborted",
+export const AUDIT_TYPE_LABEL_KEY: Record<AuditTypeKey, string> = {
+  ad_created: "auditTypeAdCreated",
+  ad_sold: "auditTypeAdSold",
+  ad_draft_updated: "auditTypeAdDraftUpdated",
+  lead_created: "auditTypeLeadCreated",
+  lead_status_changed: "auditTypeLeadStatusChanged",
+  olx_crosspost_started: "auditTypeOlxCrosspostStarted",
+  olx_crosspost_completed: "auditTypeOlxCrosspostCompleted",
+  olx_crosspost_aborted: "auditTypeOlxCrosspostAborted",
+  ig_assist_started: "auditTypeIgAssistStarted",
+  ig_assist_completed: "auditTypeIgAssistCompleted",
+  ig_assist_aborted: "auditTypeIgAssistAborted",
 };
 
 /**
- * The log's severity column. There is no severity field on ActivityEvent —
+ * The log's colour column. THERE IS NO SEVERITY FIELD on ActivityEvent —
  * these are all successful, already-happened business events — so this maps
- * outcome, not error level: a completed crosspost reads `ok`, an aborted one
+ * OUTCOME, not error level: a completed crosspost reads `ok`, an ABORTED one
  * reads `err` (something a person started and did not finish is the row worth
  * finding), and everything else is a neutral `info` record.
  */
@@ -243,17 +310,10 @@ export const AUDIT_TYPE_TONE: Record<AuditTypeKey, Tone> = {
   ig_assist_aborted: "err",
 };
 
-/**
- * A wire value this build does not know about still has to render as
- * something an admin can read and search for. The API's enum can gain a
- * member before this app is redeployed, and dropping such a row — or showing
- * a blank cell where the action should be — would hide exactly the event a
- * new feature's first incident is about.
- */
-export function auditTypeLabel(type: string): string {
-  return (AUDIT_TYPE_LABEL as Record<string, string | undefined>)[type] ?? type;
+export function auditTypeLabel(t: Translate, type: string | null | undefined): string {
+  return resolveLabel(AUDIT_TYPE_LABEL_KEY, t, type);
 }
 
-export function auditTypeTone(type: string): Tone {
-  return (AUDIT_TYPE_TONE as Record<string, Tone | undefined>)[type] ?? "mute";
+export function auditTypeTone(type: string | null | undefined): Tone {
+  return resolveTone(AUDIT_TYPE_TONE, type);
 }

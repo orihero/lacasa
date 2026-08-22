@@ -14,7 +14,7 @@ the narrower caption-only extension fallback).
 
 The goal as stated: click one button on an Ad in La Casa, and it goes out —
 LLM-filled, no manual retyping — on every channel the agency uses. That goal
-is only literally true for two of five channels. It collapses differently per
+is only literally true for two of four channels. It collapses differently per
 channel depending on whether a server-to-server API exists at all:
 
 | Tier | What actually happens | Channels |
@@ -22,7 +22,6 @@ channel depending on whether a server-to-server API exists at all:
 | True one-click (server API) | Click → server calls a partner API with structured Ad data → done. No browser tab, no form, no LLM step (there's no form to fill — the data goes straight in) | Telegram, Instagram (Graph API, business account) |
 | One-click for the user, client-side execution | Click → browser runs an OAuth-authenticated upload itself (user's own Google session) → reports the outcome back to the server | YouTube |
 | LLM-assisted, human-gated | Click → extension opens the channel's own web form in the agent's own logged-in tab → LLM fills it from a live DOM snapshot → a human reviews and clicks that channel's own Publish button | OLX |
-| Passive batch, not a "click" at all | No per-ad action. A scheduled job publishes a feed; the channel's own crawler pulls it on its own cadence | Realting.uz (backlog, Phase H) |
 | Not possible | No API and no compliant automation path exists at all | Facebook Marketplace, Instagram native composer |
 
 Two clarifications that matter for how this reads elsewhere in the doc:
@@ -51,7 +50,6 @@ Two clarifications that matter for how this reads elsewhere in the doc:
 | Instagram (fallback) | Browser extension fills only the caption field on `instagram.com`'s own web composer via LLM; agent picks photos and clicks Share themselves | LLM-assisted, human-gated, opt-in with explicit risk consent | New, narrower than OLX — see `09-instagram-onboarding.md` §2 |
 | YouTube | Browser OAuth resumable upload (user's own Google session), then `POST /publish/youtube` report-back | Client-side one-click + report-back | Existing (report-back endpoint is new) |
 | OLX.uz | Browser extension: LLM reads the live OLX form via server-side `POST /publish/olx/map-fields`, extension fills the DOM, human clicks Publish in their own tab | LLM-assisted, human-gated | New |
-| Realting.uz | Scheduled worker generates `GET /feeds/realting.xml`; Realting's own crawler pulls it | Passive batch sync | New, backlog (Phase H) |
 | Facebook Marketplace | — | Not possible | Out of scope (§5) |
 | Instagram Stories/Reels, personal (non-business) accounts | — | Not possible | Out of scope (§5) — distinct from the feed-post caption fallback above, which targets the same composer surface the Graph API already publishes to |
 
@@ -327,7 +325,6 @@ enum PublishChannel {
   INSTAGRAM
   YOUTUBE
   OLX
-  REALTING
 }
 
 enum PublishStatus {
@@ -347,7 +344,7 @@ model AdPublication {
   externalId  String? @map("external_id")  // TG message_id, IG media id, YT video id, OLX ad id
   externalUrl String? @map("external_url")
 
-  payload Json? @default("{}") // TG chatIds, IG container id, OLX LLM field-map, Realting batch id...
+  payload Json? @default("{}") // TG chatIds, IG container id, OLX LLM field-map...
 
   attempts      Int       @default(0)
   lastAttemptAt DateTime? @map("last_attempt_at") @db.Timestamptz()
@@ -374,8 +371,8 @@ Key choices: `@@unique([adId, channel])` makes the status grid a single
 channel-specific data instead of five sets of nullable columns.
 `DRAFTED_AWAITING_REVIEW` is a status value, not a boolean, precisely because
 OLX is human-gated where every other channel is not. `requestedById` is
-nullable with `SetNull` because Realting rows are cron-written with no
-acting user.
+nullable with `SetNull` so a publication outlives the account that requested
+it.
 
 ### 4.2 API additions (extends `04-api-spec.md`'s Publishing table)
 
@@ -449,12 +446,5 @@ forcing everything into Phase E — see that doc for the full phase list.
 - **Phase F "Cleanup" is renumbered to Phase G** — it's independent of the
   OLX work and can run in parallel or after; only the number shifts so
   "Phase F" consistently means the OLX work going forward.
-- **Phase H (backlog, unscheduled) — Realting.uz.** A passive batch feed
-  (`GET /feeds/realting.xml`, cron-driven), structurally unlike the other
-  four channels, so it gets no routes in this doc. Only the `REALTING` enum
-  value is reserved now, so the schema doesn't need a second migration when
-  that work actually starts.
-
 `05-migration-plan.md` has been updated in place to reflect this
-renumbering (Phase E.5-E.6 additions, new Phase F, Cleanup moved to Phase G,
-backlog Phase H).
+renumbering (Phase E.5-E.6 additions, new Phase F, Cleanup moved to Phase G).

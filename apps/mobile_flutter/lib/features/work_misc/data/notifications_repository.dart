@@ -14,7 +14,7 @@
 /// app. See that file's own doc comment for the read-state/watermark
 /// handling and the one kind-mapping edge case it has to account for.
 ///
-/// **Return type is [WorkNotificationFixture]** (from
+/// **Return type is [WorkNotification]** (from
 /// `lib/shared/fixtures/work_seed_data.dart`), reused rather than a new
 /// parallel model — that class's own doc comment anticipates a live source
 /// "will need its own live-mode type," but on inspection the two sources
@@ -27,11 +27,21 @@
 /// here would only be a rename.
 library;
 
-import '../../../shared/shared.dart';
+import './work_notification.dart';
 
 abstract class NotificationsRepository {
   /// Every notification row, most-recent-first — §22's "Rows" list, one
   /// fetch, no pagination (nothing in §4.4's seed data or any live source
   /// this repository folds implies one).
-  Future<List<WorkNotificationFixture>> fetchNotifications();
+  Future<List<WorkNotification>> fetchNotifications();
+
+  /// Records that the agent has seen everything up to now — what the
+  /// header's "Mark all read" action means. There is no server-side
+  /// read-state mutation to call (see
+  /// `notifications_watermark_repository.dart`), so the live implementation
+  /// pushes the local watermark forward, which is exactly the boundary the
+  /// *next* fetch's `unread` flags are computed against. The fixture
+  /// implementation has no watermark at all and does nothing; the caller
+  /// clears the rows it is already holding either way.
+  Future<void> markAllRead();
 }

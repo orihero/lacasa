@@ -8,7 +8,7 @@ import {
 
 describe('publish enums', () => {
   it('ALL_CHANNELS matches the status-grid channel order', () => {
-    expect(ALL_CHANNELS).toEqual(['TELEGRAM', 'INSTAGRAM', 'YOUTUBE', 'OLX', 'REALTING']);
+    expect(ALL_CHANNELS).toEqual(['TELEGRAM', 'INSTAGRAM', 'YOUTUBE', 'OLX']);
   });
 
   it('ASSISTED_CHANNELS is a subset understood by the extension', () => {

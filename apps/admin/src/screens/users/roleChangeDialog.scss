@@ -1,0 +1,29 @@
+// The role-change confirmation's own two blocks. Everything else it renders —
+// the subject box, the consequence paragraph, the error line, the buttons —
+// belongs to ui/confirmDialog.scss.
+@import "../../responsive.scss";
+
+// Two lines inside ConfirmDialog's monospace subject box: who, then the full
+// UUID. The id is quieter because it is the check, not the headline.
+.role-dialog__subject-line {
+  display: block;
+}
+
+.role-dialog__subject-id {
+  display: block;
+  margin-top: 2px;
+  color: #8d99ae;
+}
+
+// "Current role" and its badge, on one line above the picker — the before to
+// the picker's after.
+.role-dialog__current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8d99ae;
+}

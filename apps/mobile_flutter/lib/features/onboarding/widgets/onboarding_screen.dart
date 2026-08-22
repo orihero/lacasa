@@ -80,42 +80,61 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: Semantics(
-                    button: true,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _finish,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.base,
-                          vertical: AppSpacing.md,
-                        ),
-                        child: Text(
-                          l10n.onboardingSkipButtonLabel,
-                          style: type.label.copyWith(color: colors.muted),
+              Expanded(
+                child: Stack(
+                  children: [
+                    PageView.builder(
+                      controller: _pageController,
+                      onPageChanged: (index) => setState(() => _page = index),
+                      itemCount: slides.length,
+                      itemBuilder: (context, index) =>
+                          _Slide(slide: slides[index]),
+                    ),
+                    // `.onb__skip{position:absolute;top:62px;right:20px}`
+                    // floats *over* the slide rather than taking a row of
+                    // its own above it. 62 less the mockup's own
+                    // `.sb{height:54px}` status bar — the inset SafeArea has
+                    // already eaten — leaves the 8px gap below it.
+                    Positioned(
+                      top: 8,
+                      right: AppSpacing.screenGutter,
+                      child: Semantics(
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _finish,
+                          child: GlassSurface(
+                            height: 34,
+                            alignment: Alignment.center,
+                            borderRadius: BorderRadius.circular(17),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                            ),
+                            child: Text(
+                              l10n.onboardingSkipButtonLabel,
+                              // `.onb__skip{font-size:11.5px;font-weight:
+                              // 600}`. Rendered in `ink`, not the mockup's
+                              // white: these slides have no photography
+                              // under them (see `_Slide`), so white would
+                              // be invisible on `colors.screen`.
+                              style: type.bodySmall.copyWith(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: colors.ink,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) => setState(() => _page = index),
-                  itemCount: slides.length,
-                  itemBuilder: (context, index) => _Slide(slide: slides[index]),
-                ),
+              // `.dots{margin:21px 0}` — equal rhythm above and below.
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 21),
+                child: _PageDots(count: slides.length, active: _page),
               ),
-              _PageDots(count: slides.length, active: _page),
-              const SizedBox(height: AppSpacing.xl),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.screenGutter,
@@ -153,10 +172,15 @@ class _Slide extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
+    // `.onb__body{position:absolute;left:0;right:0;bottom:28px;padding:0
+    // 26px}` — the copy block is anchored to the bottom of the slide, not
+    // centred in it. The icon tile stays: it is this build's stand-in for
+    // the mockup's full-bleed slide photography, which the app ships no
+    // assets for (see `onboarding_slides.dart`).
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+      padding: const EdgeInsets.fromLTRB(26, 0, 26, 28),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Container(
             width: 96,
@@ -172,7 +196,9 @@ class _Slide extends StatelessWidget {
           Text(
             slide.title,
             textAlign: TextAlign.center,
-            style: type.heroTitle.copyWith(color: colors.ink),
+            // `.onb__h{font-size:25.5px;line-height:1.3;letter-spacing:
+            // -.5px}` — LaCasaTypography.display, exactly.
+            style: type.display.copyWith(color: colors.ink),
           ),
           const SizedBox(height: AppSpacing.base),
           Text(
@@ -202,11 +228,22 @@ class _PageDots extends StatelessWidget {
         for (var i = 0; i < count; i++)
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: i == active ? 22 : 7,
-            height: 7,
+            // `.dot{width:6px;height:6px;background:rgba(255,255,255,.4)}`,
+            // `.dot.on{width:21px}`, in a row with a 5px gap. The inactive
+            // fill is `glyphTrack`, the opaque-surface analogue of that 40%
+            // white: these slides carry no photography (see `_Slide`), and
+            // the hairline `line` token is too pale to read on a 6px dot.
+            //
+            // It was `faint` until that token became a 4.5:1-floor *text*
+            // color, at which point the inactive dots measured 4.58:1 on
+            // `screen` against the active dot's 3.16:1 — the "you are here"
+            // marker was the quietest thing in the row. `glyphTrack` exists
+            // for exactly this; see `LaCasaColors.glyphTrack`.
+            margin: const EdgeInsets.symmetric(horizontal: 2.5),
+            width: i == active ? 21 : 6,
+            height: 6,
             decoration: BoxDecoration(
-              color: i == active ? AppAccent.color : colors.line,
+              color: i == active ? AppAccent.color : colors.glyphTrack,
               borderRadius: AppRadii.pill,
             ),
           ),
@@ -233,13 +270,26 @@ class _PrimaryButton extends StatelessWidget {
         child: Container(
           height: 54,
           alignment: Alignment.center,
+          // The mockup's `.btn-w` is a *white* pill in a glass tray,
+          // because it sits on slide photography. These slides sit on
+          // `colors.screen` instead (no artwork ships with the app), where
+          // a white pill would disappear — so this takes the app's other
+          // primary-button material, `.btn--acc`'s accent gradient and
+          // glow, the same one `auth_form_widgets.dart` uses. Revisit if
+          // full-bleed slide media ever lands.
           decoration: BoxDecoration(
-            color: AppAccent.color,
+            gradient: AppAccent.gradient,
             borderRadius: BorderRadius.circular(AppRadii.pillButton),
+            boxShadow: AppShadows.accentGlow,
           ),
           child: Text(
             label,
-            style: type.label.copyWith(color: Colors.white, fontSize: 15),
+            // `.btn-w{font-size:14.5px;font-weight:600;letter-spacing:.1px}`
+            style: type.rowTitle.copyWith(
+              color: Colors.white,
+              fontSize: 14.5,
+              letterSpacing: 0.1,
+            ),
           ),
         ),
       ),

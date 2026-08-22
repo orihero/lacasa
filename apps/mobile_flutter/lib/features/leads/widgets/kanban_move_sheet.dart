@@ -86,7 +86,14 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
     final input = _isCallback
         ? LeadWriteInput(
             status: OptionalField(widget.destination),
-            callbackDate: OptionalField(_callTime),
+            // `.toUtc()` because `LeadWriteInput` serializes with
+            // `toIso8601String()`, which emits a trailing `Z` **only** for a
+            // UTC [DateTime]; `pickLeadDateTime` hands back a local one, so
+            // without this the wire carried bare wall-clock digits that the
+            // server's own `new Date(...)` resolved in the server's zone —
+            // the write half of the same timezone fix `kanban_card.dart`'s
+            // call-back pill carries on the read side.
+            callbackDate: OptionalField(_callTime?.toUtc()),
           )
         : LeadWriteInput(
             status: OptionalField(widget.destination),
@@ -106,18 +113,20 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
         : l10n.leadsConversationSheetTitle;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      // `.sh{left:8px;right:8px;bottom:8px;border-radius:34px;
+      // padding:10px 18px 22px}` — a floating, fully-rounded card inset from
+      // the screen edges, not a flush-to-edge square-bottomed sheet. The route
+      // is opened with a transparent background, so the inset shows the scrim.
       child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.sheet)),
+          borderRadius: BorderRadius.circular(34),
         ),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.base,
-          AppSpacing.xl,
-          AppSpacing.xl,
-        ),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 22),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -128,21 +137,44 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                   width: 38,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-                  decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
+                  decoration: BoxDecoration(
+                    color: colors.line,
+                    borderRadius: AppRadii.pill,
+                  ),
                 ),
               ),
-              Text(title, style: type.sheetTitle.copyWith(color: colors.ink)),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: type.sheetTitle.copyWith(color: colors.ink),
+                    ),
+                  ),
+                  LeadSheetCloseButton(
+                    key: const ValueKey('kanbanMoveSheet-close'),
+                    semanticsLabel: l10n.sharedNavRowCloseLabel,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.section),
               if (_isCallback) ...[
                 Semantics(
                   button: true,
                   child: KeyedSubtree(
                     key: const ValueKey('kanbanMoveSheet-callTime'),
-                    child: LeadDateTimeField(value: _callTime, onTap: _pickCallTime),
+                    child: LeadDateTimeField(
+                      value: _callTime,
+                      onTap: _pickCallTime,
+                    ),
                   ),
                 ),
               ] else ...[
-                Text(l10n.leadsCommitFieldUppercaseLabel, style: type.label.copyWith(color: colors.muted)),
+                Text(
+                  l10n.leadsCommitFieldUppercaseLabel,
+                  style: type.label.copyWith(color: colors.muted),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 GlassSurface(
                   variant: GlassVariant.flatForm,
@@ -154,7 +186,13 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                   child: TextField(
                     key: const ValueKey('kanbanMoveSheet-note'),
                     controller: _note,
+                    // `.ta{height:auto;min-height:96px;padding:15px 16px;
+                    // line-height:1.55;resize:none;display:block}` — a
+                    // Flutter `TextField` opens at `minLines`, not at
+                    // `maxLines`, so without this the textarea would rest at
+                    // the same one-line height as a plain input.
                     maxLines: 4,
+                    minLines: 3,
                     onChanged: (_) => setState(() => _noteTouched = true),
                     style: type.body.copyWith(color: colors.ink),
                     decoration: InputDecoration(
@@ -166,11 +204,14 @@ class _KanbanMoveSheetState extends State<_KanbanMoveSheet> {
                     ),
                   ),
                 ),
-                if (_noteTouched && _note.text.trim().length < _minNoteLength) ...[
+                if (_noteTouched &&
+                    _note.text.trim().length < _minNoteLength) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     l10n.leadsCommitMinLengthError(_minNoteLength),
-                    style: type.bodySmall.copyWith(color: AppStatusColors.errorText),
+                    style: type.bodySmall.copyWith(
+                      color: AppStatusColors.errorText,
+                    ),
                   ),
                 ],
               ],
@@ -221,25 +262,35 @@ class _SheetButton extends StatelessWidget {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final enabled = onTap != null;
 
+    final text = Text(
+      label,
+      style: type.rowTitle.copyWith(color: primary ? Colors.white : colors.ink),
+    );
+
+    // `.btn--ghost glf` — the flat-form glass (white, hairline rim), not a
+    // grey fill; `.btn--acc` keeps the accent gradient.
+    final Widget body = primary
+        ? Container(
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppAccent.gradient,
+              borderRadius: BorderRadius.circular(AppRadii.pillButton),
+            ),
+            child: text,
+          )
+        : GlassSurface(
+            variant: GlassVariant.flatForm,
+            borderRadius: BorderRadius.circular(AppRadii.pillButton),
+            height: 52,
+            alignment: Alignment.center,
+            child: text,
+          );
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Opacity(
-        opacity: !primary || enabled ? 1 : 0.5,
-        child: Container(
-          height: 52,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: primary ? AppAccent.gradient : null,
-            color: primary ? null : colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-          ),
-          child: Text(
-            label,
-            style: type.rowTitle.copyWith(color: primary ? Colors.white : colors.ink2),
-          ),
-        ),
-      ),
+      child: Opacity(opacity: !primary || enabled ? 1 : 0.5, child: body),
     );
   }
 }

@@ -73,35 +73,32 @@ void main() {
       expect(repo.loginCallCount, 1);
     });
 
-    test(
-      'propagates ApiErrorException unchanged, leaving the session signed '
-      'out — never swallowed into a bool',
-      () async {
-        final repo = FakeAuthRepository(
-          loginError: ApiErrorException(
-            body: const ApiErrorBody(
-              code: ApiErrorCode.invalidCredentials,
-              message: 'Invalid email or password',
-            ),
-            statusCode: 401,
+    test('propagates ApiErrorException unchanged, leaving the session signed '
+        'out — never swallowed into a bool', () async {
+      final repo = FakeAuthRepository(
+        loginError: ApiErrorException(
+          body: const ApiErrorBody(
+            code: ApiErrorCode.invalidCredentials,
+            message: 'Invalid email or password',
           ),
-        );
-        final container = buildContainer(repository: repo);
-        final notifier = container.read(authSessionProvider.notifier);
+          statusCode: 401,
+        ),
+      );
+      final container = buildContainer(repository: repo);
+      final notifier = container.read(authSessionProvider.notifier);
 
-        await expectLater(
-          notifier.signInWithPassword(email: 'a@example.com', password: 'x'),
-          throwsA(
-            isA<ApiErrorException>().having(
-              (e) => e.code,
-              'code',
-              ApiErrorCode.invalidCredentials,
-            ),
+      await expectLater(
+        notifier.signInWithPassword(email: 'a@example.com', password: 'x'),
+        throwsA(
+          isA<ApiErrorException>().having(
+            (e) => e.code,
+            'code',
+            ApiErrorCode.invalidCredentials,
           ),
-        );
-        expect(container.read(authSessionProvider).isSignedIn, isFalse);
-      },
-    );
+        ),
+      );
+      expect(container.read(authSessionProvider).isSignedIn, isFalse);
+    });
   });
 
   group('registerAccount', () {
@@ -129,29 +126,32 @@ void main() {
       },
     );
 
-    test('propagates a 409 emailTaken failure, session stays signed out', () async {
-      final repo = FakeAuthRepository(
-        registerError: ApiErrorException(
-          body: const ApiErrorBody(
-            code: ApiErrorCode.emailTaken,
-            message: 'Email is already registered',
+    test(
+      'propagates a 409 emailTaken failure, session stays signed out',
+      () async {
+        final repo = FakeAuthRepository(
+          registerError: ApiErrorException(
+            body: const ApiErrorBody(
+              code: ApiErrorCode.emailTaken,
+              message: 'Email is already registered',
+            ),
+            statusCode: 409,
           ),
-          statusCode: 409,
-        ),
-      );
-      final container = buildContainer(repository: repo);
-      final notifier = container.read(authSessionProvider.notifier);
+        );
+        final container = buildContainer(repository: repo);
+        final notifier = container.read(authSessionProvider.notifier);
 
-      await expectLater(
-        notifier.registerAccount(
-          fullName: 'X',
-          email: 'taken@example.com',
-          password: 'secret1',
-        ),
-        throwsA(isA<ApiErrorException>()),
-      );
-      expect(container.read(authSessionProvider).isSignedIn, isFalse);
-    });
+        await expectLater(
+          notifier.registerAccount(
+            fullName: 'X',
+            email: 'taken@example.com',
+            password: 'secret1',
+          ),
+          throwsA(isA<ApiErrorException>()),
+        );
+        expect(container.read(authSessionProvider).isSignedIn, isFalse);
+      },
+    );
   });
 
   group('signOut', () {
@@ -217,25 +217,22 @@ void main() {
   });
 
   group('startup restore', () {
-    test(
-      'hasPersistedAuthTokenProvider defaulting to false (unoverridden) '
-      'never attempts a restore',
-      () {
-        final repo = FakeAuthRepository();
-        // No override at all — proves the *default*, not just `false`
-        // passed explicitly by buildContainer above.
-        final container = ProviderContainer(
-          overrides: [authRepositoryProvider.overrideWithValue(repo)],
-        );
-        addTearDown(container.dispose);
+    test('hasPersistedAuthTokenProvider defaulting to false (unoverridden) '
+        'never attempts a restore', () {
+      final repo = FakeAuthRepository();
+      // No override at all — proves the *default*, not just `false`
+      // passed explicitly by buildContainer above.
+      final container = ProviderContainer(
+        overrides: [authRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
 
-        final state = container.read(authSessionProvider);
+      final state = container.read(authSessionProvider);
 
-        expect(state.isSignedIn, isFalse);
-        expect(state.isRestoring, isFalse);
-        expect(repo.currentUserCallCount, 0);
-      },
-    );
+      expect(state.isSignedIn, isFalse);
+      expect(state.isRestoring, isFalse);
+      expect(repo.currentUserCallCount, 0);
+    });
 
     test(
       'a persisted token that validates signs the session in asynchronously',
@@ -263,86 +260,77 @@ void main() {
       },
     );
 
-    test(
-      'a dead token (401 unauthorized) settles to signed out and clears '
-      'the stored token via signOut()',
-      () async {
-        final repo = FakeAuthRepository(
-          currentUserError: ApiErrorException(
-            body: const ApiErrorBody(
-              code: ApiErrorCode.unauthorized,
-              message: 'Invalid or expired token',
-            ),
-            statusCode: 401,
+    test('a dead token (401 unauthorized) settles to signed out and clears '
+        'the stored token via signOut()', () async {
+      final repo = FakeAuthRepository(
+        currentUserError: ApiErrorException(
+          body: const ApiErrorBody(
+            code: ApiErrorCode.unauthorized,
+            message: 'Invalid or expired token',
           ),
-        );
+          statusCode: 401,
+        ),
+      );
+      final container = buildContainer(
+        repository: repo,
+        hasPersistedAuthToken: true,
+      );
+
+      // First read is what triggers `build()` — and with it the
+      // fire-and-forget restore microtask — exactly like the "validates"
+      // test above. Pumping before this first read would pump an event
+      // queue `authSessionProvider` hasn't even started using yet, so the
+      // read below would return the just-started (`isRestoring: true`)
+      // state instead of the settled one.
+      container.read(authSessionProvider);
+      await pumpEventQueue();
+
+      final state = container.read(authSessionProvider);
+      expect(state.isSignedIn, isFalse);
+      expect(state.isRestoring, isFalse);
+      expect(repo.signOutCallCount, 1);
+    });
+
+    test('a network failure settles to signed out WITHOUT clearing the stored '
+        'token — it might still be valid once connectivity returns', () async {
+      final repo = FakeAuthRepository(
+        currentUserError: const NetworkException('Could not connect'),
+      );
+      final container = buildContainer(
+        repository: repo,
+        hasPersistedAuthToken: true,
+      );
+
+      // See the "dead token" test above for why this first read has to
+      // come before the pump.
+      container.read(authSessionProvider);
+      await pumpEventQueue();
+
+      final state = container.read(authSessionProvider);
+      expect(state.isSignedIn, isFalse);
+      expect(repo.signOutCallCount, 0);
+    });
+
+    test('a restore that never resolves times out and settles to signed out, '
+        'without a real multi-second wait (package:fake_async)', () {
+      fakeAsync((async) {
+        final repo = FakeAuthRepository(currentUserHold: Completer<void>());
         final container = buildContainer(
           repository: repo,
           hasPersistedAuthToken: true,
         );
 
-        // First read is what triggers `build()` — and with it the
-        // fire-and-forget restore microtask — exactly like the "validates"
-        // test above. Pumping before this first read would pump an event
-        // queue `authSessionProvider` hasn't even started using yet, so the
-        // read below would return the just-started (`isRestoring: true`)
-        // state instead of the settled one.
+        // Triggers build(), which schedules the restore microtask.
         container.read(authSessionProvider);
-        await pumpEventQueue();
+        async.elapse(const Duration(seconds: 30));
 
         final state = container.read(authSessionProvider);
         expect(state.isSignedIn, isFalse);
         expect(state.isRestoring, isFalse);
-        expect(repo.signOutCallCount, 1);
-      },
-    );
-
-    test(
-      'a network failure settles to signed out WITHOUT clearing the stored '
-      'token — it might still be valid once connectivity returns',
-      () async {
-        final repo = FakeAuthRepository(
-          currentUserError: const NetworkException('Could not connect'),
-        );
-        final container = buildContainer(
-          repository: repo,
-          hasPersistedAuthToken: true,
-        );
-
-        // See the "dead token" test above for why this first read has to
-        // come before the pump.
-        container.read(authSessionProvider);
-        await pumpEventQueue();
-
-        final state = container.read(authSessionProvider);
-        expect(state.isSignedIn, isFalse);
+        // A timeout is not an ApiErrorException, so the (possibly still
+        // good) token is left alone.
         expect(repo.signOutCallCount, 0);
-      },
-    );
-
-    test(
-      'a restore that never resolves times out and settles to signed out, '
-      'without a real multi-second wait (package:fake_async)',
-      () {
-        fakeAsync((async) {
-          final repo = FakeAuthRepository(currentUserHold: Completer<void>());
-          final container = buildContainer(
-            repository: repo,
-            hasPersistedAuthToken: true,
-          );
-
-          // Triggers build(), which schedules the restore microtask.
-          container.read(authSessionProvider);
-          async.elapse(const Duration(seconds: 30));
-
-          final state = container.read(authSessionProvider);
-          expect(state.isSignedIn, isFalse);
-          expect(state.isRestoring, isFalse);
-          // A timeout is not an ApiErrorException, so the (possibly still
-          // good) token is left alone.
-          expect(repo.signOutCallCount, 0);
-        });
-      },
-    );
+      });
+    });
   });
 }

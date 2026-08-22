@@ -5,6 +5,28 @@
 /// prose draft" precedent `home_feed_screen.dart` already established for
 /// this app. Each row reuses [ListRow] (the exact `.lrow gl` shape) and its
 /// subtitle is real, already-fetched data — no new fetch of its own.
+///
+/// **The Leads row's `{n} active` figure is [countActiveLeads], not
+/// `leads.length`.** It used to be the raw `GET /leads` table size, the same
+/// inflated number the "Active leads" stat tile showed — two places printing
+/// the word "active" over a count that included archived and closed leads.
+/// Both now call the one shared helper in `state/dashboard_providers.dart`
+/// specifically so they can no longer drift apart; that helper's doc comment
+/// records which statuses it excludes and why.
+///
+/// The `{dueToday}` half of the very same ARB string is
+/// [countCallbacksDueToday], which folds that identical active-lead
+/// predicate before counting — otherwise one closed lead with a stale
+/// `callbackDate` would make this single sentence contradict itself
+/// ("0 active · 1 need a call back"). Both halves of one string must be
+/// counted over one population.
+///
+/// **The Coworkers row is dropped for a session with no team to manage**
+/// ([canManageCoworkersProvider]) — the same gate the "Coworker statistics"
+/// section and the "Coworkers" stat tile take, so a solo realtor sees no
+/// coworker surface anywhere on this screen rather than a shortcut into a
+/// roster `POST /coworkers` forbids them to add to. See
+/// `dashboard_screen.dart`'s doc comment.
 library;
 
 import 'package:flutter/material.dart';
@@ -24,7 +46,14 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final adsAsync = ref.watch(dashboardAdsProvider);
     final leadsAsync = ref.watch(dashboardLeadsProvider);
-    final coworkersAsync = ref.watch(dashboardCoworkersProvider);
+    final canManageCoworkers = ref.watch(canManageCoworkersProvider);
+    // Deliberately not fetched at all when the row is hidden: nothing else
+    // on a solo realtor's dashboard reads the roster (the tile and the
+    // statistics section take the same gate), so watching it would spend a
+    // request whose only possible answer is the empty list.
+    final coworkersAsync = canManageCoworkers
+        ? ref.watch(dashboardCoworkersProvider)
+        : const AsyncValue<List<Coworker>>.data(<Coworker>[]);
     final l10n = AppLocalizations.of(context);
 
     final adsSubtitle = adsAsync.whenOrNull(
@@ -35,7 +64,7 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
     );
     final leadsSubtitle = leadsAsync.whenOrNull(
       data: (leads) => l10n.dashboardWorkspaceLeadsSubtitle(
-        leads.length,
+        countActiveLeads(leads),
         countCallbacksDueToday(leads),
       ),
     );
@@ -60,14 +89,16 @@ class DashboardWorkspaceLinks extends ConsumerWidget {
           subtitle: leadsSubtitle,
           onTap: () => context.push(RoutePaths.workLeads),
         ),
-        const SizedBox(height: 12),
-        ListRow(
-          key: const ValueKey('workspaceLink-coworkers'),
-          icon: Icons.groups_outlined,
-          title: l10n.dashboardWorkspaceCoworkersRowTitle,
-          subtitle: coworkersSubtitle,
-          onTap: () => context.push(RoutePaths.workCoworkers),
-        ),
+        if (canManageCoworkers) ...[
+          const SizedBox(height: 12),
+          ListRow(
+            key: const ValueKey('workspaceLink-coworkers'),
+            icon: Icons.groups_outlined,
+            title: l10n.dashboardWorkspaceCoworkersRowTitle,
+            subtitle: coworkersSubtitle,
+            onTap: () => context.push(RoutePaths.workCoworkers),
+          ),
+        ],
       ],
     );
   }

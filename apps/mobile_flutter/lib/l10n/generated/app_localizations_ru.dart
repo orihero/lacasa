@@ -101,6 +101,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get homeCategoryRetailLabel => 'Торговое помещение';
 
   @override
+  String homeCategoryChipSemanticsLabel(String category) {
+    return 'Показать объявления: $category';
+  }
+
+  @override
   String get homeExploreNearbySectionTitle => 'Рядом с вами';
 
   @override
@@ -115,6 +120,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get homeFeedEmptyMessage => 'Пока нет доступных объявлений.';
+
+  @override
+  String get homeFeedCategoryEmptyMessage =>
+      'В этой категории пока нет объявлений.';
 
   @override
   String get homePromoOneTitle => 'Один пост —\nна всех каналах';
@@ -151,22 +160,33 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String homeAgentRatingCaption(String rating, int count) {
+    return '★ $rating ($count)';
+  }
+
+  @override
   String get homeTopDistrictsSectionTitle => 'Популярные районы';
 
   @override
   String get homeTopDistrictsExploreLinkLabel => 'Смотреть';
 
   @override
-  String get homeDistrictChilonzorName => 'Чиланзар';
+  String homeDistrictListingsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count объявлений',
+      many: '$count объявлений',
+      few: '$count объявления',
+      one: '$count объявление',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get homeDistrictYunusobodName => 'Юнусабад';
-
-  @override
-  String get homeDistrictSergeliName => 'Сергели';
-
-  @override
-  String get homeDistrictMirobodName => 'Миробод';
+  String homeDistrictTapSemanticsLabel(String district) {
+    return 'Показать объявления в районе $district';
+  }
 
   @override
   String get searchScreenTitle => 'Поиск';
@@ -193,7 +213,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get searchResultsRetryMessage => 'Не удалось загрузить объявления.';
 
   @override
-  String get searchResultsEmptyMessage => 'Объявления не найдены.';
+  String get searchResultsEmptyMessage =>
+      'По вашему запросу объявления не найдены.';
+
+  @override
+  String get searchResultsFilteredEmptyMessage =>
+      'Нет объявлений, соответствующих фильтрам.';
 
   @override
   String get searchRecentSearchesSectionTitle => 'Недавние поиски';
@@ -203,6 +228,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get filterSheetTitle => 'Фильтры';
+
+  @override
+  String get filterSheetCloseLabel => 'Закрыть';
 
   @override
   String get filterCountErrorMessage =>
@@ -331,6 +359,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get filterStoreyFieldLabel => 'Этаж';
 
   @override
+  String get listingOverviewSectionTitle => 'Обзор';
+
+  @override
   String get listingDescriptionSectionTitle => 'Описание';
 
   @override
@@ -391,6 +422,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get listingNavShareSemanticsLabel => 'Поделиться';
+
+  @override
+  String get listingHeroVideoBadgeLabel => 'Видео';
 
   @override
   String get listingLinkCopiedToastMessage => 'Ссылка скопирована для отправки';
@@ -486,6 +520,13 @@ class AppLocalizationsRu extends AppLocalizations {
       'Этот тип файла нельзя предпросмотреть.';
 
   @override
+  String get galleryOpenVideoExternallyLabel => 'Открыть видео';
+
+  @override
+  String get galleryVideoLinkCopiedToastMessage =>
+      'Не удалось открыть видео — ссылка скопирована. Вставьте её в браузер, чтобы посмотреть.';
+
+  @override
   String galleryPositionSemanticsLabel(int current, int total) {
     return 'Позиция в галерее: $current из $total';
   }
@@ -513,14 +554,25 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mapShowListSemanticsLabel => 'Показать список';
 
   @override
-  String mapPinnedAllCountLabel(int count) {
-    return '$count на карте';
-  }
-
-  @override
   String mapPinnedPartialCountLabel(int pinned, int total) {
     return '$pinned из $total на карте';
   }
+
+  @override
+  String mapPartialResultsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Показаны первые $count объявлений',
+      many: 'Показаны первые $count объявлений',
+      few: 'Показаны первые $count объявления',
+      one: 'Показано первое $count объявление',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapUpdatingResultsLabel => 'Обновляем…';
 
   @override
   String get mapFiltersButtonLabel => 'Фильтры';
@@ -609,8 +661,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sharedNoReviewsYetLabel => 'Пока нет отзывов';
 
   @override
-  String sharedRatingLabel(String rating, int count) {
-    return 'Отзыв: $rating/5 ($count)';
+  String sharedRatingLabel(String rating) {
+    return 'Отзыв: $rating/5';
   }
 
   @override
@@ -641,19 +693,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sharedLeadStatusAcceptedLabel => 'Принят';
 
   @override
-  String get sharedPublishStatusPendingLabel => 'Не опубликовано';
+  String get sharedPublishStatusPendingLabel => 'PENDING';
 
   @override
-  String get sharedPublishStatusAwaitingReviewLabel => 'Ожидает проверки';
+  String get sharedPublishStatusAwaitingReviewLabel =>
+      'DRAFTED_AWAITING_REVIEW';
 
   @override
-  String get sharedPublishStatusPublishedLabel => 'Опубликовано';
+  String get sharedPublishStatusPublishedLabel => 'PUBLISHED';
 
   @override
-  String get sharedPublishStatusFailedLabel => 'Ошибка';
+  String get sharedPublishStatusFailedLabel => 'FAILED';
 
   @override
   String get sharedGenericErrorMessage => 'Что-то пошло не так.';
+
+  @override
+  String get sharedOfflineErrorMessage =>
+      'Нет соединения. Проверьте сеть и попробуйте снова.';
 
   @override
   String get sharedShowPasswordLabel => 'Показать пароль';
@@ -689,8 +746,26 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось обновить избранное';
 
   @override
+  String get sharedFavouriteAddSemanticsLabel => 'Добавить в избранное';
+
+  @override
+  String get sharedFavouriteRemoveSemanticsLabel => 'Удалить из избранного';
+
+  @override
+  String get sharedSignInToSaveMessage => 'Войдите, чтобы сохранять объявления';
+
+  @override
+  String get sharedSignInActionLabel => 'Войти';
+
+  @override
+  String get sharedClearFiltersActionLabel => 'Сбросить фильтры';
+
+  @override
   String get sharedLoadMoreFailedLabel =>
       'Не удалось загрузить ещё — Повторить';
+
+  @override
+  String get sharedLoadMoreLabel => 'Показать ещё';
 
   @override
   String get sharedRetryLabel => 'Повторить';
@@ -715,6 +790,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get sharedPricePerMonthSuffix => '/мес';
+
+  @override
   String get navTabHomeLabel => 'Главная';
 
   @override
@@ -722,6 +800,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get navTabWorkLabel => 'Работа';
+
+  @override
+  String get navTabDashboardLabel => 'Статистика';
+
+  @override
+  String get navTabMyAdsLabel => 'Объявления';
+
+  @override
+  String get navTabLeadsLabel => 'Лиды';
+
+  @override
+  String get navTabCoworkersLabel => 'Коллеги';
 
   @override
   String get navTabAgentsLabel => 'Риелторы';
@@ -825,6 +915,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listingEditorWizardCreateLabel => 'Создать';
 
   @override
+  String get listingEditorWizardDisabledReasonMessage =>
+      'Заполните обязательные поля, чтобы продолжить.';
+
+  @override
   String get listingEditorStepBasicsLabel => 'Основное';
 
   @override
@@ -837,12 +931,40 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listingEditorStepPublishLabel => 'Публикация';
 
   @override
+  String listingEditorStepGoToSemanticsLabel(String step) {
+    return 'Перейти к шагу «$step»';
+  }
+
+  @override
   String get listingEditorCreatePublishNoticeMessage =>
       'Публикация станет доступна после создания этого объявления — нажмите «Создать», а затем используйте кнопки для каждого канала на экране редактирования объявления.';
 
   @override
+  String get listingEditorSummaryCardTitle => 'Сводка';
+
+  @override
+  String listingEditorSummaryPhotosCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count фото',
+      many: '$count фото',
+      few: '$count фото',
+      one: '$count фото',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listingEditorSummaryNotSetLabel => 'Не указано';
+
+  @override
   String get listingEditorPendingUploadsMessage =>
       'Дождитесь завершения загрузки фото/видео.';
+
+  @override
+  String get listingEditorFailedUploadsMessage =>
+      'Некоторые фото/видео не загрузились. Удалите их и добавьте заново перед сохранением.';
 
   @override
   String get listingEditorCreatePendingLabel => 'Создание';
@@ -1035,6 +1157,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listingEditorAddVideoButtonLabel => 'Добавить видео';
 
   @override
+  String get listingEditorAddVideoOptionalHint => 'По желанию · до 70 МБ';
+
+  @override
   String get listingEditorMediaLimitsHint =>
       'До 5 изображений (по 5 МБ каждое). Одно видео по желанию, до 70 МБ.';
 
@@ -1060,6 +1185,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get listingEditorRetryUploadLabel => 'Повторить загрузку';
+
+  @override
   String get listingEditorPublishSectionLabel => 'Публикация';
 
   @override
@@ -1075,7 +1203,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get listingEditorChannelOlxLabel => 'OLX';
 
   @override
-  String get listingEditorChannelRealtingLabel => 'Realting';
+  String get listingEditorChannelThreadsLabel => 'Threads';
+
+  @override
+  String get listingEditorChannelFacebookMarketplaceLabel =>
+      'Facebook Marketplace';
+
+  @override
+  String get listingEditorChannelXLabel => 'X';
+
+  @override
+  String get listingEditorChannelLinkedinLabel => 'LinkedIn';
 
   @override
   String get listingEditorChannelUnknownLabel => 'Неизвестный канал';
@@ -1089,6 +1227,22 @@ class AppLocalizationsRu extends AppLocalizations {
       'Кросс-постинг на OLX доступен только в десктопном приложении (требуется расширение браузера).';
 
   @override
+  String get listingEditorThreadsUnavailableHint =>
+      'Публикация в Threads требует профиля Threads, привязанного к профессиональному аккаунту Instagram, — эта сборка такой доступ не запрашивает.';
+
+  @override
+  String get listingEditorFacebookMarketplaceUnavailableHint =>
+      'У Facebook Marketplace нет разрешённого способа автоматизации ни на одной платформе — объявления туда размещаются вручную.';
+
+  @override
+  String get listingEditorXUnavailableHint =>
+      'Публикация в X требует отдельного приложения X API с платным тарифом на запись — ни того, ни другого в этой сборке нет.';
+
+  @override
+  String get listingEditorLinkedinUnavailableHint =>
+      'Публикация в LinkedIn требует одобренного приложения LinkedIn Marketing API — в этой сборке нет учётных данных LinkedIn.';
+
+  @override
   String get listingEditorPublishStatusLinkLabel => 'Статус публикации';
 
   @override
@@ -1098,6 +1252,11 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get listingEditorInstagramLoadErrorMessage =>
       'Не удалось загрузить подключённые аккаунты Instagram.';
+
+  @override
+  String listingEditorInstagramFollowersSubtitle(String count) {
+    return 'Instagram · $count подписчиков';
+  }
 
   @override
   String get listingEditorNoInstagramAccountMessage =>
@@ -1164,10 +1323,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Публикация на OLX выполняется через расширение браузера, где человек проверяет и нажимает «Опубликовать». Повторите кросс-постинг из расширения.';
 
   @override
-  String get listingEditorRealtingNonRetryableReason =>
-      'Объявления на Realting синхронизируются через запланированную ленту, а не через вызов публикации для каждого объявления. Здесь нечего повторять.';
-
-  @override
   String get listingEditorUnknownChannelReason =>
       'Неизвестный канал публикации.';
 
@@ -1217,7 +1372,78 @@ class AppLocalizationsRu extends AppLocalizations {
   String get myListingsEmptyStateMessage => 'Объявления не найдены.';
 
   @override
+  String get myListingsFilteredEmptyStateMessage =>
+      'Нет объявлений, соответствующих фильтрам.';
+
+  @override
+  String get myListingsEmptyStateActionLabel => 'Создать новое объявление';
+
+  @override
   String get myListingsEditButtonSemanticsLabel => 'Редактировать';
+
+  @override
+  String get myListingsStageAllLabel => 'Все';
+
+  @override
+  String myListingsStageCountActiveLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count активных',
+      many: '$count активных',
+      few: '$count активных',
+      one: '$count активное',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountSoldLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count проданных',
+      many: '$count проданных',
+      few: '$count проданных',
+      one: '$count проданное',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountDraftLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count черновиков',
+      many: '$count черновиков',
+      few: '$count черновика',
+      one: '$count черновик',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageFilterSemanticsLabel(String stage) {
+    return 'Показать объявления: $stage';
+  }
+
+  @override
+  String get myListingsChannelPublishedLabel => 'Опубликовано';
+
+  @override
+  String get myListingsChannelFailedLabel => 'Ошибка';
+
+  @override
+  String get myListingsChannelPendingLabel => 'Публикуется…';
+
+  @override
+  String get myListingsChannelNotPublishedLabel => 'Не опубликовано';
+
+  @override
+  String myListingsChannelBadgeSemanticsLabel(String channel, String status) {
+    return '$channel — $status';
+  }
 
   @override
   String get agentsDirectoryScreenTitle => 'Риелторы';
@@ -1262,6 +1488,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get agentsInfoAddressLabel => 'Адрес:';
 
   @override
+  String get agentsInfoRatingLabel => 'Рейтинг:';
+
+  @override
   String get agentsInfoCallButtonLabel => 'Позвонить';
 
   @override
@@ -1276,11 +1505,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get agentsAdsGridHeading => 'Список объявлений';
-
-  @override
-  String agentsAdsGridHeadingWithCount(int count) {
-    return 'Список объявлений ($count)';
-  }
 
   @override
   String get reviewsRatingRequiredError => 'Пожалуйста, выберите рейтинг.';
@@ -1396,6 +1620,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profileAgentLanguageRowTitle => 'Язык';
 
   @override
+  String get profileAgentWorkspaceGroupLabel => 'Рабочий кабинет';
+
+  @override
+  String get profileAgentBrowseModeRowTitle => 'Смотреть объявления';
+
+  @override
+  String get profileAgentBrowseModeRowSubtitle => 'Ищите и смотрите как клиент';
+
+  @override
+  String get profileAgentWorkModeRowTitle => 'Перейти в кабинет';
+
+  @override
+  String get profileAgentWorkModeRowSubtitle =>
+      'Статистика, объявления, лиды и коллеги';
+
+  @override
   String get profileAgentSessionGroupLabel => 'Сессия';
 
   @override
@@ -1411,6 +1651,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get profileBuyerSavedListingsRowTitle => 'Сохранённые объявления';
 
   @override
+  String profileBuyerSavedListingsRowSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count объявлений',
+      few: '$count объявления',
+      one: '$count объявление',
+      zero: 'Нет объявлений',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get profileBuyerUpdateProfileRowTitle => 'Обновить профиль';
 
   @override
@@ -1419,6 +1672,35 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get profileBuyerRegisterAsAgentRowTitle =>
       'Зарегистрироваться как риелтор';
+
+  @override
+  String get profileBuyerRealtorPendingRowTitle =>
+      'Заявка риелтора на рассмотрении';
+
+  @override
+  String profileBuyerRealtorPendingRowSubtitle(String phone) {
+    return 'Мы позвоним на $phone — обычно в течение одного рабочего дня.';
+  }
+
+  @override
+  String get profileBuyerRealtorPendingNoPhoneSubtitle =>
+      'Мы вам позвоним — обычно в течение одного рабочего дня.';
+
+  @override
+  String get profileBuyerRealtorRejectedRowTitle =>
+      'Заявка риелтора не одобрена';
+
+  @override
+  String get profileBuyerRealtorRejectedRowSubtitle =>
+      'Свяжитесь с нами, и мы разберём это вместе с вами.';
+
+  @override
+  String get profileBuyerRealtorRejectedActionLabel => 'Связаться с нами';
+
+  @override
+  String profileBuyerRealtorAppliedAtLabel(String date) {
+    return 'Заявка от $date';
+  }
 
   @override
   String get profileBuyerSessionGroupLabel => 'Сессия';
@@ -1462,6 +1744,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get authLoginInvalidCredentialsError => 'Неверный email или пароль';
 
   @override
+  String get authLoginForgotPasswordHintMessage =>
+      'Забыли его? Нажмите «Забыли пароль?».';
+
+  @override
   String get authLoginNetworkErrorMessage =>
       'Нет соединения. Проверьте сеть и попробуйте снова.';
 
@@ -1479,6 +1765,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get authLoginSubmitButtonLabel => 'Войти';
+
+  @override
+  String get authLoginForgotPasswordLinkLabel => 'Забыли пароль?';
+
+  @override
+  String authLoginForgotPasswordContactMessage(String email) {
+    return 'Я забыл(а) пароль от $email и не могу войти. Пожалуйста, помогите его сбросить.';
+  }
+
+  @override
+  String get authLoginForgotPasswordContactMessageNoEmail =>
+      'Я забыл(а) пароль и не могу войти. Пожалуйста, помогите его сбросить.';
 
   @override
   String get authLoginFooterLinkText => 'Нет аккаунта?';
@@ -1570,6 +1868,29 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get authRegisterInvalidPhoneError => 'Неверный формат номера телефона';
+
+  @override
+  String get authRegisterFullNameRequiredError => 'Укажите полное имя';
+
+  @override
+  String get authRegisterPhoneRequiredError => 'Укажите номер телефона';
+
+  @override
+  String get authRegisterEmailRequiredError => 'Укажите email';
+
+  @override
+  String get authRegisterEmailInvalidError => 'Неверный формат адреса email';
+
+  @override
+  String get authRegisterPasswordRequiredError => 'Укажите пароль';
+
+  @override
+  String get authRegisterPasswordTooShortError =>
+      'Пароль должен содержать не менее 6 символов';
+
+  @override
+  String get authRegisterAgencyNameRequiredError =>
+      'Укажите название агентства';
 
   @override
   String get authRegisterRealtorSuccessToast =>
@@ -1722,6 +2043,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get contactMessageFieldLabel => 'Сообщение';
 
   @override
+  String get contactMessageFieldHintText =>
+      'Хотелось бы посмотреть эту квартиру на этой неделе.';
+
+  @override
   String get contactSendButtonLabel => 'Отправить сообщение';
 
   @override
@@ -1766,6 +2091,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось переместить — попробуйте снова.';
 
   @override
+  String get leadsCardMoveFailedLabel => 'Не удалось переместить';
+
+  @override
+  String leadsCardMoveRetrySemanticsLabel(String status) {
+    return 'Повторить перемещение в «$status»';
+  }
+
+  @override
   String get leadsCreateScreenTitle => 'Создать лид';
 
   @override
@@ -1787,7 +2120,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get leadsFieldSourceLabel => 'Источник';
 
   @override
-  String get leadsCreateCommitHint => 'Что ищет этот лид?';
+  String get leadsCreateCommitHint => 'Что они ищут?';
 
   @override
   String get leadsCreateFullNameRequiredError => 'Укажите имя';
@@ -1861,10 +2194,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get leadsDetailCloseLabel => 'Закрыть';
 
   @override
+  String get leadsCallButtonLabel => 'Позвонить';
+
+  @override
+  String leadsCallSemanticsLabel(String phone) {
+    return 'Позвонить: $phone';
+  }
+
+  @override
   String get leadsDetailLoadErrorMessage => 'Не удалось загрузить этот лид.';
 
   @override
-  String get leadsDeleteLeadButtonLabel => 'Удалить лид';
+  String get leadsDeleteLeadButtonLabel => 'Удалить';
 
   @override
   String leadsCommitMinLengthError(int min) {
@@ -1878,7 +2219,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get leadsConversationSheetTitle => 'Кратко опишите разговор';
 
   @override
-  String get leadsConversationHint => 'О чём вы говорили?';
+  String get leadsConversationHint => 'Не менее 10 символов';
 
   @override
   String get leadsMoveToSheetTitle => 'Переместить…';
@@ -1891,6 +2232,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get coworkersEmptyMessage => 'Пока нет коллег.';
+
+  @override
+  String get coworkersEmptyStateActionLabel => 'Добавить коллегу';
 
   @override
   String get coworkersAddNewButtonLabel => '+ Добавить коллегу';
@@ -1974,7 +2318,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get coworkersPasswordHintKeepCurrent =>
-      'Оставьте пустым, чтобы сохранить текущий пароль';
+      'Оставьте пустым, чтобы сохранить текущий';
 
   @override
   String get coworkersFullNameRequiredError => 'Укажите полное имя';
@@ -2037,11 +2381,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get coworkersReadOnlyNoteMessage =>
       'Только риелторы могут редактировать или удалять коллег.';
-
-  @override
-  String coworkersActivitySummaryLine(String listings, String active) {
-    return '$listings · Активность: $active';
-  }
 
   @override
   String get coworkersActivityJustNow => 'Только что';
@@ -2108,6 +2447,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dashboardLegendSold => 'Продано';
 
   @override
+  String dashboardChartSemanticsLabel(String range, int created, int sold) {
+    return 'Статистика объявлений, $range: создано — $created, продано — $sold';
+  }
+
+  @override
   String dashboardCaptionHour(String hour) {
     return 'Час $hour';
   }
@@ -2128,11 +2472,19 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String dashboardCaptionAllTimeChartNote(String range) {
+    return '$range · на графике этот месяц';
+  }
+
+  @override
   String get dashboardCoworkerStatisticsLoadErrorMessage =>
       'Не удалось загрузить статистику коллег';
 
   @override
   String get dashboardNoCoworkersMessage => 'Пока нет коллег.';
+
+  @override
+  String get dashboardAddCoworkerButtonLabel => 'Добавить коллегу';
 
   @override
   String get dashboardLegendAdsCount => 'Кол-во объявлений';
@@ -2144,16 +2496,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dashboardLegendSaleCount => 'Кол-во продаж';
 
   @override
-  String get dashboardHeaderCoworkers => 'КОЛЛЕГИ';
+  String dashboardCoworkerBarsSemanticsLabel(
+    String name,
+    int ads,
+    int leads,
+    int sales,
+  ) {
+    return '$name: объявлений — $ads, лидов — $leads, продаж — $sales';
+  }
 
   @override
-  String get dashboardHeaderAds => 'ОБЪЯВЛЕНИЯ';
+  String get dashboardHeaderCoworkers => 'Коллеги';
 
   @override
-  String get dashboardHeaderLeads => 'ЛИДЫ';
+  String get dashboardHeaderAds => 'Объявления';
 
   @override
-  String get dashboardHeaderSales => 'ПРОДАЖИ';
+  String get dashboardHeaderLeads => 'Лиды';
+
+  @override
+  String get dashboardHeaderSales => 'Продажи';
 
   @override
   String get dashboardTileAdsCreatedLabel => 'Создано объявлений';
@@ -2169,6 +2531,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dashboardTileTapToManageSubtitle => 'нажмите, чтобы управлять';
+
+  @override
+  String get dashboardTileTapToViewSubtitle => 'нажмите, чтобы посмотреть';
 
   @override
   String get dashboardRangeSubtitleAll => 'за всё время';
@@ -2247,7 +2612,39 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось загрузить ваши уведомления.';
 
   @override
+  String get notificationsMarkAllReadLabel => 'Всё прочитано';
+
+  @override
+  String get notificationsMarkedAllReadToastMessage =>
+      'Все уведомления отмечены прочитанными';
+
+  @override
+  String get notificationsMarkAllReadPendingLabel => 'Отмечаем прочитанными';
+
+  @override
+  String get notificationsMarkAllReadErrorMessage =>
+      'Не удалось отметить уведомления прочитанными.';
+
+  @override
   String get notificationsEmptyMessage => 'Пока нет уведомлений.';
+
+  @override
+  String get notificationsEmptyStateDetailMessage =>
+      'Здесь появятся новые лиды, одобрения объявлений и результаты публикаций.';
+
+  @override
+  String get notificationsEmptyStateActionLabel => 'Обновить';
+
+  @override
+  String get notificationsAgentOnlyMessage =>
+      'Уведомления доступны только риелторам.';
+
+  @override
+  String get notificationsSignInPromptMessage =>
+      'Войдите, чтобы увидеть свои уведомления.';
+
+  @override
+  String get notificationsGoBackLabel => 'Назад';
 
   @override
   String notificationsUnreadSemanticsLabel(String title) {
@@ -2294,8 +2691,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get messagesScreenTitle => 'Сообщения';
 
   @override
-  String get messagesComingSoonBanner =>
-      'Обмен сообщениями скоро появится. Пока связывайтесь с лидами по телефону.';
+  String get messagesComingSoonTitle => 'Обмен сообщениями скоро появится';
+
+  @override
+  String get messagesComingSoonBody =>
+      'Пока связывайтесь с лидами по телефону. В карточке каждого лида есть номер для звонка в одно касание.';
+
+  @override
+  String get messagesOpenLeadsAction => 'Открыть лиды';
 
   @override
   String get connectedAccountsScreenTitle => 'Подключённые аккаунты';
@@ -2305,10 +2708,31 @@ class AppLocalizationsRu extends AppLocalizations {
       'Создать пост в Instagram';
 
   @override
+  String get connectedAccountsInstagramToggleSubtitle =>
+      'Статус — включён, когда привязан хотя бы один аккаунт';
+
+  @override
   String get connectedAccountsTelegramToggleTitle => 'Создать пост в Telegram';
 
   @override
+  String get connectedAccountsTelegramToggleSubtitle =>
+      'Статус — включён, когда привязан канал';
+
+  @override
   String get connectedAccountsYoutubeToggleTitle => 'Создать пост в Youtube';
+
+  @override
+  String get connectedAccountsThreadsToggleTitle => 'Создать пост в Threads';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceToggleTitle =>
+      'Создать пост в Facebook Marketplace';
+
+  @override
+  String get connectedAccountsXToggleTitle => 'Создать пост в X';
+
+  @override
+  String get connectedAccountsLinkedinToggleTitle => 'Создать пост в LinkedIn';
 
   @override
   String get connectedAccountsInstagramLoadErrorMessage =>
@@ -2398,10 +2822,34 @@ class AppLocalizationsRu extends AppLocalizations {
       'Бета — недоступно в этой версии.';
 
   @override
+  String get connectedAccountsThreadsUnavailableNoteMessage =>
+      'Публикация в Threads требует профиля Threads, привязанного к профессиональному аккаунту Instagram, — эта сборка такой доступ не запрашивает.';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceUnavailableNoteMessage =>
+      'У Facebook Marketplace нет разрешённого способа автоматизации ни на одной платформе — объявления туда размещаются вручную.';
+
+  @override
+  String get connectedAccountsXUnavailableNoteMessage =>
+      'Публикация в X требует отдельного приложения X API с платным тарифом на запись — ни того, ни другого в этой сборке нет.';
+
+  @override
+  String get connectedAccountsLinkedinUnavailableNoteMessage =>
+      'Публикация в LinkedIn требует одобренного приложения LinkedIn Marketing API — в этой сборке нет учётных данных LinkedIn.';
+
+  @override
   String get connectedAccountsConnectedStatusLabel => 'Подключено';
 
   @override
   String get connectedAccountsNotConnectedStatusLabel => 'Не подключено';
+
+  @override
+  String get connectedAccountsInstagramBrowserHint =>
+      'Откроется системный браузер — Meta не разрешает OAuth внутри встроенного WebView.';
+
+  @override
+  String get connectedAccountsOtherChannelsHint =>
+      'У OLX нет постоянного аккаунта для подключения — кросс-постинг в OLX работает только из десктопного приложения.';
 
   @override
   String get leadsCommitFieldUppercaseLabel => 'КОММЕНТАРИЙ';
@@ -2411,4 +2859,110 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get languageSheetCloseLabel => 'Закрыть';
+
+  @override
+  String get galleryPreviousPhotoSemanticsLabel => 'Предыдущее фото';
+
+  @override
+  String get galleryNextPhotoSemanticsLabel => 'Следующее фото';
+
+  @override
+  String get contactPhoneFieldHint =>
+      'Только номера Узбекистана — +998 и девять цифр.';
+
+  @override
+  String get leadsPhoneFormatHint =>
+      'Только номера Узбекистана — +998 и девять цифр.';
+
+  @override
+  String get filterPriceAnyOptionLabel => 'Любая цена';
+
+  @override
+  String agentsAdsGridActiveCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count активных',
+      many: '$count активных',
+      few: '$count активных',
+      one: '$count активное',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get permissionsPrimerLeadBody =>
+      'Два разрешения, запрашиваются один раз. Оба можно изменить позже в настройках.';
+
+  @override
+  String get authLoginLeadBody =>
+      'Войдите, чтобы сохранять объявления, писать риелторам и вести свой бизнес.';
+
+  @override
+  String get authRegisterLeadBody =>
+      'Просмотр, сохранение и сообщения работают в любом аккаунте. Аккаунт риелтора добавляет вкладку «Работа» — объявления, лиды и публикацию.';
+
+  @override
+  String get authRegisterFullNameHint => 'Dilnoza Yusupova';
+
+  @override
+  String get authEmailHint => 'you@example.com';
+
+  @override
+  String get profileSignedOutContactUsRowSubtitle =>
+      'Вопросы, проблемы и предложения';
+
+  @override
+  String get profileAgentEditProfileRowSubtitle =>
+      'Аватар, имя, телефон, эл. почта';
+
+  @override
+  String get profileAgentConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get profileAgentSettingsRowSubtitle =>
+      'Язык, уведомления, о приложении';
+
+  @override
+  String get profileAgentMessagesRowSubtitle => 'Скоро';
+
+  @override
+  String get profileBuyerUpdateProfileRowSubtitle =>
+      'Имя, телефон, эл. почта, пароль';
+
+  @override
+  String get profileBuyerRegisterAsAgentRowSubtitle =>
+      'Откроет Google Форму в браузере';
+
+  @override
+  String get settingsConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get settingsLogoutRowSubtitle => 'Потребуется войти снова';
+
+  @override
+  String get editProfilePasswordHelper =>
+      'Не менее 6 символов. Нужен, только если вы его меняете.';
+
+  @override
+  String get sharedLoadMoreLoadingLabel => 'Загружаем ещё…';
+
+  @override
+  String get leadsKanbanLongPressHint =>
+      'Нажмите и удерживайте карточку, чтобы переместить';
+
+  @override
+  String leadsCallBackFlagLabel(String when) {
+    return 'Перезвонить $when';
+  }
+
+  @override
+  String get leadsOptionalFieldHint => 'Необязательно';
+
+  @override
+  String leadsMoveToContextLine(String name, String status) {
+    return '$name сейчас в «$status».';
+  }
 }

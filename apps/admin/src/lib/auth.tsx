@@ -2,15 +2,13 @@
  * src/lib/auth — session state for the whole app: who is signed in, and the
  * gate every control-room route sits behind.
  *
- * Ported from apps/console/src/lib/auth.tsx, plus the admin gate. The token
- * itself lives in localStorageTokenStorage (localStorage), not in this
- * context — AuthProvider only ever asks it "is there a token?" via
- * `localStorageTokenStorage.getToken()` rather than reading localStorage
- * directly a second time, so exactly one module knows how the token is
- * persisted (lib/apiClient.ts, which also explains why this app's key differs
- * from the console's). Note this is NOT reached through
- * `apiClient.tokenStorage` — createLaCasaApiClient() returns only the
- * resource groups (ads, auth, …), not the underlying ApiClient's
+ * The token itself lives in `localStorageTokenStorage` (./apiClient), not in
+ * this context — AuthProvider only ever asks it "is there a token?" via
+ * `getToken()` rather than reading localStorage directly a second time, so
+ * EXACTLY ONE MODULE knows how the token is persisted (./apiClient, which also
+ * explains why this app's key differs from the console's). Note this is NOT
+ * reached through `apiClient.tokenStorage`: createLaCasaApiClient() returns
+ * only the resource groups (auth, admin, …), not the underlying ApiClient's
  * `.tokenStorage`/`.baseUrl`, so the same TokenStorage instance has to be
  * imported on its own.
  */
@@ -24,6 +22,7 @@ import {
   type ReactNode,
 } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { ApiError } from "@lacasa/domain";
 import type { AuthUser } from "@lacasa/api-client";
 import { apiClient, localStorageTokenStorage } from "./apiClient";
@@ -47,17 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
   const [status, setStatus] = useState<AuthStatus>("loading");
 
   // Runs once on mount: a token surviving a refresh doesn't mean it's still
-  // good (the account could have been demoted out of ADMIN, deleted, or the
+  // good (the account could have been DEMOTED OUT OF ADMIN, deleted, or the
   // token could have expired) — it has to be checked against GET /auth/me
   // before the app trusts it. Demotion is the case that matters most here:
-  // the role this app gates on is re-read from the server on every load, not
-  // remembered from the login response.
+  // the role this app gates on is re-read from the server on every load, never
+  // remembered from the login response and never persisted beside the token.
   useEffect(() => {
     let cancelled = false;
 
     async function checkSession() {
       const token = await localStorageTokenStorage.getToken();
       if (!token) {
+        // No token: no request. There is nothing to revalidate.
         if (!cancelled) setStatus("anonymous");
         return;
       }
@@ -69,10 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
           setStatus("authenticated");
         }
       } catch (error) {
-        // Only a 401 means the token itself is bad — anything else (a network
-        // blip, a 500) shouldn't throw away a token that might still be good
-        // on the next request, so it's left in storage and only the in-memory
-        // session drops to anonymous.
+        // ONLY A 401 means the token itself is bad. Anything else (a network
+        // blip, a 500, a 502 from a proxy) must not throw away a token that
+        // might still be good on the next request, so it is left in storage
+        // and only the in-memory session drops to anonymous. Throwing away a
+        // valid token because the API was briefly down forces a re-login for
+        // no reason.
         if (ApiError.isApiError(error) && error.status === 401) {
           await localStorageTokenStorage.setToken(null);
         }
@@ -86,10 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     };
   }, []);
 
-  // A 401 discovered later in the session (queryClient.ts's global
-  // QueryCache/MutationCache onError, not just this component's own
-  // mount-time checkSession above) reaches here through sessionExpired.ts —
-  // same recovery as the 401 branch above, just reachable from any request.
+  // A 401 discovered LATER in the session (./queryClient's global
+  // QueryCache/MutationCache onError, not just this component's own mount-time
+  // checkSession above) reaches here through ./sessionExpired — the same
+  // recovery as the 401 branch above, just reachable from any request at any
+  // point. This provider is the only place allowed to flip `status` to
+  // 'anonymous'.
   useEffect(() => {
     return onSessionExpired(() => {
       void localStorageTokenStorage.setToken(null);
@@ -103,6 +107,11 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       user,
       status,
       async login(email: string, password: string) {
+        // The SHARED /auth/login, not an admin-specific endpoint: it succeeds
+        // for any valid account, admin or not, and performs NO role check.
+        // The role gate lives in exactly one place (isAdmin, backed by the
+        // server's requireRole on every /api/admin request) — a login screen
+        // that refused non-admins would be a second one.
         const { token, user: loggedInUser } = await apiClient.auth.login({ email, password });
         await localStorageTokenStorage.setToken(token);
         setUser(loggedInUser);
@@ -111,9 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       logout() {
         // Fire-and-forget: the in-memory session drops immediately (the UI
         // shouldn't wait on a localStorage write to redirect), and the token
-        // clear just needs to land before the next request goes out, which
+        // clear only needs to land before the next request goes out — which
         // the Authorization header on that request already guarantees by
-        // re-reading tokenStorage each time (see core/client.ts).
+        // re-reading token storage each time.
         void localStorageTokenStorage.setToken(null);
         setUser(null);
         setStatus("anonymous");
@@ -141,9 +150,9 @@ export const ADMIN_ROLE_KEY = "admin";
 /**
  * True only for a signed-in ADMIN. `AuthUser.role` is deliberately typed as a
  * bare `string` by @lacasa/api-client (it is whatever the server sent), so
- * this compares against the wire key — lowercased first, because
- * serializeUser.js emits `"admin"` but nothing stops a future serializer, or
- * a hand-issued token in a test fixture, from sending `"ADMIN"`. Being strict
+ * this compares against the wire key — LOWERCASED FIRST, because the
+ * serializer emits `"admin"` but nothing stops a future serializer, or a
+ * hand-issued token in a test fixture, from sending `"ADMIN"`. Being strict
  * about case here would fail CLOSED in a confusing way (a real admin locked
  * out with no explanation); being lenient about case cannot let a non-admin
  * in, because no other role string lowercases to "admin".
@@ -154,34 +163,39 @@ export function isAdmin(user: AuthUser | null): boolean {
 }
 
 /**
- * Route guard for every route except /login. Three distinct outcomes, and the
- * middle one is the reason this exists as its own component rather than
- * apps/console's RequireAuth:
+ * Route guard for every route except /login. THREE DISTINCT OUTCOMES, and the
+ * middle one is the reason this exists rather than a plain RequireAuth:
  *
  *   loading       — a full-page loading state. Never flash the login screen
- *                   while the token is still being checked.
- *   anonymous     — redirect to /login, remembering where they were headed.
- *   signed in,    — ForbiddenScreen. NOT a redirect to /login (they are
- *   not admin       already signed in, so /login would bounce them back here
- *                   and spin), and NOT the app shell with empty screens
- *                   inside it (a rail full of nav items that all 403 reads as
- *                   a broken control room rather than a closed door).
+ *                   while the token is still being checked; a refresh with a
+ *                   valid token must not blink through /login.
+ *   anonymous     — redirect to /login, remembering where they were headed in
+ *                   `state.from` so login can send them back, and `replace` so
+ *                   the guarded URL does not sit in history.
+ *   signed in,    — ForbiddenScreen, rendered INSTEAD OF the shell. NOT a
+ *   not admin       redirect to /login (they are already signed in, so login
+ *                   would authenticate them again, the guard would refuse
+ *                   again, and the two would trade the browser back and forth
+ *                   forever), and NOT the shell with empty screens inside it
+ *                   (a rail full of nav items that all 403 reads as a broken
+ *                   control room rather than a closed door).
  *
- * THIS GATE IS CLIENT-SIDE CONVENIENCE ONLY. It decides what to paint, not
- * what is permitted: anyone can edit `role` in their own browser's memory, so
+ * THIS GATE IS CLIENT-SIDE CONVENIENCE ONLY. It decides what to PAINT, not
+ * what is PERMITTED: anyone can edit `role` in their own browser's memory, so
  * the only thing standing between a non-admin and someone else's account is
  * the server — every /api/admin route is gated by
  * `requireAuth + requireRole("ADMIN")`, and this component would be a
  * decoration if it were the only check. Its real job is to make an
- * accidentally-signed-in agent see an honest refusal instead of a screenful
- * of failed requests.
+ * accidentally-signed-in agent see an honest refusal instead of a screenful of
+ * failed requests.
  */
 export function RequireAdmin({ children }: { children: ReactNode }): ReactElement {
   const { status, user } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
 
   if (status === "loading") {
-    return <LoadingState label="Checking your session…" />;
+    return <LoadingState label={t("checkingSession")} />;
   }
 
   if (status === "anonymous") {

@@ -276,6 +276,18 @@ function validateTour3dLink(body) {
 // the moment they tried to `.map()` over `{ items, nextCursor }`. None of
 // today's callers send `limit`/`cursor`/`paged`, so none of them notice
 // this feature exists until a client is deliberately updated to ask for it.
+//
+// `?countOnly=true` is the third response shape: `{ count }`, and nothing
+// else. It exists for callers that only ever wanted the *size* of the
+// result set -- apps/mobile_flutter's filter sheet renders a live
+// "Apply Filters (N)" preview that re-fires on every debounced field edit,
+// and with no count route to call it was reduced to fetching every matching
+// row (fully serialized, photo URLs and all) purely to read `.length`. That
+// cost grows linearly with the catalogue while the answer is one integer.
+// Deliberately ignores `sort`/`limit`/`cursor`: a count is both order- and
+// page-independent, so honouring them would only invite the caller to
+// believe it counts a page rather than the whole match. See the branch
+// itself for why it sits where it does.
 export async function listAds(ctx, query, { agentId, orderBy } = {}) {
   const where = buildAdFilters(query);
   if (agentId) {
@@ -284,6 +296,17 @@ export async function listAds(ctx, query, { agentId, orderBy } = {}) {
     where.stage = "ACTIVE";
   }
   applySearch(where, query.q);
+
+  // Placed *here* -- after the stage/agent scoping above and after
+  // applySearch -- rather than next to buildAdFilters, so the count is taken
+  // against the exact same `where` the list branches below would use. Any
+  // earlier and a public `?countOnly=true` would count DRAFT/SOLD rows the
+  // matching list call can never return, and a `q=` search would be counted
+  // as if it weren't there: the number on the button would disagree with the
+  // results behind it, which is worse than no number at all.
+  if (query.countOnly === "true" || query.countOnly === true) {
+    return { count: await adRepository.countAds(ctx.prisma, { where }) };
+  }
 
   const sort = resolveSort(query.sort);
   const paged = isPagedRequest(query);

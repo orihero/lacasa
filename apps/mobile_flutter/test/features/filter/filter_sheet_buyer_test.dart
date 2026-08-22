@@ -6,6 +6,24 @@
 // untested, per the README's "Known gaps"). Each test overrides
 // `filterRepositoryProvider` with `FakeFilterRepository` — no network, no
 // coupling to `filter_ads_fixtures.dart`.
+//
+// Everything else the sheet touches goes through
+// `ambientRepositoryOverrides(filter: false)`: the repository providers now
+// build live implementations around `LaCasaApi.create()` unconditionally
+// (the bundled fixtures and `app_mode.dart`'s `FLUTTER_TEST` switch are
+// gone), so an un-overridden provider fires real HTTP and hangs
+// `pumpAndSettle`. `filter` is switched off because each container supplies
+// its own `FakeFilterRepository` and Riverpod rejects a duplicate override
+// outright.
+//
+// The City/District cascade is a second casualty of the same removal: it
+// reads `regionsDataProvider`, whose vocabulary used to arrive for free from
+// `FixtureRegionsRepository`. The ambient set's inert regions repository
+// answers with *no* regions, which would leave the City picker with nothing
+// to tap — so each container overrides `regionsDataProvider` itself with
+// `testRegionsData` (`support/fake_regions_data.dart`). That override is on
+// the derived `FutureProvider`, not on `regionsRepositoryProvider`, so it
+// does not collide with the ambient entry for the latter.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,10 +32,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/filter/filter.dart';
 import 'package:lacasa_mobile/features/filter/state/filter_repository_provider.dart';
+import 'package:lacasa_mobile/features/filter/state/regions_repository_provider.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../support/ambient_repository_overrides.dart';
 import 'support/fake_filter_repository.dart';
+import 'support/fake_regions_data.dart';
 
 void main() {
   /// Same `openButton` shape as `filter_sheet_crm_test.dart`, but backed by
@@ -108,18 +129,17 @@ void main() {
     testWidgets('every field label is present', (tester) async {
       final container = ProviderContainer(
         overrides: [
+          ...ambientRepositoryOverrides(filter: false),
           filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
         ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -149,18 +169,17 @@ void main() {
     testWidgets('District starts disabled with no City set', (tester) async {
       final container = ProviderContainer(
         overrides: [
+          ...ambientRepositoryOverrides(filter: false),
           filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
         ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -171,18 +190,17 @@ void main() {
     testWidgets('picking a City enables District', (tester) async {
       final container = ProviderContainer(
         overrides: [
+          ...ambientRepositoryOverrides(filter: false),
           filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
         ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -198,7 +216,9 @@ void main() {
         AdFilters? result;
         final container = ProviderContainer(
           overrides: [
+            ...ambientRepositoryOverrides(filter: false),
             filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
+            regionsDataProvider.overrideWith((ref) => testRegionsData),
           ],
         );
         addTearDown(container.dispose);
@@ -218,9 +238,15 @@ void main() {
         // `selectPickerOption`'s doc comment.
         await selectPickerOption(tester, 'filterField-city', null);
 
-        expect(await pickerFieldEnabled(tester, 'filterField-district'), isFalse);
+        expect(
+          await pickerFieldEnabled(tester, 'filterField-district'),
+          isFalse,
+        );
 
-        await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('filterSheet-apply')),
+        );
 
         expect(result!.city, isNull);
         expect(result!.district, isNull);
@@ -234,17 +260,18 @@ void main() {
     ) async {
       final repo = FakeFilterRepository(count: 4);
       final container = ProviderContainer(
-        overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          ...ambientRepositoryOverrides(filter: false),
+          filterRepositoryProvider.overrideWithValue(repo),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
+        ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -258,17 +285,18 @@ void main() {
     ) async {
       final repo = FakeFilterRepository(count: 4);
       final container = ProviderContainer(
-        overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          ...ambientRepositoryOverrides(filter: false),
+          filterRepositoryProvider.overrideWithValue(repo),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
+        ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -295,17 +323,18 @@ void main() {
           error: const NetworkException('offline'),
         );
         final container = ProviderContainer(
-          overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            ...ambientRepositoryOverrides(filter: false),
+            filterRepositoryProvider.overrideWithValue(repo),
+            regionsDataProvider.overrideWith((ref) => testRegionsData),
+          ],
         );
         addTearDown(container.dispose);
 
         await tester.pumpWidget(
-          openButton(
-            (context) async {
-              await showFilterSheet(context);
-            },
-            container: container,
-          ),
+          openButton((context) async {
+            await showFilterSheet(context);
+          }, container: container),
         );
         await tester.tap(find.text('open'));
         await tester.pumpAndSettle();
@@ -315,7 +344,10 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Apply Filters'), findsOneWidget); // no count shown
-        expect(find.text('CITY'), findsOneWidget); // the rest of the sheet is intact
+        expect(
+          find.text('CITY'),
+          findsOneWidget,
+        ); // the rest of the sheet is intact
         expect(repo.countCallCount, 1);
 
         await tapVisible(
@@ -332,17 +364,18 @@ void main() {
     ) async {
       final repo = FakeFilterRepository(count: 4);
       final container = ProviderContainer(
-        overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          ...ambientRepositoryOverrides(filter: false),
+          filterRepositoryProvider.overrideWithValue(repo),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
+        ],
       );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
-        openButton(
-          (context) async {
-            await showCrmFilterSheet(context);
-          },
-          container: container,
-        ),
+        openButton((context) async {
+          await showCrmFilterSheet(context);
+        }, container: container),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -389,7 +422,11 @@ void main() {
       (tester) async {
         final repo = FakeFilterRepository(count: 6);
         final container = ProviderContainer(
-          overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            ...ambientRepositoryOverrides(filter: false),
+            filterRepositoryProvider.overrideWithValue(repo),
+            regionsDataProvider.overrideWith((ref) => testRegionsData),
+          ],
         );
         addTearDown(container.dispose);
 
@@ -438,7 +475,10 @@ void main() {
           isTrue,
         );
 
-        await tapVisible(tester, find.byKey(const ValueKey('filterSheet-reset')));
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('filterSheet-reset')),
+        );
 
         // Reset drops back to the picker's own "Any city" placeholder — the
         // City field never held free text to begin with (see
@@ -455,12 +495,14 @@ void main() {
         // state — see `chipIsOn`'s doc comment for why this, not just the
         // draft below, is the assertion that actually matters for B1.
         expect(chipIsOn(tester, 'filterRooms-5'), isFalse);
-        // Furniture/Repair fall back to their SCREENS.md §3.5 defaults, not
-        // to "any" — the default chip is the one now selected, and the one
-        // just touched is not.
+        // Furniture/Repair clear all the way to "any" — *no* chip is left
+        // lit, despite SCREENS.md §3.5 annotating one option in each group
+        // as that field's `default`. Reset means "no constraints"; leaving
+        // two chips selected would mean Reset→Apply still narrowed the
+        // results (see `filter_sheet.dart`'s "No invented defaults").
         expect(
           chipIsOn(tester, 'filterFurniture-${Furniture.withFurniture}'),
-          isTrue,
+          isFalse,
         );
         expect(
           chipIsOn(tester, 'filterFurniture-${Furniture.withoutFurniture}'),
@@ -468,7 +510,7 @@ void main() {
         );
         expect(
           chipIsOn(tester, 'filterRepair-${Repairment.notRepaired}'),
-          isTrue,
+          isFalse,
         );
         expect(
           chipIsOn(tester, 'filterRepair-${Repairment.excellent}'),
@@ -478,16 +520,151 @@ void main() {
         expect(repo.lastFilters?.city, isNull);
         expect(repo.lastFilters?.category, isNull);
         expect(repo.lastFilters?.rooms, isNull);
-        expect(repo.lastFilters?.furniture, Furniture.withFurniture);
-        expect(repo.lastFilters?.repairment, Repairment.notRepaired);
+        expect(repo.lastFilters?.furniture, isNull);
+        expect(repo.lastFilters?.repairment, isNull);
 
-        await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('filterSheet-apply')),
+        );
 
         expect(result!.city, isNull);
         expect(result!.category, isNull);
         expect(result!.rooms, isNull);
+        expect(result!.furniture, isNull);
+        expect(result!.repairment, isNull);
       },
     );
+  });
+
+  group('initial state (no invented defaults)', () {
+    /// Same rendered-chip probe as the `reset` group's — see its doc
+    /// comment. Duplicated rather than hoisted so each group stays
+    /// readable on its own; the two are three lines each.
+    bool chipIsOn(WidgetTester tester, String key) {
+      return find
+          .descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(GlassSurface),
+          )
+          .evaluate()
+          .isEmpty;
+    }
+
+    testWidgets(
+      'a fresh open pre-selects nothing and Apply returns an empty filter set',
+      (tester) async {
+        final repo = FakeFilterRepository(count: 9);
+        final container = ProviderContainer(
+          overrides: [
+            ...ambientRepositoryOverrides(filter: false),
+            filterRepositoryProvider.overrideWithValue(repo),
+            regionsDataProvider.overrideWith((ref) => testRegionsData),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        AdFilters? result;
+        await tester.pumpWidget(
+          openButton((context) async {
+            result = await showFilterSheet(context);
+          }, container: container),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        // The regression this guards: `withFurniture`/`notRepaired` used to
+        // arrive pre-selected on every fresh open, so a buyer who opened
+        // Filters only to set a price walked out with two constraints they
+        // never chose and a toolbar badge reading 3. Assert on the rendered
+        // chips as well as the returned draft — the two together are what
+        // "the user never chose this" actually means.
+        for (final key in [
+          'filterFurniture-${Furniture.withFurniture}',
+          'filterFurniture-${Furniture.withoutFurniture}',
+          'filterRepair-${Repairment.notRepaired}',
+          'filterRepair-${Repairment.normal}',
+          'filterRepair-${Repairment.good}',
+          'filterRepair-${Repairment.excellent}',
+        ]) {
+          await tester.ensureVisible(find.byKey(ValueKey(key)));
+          await tester.pumpAndSettle();
+          expect(chipIsOn(tester, key), isFalse, reason: '$key must start off');
+        }
+
+        // The seeded live count is queried against an empty draft too, so
+        // the number on the Apply button is the unfiltered total. The
+        // `isNotNull` guard is load-bearing: without it, the two `isNull`
+        // assertions below would also pass if the sheet had never issued a
+        // count request at all (`lastFilters` still null), which is exactly
+        // the failure mode that would hide a regression here.
+        expect(repo.lastFilters, isNotNull);
+        expect(repo.lastFilters?.furniture, isNull);
+        expect(repo.lastFilters?.repairment, isNull);
+
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('filterSheet-apply')),
+        );
+
+        // `AdFilters` has no `==` of its own (`api/resources/
+        // ads_resource.dart`), so "empty" is asserted field by field
+        // rather than against a `const AdFilters()` literal.
+        expect(result, isNotNull);
+        expect(result!.city, isNull);
+        expect(result!.district, isNull);
+        expect(result!.category, isNull);
+        expect(result!.type, isNull);
+        expect(result!.rooms, isNull);
+        expect(result!.areaMin, isNull);
+        expect(result!.areaMax, isNull);
+        expect(result!.priceMin, isNull);
+        expect(result!.priceMax, isNull);
+        expect(result!.furniture, isNull);
+        expect(result!.repairment, isNull);
+        expect(result!.storey, isNull);
+      },
+    );
+
+    testWidgets('re-opening with applied filters seeds those and only those', (
+      tester,
+    ) async {
+      final repo = FakeFilterRepository(count: 1);
+      final container = ProviderContainer(
+        overrides: [
+          ...ambientRepositoryOverrides(filter: false),
+          filterRepositoryProvider.overrideWithValue(repo),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      AdFilters? result;
+      await tester.pumpWidget(
+        openButton((context) async {
+          result = await showFilterSheet(
+            context,
+            initialFilters: const AdFilters(rooms: 3),
+          );
+        }, container: container),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const ValueKey('filterRooms-3')));
+      await tester.pumpAndSettle();
+      expect(chipIsOn(tester, 'filterRooms-3'), isTrue);
+
+      await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
+
+      // Round-trips unchanged: the caller's one filter comes back as its
+      // one filter, with nothing bolted on.
+      expect(result!.rooms, 3);
+      expect(result!.furniture, isNull);
+      expect(result!.repairment, isNull);
+      expect(result!.city, isNull);
+      expect(result!.category, isNull);
+    });
   });
 
   group('apply', () {
@@ -496,7 +673,11 @@ void main() {
       (tester) async {
         final repo = FakeFilterRepository(count: 2);
         final container = ProviderContainer(
-          overrides: [filterRepositoryProvider.overrideWithValue(repo)],
+          overrides: [
+            ...ambientRepositoryOverrides(filter: false),
+            filterRepositoryProvider.overrideWithValue(repo),
+            regionsDataProvider.overrideWith((ref) => testRegionsData),
+          ],
         );
         addTearDown(container.dispose);
 
@@ -517,24 +698,28 @@ void main() {
           tester,
           find.byKey(ValueKey('filterCategory-${AdCategory.sale}')),
         );
+        // Min/Max price are `.selbox` pickers now, not chip groups — same
+        // ladder, picked through `showFilterOptionPicker` like City/District
+        // (see `filter_price_section.dart`).
+        await selectPickerOption(tester, 'filterField-priceMin', '100,000');
+        await selectPickerOption(tester, 'filterField-priceMax', '1,000,000');
+        // Furniture starts unselected (see the `initial state` group), so
+        // one tap *selects* it — and the two taps below prove the chip
+        // group's own deselect still works from there, leaving Furniture
+        // back at "any" while the rest of the draft is untouched.
         await tapVisible(
           tester,
-          find.byKey(const ValueKey('filterPriceMin-100000')),
+          find.byKey(ValueKey('filterFurniture-${Furniture.withFurniture}')),
         );
-        await tapVisible(
-          tester,
-          find.byKey(const ValueKey('filterPriceMax-1000000')),
-        );
-        // Re-tapping the already-selected Furniture chip deselects it back
-        // to "any" — proves a caller-cleared field stays cleared, not
-        // silently re-defaulted (see `filter_sheet.dart#_applyToLocalState`
-        // vs `_seedDefaults`).
         await tapVisible(
           tester,
           find.byKey(ValueKey('filterFurniture-${Furniture.withFurniture}')),
         );
 
-        await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
+        await tapVisible(
+          tester,
+          find.byKey(const ValueKey('filterSheet-apply')),
+        );
 
         expect(result!.city, 'Tashkent');
         expect(result!.district, 'Chilonzor');
@@ -542,40 +727,41 @@ void main() {
         expect(result!.category, AdCategory.sale);
         expect(result!.priceMin, 100000);
         expect(result!.priceMax, 1000000);
-        expect(result!.furniture, isNull);
-        expect(result!.repairment, Repairment.notRepaired); // untouched default
+        expect(result!.furniture, isNull); // selected, then deselected
+        expect(result!.repairment, isNull); // never touched, so never applied
       },
     );
 
-    testWidgets(
-      'a Storey number entry round-trips through Apply',
-      (tester) async {
-        final container = ProviderContainer(
-          overrides: [
-            filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
-          ],
-        );
-        addTearDown(container.dispose);
+    testWidgets('a Storey number entry round-trips through Apply', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...ambientRepositoryOverrides(filter: false),
+          filterRepositoryProvider.overrideWithValue(FakeFilterRepository()),
+          regionsDataProvider.overrideWith((ref) => testRegionsData),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        AdFilters? result;
-        await tester.pumpWidget(
-          openButton((context) async {
-            result = await showFilterSheet(context);
-          }, container: container),
-        );
-        await tester.tap(find.text('open'));
-        await tester.pumpAndSettle();
+      AdFilters? result;
+      await tester.pumpWidget(
+        openButton((context) async {
+          result = await showFilterSheet(context);
+        }, container: container),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
 
-        final storeyField = textFieldIn('filterField-storey');
-        await tester.ensureVisible(storeyField);
-        await tester.pumpAndSettle();
-        await tester.enterText(storeyField, '9');
-        await tester.pumpAndSettle();
+      final storeyField = textFieldIn('filterField-storey');
+      await tester.ensureVisible(storeyField);
+      await tester.pumpAndSettle();
+      await tester.enterText(storeyField, '9');
+      await tester.pumpAndSettle();
 
-        await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
+      await tapVisible(tester, find.byKey(const ValueKey('filterSheet-apply')));
 
-        expect(result!.storey, 9);
-      },
-    );
+      expect(result!.storey, 9);
+    });
   });
 }

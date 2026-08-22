@@ -1,73 +1,84 @@
 /**
- * Central re-export of every Phosphor icon the control room draws on, under
- * Phosphor's own names — nothing else in this app imports
- * `@phosphor-icons/react` directly, so this file is the one place to audit
- * iconography end to end (which glyphs are in play, whether a screen reached
- * for one that isn't accounted for in the design).
+ * src/ui/icons — the one place this app names a glyph.
  *
- * @phosphor-icons/react v2.1.10 ships every icon under two export names: a
- * deprecated bare one (`Bell`) kept only for v1 back-compat, and the
- * recommended weight-agnostic one (`BellIcon`) that this file always
- * re-exports. Weight (regular/bold/fill/…) is a runtime prop, not baked into
- * the import — the mockup's `squares-four-fill` is
- * `<SquaresFourIcon weight="fill" />` at the call site, not a separate
- * `SquaresFourFillIcon` export.
+ * Nothing else imports `lucide-react` directly, so this file stays the single
+ * audit point for iconography end to end: which glyphs are in play, and whether
+ * a screen reached for one that nobody accounted for. That was the deleted
+ * app's rule too (its `ui/icons.ts` re-exported Phosphor); only the underlying
+ * package changes, because apps/web ships `lucide-react` and does not ship
+ * `@phosphor-icons/react` (web-design-contract.md §4.4 — local hand-rolled SVGs
+ * for sidebar nav, lucide for dashboard tiles, @mui/icons-material only where a
+ * table or toolbar needs a stock glyph).
  *
- * This list covers every `data-i` glyph slug used by the FOUR IN-SCOPE
- * screens of mockups/build/web-admin.src.html (overview, applications,
- * users, audit) plus the shell around them. The mockup's moderation, 3D-tour
- * and plans screens are out of scope, so their glyphs (`map-pin-fill`,
- * `eye-slash`, `video-camera-fill`, `tag-fill`) are deliberately absent — an
- * icon in this file is a small promise that some screen renders it.
+ * The Phosphor → lucide mapping, so a spec that names the old glyph is still
+ * findable:
+ *
+ *   ArrowsClockwise → RefreshCw     Buildings      → Building2
+ *   CalendarBlank   → Calendar      CaretDown/L/R  → ChevronDown/Left/Right
+ *   Funnel          → Filter        Gear           → Settings
+ *   ListBullets     → List          LockSimple     → Lock
+ *   MagnifyingGlass → Search        Prohibit       → Ban
+ *   SignOut         → LogOut        SquaresFour    → LayoutGrid
+ *   Trash           → Trash2        UserCircle     → CircleUser
+ *   UserSwitch      → UserCog       UsersThree     → Users
+ *   WarningCircle   → CircleAlert   Warning        → TriangleAlert
+ *
+ * The list covers the four in-scope screens (overview, applications, users,
+ * audit) plus the shell, and nothing else — an icon in this file is a small
+ * promise that some screen renders it. The out-of-scope moderation / 3D-tour /
+ * plans screens have no glyphs here because they have no routes either.
  */
 export {
-  ArrowDownRightIcon,
-  ArrowRightIcon,
-  ArrowUpRightIcon,
-  ArrowsClockwiseIcon,
-  BellIcon,
-  BuildingsIcon,
-  CalendarBlankIcon,
-  CaretDownIcon,
-  CaretLeftIcon,
-  CaretRightIcon,
-  CheckIcon,
-  ClockIcon,
-  DatabaseIcon,
-  EyeIcon,
-  FunnelIcon,
-  GearIcon,
-  InfoIcon,
-  ListBulletsIcon,
-  LockSimpleIcon,
-  MagnifyingGlassIcon,
-  MinusIcon,
-  ProhibitIcon,
-  SignOutIcon,
-  SquaresFourIcon,
-  TrashIcon,
-  UserCircleIcon,
-  UserIcon,
-  UserSwitchIcon,
-  UsersThreeIcon,
-  WarningCircleIcon,
-  WarningIcon,
-  XIcon,
-} from "@phosphor-icons/react";
-export type { IconWeight } from "@phosphor-icons/react";
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  Ban,
+  Bell,
+  Building2,
+  Calendar,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  CircleUser,
+  Clock,
+  Database,
+  Eye,
+  Filter,
+  Info,
+  LayoutGrid,
+  List,
+  Lock,
+  LogOut,
+  Minus,
+  RefreshCw,
+  Search,
+  Settings,
+  Trash2,
+  TriangleAlert,
+  User,
+  UserCog,
+  Users,
+  X,
+} from "lucide-react";
 
 import type { ComponentType } from "react";
-import type { IconWeight } from "@phosphor-icons/react";
 
 /**
  * The narrow prop surface our own primitives (Button, IconButton, Tag,
- * RowActions, …) actually reach for. Every Phosphor icon component satisfies
- * this structurally — spelling it out here means a primitive's props file
- * doesn't need to import the full `@phosphor-icons/react` IconProps surface
- * (SVG attrs, ref forwarding, `mirrored`, …) just to say "an icon goes here".
+ * RowAction, EmptyState, …) actually reach for. Every lucide icon satisfies it
+ * structurally, which means a primitive can say "an icon goes here" without
+ * importing lucide's full `LucideProps` (every SVG attribute, ref forwarding,
+ * `absoluteStrokeWidth`, …).
+ *
+ * Icons are passed as a COMPONENT REFERENCE, never as a pre-built element
+ * (`icon={CheckIcon}`, not `icon={<CheckIcon />}`), so the primitive owns the
+ * size and every glyph in a given slot comes out the same size. A call site
+ * that needs something specific passes a small inline wrapper of its own.
  */
 export type IconComponent = ComponentType<{
-  size?: number;
-  weight?: IconWeight;
+  size?: number | string;
   className?: string;
+  "aria-hidden"?: boolean | "true" | "false";
 }>;

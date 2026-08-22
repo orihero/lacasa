@@ -128,7 +128,6 @@ const CHANNEL_LABEL = {
   INSTAGRAM: "Instagram",
   YOUTUBE: "YouTube",
   OLX: "OLX",
-  REALTING: "Realting",
 };
 
 function epochSeconds(date) {

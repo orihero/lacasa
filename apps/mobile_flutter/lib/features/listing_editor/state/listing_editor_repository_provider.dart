@@ -7,16 +7,11 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/fixture_listing_editor_repository.dart';
-import '../data/listing_editor_mode.dart';
 import '../data/listing_editor_repository.dart';
 import '../data/live_listing_editor_repository.dart';
 
 final listingEditorRepositoryProvider = Provider<ListingEditorRepository>((
   ref,
 ) {
-  if (useLiveListingEditorApi) {
-    return LiveListingEditorRepository(LaCasaApi.create());
-  }
-  return FixtureListingEditorRepository();
+  return LiveListingEditorRepository(LaCasaApi.create());
 });

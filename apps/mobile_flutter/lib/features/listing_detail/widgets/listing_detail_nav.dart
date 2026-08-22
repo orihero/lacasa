@@ -119,7 +119,13 @@ class ListingDetailNav extends ConsumerWidget {
   }
 }
 
-/// `.rnd` over a photo — 42px circle, glass, white icon.
+/// `.hero__nav .rnd{background:rgba(255,255,255,.46);color:#1b1b23}` — the
+/// one place the mockup overrides the base `.rnd{color:#fff}`: a dark ink
+/// glyph on a light translucent circle, so it stays legible over any
+/// photography rather than disappearing into a bright hero.
+const Color _heroNavIcon = Color(0xFF1B1B23);
+
+/// `.hero__nav .rnd` — 42px circle, glass, dark ink icon.
 class _RoundGlassButton extends StatelessWidget {
   const _RoundGlassButton({
     required this.icon,
@@ -144,8 +150,16 @@ class _RoundGlassButton extends StatelessWidget {
           borderRadius: AppRadii.pill,
           width: 42,
           height: 42,
-          alignment: Alignment.center,
-          child: Icon(icon, size: 19, color: Colors.white),
+          // The `rgba(255,255,255,.46)` base tint sits *inside* the lens, on
+          // top of the refracted photo, exactly as the CSS layers it.
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.46),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 19, color: _heroNavIcon),
+          ),
         ),
       ),
     );

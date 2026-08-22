@@ -19,9 +19,7 @@ class NotificationsPreferenceNotifier extends AsyncNotifier<bool> {
   /// `LanguageNotifier.select`'s "update state, then await the write" order.
   Future<void> setEnabled(bool enabled) async {
     state = AsyncData(enabled);
-    await ref
-        .read(notificationsPreferenceRepositoryProvider)
-        .save(enabled);
+    await ref.read(notificationsPreferenceRepositoryProvider).save(enabled);
   }
 }
 

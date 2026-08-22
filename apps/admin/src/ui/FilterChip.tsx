@@ -1,18 +1,20 @@
 /**
- * FilterChip — the control room's `.filt` pill. The mockup's chips ("Any
- * status", "All actors", "Last 24 h") are inert `<span>`s wired to nothing.
- * Rather than ship a control that looks clickable and isn't, this renders a
- * real `<button>` only when `onClick` is given and a plain `<span>`
- * otherwise — a fake affordance on a surface where the real controls lock
- * accounts is worse than a missing one.
+ * FilterChip — the small "what is this list narrowed to" pill.
  *
- * `active` dims up the border and text when a filter is actually narrowing
- * the list, so an admin can tell at a glance that the 4 rows on screen are 4
- * rows of a filtered set rather than 4 rows total. That distinction is the
- * difference between "nothing is waiting" and "you filtered the queue away".
+ * It renders a REAL `<button>` only when `onClick` is given, and an inert
+ * `<span>` otherwise. A fake affordance on a surface where the real controls
+ * lock accounts is worse than a missing one: an admin who clicks a chip that
+ * looks like a filter and gets nothing has no way to tell that from a filter
+ * that ran and matched everything.
+ *
+ * `active` means the filter is actually narrowing the list. That is the
+ * difference between "nothing is waiting on you" and "you filtered the queue
+ * away" — four rows on screen mean opposite things in the two cases — so an
+ * active chip takes the accent yellow, and carries `aria-pressed` when it is
+ * interactive.
  */
+import Chip from "@mui/material/Chip";
 import type { ReactNode } from "react";
-import clsx from "clsx";
 import type { IconComponent } from "./icons";
 
 export function FilterChip({
@@ -23,31 +25,49 @@ export function FilterChip({
 }: {
   icon?: IconComponent;
   children: ReactNode;
+  /** Omit for a read-only chip; it then renders as a `<span>`, not a button. */
   onClick?: () => void;
   active?: boolean;
 }) {
-  const className = clsx(
-    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-control border px-2.5 py-1 text-small font-medium",
-    active ? "border-acc-line bg-acc-soft text-acc" : "border-line bg-sunk text-ink",
-    onClick &&
-      "transition-colors hover:border-line focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc",
-    onClick && !active && "hover:bg-card",
-  );
-  const content = (
+  const label = (
     <>
-      {Icon ? (
-        <Icon size={12} className={clsx("shrink-0", active ? "text-acc" : "text-muted")} />
-      ) : null}
+      {Icon ? <Icon size={12} aria-hidden="true" /> : null}
       {children}
     </>
   );
 
+  const sx = {
+    height: "auto",
+    // 5px is apps/web's filter-control radius (`.filter .item input, select`).
+    borderRadius: "5px",
+    border: `1px solid ${active ? "#fece51" : "#e0e0e0"}`,
+    backgroundColor: active ? "#fece51" : "#ffffff",
+    color: active ? "#000000" : "#2b2d42",
+    "& .MuiChip-label": {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "6px",
+      padding: "7px 10px",
+      fontSize: "12px",
+      fontWeight: 600,
+    },
+    ...(onClick
+      ? { "&:hover": { backgroundColor: active ? "#fece51" : "#eeeeee" } }
+      : {}),
+  };
+
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} aria-pressed={active} className={className}>
-        {content}
-      </button>
+      <Chip
+        component="button"
+        type="button"
+        clickable
+        onClick={onClick}
+        aria-pressed={active}
+        label={label}
+        sx={sx}
+      />
     );
   }
-  return <span className={className}>{content}</span>;
+  return <Chip component="span" label={label} sx={sx} />;
 }

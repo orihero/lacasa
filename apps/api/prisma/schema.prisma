@@ -115,7 +115,6 @@ enum PublishChannel {
   INSTAGRAM
   YOUTUBE
   OLX
-  REALTING
 }
 
 enum PublishStatus {

@@ -23,8 +23,12 @@ class ListingInfoTags extends StatelessWidget {
 
   final Ad ad;
 
-  @override
-  Widget build(BuildContext context) {
+  /// The tag wrap, or null when the ad states none of the four attributes —
+  /// the same drop-if-empty contract [tagWrapOrNull] gives every other chip
+  /// list here. The Description pane calls this directly so it can decide
+  /// whether it has any body at all (the mockup nests `.tags` inside
+  /// `<div class="pane" data-pane-body="description">`, after the paragraph).
+  static Widget? buildOrNull(BuildContext context, Ad ad) {
     final l10n = AppLocalizations.of(context);
     final labels = <String>[
       ?ListingDetailFormatters.typeLabel(l10n, ad.type),
@@ -37,7 +41,10 @@ class ListingInfoTags extends StatelessWidget {
       // Bounded at four — the one chip list on this screen that keeps the
       // mockup's glass material. See `listing_tag_chip.dart`.
       for (final label in labels) ListingTagChip(label: label, glass: true),
-    ]) ??
-        const SizedBox.shrink();
+    ]);
   }
+
+  @override
+  Widget build(BuildContext context) =>
+      buildOrNull(context, ad) ?? const SizedBox.shrink();
 }

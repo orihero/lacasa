@@ -27,10 +27,15 @@ class LiveDashboardRepository implements DashboardRepository {
   /// with itself about what "All" means, with nothing in the response
   /// shape signalling the substitution happened. `thisMonth` is not
   /// arbitrary: it is this screen's own already-established "biggest sane
-  /// default" (`DashboardTimeRangeNotifier.build()`), and it is exactly what
-  /// [FixtureDashboardRepository.fetchAdsSeries] already does for `.all` —
-  /// this fixes live mode to match fixture mode's existing (correct) choice
-  /// rather than inventing a new one.
+  /// default" (`DashboardTimeRangeNotifier.build()`), and the deleted
+  /// fixture repository made the same substitution for `.all` before this
+  /// class existed — so this is the choice this feature already made,
+  /// applied to the one path that was still missing it, not a new one.
+  ///
+  /// The substitution is *stated*, not hidden: `ads_statistics_panel.dart`'s
+  /// caption wraps the plotted span in
+  /// `AppLocalizations.dashboardCaptionAllTimeChartNote` whenever the chip
+  /// reads "All" (see `_captionFor`).
   @override
   Future<AdsSeries> fetchAdsSeries(StatisticsFilter filter) => _api.statistics
       .series(

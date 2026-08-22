@@ -347,9 +347,9 @@ describe("retryPublish", () => {
     vi.unstubAllGlobals();
   });
 
-  it("400s not_retryable for youtube/olx/realting, each with its own named reason, without touching the database", async () => {
+  it("400s not_retryable for youtube/olx, each with its own named reason, without touching the database", async () => {
     const ctx = { prisma: createFakePrisma() };
-    for (const channelKey of ["youtube", "olx", "realting"]) {
+    for (const channelKey of ["youtube", "olx"]) {
       await expect(
         publishService.retryPublish(ctx, { adId: "draft-1", channelKey, actor: makeActor() }),
       ).rejects.toMatchObject({ status: 400, code: "not_retryable" });

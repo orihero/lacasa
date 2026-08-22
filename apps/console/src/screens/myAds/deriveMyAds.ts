@@ -143,7 +143,6 @@ const CHANNEL_ABBREV: Record<Channel, string> = {
   INSTAGRAM: 'IG',
   YOUTUBE: 'YT',
   OLX: 'OLX',
-  REALTING: 'RE',
 };
 
 function isChannel(value: string): value is Channel {

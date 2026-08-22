@@ -36,9 +36,7 @@ void main() {
   }) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          contactRepositoryProvider.overrideWithValue(repository),
-        ],
+        overrides: [contactRepositoryProvider.overrideWithValue(repository)],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -60,11 +58,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> fill(
-    WidgetTester tester, {
-    String? name,
-    String? phone,
-  }) async {
+  Future<void> fill(WidgetTester tester, {String? name, String? phone}) async {
     if (name != null) {
       await tester.enterText(find.byType(TextField).at(0), name);
     }
@@ -77,10 +71,7 @@ void main() {
     await pumpSheet(tester, _FakeContactRepository());
 
     expect(find.text('Contact Us'), findsOneWidget);
-    expect(
-      find.textContaining('We welcome all your concerns'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('We welcome all your concerns'), findsOneWidget);
     expect(find.text('Send message'), findsOneWidget);
     expect(find.text('FULL NAME'), findsOneWidget);
     expect(find.text('PHONE'), findsOneWidget);
@@ -159,12 +150,15 @@ void main() {
       ),
     );
 
-    // SCREENS.md §3.7: "pre-filled with listing title + agent".
+    // SCREENS.md §3.7: "pre-filled with listing title + agent". Both now
+    // appear twice — once in the message the user is about to send, once on
+    // the `.prefill` context card above the fields — hence findsWidgets
+    // rather than findsOneWidget.
     expect(
       find.textContaining('Bright 3-room apartment in Chilonzor'),
-      findsOneWidget,
+      findsWidgets,
     );
-    expect(find.textContaining('Javlon Rustamov'), findsOneWidget);
+    expect(find.textContaining('Javlon Rustamov'), findsWidgets);
     expect(find.textContaining('#ad-1'), findsOneWidget);
   });
 

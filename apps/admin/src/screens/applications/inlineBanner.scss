@@ -1,0 +1,51 @@
+// InlineBanner — the transient strip above the queue.
+//
+// Neutral is the app canvas grey on the white panel column, with apps/web's
+// hairline. Error is its warm blush (#fcf5f3, the tint behind every standing
+// panel there) with the settled-outcome red on the icon and the rule. Neither
+// borrows the accent yellow: that colour means "waiting on you" everywhere else
+// on this surface and a banner cannot be allowed to spend it.
+@import "../../responsive.scss";
+
+.inline-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  background-color: #f5f6fa;
+  border: 1px solid #dedede;
+
+  .inline-banner__icon {
+    display: flex;
+    flex: none;
+    margin-top: 1px;
+    color: #8d99ae;
+  }
+
+  .inline-banner__text {
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #2b2d42;
+
+    b {
+      font-weight: 700;
+    }
+  }
+
+  .inline-banner__dismiss {
+    flex: none;
+    margin-left: auto;
+    padding-left: 10px;
+  }
+
+  &.inline-banner--error {
+    background-color: #fcf5f3;
+    border-color: rgb(216, 72, 53);
+
+    .inline-banner__icon {
+      color: rgb(216, 72, 53);
+    }
+  }
+}

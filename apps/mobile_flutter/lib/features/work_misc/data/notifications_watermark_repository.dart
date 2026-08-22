@@ -26,7 +26,7 @@
 ///
 /// Not shared with fixture mode: `FixtureNotificationsRepository` renders
 /// SCREENS.md §4.4's seed rows verbatim, each with its own hardcoded
-/// [WorkNotificationFixture.unread] value — there is no `since` to compute
+/// [WorkNotification.unread] value — there is no `since` to compute
 /// against and nothing this watermark could change about what fixture mode
 /// shows.
 library;

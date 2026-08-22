@@ -12,16 +12,38 @@ class FakeMyListingsRepository implements MyListingsRepository {
   FakeMyListingsRepository({
     List<Ad>? ads,
     List<Coworker>? coworkers,
+    Map<String, List<ChannelStatus>>? publishStatuses,
+    this.stageCounts = const AdStageCounts(active: 0, sold: 0, draft: 0),
     this.adsError,
     this.coworkersError,
+    this.stageCountsError,
+    this.publishStatusesError,
     this.adsHold,
   }) : ads = ads ?? const [],
-       coworkers = coworkers ?? const [];
+       coworkers = coworkers ?? const [],
+       publishStatuses = publishStatuses ?? const {};
 
   final List<Ad> ads;
   final List<Coworker> coworkers;
-  final Object? adsError;
-  final Object? coworkersError;
+
+  /// Keyed by ad id, exactly the shape `GET /publish/status` answers. A
+  /// **missing** key is what the real route never produces for an id it was
+  /// asked about (`publishService.getStatusBulk` writes one key per
+  /// requested id, empty array included), so [fetchPublishStatuses] below
+  /// fills the gap itself rather than let a test accidentally exercise a
+  /// response shape the server cannot send.
+  final Map<String, List<ChannelStatus>> publishStatuses;
+
+  final AdStageCounts stageCounts;
+
+  /// Mutable, unlike the data above: a test that needs the *second* fetch
+  /// to fail — the pull-to-refresh-while-offline case — has no other way to
+  /// express it, since the first fetch has to succeed for there to be
+  /// anything to pull on.
+  Object? adsError;
+  Object? coworkersError;
+  Object? stageCountsError;
+  Object? publishStatusesError;
 
   /// When set, [fetchMyAdsPage] awaits this before returning — the only way
   /// to observe a loading state in a widget test, same reasoning as
@@ -30,8 +52,12 @@ class FakeMyListingsRepository implements MyListingsRepository {
 
   int fetchMyAdsCallCount = 0;
   int fetchCoworkersCallCount = 0;
+  int fetchStageCountsCallCount = 0;
+  int fetchPublishStatusesCallCount = 0;
   AdFilters? lastFilters;
   AdSort? lastSort;
+  AdStage? lastStage;
+  List<String>? lastPublishStatusAdIds;
 
   /// [fetchMyAdsPage]'s own opaque cursor stand-in — same shape as
   /// `FixtureMyListingsRepository`'s "matched list's next start index, as a
@@ -50,6 +76,7 @@ class FakeMyListingsRepository implements MyListingsRepository {
   }) async {
     fetchMyAdsCallCount++;
     lastFilters = filters;
+    lastStage = stage;
     lastSort = switch (sort) {
       AdListSort.newest => AdSort.newest,
       AdListSort.priceDesc => AdSort.highestPrice,
@@ -82,6 +109,28 @@ class FakeMyListingsRepository implements MyListingsRepository {
         : matched.sublist(start, end);
     final nextCursor = end >= matched.length ? null : end.toString();
     return AdPage(items: items, nextCursor: nextCursor);
+  }
+
+  @override
+  Future<AdStageCounts> fetchStageCounts() async {
+    fetchStageCountsCallCount++;
+    if (stageCountsError != null) throw stageCountsError!;
+    return stageCounts;
+  }
+
+  @override
+  Future<Map<String, List<ChannelStatus>>> fetchPublishStatuses(
+    List<String> adIds,
+  ) async {
+    fetchPublishStatusesCallCount++;
+    lastPublishStatusAdIds = adIds;
+    if (publishStatusesError != null) throw publishStatusesError!;
+    // One key per requested id, empty list when there is nothing stored —
+    // mirroring `publishService.getStatusBulk` exactly. A test that only
+    // supplies rows for the one ad it cares about therefore still gets the
+    // "never attempted" badges on every other row, which is what the real
+    // screen shows.
+    return {for (final id in adIds) id: publishStatuses[id] ?? const []};
   }
 
   @override

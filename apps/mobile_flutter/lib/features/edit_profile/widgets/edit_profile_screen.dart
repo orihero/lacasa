@@ -57,6 +57,25 @@
 /// with no prompt. [PopScope.canPop] carries that same live boolean so the
 /// system back gesture can't bypass the check the on-screen Cancel button
 /// enforces.
+///
+/// **Both save toasts go through [LaCasaToast]** (this run's audit §10.4) —
+/// §3.18's "Profile successfully updated!" as a success, "Error updating
+/// profile: {message}" as an error, with the status glyph and the 2.5s/4s
+/// budgets SCREENS.md §5 specifies. They used to be bare `SnackBar`s, which
+/// inherit Material's docked dark-grey bar and no icon: a visibly different
+/// component from the one the avatar-upload failures three lines away
+/// already rendered, on the same screen, in the same second.
+///
+/// **The four fields carry no `autofillHints`**, unlike `login`/`register`'s
+/// (§7.8) — not an oversight, a missing seam: this screen builds on
+/// `shared/widgets/labelled_form_field.dart`'s [LabelledFormField], which
+/// exposes no such parameter, and that file is owned outside this feature.
+/// Reported rather than reached into; the change is one optional
+/// `Iterable<String>? autofillHints` forwarded to its inner [TextField],
+/// after which this form wants `name` / `telephoneNumber` / `[username,
+/// email]` / `newPassword` and an [AutofillGroup] around [_FormBody], so a
+/// password manager can capture a *changed* password the same way it now
+/// captures a new one on `register`.
 library;
 
 import 'package:flutter/material.dart';
@@ -282,18 +301,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
       if (!mounted) return;
       _leave();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.editProfileUpdateSuccessToast)),
-      );
+      // LaCasaToast, not a bare SnackBar — see the file doc comment's §10.4
+      // note. Same swap on the failure path below.
+      LaCasaToast.showSuccess(context, l10n.editProfileUpdateSuccessToast);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.editProfileUpdateErrorToast(_messageFor(l10n, e)),
-          ),
-        ),
+      LaCasaToast.showError(
+        context,
+        l10n.editProfileUpdateErrorToast(_messageFor(l10n, e)),
       );
     }
   }
@@ -355,8 +371,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         passwordError: _passwordError,
                         onFieldChanged: () => setState(() {}),
                         avatarUrl: _avatarUrl,
-                        onAvatarUploaded: (url) => setState(() => _avatarUrl = url),
-                        onAvatarError: (message) => LaCasaToast.showError(context, message),
+                        onAvatarUploaded: (url) =>
+                            setState(() => _avatarUrl = url),
+                        onAvatarError: (message) =>
+                            LaCasaToast.showError(context, message),
                         onAvatarUploadStateChanged: (busy) =>
                             setState(() => _avatarUploading = busy),
                         submitting: _submitting,
@@ -389,7 +407,9 @@ class _SignedOutState extends StatelessWidget {
       child: FullWidthState(
         icon: Icons.lock_outline_rounded,
         message: AppLocalizations.of(context).editProfileSignedOutMessage,
-        actionLabel: AppLocalizations.of(context).editProfileSignedOutGoBackLabel,
+        actionLabel: AppLocalizations.of(
+          context,
+        ).editProfileSignedOutGoBackLabel,
         onAction: onGoBack,
       ),
     );
@@ -503,6 +523,9 @@ class _FormBody extends StatelessWidget {
               label: AppLocalizations.of(context).editProfilePasswordFieldLabel,
               controller: password,
               errorText: passwordError,
+              helperText: AppLocalizations.of(
+                context,
+              ).editProfilePasswordHelper,
               hintText: AppLocalizations.of(context).editProfilePasswordHint,
               obscureText: obscurePassword,
               textInputAction: TextInputAction.done,
@@ -517,14 +540,18 @@ class _FormBody extends StatelessWidget {
               children: [
                 Expanded(
                   child: _SecondaryButton(
-                    label: AppLocalizations.of(context).editProfileCancelButtonLabel,
+                    label: AppLocalizations.of(
+                      context,
+                    ).editProfileCancelButtonLabel,
                     onTap: onCancel,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.base),
                 Expanded(
                   child: _PrimaryButton(
-                    label: AppLocalizations.of(context).editProfileSaveButtonLabel,
+                    label: AppLocalizations.of(
+                      context,
+                    ).editProfileSaveButtonLabel,
                     submitting: submitting,
                     onTap: onSave,
                   ),
@@ -611,17 +638,14 @@ class _SecondaryButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
+        // `.btn btn--ghost glf` — flat glass with the source's hairline
+        // rim and near-black label, not a solid grey fill.
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          borderRadius: BorderRadius.circular(AppRadii.pillButton),
           height: 52,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-          ),
-          child: Text(
-            label,
-            style: type.rowTitle.copyWith(color: colors.ink2),
-          ),
+          child: Text(label, style: type.rowTitle.copyWith(color: colors.ink)),
         ),
       ),
     );

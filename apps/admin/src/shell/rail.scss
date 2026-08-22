@@ -1,0 +1,243 @@
+// The rail — apps/web's `.sidebar`, with the control room's nav in it.
+//
+// Quoted from components/sidebar/sidebar.scss:
+//   .sidebar    { width: 300px; min-width: 250px; background-color: #fff; }
+//   .menu-list  { border-top: 1px solid #dddd; padding: 15px 0; }
+//   .menu-list span { padding: 10px 20px; cursor: pointer; display: flex; gap: 10px; }
+//   .active-menu { background-color: #fece51; }
+//   .logout button { padding: 10px 25px; border: none; background: transparent; color: red; }
+//
+// The width takes the narrow end of the console's own 250–300px range: the
+// users table has nine columns of records and wants every pixel it can get.
+@import "../responsive.scss";
+
+.sidebar.admin-rail {
+  width: 250px;
+  min-width: 250px;
+  flex: none;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  // Sticky against #root (the app's scroll container — see index.scss), offset
+  // by the shell's own 10px gutter so it lines up with the records column.
+  position: sticky;
+  top: 10px;
+  height: calc(100vh - 20px);
+  overflow: hidden;
+
+  .admin-rail__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    flex: none;
+  }
+
+  .admin-rail__mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    // The accent, doing the job it does over apps/web's sidebar avatar.
+    background-color: #fece51;
+    color: #000000;
+  }
+
+  .admin-rail__wordmark {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    b {
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1.2;
+    }
+
+    small {
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8d99ae;
+    }
+  }
+
+  // `.menu-list` — the divider and the vertical padding, verbatim. The rail
+  // owns the only scroller in the frame besides #root and the tables.
+  .admin-rail__nav {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 15px 0;
+    border-top: 1px solid #dddd;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .admin-rail__group + .admin-rail__group {
+    margin-top: 10px;
+  }
+
+  .admin-rail__group-label {
+    padding: 0 20px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8d99ae;
+  }
+
+  // `.menu-list span` — same box, but a real <Link>.
+  .admin-rail__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #2b2d42;
+
+    &:hover {
+      // The list-row hover apps/web uses on its own rows.
+      background-color: #eeeeee;
+    }
+
+    // `.active-menu { background-color: #fece51; }`. Flat, no border, black
+    // text — the accent never gains a hover state or a gradient here.
+    &.active-menu {
+      background-color: #fece51;
+      font-weight: 600;
+
+      &:hover {
+        background-color: #fece51;
+      }
+    }
+  }
+
+  .admin-rail__item-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // The count. The neutral one is the list-row grey; the hot one is the
+  // accent, and it appears only on a queue that has something in it.
+  .admin-rail__badge {
+    margin-left: auto;
+    flex: none;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: #eeeeee;
+    color: #2b2d42;
+    font-size: 10px;
+    font-weight: bold;
+    font-style: normal;
+  }
+
+  .admin-rail__badge--hot {
+    background-color: #fece51;
+    color: #000000;
+  }
+
+  // The account footer sits where apps/web's `.logout` does, on the same
+  // hairline the menu list opens with.
+  .admin-rail__account {
+    position: relative;
+    flex: none;
+    padding: 10px;
+    border-top: 1px solid #dddd;
+  }
+
+  .admin-rail__account-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: none;
+    background-color: transparent;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #eeeeee;
+    }
+  }
+
+  .admin-rail__avatar {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: none;
+    background-color: #fece51;
+    color: #000000;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .admin-rail__identity {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    b,
+    small {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    b {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2b2d42;
+    }
+
+    small {
+      font-size: 11px;
+      color: #8d99ae;
+    }
+  }
+
+  .admin-rail__menu {
+    position: absolute;
+    bottom: calc(100% - 6px);
+    left: 10px;
+    right: 10px;
+    background-color: #ffffff;
+    border: 1px solid #dedede;
+    box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+    z-index: 10;
+  }
+
+  // apps/web's logout is `background: transparent; color: red;` — kept, because
+  // ending your own session on this surface is the one control that should not
+  // read as routine.
+  .admin-rail__menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: none;
+    background-color: transparent;
+    color: red;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+
+    &:hover {
+      background-color: #eeeeee;
+    }
+  }
+
+  @include md {
+    width: 220px;
+    min-width: 220px;
+  }
+}

@@ -12,7 +12,8 @@ class LiveHomeFeedRepository implements HomeFeedRepository {
   final LaCasaApi _api;
 
   @override
-  Future<List<Ad>> fetchFeed() => _api.ads.list();
+  Future<List<Ad>> fetchFeed({AdFilters filters = const AdFilters()}) =>
+      _api.ads.list(filters: filters);
 
   @override
   Future<List<AgentSummary>> fetchTopAgents() async {

@@ -13,10 +13,10 @@ import '../../api/api.dart';
 import '../../l10n/generated/app_localizations.dart';
 
 abstract final class Formatters {
-  /// The grouped-integer body of a price, with no `$` and no `/month`
+  /// The grouped-integer body of a price, with no `$` and no per-month
   /// suffix — e.g. `78,000`. Kept separate from [price] because
   /// `PricePill` (`shared/widgets/price_pill.dart`) needs the bare number
-  /// to style the `/month` suffix smaller/lighter than the rest of the
+  /// to style the per-month suffix smaller/lighter than the rest of the
   /// string; this stays a plain string so both call sites — and this
   /// file's own tests — stay trivial.
   static String groupedPrice(Ad ad) => groupedNumber(ad.price);
@@ -30,7 +30,8 @@ abstract final class Formatters {
   static String groupedNumber(num value) => _groupInteger(value);
 
   /// The full price string per SCREENS.md's rule: `$ {price}` for a sale
-  /// ad, `$ {price}/month` for a rent ad, thousands grouped, no decimals —
+  /// ad, `$ {price}` + the localized per-month suffix for a rent ad,
+  /// thousands grouped, no decimals —
   /// but that literal rule only ever covered USD. SCREENS.md's preamble
   /// says the `$` prefix "consolidates the web app's three inconsistent
   /// formats — `$`, `y.e`, `{priceType}` — into one rule for mobile"; it
@@ -51,26 +52,82 @@ abstract final class Formatters {
   ///
   /// Use this wherever a price is needed as plain text with no glass
   /// styling (a share-sheet body, a static price row) — `PricePill` does
-  /// not call this, since it needs the `/month` suffix as a separately
+  /// not call this, since it needs the per-month suffix as a separately
   /// styled [TextSpan], and builds the same USD/UZS branch itself so it can
   /// pass a real [l10n] (it always has a [BuildContext]).
   ///
-  /// [l10n] is optional for the same reason [rooms]'s is: most of this
-  /// method's call sites (map-view, listing-detail's hero/footer/share
-  /// text) don't have a [BuildContext] on hand at the call site, and
-  /// threading one through is out of this fix's scope. Pass it (from
-  /// `AppLocalizations.of(context)`) wherever a context is available, for a
-  /// so'm suffix sourced through the localization layer like the editor's
-  /// own preview; omit it and a UZS ad still renders "so'm" — the ARB's own
-  /// description flags that value as likely invariant across en/uz/ru — just
-  /// not routed through [AppLocalizations].
+  /// **[l10n] now carries two strings, not one.** The rental suffix used to
+  /// be a hardcoded English `'/month'` glued on below, so every ru/uz rental
+  /// price in the app read `800 000 so'm/month` — the currency word resolved
+  /// through [AppLocalizations] on the line directly above while the period
+  /// beside it stayed English, mixing two scripts inside one price. It now
+  /// reads `sharedPricePerMonthSuffix` (`/мес`, `/oyiga`) on exactly the
+  /// same optional-with-fallback terms the UZS branch already used.
+  ///
+  /// [l10n] stays optional for the same reason [rooms]'s is: this method is
+  /// called from six widgets across `map_view/` and `listing_detail/`, all
+  /// of them directories a single change cannot own, so a *required*
+  /// parameter would be a flag-day edit across feature boundaries. Omitting
+  /// it is a real regression now rather than a cosmetic one, though — the
+  /// fallback is English on both halves — so every call site that *can*
+  /// reach a [BuildContext] should pass it. Verified against the current
+  /// tree: all six sites sit inside a `build(BuildContext context)` and can,
+  /// which is why the older note here about call sites with "no
+  /// BuildContext on hand" no longer describes this file's callers.
   static String price(Ad ad, {AppLocalizations? l10n}) {
     final body = switch (ad.priceType) {
       CurrencyCode.uzs =>
         '${groupedPrice(ad)} ${l10n?.listingEditorPriceTypeUzsOption ?? "so'm"}',
-      CurrencyCode.usd || CurrencyCode.unknown => '\$ ${groupedPrice(ad)}',
+      CurrencyCode.usd || CurrencyCode.unknown => '\$${groupedPrice(ad)}',
     };
-    return ad.category == AdCategory.rent ? '$body/month' : body;
+    if (ad.category != AdCategory.rent) return body;
+    // No separator: the suffix is the abbreviated classifieds form in all
+    // three locales and glues straight onto the digits — `$900/month`,
+    // `800,000 so'm/мес`. See `lib/l10n/GLOSSARY.md`'s "per month" row.
+    return '$body${l10n?.sharedPricePerMonthSuffix ?? '/month'}';
+  }
+
+  /// A price abbreviated to fit somewhere there is no room for the grouped
+  /// form — `$78k`, `$1.2k`, `$350` — with **no** per-month suffix and no
+  /// currency word for UZS. `map-view`'s pins are the caller this exists
+  /// for (`.map__pin` is 30px tall with `0 11px` of padding; the full
+  /// `$1,200,000/month` does not fit and the mockup's pins read `$120k`).
+  ///
+  /// Deliberately not a variant of [price]: that method is the honest,
+  /// complete string (share text, detail hero, pin semantics label) and
+  /// must stay lossless. This one rounds — 1,250,000 renders `$1.2M`, not
+  /// the exact figure — so it belongs only where the exact figure is one
+  /// tap away. Callers that need both (map pins: abbreviated label,
+  /// full-price semantics) should use [price] for the accessible string.
+  ///
+  /// Branches on [Ad.priceType] for the same reason [price] does — a `$`
+  /// in front of an 800,000 so'm ad misstates it by ~13x — so a UZS ad
+  /// abbreviates to `800k so'm`, keeping the suffix convention [price]
+  /// established. [l10n] is optional on the same terms as [price]'s.
+  static String abbreviatedPrice(Ad ad, {AppLocalizations? l10n}) {
+    final value = ad.price.abs().round();
+    final sign = ad.price < 0 ? '-' : '';
+    final String magnitude;
+    if (value >= 1000000) {
+      magnitude = '${_trimTenth(value / 1000000)}M';
+    } else if (value >= 1000) {
+      magnitude = '${_trimTenth(value / 1000)}k';
+    } else {
+      magnitude = '$value';
+    }
+    return switch (ad.priceType) {
+      CurrencyCode.uzs =>
+        '$sign$magnitude ${l10n?.listingEditorPriceTypeUzsOption ?? "so'm"}',
+      CurrencyCode.usd || CurrencyCode.unknown => '$sign\$$magnitude',
+    };
+  }
+
+  /// One decimal place, with a whole value's `.0` dropped — `1.2`, `78`.
+  static String _trimTenth(double value) {
+    final rounded = (value * 10).round() / 10;
+    return rounded == rounded.roundToDouble()
+        ? rounded.round().toString()
+        : rounded.toStringAsFixed(1);
   }
 
   static String _groupInteger(num value) {
@@ -181,7 +238,11 @@ abstract final class Formatters {
   /// room for it (see `CompactListingCard`'s own doc comment). [l10n] is
   /// forwarded to [rooms] unchanged — see that method's doc comment for why
   /// it's optional.
-  static String statLine(Ad ad, {bool includeFloor = true, AppLocalizations? l10n}) {
+  static String statLine(
+    Ad ad, {
+    bool includeFloor = true,
+    AppLocalizations? l10n,
+  }) {
     return [
       rooms(ad.rooms, l10n: l10n),
       area(ad.area),

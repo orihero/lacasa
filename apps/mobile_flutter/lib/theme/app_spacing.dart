@@ -43,4 +43,11 @@ abstract final class AppSpacing {
   /// identical, since the two tokens mean different things (horizontal
   /// gutter vs. vertical section rhythm) and may diverge later.
   static const double section = 20;
+
+  /// 15px — vertical rhythm between *form fields*
+  /// (`.field{display:block;margin-top:15px}`). Deliberately not [section]:
+  /// the prototype's forms run one flat 15px gap from field to field, where
+  /// `.sec`'s 20px is the gap between whole feed sections. A form that
+  /// alternates the two reads as arbitrary grouping the source never states.
+  static const double field = 15;
 }

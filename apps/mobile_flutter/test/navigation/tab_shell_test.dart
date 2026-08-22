@@ -8,20 +8,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
+import 'package:lacasa_mobile/features/coworkers/coworkers.dart';
 import 'package:lacasa_mobile/features/home/home.dart';
+import 'package:lacasa_mobile/features/leads/leads.dart';
 import 'package:lacasa_mobile/features/listing_detail/listing_detail.dart';
+import 'package:lacasa_mobile/features/my_listings/my_listings.dart';
 import 'package:lacasa_mobile/features/search/search.dart';
+import 'package:lacasa_mobile/features/work_dashboard/work_dashboard.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
+import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/navigation/workspace_mode.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
+
+import '../support/ambient_repository_overrides.dart';
 
 void main() {
   Future<GoRouter> pumpApp(
     WidgetTester tester, {
     ProviderContainer? container,
   }) async {
-    final c = container ?? ProviderContainer();
+    final c =
+        container ?? ProviderContainer(overrides: ambientRepositoryOverrides());
     addTearDown(c.dispose);
     final router = c.read(goRouterProvider);
 
@@ -94,21 +103,30 @@ void main() {
   });
 
   testWidgets(
-    'the Work tab is hidden signed out and appears immediately on role change',
+    'a signed-out session gets the 4-tab buyer shell, and becoming an agent '
+    'swaps the whole shell for the 5-tab agent one — no restart',
     (tester) async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: ambientRepositoryOverrides(),
+      );
       addTearDown(container.dispose);
       await pumpApp(tester, container: container);
 
-      // Signed out: 4 tabs, no Work button in the tree at all.
-      expect(find.byKey(const ValueKey('navTab-2')), findsNothing);
+      // Buyer shell: exactly four tabs, and Home is what tab 0 shows.
+      expect(find.byKey(const ValueKey('navTab-3')), findsOneWidget);
+      expect(find.byKey(const ValueKey('navTab-4')), findsNothing);
+      expect(find.byType(HomeFeedScreen), findsOneWidget);
 
-      // Flip role to agent with no navigation and no restart.
+      // Flip role to agent with no navigation and no restart. The default
+      // workspace mode is `work`, so `_redirect` moves the session into the
+      // agent shell on its own — this is the whole two-shell mechanism.
       container.read(authSessionProvider.notifier).setRole(UserRole.agent);
       await tester.pumpAndSettle();
 
-      // Work tab appears immediately, purely from the ref.watch rebuild.
-      expect(find.byKey(const ValueKey('navTab-2')), findsOneWidget);
+      // Agent shell: five tabs, dashboard first, and no Home anywhere.
+      expect(find.byKey(const ValueKey('navTab-4')), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(find.byType(HomeFeedScreen), findsNothing);
     },
   );
 
@@ -119,5 +137,87 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(HomeFeedScreen), findsOneWidget);
+  });
+
+  testWidgets(
+    'the agent shell keeps its own per-branch back stacks, same as the buyer '
+    'one',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: ambientRepositoryOverrides(),
+      );
+      addTearDown(container.dispose);
+      final router = await pumpApp(tester, container: container);
+
+      container.read(authSessionProvider.notifier).setRole(UserRole.agent);
+      await tester.pumpAndSettle();
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      // Drill into the Coworkers branch, leave for Leads, come back. `go`,
+      // not `push`, matching `WORK_TAB_CONTRACT.md` §2.2's rule for
+      // `coworker-detail` (and what `coworker_statistics_section.dart`
+      // actually calls).
+      router.go(
+        RoutePaths.workCoworkerDetail.replaceFirst(':id', 'coworker-1'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(CoworkerDetailScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('navTab-2')));
+      await tester.pumpAndSettle();
+      expect(find.byType(LeadsListScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('navTab-3')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CoworkerDetailScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the Browse switch moves an agent into the buyer shell, and back',
+    (tester) async {
+      final container = ProviderContainer(
+        overrides: ambientRepositoryOverrides(),
+      );
+      addTearDown(container.dispose);
+      await pumpApp(tester, container: container);
+
+      container.read(authSessionProvider.notifier).setRole(UserRole.agent);
+      await tester.pumpAndSettle();
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      // Setting the mode is the entire gesture — `_AuthRouterRefresh`
+      // listens to this provider and the redirect swaps the shell.
+      container
+          .read(workspaceModeProvider.notifier)
+          .setMode(WorkspaceMode.browse);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeFeedScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsNothing);
+      // Four tabs again, the buyer set.
+      expect(find.byKey(const ValueKey('navTab-4')), findsNothing);
+
+      container.read(workspaceModeProvider.notifier).setMode(WorkspaceMode.work);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DashboardScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('a coworker in work mode lands on my-listings, not the dashboard', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: ambientRepositoryOverrides(),
+    );
+    addTearDown(container.dispose);
+    await pumpApp(tester, container: container);
+
+    container.read(authSessionProvider.notifier).setRole(UserRole.coworker);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyListingsScreen), findsOneWidget);
+    expect(find.byType(DashboardScreen), findsNothing);
   });
 }

@@ -173,6 +173,32 @@ class AdsResource {
     return AdPage.fromJson(json as Map<String, dynamic>);
   }
 
+  /// How many ads match [filters] — `GET /api/ads?countOnly=true`, whose
+  /// response is `{ "count": N }` and nothing else. The narrowing is the
+  /// same `where` [list] would have built (`adService.js#listAds` takes the
+  /// count *after* its `stage: "ACTIVE"` forcing and its `?q=` OR-clause, so
+  /// this number can never disagree with the list behind it), but no row is
+  /// selected and `photos` is never joined.
+  ///
+  /// Deliberately takes no `sort`/`limit`/`cursor`: a count is order- and
+  /// page-independent, and the server ignores those params on this branch.
+  /// Use this — never `list(...).length` — wherever only the size of the
+  /// result set is wanted; the bare-array branch of `GET /ads` has no `take`
+  /// at all, so `.length` means downloading the entire matching catalogue.
+  Future<int> count({AdFilters? filters, String? agentId}) async {
+    final query = <String, Object?>{
+      ...(filters ?? const AdFilters()).toQuery(),
+      'agentId': agentId,
+      'countOnly': 'true',
+    };
+    final json = await _client.request(
+      method: 'GET',
+      path: '/ads',
+      query: query,
+    );
+    return (json as Map<String, dynamic>)['count'] as int;
+  }
+
   /// `GET /api/ads/:id`. Throws [ApiErrorException] with `code: notFound`
   /// (404) for a missing or malformed id.
   Future<Ad> getById(String id) async {

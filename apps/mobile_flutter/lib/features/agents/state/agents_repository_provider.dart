@@ -7,14 +7,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/agents_mode.dart';
 import '../data/agents_repository.dart';
-import '../data/fixture_agents_repository.dart';
 import '../data/live_agents_repository.dart';
 
 final agentsRepositoryProvider = Provider<AgentsRepository>((ref) {
-  if (useLiveAgentsApi) {
-    return LiveAgentsRepository(LaCasaApi.create());
-  }
-  return FixtureAgentsRepository();
+  return LiveAgentsRepository(LaCasaApi.create());
 });

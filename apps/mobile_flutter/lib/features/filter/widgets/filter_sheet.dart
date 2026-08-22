@@ -37,6 +37,35 @@
 /// — a caller that wants the CRM fields back needs [showCrmFilterSheet]'s
 /// richer [FilterSheetResult] return type, not [showFilterSheet]'s bare
 /// [AdFilters].
+///
+/// **No invented defaults.** The sheet seeds its local state from
+/// [FilterSheet.initialFilters] *verbatim*, and "Reset" restores a bare
+/// `const AdFilters()` — every field, with no exceptions. This is a
+/// deliberate divergence from a literal reading of SCREENS.md §3.5,
+/// which annotates Furniture's `withFurniture` and Repair's
+/// `notRepaired` as that field's `default` (the same annotation §3.24's
+/// `create-listing` Details step carries, where a *composition* form
+/// genuinely must ship a value for a required `Ad` column). A search
+/// filter is not a composition form: `null` there means "any", so
+/// pre-selecting those two chips is not a harmless visual default — it
+/// silently applies two constraints the buyer never chose. Concretely,
+/// the pre-fix behaviour was that opening Filters purely to set a price
+/// ladder returned `furniture: withFurniture, repairment: notRepaired`
+/// alongside it — three filters counted by `activeFilterCount`
+/// (`features/search/state/search_providers.dart`), a toolbar badge
+/// reading `3`, and results quietly restricted to furnished,
+/// unrenovated properties. The escape hatch was undiscoverable too:
+/// unlike City/District/Price, whose pickers all carry an explicit
+/// leading "Any …" row, the two chip groups offer no "any" chip, so
+/// clearing them meant knowing to re-tap the already-lit chip
+/// (`shared/widgets/choice_chip_group.dart`'s `allowDeselect`).
+/// Opening the sheet and tapping "Apply Filters" without touching
+/// anything must apply zero filters; that invariant outranks the
+/// mockup's initial-render appearance. (The other way to honour both —
+/// keep the visual default, but make "any" a real, selectable,
+/// initially-selected chip prepended to each option list — needs two
+/// new localized labels, so it is left to a follow-up; see
+/// `data/filter_options.dart`.)
 library;
 
 import 'dart:async';
@@ -46,6 +75,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/filter_count_provider.dart';
 import 'filter_area_section.dart';
@@ -186,7 +216,12 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   @override
   void initState() {
     super.initState();
-    _applyToLocalState(_seedDefaults(widget.initialFilters));
+    // Seeded from [FilterSheet.initialFilters] *verbatim* — the sheet
+    // never invents a selection the caller did not pass. See this file's
+    // library doc comment ("No invented defaults") for why the two
+    // fields SCREENS.md §3.5 annotates as `default` are deliberately not
+    // pre-selected here.
+    _applyToLocalState(widget.initialFilters);
     _sort = widget.initialSort;
     _status = widget.initialStatus;
     _areaMinController = TextEditingController(
@@ -216,30 +251,6 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _areaMaxController.dispose();
     _storeyController.dispose();
     super.dispose();
-  }
-
-  /// Furniture/Repair are the only two fields SCREENS.md §3.5 gives a
-  /// stated default (`withFurniture`, `notRepaired`) — applied whenever
-  /// the incoming value is `null`. A caller re-opening the sheet with
-  /// previously-*applied* filters that explicitly cleared one of these
-  /// two back to "any" gets that `null` preserved as-is (the field was
-  /// deliberately set, not merely never touched) — this only fills the
-  /// gap for a truly fresh `const AdFilters()`.
-  static AdFilters _seedDefaults(AdFilters initial) {
-    return AdFilters(
-      city: initial.city,
-      district: initial.district,
-      category: initial.category,
-      type: initial.type,
-      rooms: initial.rooms,
-      repairment: initial.repairment ?? Repairment.notRepaired,
-      storey: initial.storey,
-      furniture: initial.furniture ?? Furniture.withFurniture,
-      areaMin: initial.areaMin,
-      areaMax: initial.areaMax,
-      priceMin: initial.priceMin,
-      priceMax: initial.priceMax,
-    );
   }
 
   void _applyToLocalState(AdFilters f) {
@@ -307,7 +318,11 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
 
   void _reset() {
     setState(() {
-      _applyToLocalState(_seedDefaults(const AdFilters()));
+      // A fully empty filter set — *every* field back to "any", including
+      // Furniture/Repair. "Reset" is the user asking for no constraints;
+      // leaving two chips lit afterwards would mean Reset→Apply still
+      // narrowed the results (see this file's library doc comment).
+      _applyToLocalState(const AdFilters());
       _areaMinController.clear();
       _areaMaxController.clear();
       _storeyController.clear();
@@ -351,169 +366,203 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
+      // `.sh{position:absolute;left:8px;right:8px;bottom:8px;
+      // border-radius:34px;max-height:86%}` — a floating, fully-rounded
+      // card inset from all three edges, not an edge-to-edge sheet with
+      // square bottom corners.
       child: FractionallySizedBox(
-        heightFactor: 0.88,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colors.card,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(AppRadii.sheet),
-              topRight: Radius.circular(AppRadii.sheet),
+        heightFactor: 0.86,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.card,
+              borderRadius: BorderRadius.circular(AppRadii.sheet),
             ),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: AppSpacing.sm),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: colors.line,
-                  borderRadius: AppRadii.pill,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenGutter,
-                  AppSpacing.lg,
-                  AppSpacing.base,
-                  AppSpacing.base,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.filterSheetTitle,
-                        style: type.sheetTitle.copyWith(color: colors.ink),
-                      ),
-                    ),
-                    GestureDetector(
-                      key: const ValueKey('filterSheet-close'),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: colors.ink2,
-                        size: 22,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(
-                    overscroll: false,
+            child: Column(
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.line,
+                    borderRadius: AppRadii.pill,
                   ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenGutter,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenGutter,
+                    AppSpacing.lg,
+                    AppSpacing.base,
+                    AppSpacing.base,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.filterSheetTitle,
+                          style: type.sheetTitle.copyWith(color: colors.ink),
+                        ),
+                      ),
+                      // `.sh__h .rnd{width:34px;height:34px;font-size:16px;
+                      // color:var(--ink);background:var(--sunk)}` — a filled
+                      // round button. The chip is what makes the 16px glyph
+                      // *visible* as a control; [TapTarget] is what makes it
+                      // reachable, since 34dp of painted chip is still 14dp
+                      // under the 48dp floor. It also carries the `button`
+                      // role and the screen-reader label this dismiss had
+                      // been missing entirely — an unlabelled "X" is the one
+                      // control a screen-reader user most needs named,
+                      // because without it there is no way out of the sheet
+                      // except the swipe they cannot see.
+                      TapTarget(
+                        key: const ValueKey('filterSheet-close'),
+                        semanticsLabel: l10n.filterSheetCloseLabel,
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          width: 34,
+                          height: 34,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: colors.sunk,
+                            borderRadius: AppRadii.pill,
+                          ),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: colors.ink,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ScrollConfiguration(
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      overscroll: false,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        FilterCityDistrictSection(
-                          city: _city,
-                          district: _district,
-                          onCityChanged: _onCityChanged,
-                          onDistrictChanged: _onDistrictChanged,
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterCategoryTypeSection(
-                          category: _category,
-                          type: _type,
-                          onCategoryChanged: (v) {
-                            _category = v;
-                            _onFieldChanged();
-                          },
-                          onTypeChanged: (v) {
-                            _type = v;
-                            _onFieldChanged();
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterRoomsSection(
-                          rooms: _rooms,
-                          onChanged: (v) {
-                            _rooms = v;
-                            _onFieldChanged();
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterAreaSection(
-                          areaMinController: _areaMinController,
-                          areaMaxController: _areaMaxController,
-                          onAreaMinChanged: _onAreaMinChanged,
-                          onAreaMaxChanged: _onAreaMaxChanged,
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterPriceSection(
-                          priceMin: _priceMin,
-                          priceMax: _priceMax,
-                          onPriceMinChanged: (v) {
-                            _priceMin = v;
-                            _onFieldChanged();
-                          },
-                          onPriceMaxChanged: (v) {
-                            _priceMax = v;
-                            _onFieldChanged();
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterFurnitureRepairSection(
-                          furniture: _furniture,
-                          repairment: _repairment,
-                          onFurnitureChanged: (v) {
-                            _furniture = v;
-                            _onFieldChanged();
-                          },
-                          onRepairmentChanged: (v) {
-                            _repairment = v;
-                            _onFieldChanged();
-                          },
-                        ),
-                        const SizedBox(height: AppSpacing.section),
-                        FilterStoreySection(
-                          storeyController: _storeyController,
-                          onChanged: _onStoreyChanged,
-                        ),
-                        if (widget.isCrm) ...[
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenGutter,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FilterCityDistrictSection(
+                            city: _city,
+                            district: _district,
+                            onCityChanged: _onCityChanged,
+                            onDistrictChanged: _onDistrictChanged,
+                          ),
+                          // One flat `.field{margin-top:15px}` rhythm all the
+                          // way down the form — the same gap between any two
+                          // adjacent fields, whichever widget happens to own
+                          // them (see `filter_category_type_section.dart` and
+                          // `filter_furniture_repair_section.dart`, which
+                          // carry two fields each and use the same token).
+                          const SizedBox(height: AppSpacing.field),
+                          FilterCategoryTypeSection(
+                            category: _category,
+                            type: _type,
+                            onCategoryChanged: (v) {
+                              _category = v;
+                              _onFieldChanged();
+                            },
+                            onTypeChanged: (v) {
+                              _type = v;
+                              _onFieldChanged();
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.field),
+                          FilterRoomsSection(
+                            rooms: _rooms,
+                            onChanged: (v) {
+                              _rooms = v;
+                              _onFieldChanged();
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.field),
+                          FilterAreaSection(
+                            areaMinController: _areaMinController,
+                            areaMaxController: _areaMaxController,
+                            onAreaMinChanged: _onAreaMinChanged,
+                            onAreaMaxChanged: _onAreaMaxChanged,
+                          ),
+                          const SizedBox(height: AppSpacing.field),
+                          FilterPriceSection(
+                            priceMin: _priceMin,
+                            priceMax: _priceMax,
+                            onPriceMinChanged: (v) {
+                              _priceMin = v;
+                              _onFieldChanged();
+                            },
+                            onPriceMaxChanged: (v) {
+                              _priceMax = v;
+                              _onFieldChanged();
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.field),
+                          FilterFurnitureRepairSection(
+                            furniture: _furniture,
+                            repairment: _repairment,
+                            onFurnitureChanged: (v) {
+                              _furniture = v;
+                              _onFieldChanged();
+                            },
+                            onRepairmentChanged: (v) {
+                              _repairment = v;
+                              _onFieldChanged();
+                            },
+                          ),
+                          const SizedBox(height: AppSpacing.field),
+                          FilterStoreySection(
+                            storeyController: _storeyController,
+                            onChanged: _onStoreyChanged,
+                          ),
+                          if (widget.isCrm) ...[
+                            const SizedBox(height: AppSpacing.field),
+                            FilterSortStatusSection(
+                              sort: _sort,
+                              status: _status,
+                              onSortChanged: (v) =>
+                                  _onSortChanged(v ?? AdSort.newest),
+                              onStatusChanged: _onStatusChanged,
+                            ),
+                          ],
+                          if (countAsync != null && countAsync.hasError) ...[
+                            const SizedBox(height: AppSpacing.base),
+                            _CountErrorRow(
+                              onRetry: () => ref
+                                  .read(filterCountProvider.notifier)
+                                  .recountNow(_draft),
+                            ),
+                          ],
+                          // Not a field gap (so not [AppSpacing.field]): this
+                          // is the scroller's own tail pad before the pinned
+                          // footer, the mockup's `.btns{margin-top:18px}`.
                           const SizedBox(height: AppSpacing.section),
-                          FilterSortStatusSection(
-                            sort: _sort,
-                            status: _status,
-                            onSortChanged: (v) =>
-                                _onSortChanged(v ?? AdSort.newest),
-                            onStatusChanged: _onStatusChanged,
-                          ),
                         ],
-                        if (countAsync != null && countAsync.hasError) ...[
-                          const SizedBox(height: AppSpacing.base),
-                          _CountErrorRow(
-                            onRetry: () => ref
-                                .read(filterCountProvider.notifier)
-                                .recountNow(_draft),
-                          ),
-                        ],
-                        const SizedBox(height: AppSpacing.section),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenGutter,
-                  AppSpacing.base,
-                  AppSpacing.screenGutter,
-                  AppSpacing.lg,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenGutter,
+                    AppSpacing.base,
+                    AppSpacing.screenGutter,
+                    AppSpacing.lg,
+                  ),
+                  child: FilterSheetFooter(
+                    onReset: _reset,
+                    onApply: _apply,
+                    showLiveCount: !widget.isCrm,
+                  ),
                 ),
-                child: FilterSheetFooter(
-                  onReset: _reset,
-                  onApply: _apply,
-                  showLiveCount: !widget.isCrm,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -545,8 +594,14 @@ class _CountErrorRow extends StatelessWidget {
             style: type.bodySmall.copyWith(color: AppStatusColors.warningText),
           ),
         ),
-        GestureDetector(
+        // A 10px `type.label` word inside a bare GestureDetector is ~13dp of
+        // tappable glyph — the single worst kind of target in the app, and
+        // the reason `shared/widgets/tap_target.dart` exists. The row grows
+        // to 48dp tall as a result; it is the last thing in a scrolling
+        // sheet, so the space costs nothing but reach.
+        TapTarget(
           key: const ValueKey('filterSheet-countRetry'),
+          semanticsLabel: l10n.sharedRetryLabel,
           onTap: onRetry,
           child: Text(
             l10n.sharedRetryLabel,

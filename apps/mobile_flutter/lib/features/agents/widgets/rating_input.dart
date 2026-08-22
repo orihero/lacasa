@@ -49,7 +49,14 @@ class RatingInput extends StatelessWidget {
                 child: Icon(
                   i <= value ? Icons.star_rounded : Icons.star_outline_rounded,
                   size: starSize,
-                  color: i <= value ? AppStatusColors.ratingStar : colors.faint,
+                  // Same pairing rule as `shared/widgets/rating_stars.dart`:
+                  // the unpicked star uses `glyphTrack` so it stays lower
+                  // contrast than the picked one. Borrowing the `faint`
+                  // *text* token reversed that. See
+                  // `LaCasaColors.glyphTrack`.
+                  color: i <= value
+                      ? AppStatusColors.ratingStar
+                      : colors.glyphTrack,
                 ),
               ),
             ),

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import '../../../api/api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
+import '../../../theme/theme.dart';
 import '../data/filter_options.dart';
 
 class FilterCategoryTypeSection extends StatelessWidget {
@@ -39,7 +40,9 @@ class FilterCategoryTypeSection extends StatelessWidget {
           selected: category,
           onChanged: onCategoryChanged,
         ),
-        const SizedBox(height: 14),
+        // `.field{margin-top:15px}` — Category→Type is the same field gap as
+        // Type→Rooms, even though that one is the parent sheet's to draw.
+        const SizedBox(height: AppSpacing.field),
         FieldLabel(l10n.filterTypeFieldLabel),
         ChoiceChipGroup<AdType>(
           keyPrefix: 'filterType',

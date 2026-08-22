@@ -99,6 +99,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCategoryRetailLabel => 'Retail';
 
   @override
+  String homeCategoryChipSemanticsLabel(String category) {
+    return 'Show $category listings';
+  }
+
+  @override
   String get homeExploreNearbySectionTitle => 'Explore Nearby';
 
   @override
@@ -112,6 +117,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeFeedEmptyMessage => 'No listings available yet.';
+
+  @override
+  String get homeFeedCategoryEmptyMessage =>
+      'No listings in this category yet.';
 
   @override
   String get homePromoOneTitle => 'One Post,\nEvery Channel';
@@ -146,22 +155,31 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String homeAgentRatingCaption(String rating, int count) {
+    return '★ $rating ($count)';
+  }
+
+  @override
   String get homeTopDistrictsSectionTitle => 'Top Districts';
 
   @override
   String get homeTopDistrictsExploreLinkLabel => 'Explore';
 
   @override
-  String get homeDistrictChilonzorName => 'Chilonzor';
+  String homeDistrictListingsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count listings',
+      one: '$count listing',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get homeDistrictYunusobodName => 'Yunusobod';
-
-  @override
-  String get homeDistrictSergeliName => 'Sergeli';
-
-  @override
-  String get homeDistrictMirobodName => 'Mirobod';
+  String homeDistrictTapSemanticsLabel(String district) {
+    return 'Show listings in $district';
+  }
 
   @override
   String get searchScreenTitle => 'Search';
@@ -188,7 +206,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchResultsRetryMessage => 'Couldn\'t load listings.';
 
   @override
-  String get searchResultsEmptyMessage => 'No listings found.';
+  String get searchResultsEmptyMessage => 'No listings match your search.';
+
+  @override
+  String get searchResultsFilteredEmptyMessage =>
+      'No listings match your filters.';
 
   @override
   String get searchRecentSearchesSectionTitle => 'Recent Searches';
@@ -198,6 +220,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterSheetTitle => 'Filters';
+
+  @override
+  String get filterSheetCloseLabel => 'Close';
 
   @override
   String get filterCountErrorMessage =>
@@ -326,6 +351,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterStoreyFieldLabel => 'Storey';
 
   @override
+  String get listingOverviewSectionTitle => 'Overview';
+
+  @override
   String get listingDescriptionSectionTitle => 'Description';
 
   @override
@@ -384,6 +412,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get listingNavShareSemanticsLabel => 'Share';
+
+  @override
+  String get listingHeroVideoBadgeLabel => 'Video';
 
   @override
   String get listingLinkCopiedToastMessage => 'Link copied for sharing';
@@ -477,6 +508,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'This media type can\'t be previewed.';
 
   @override
+  String get galleryOpenVideoExternallyLabel => 'Open video';
+
+  @override
+  String get galleryVideoLinkCopiedToastMessage =>
+      'Couldn\'t open the video — link copied instead. Paste it into your browser to watch.';
+
+  @override
   String galleryPositionSemanticsLabel(int current, int total) {
     return 'Gallery position $current of $total';
   }
@@ -504,14 +542,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mapShowListSemanticsLabel => 'Show list';
 
   @override
-  String mapPinnedAllCountLabel(int count) {
-    return '$count on the map';
-  }
-
-  @override
   String mapPinnedPartialCountLabel(int pinned, int total) {
     return '$pinned of $total on the map';
   }
+
+  @override
+  String mapPartialResultsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Showing the first $count matches',
+      one: 'Showing the first $count match',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapUpdatingResultsLabel => 'Updating…';
 
   @override
   String get mapFiltersButtonLabel => 'Filters';
@@ -598,8 +645,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharedNoReviewsYetLabel => 'No reviews yet';
 
   @override
-  String sharedRatingLabel(String rating, int count) {
-    return 'Review: $rating/5 ($count)';
+  String sharedRatingLabel(String rating) {
+    return 'Review: $rating/5';
   }
 
   @override
@@ -630,19 +677,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharedLeadStatusAcceptedLabel => 'Accepted';
 
   @override
-  String get sharedPublishStatusPendingLabel => 'Not published';
+  String get sharedPublishStatusPendingLabel => 'PENDING';
 
   @override
-  String get sharedPublishStatusAwaitingReviewLabel => 'Awaiting review';
+  String get sharedPublishStatusAwaitingReviewLabel =>
+      'DRAFTED_AWAITING_REVIEW';
 
   @override
-  String get sharedPublishStatusPublishedLabel => 'Published';
+  String get sharedPublishStatusPublishedLabel => 'PUBLISHED';
 
   @override
-  String get sharedPublishStatusFailedLabel => 'Failed';
+  String get sharedPublishStatusFailedLabel => 'FAILED';
 
   @override
   String get sharedGenericErrorMessage => 'Something went wrong.';
+
+  @override
+  String get sharedOfflineErrorMessage =>
+      'No connection. Check your network and try again.';
 
   @override
   String get sharedShowPasswordLabel => 'Show password';
@@ -678,7 +730,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t update favourites';
 
   @override
+  String get sharedFavouriteAddSemanticsLabel => 'Add to favourites';
+
+  @override
+  String get sharedFavouriteRemoveSemanticsLabel => 'Remove from favourites';
+
+  @override
+  String get sharedSignInToSaveMessage => 'Sign in to save listings';
+
+  @override
+  String get sharedSignInActionLabel => 'Sign in';
+
+  @override
+  String get sharedClearFiltersActionLabel => 'Clear filters';
+
+  @override
   String get sharedLoadMoreFailedLabel => 'Couldn\'t load more — Retry';
+
+  @override
+  String get sharedLoadMoreLabel => 'Load more';
 
   @override
   String get sharedRetryLabel => 'Retry';
@@ -701,6 +771,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get sharedPricePerMonthSuffix => '/month';
+
+  @override
   String get navTabHomeLabel => 'Home';
 
   @override
@@ -708,6 +781,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navTabWorkLabel => 'Work';
+
+  @override
+  String get navTabDashboardLabel => 'Statistics';
+
+  @override
+  String get navTabMyAdsLabel => 'My Ads';
+
+  @override
+  String get navTabLeadsLabel => 'Leads';
+
+  @override
+  String get navTabCoworkersLabel => 'Coworkers';
 
   @override
   String get navTabAgentsLabel => 'Agents';
@@ -810,6 +895,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingEditorWizardCreateLabel => 'Create';
 
   @override
+  String get listingEditorWizardDisabledReasonMessage =>
+      'Fill in the required fields to continue.';
+
+  @override
   String get listingEditorStepBasicsLabel => 'Basics';
 
   @override
@@ -822,12 +911,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingEditorStepPublishLabel => 'Publish';
 
   @override
+  String listingEditorStepGoToSemanticsLabel(String step) {
+    return 'Go to $step';
+  }
+
+  @override
   String get listingEditorCreatePublishNoticeMessage =>
       'Publishing is available once this listing is created — tap Create, then use the per-channel buttons on the listing\'s own edit screen.';
 
   @override
+  String get listingEditorSummaryCardTitle => 'Summary';
+
+  @override
+  String listingEditorSummaryPhotosCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '$count photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listingEditorSummaryNotSetLabel => 'Not set';
+
+  @override
   String get listingEditorPendingUploadsMessage =>
       'Please wait for photos/video to finish uploading.';
+
+  @override
+  String get listingEditorFailedUploadsMessage =>
+      'Some photos/video didn\'t upload. Remove them and add them again before saving.';
 
   @override
   String get listingEditorCreatePendingLabel => 'Creating';
@@ -1019,6 +1134,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingEditorAddVideoButtonLabel => 'Add video';
 
   @override
+  String get listingEditorAddVideoOptionalHint => 'Optional · up to 70 MB';
+
+  @override
   String get listingEditorMediaLimitsHint =>
       'Up to 5 images (5MB each). An optional single video up to 70MB.';
 
@@ -1044,6 +1162,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get listingEditorRetryUploadLabel => 'Retry upload';
+
+  @override
   String get listingEditorPublishSectionLabel => 'Publish';
 
   @override
@@ -1059,7 +1180,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listingEditorChannelOlxLabel => 'OLX';
 
   @override
-  String get listingEditorChannelRealtingLabel => 'Realting';
+  String get listingEditorChannelThreadsLabel => 'Threads';
+
+  @override
+  String get listingEditorChannelFacebookMarketplaceLabel =>
+      'Facebook Marketplace';
+
+  @override
+  String get listingEditorChannelXLabel => 'X';
+
+  @override
+  String get listingEditorChannelLinkedinLabel => 'LinkedIn';
 
   @override
   String get listingEditorChannelUnknownLabel => 'Unknown channel';
@@ -1073,6 +1204,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'OLX cross-posting is only available from the desktop app (requires a browser extension).';
 
   @override
+  String get listingEditorThreadsUnavailableHint =>
+      'Threads posting needs a Threads profile linked to an Instagram professional account — this build never requests that permission.';
+
+  @override
+  String get listingEditorFacebookMarketplaceUnavailableHint =>
+      'Facebook Marketplace has no compliant automation path on any platform — its listings have to be posted by hand.';
+
+  @override
+  String get listingEditorXUnavailableHint =>
+      'X posting needs its own X API app on a paid write tier — neither is set up in this build.';
+
+  @override
+  String get listingEditorLinkedinUnavailableHint =>
+      'LinkedIn posting needs an approved LinkedIn Marketing API app — this build has no LinkedIn credentials.';
+
+  @override
   String get listingEditorPublishStatusLinkLabel => 'Publish Status';
 
   @override
@@ -1082,6 +1229,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get listingEditorInstagramLoadErrorMessage =>
       'Couldn\'t load connected Instagram accounts.';
+
+  @override
+  String listingEditorInstagramFollowersSubtitle(String count) {
+    return 'Instagram · $count followers';
+  }
 
   @override
   String get listingEditorNoInstagramAccountMessage =>
@@ -1148,10 +1300,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'OLX posting happens through the browser extension with a human reviewing and clicking Publish. Retry the cross-post from the extension instead.';
 
   @override
-  String get listingEditorRealtingNonRetryableReason =>
-      'Realting listings sync through a scheduled feed, not a per-ad publish call. There is nothing here to retry.';
-
-  @override
   String get listingEditorUnknownChannelReason => 'Unknown publish channel.';
 
   @override
@@ -1199,7 +1347,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myListingsEmptyStateMessage => 'Ads not found.';
 
   @override
+  String get myListingsFilteredEmptyStateMessage =>
+      'No ads match your filters.';
+
+  @override
+  String get myListingsEmptyStateActionLabel => 'Create New Post';
+
+  @override
   String get myListingsEditButtonSemanticsLabel => 'Edit';
+
+  @override
+  String get myListingsStageAllLabel => 'All';
+
+  @override
+  String myListingsStageCountActiveLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count active',
+      one: '$count active',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountSoldLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sold',
+      one: '$count sold',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountDraftLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count drafts',
+      one: '$count draft',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageFilterSemanticsLabel(String stage) {
+    return 'Show $stage ads';
+  }
+
+  @override
+  String get myListingsChannelPublishedLabel => 'Published';
+
+  @override
+  String get myListingsChannelFailedLabel => 'Failed';
+
+  @override
+  String get myListingsChannelPendingLabel => 'Publishing…';
+
+  @override
+  String get myListingsChannelNotPublishedLabel => 'Not published';
+
+  @override
+  String myListingsChannelBadgeSemanticsLabel(String channel, String status) {
+    return '$channel — $status';
+  }
 
   @override
   String get agentsDirectoryScreenTitle => 'Agents';
@@ -1244,6 +1457,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get agentsInfoAddressLabel => 'Address:';
 
   @override
+  String get agentsInfoRatingLabel => 'Rating:';
+
+  @override
   String get agentsInfoCallButtonLabel => 'Call';
 
   @override
@@ -1258,11 +1474,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentsAdsGridHeading => 'Ads List';
-
-  @override
-  String agentsAdsGridHeadingWithCount(int count) {
-    return 'Ads List ($count)';
-  }
 
   @override
   String get reviewsRatingRequiredError => 'Please choose a rating.';
@@ -1376,6 +1587,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileAgentLanguageRowTitle => 'Language';
 
   @override
+  String get profileAgentWorkspaceGroupLabel => 'Workspace';
+
+  @override
+  String get profileAgentBrowseModeRowTitle => 'Browse listings';
+
+  @override
+  String get profileAgentBrowseModeRowSubtitle =>
+      'Search and view ads like a client';
+
+  @override
+  String get profileAgentWorkModeRowTitle => 'Go to workspace';
+
+  @override
+  String get profileAgentWorkModeRowSubtitle =>
+      'Statistics, ads, leads and coworkers';
+
+  @override
   String get profileAgentSessionGroupLabel => 'Session';
 
   @override
@@ -1391,6 +1619,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBuyerSavedListingsRowTitle => 'Saved Listings';
 
   @override
+  String profileBuyerSavedListingsRowSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count listings',
+      one: '$count listing',
+      zero: 'No listings',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get profileBuyerUpdateProfileRowTitle => 'Update Profile';
 
   @override
@@ -1398,6 +1638,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileBuyerRegisterAsAgentRowTitle => 'Register as Agent';
+
+  @override
+  String get profileBuyerRealtorPendingRowTitle =>
+      'Realtor application under review';
+
+  @override
+  String profileBuyerRealtorPendingRowSubtitle(String phone) {
+    return 'We\'ll call $phone — usually within one business day.';
+  }
+
+  @override
+  String get profileBuyerRealtorPendingNoPhoneSubtitle =>
+      'We\'ll call you — usually within one business day.';
+
+  @override
+  String get profileBuyerRealtorRejectedRowTitle =>
+      'Realtor application not approved';
+
+  @override
+  String get profileBuyerRealtorRejectedRowSubtitle =>
+      'Contact us and we\'ll go through it with you.';
+
+  @override
+  String get profileBuyerRealtorRejectedActionLabel => 'Contact Us';
+
+  @override
+  String profileBuyerRealtorAppliedAtLabel(String date) {
+    return 'Applied $date';
+  }
 
   @override
   String get profileBuyerSessionGroupLabel => 'Session';
@@ -1441,6 +1710,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authLoginInvalidCredentialsError => 'Invalid email or password';
 
   @override
+  String get authLoginForgotPasswordHintMessage =>
+      'Forgot it? Tap Forgot password.';
+
+  @override
   String get authLoginNetworkErrorMessage =>
       'No connection. Check your network and try again.';
 
@@ -1458,6 +1731,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authLoginSubmitButtonLabel => 'Sign in';
+
+  @override
+  String get authLoginForgotPasswordLinkLabel => 'Forgot password?';
+
+  @override
+  String authLoginForgotPasswordContactMessage(String email) {
+    return 'I forgot the password for $email and can\'t sign in. Please help me reset it.';
+  }
+
+  @override
+  String get authLoginForgotPasswordContactMessageNoEmail =>
+      'I forgot my password and can\'t sign in. Please help me reset it.';
 
   @override
   String get authLoginFooterLinkText => 'Don\'t you have an account?';
@@ -1547,6 +1832,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authRegisterInvalidPhoneError => 'Invalid phone number format';
+
+  @override
+  String get authRegisterFullNameRequiredError => 'Full name is required';
+
+  @override
+  String get authRegisterPhoneRequiredError => 'Phone number is required';
+
+  @override
+  String get authRegisterEmailRequiredError => 'Email is required';
+
+  @override
+  String get authRegisterEmailInvalidError => 'Invalid email address format';
+
+  @override
+  String get authRegisterPasswordRequiredError => 'Password is required';
+
+  @override
+  String get authRegisterPasswordTooShortError =>
+      'Password must be at least 6 characters';
+
+  @override
+  String get authRegisterAgencyNameRequiredError => 'Agency name is required';
 
   @override
   String get authRegisterRealtorSuccessToast =>
@@ -1697,6 +2004,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactMessageFieldLabel => 'Message';
 
   @override
+  String get contactMessageFieldHintText =>
+      'I\'d like to view this apartment this week.';
+
+  @override
   String get contactSendButtonLabel => 'Send message';
 
   @override
@@ -1738,6 +2049,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadsCardMoveFailedMessage => 'Couldn\'t move — try again.';
 
   @override
+  String get leadsCardMoveFailedLabel => 'Couldn\'t move';
+
+  @override
+  String leadsCardMoveRetrySemanticsLabel(String status) {
+    return 'Retry moving to $status';
+  }
+
+  @override
   String get leadsCreateScreenTitle => 'Create Lead';
 
   @override
@@ -1759,7 +2078,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadsFieldSourceLabel => 'Source';
 
   @override
-  String get leadsCreateCommitHint => 'What is this lead looking for?';
+  String get leadsCreateCommitHint => 'What are they looking for?';
 
   @override
   String get leadsCreateFullNameRequiredError => 'First name is required';
@@ -1833,10 +2152,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadsDetailCloseLabel => 'Close';
 
   @override
+  String get leadsCallButtonLabel => 'Call';
+
+  @override
+  String leadsCallSemanticsLabel(String phone) {
+    return 'Call $phone';
+  }
+
+  @override
   String get leadsDetailLoadErrorMessage => 'Couldn\'t load this lead.';
 
   @override
-  String get leadsDeleteLeadButtonLabel => 'Delete lead';
+  String get leadsDeleteLeadButtonLabel => 'Delete';
 
   @override
   String leadsCommitMinLengthError(int min) {
@@ -1851,7 +2178,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Write briefly about the conversation';
 
   @override
-  String get leadsConversationHint => 'What did you discuss?';
+  String get leadsConversationHint => 'At least 10 characters';
 
   @override
   String get leadsMoveToSheetTitle => 'Move to…';
@@ -1866,6 +2193,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coworkersEmptyMessage => 'No coworkers yet.';
 
   @override
+  String get coworkersEmptyStateActionLabel => 'Add coworker';
+
+  @override
   String get coworkersAddNewButtonLabel => '+ Add new coworker';
 
   @override
@@ -1873,8 +2203,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count listings',
-      one: '$count listing',
+      other: '$count ads',
+      one: '$count ad',
     );
     return '$_temp0';
   }
@@ -1942,8 +2272,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get coworkersPasswordHint => 'At least 6 characters';
 
   @override
-  String get coworkersPasswordHintKeepCurrent =>
-      'Leave blank to keep the current password';
+  String get coworkersPasswordHintKeepCurrent => 'Leave blank to keep current';
 
   @override
   String get coworkersFullNameRequiredError => 'Full Name is required';
@@ -2005,11 +2334,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get coworkersReadOnlyNoteMessage =>
       'Only agents can edit or delete coworkers.';
-
-  @override
-  String coworkersActivitySummaryLine(String listings, String active) {
-    return '$listings · Active $active';
-  }
 
   @override
   String get coworkersActivityJustNow => 'Just now';
@@ -2076,6 +2400,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardLegendSold => 'Sold';
 
   @override
+  String dashboardChartSemanticsLabel(String range, int created, int sold) {
+    return 'Ads statistics, $range: $created created, $sold sold';
+  }
+
+  @override
   String dashboardCaptionHour(String hour) {
     return 'Hour $hour';
   }
@@ -2096,11 +2425,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String dashboardCaptionAllTimeChartNote(String range) {
+    return '$range · chart shows this month';
+  }
+
+  @override
   String get dashboardCoworkerStatisticsLoadErrorMessage =>
       'Couldn\'t load coworker statistics';
 
   @override
   String get dashboardNoCoworkersMessage => 'No coworkers yet.';
+
+  @override
+  String get dashboardAddCoworkerButtonLabel => 'Add coworker';
 
   @override
   String get dashboardLegendAdsCount => 'Ads count';
@@ -2112,16 +2449,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardLegendSaleCount => 'Sale count';
 
   @override
-  String get dashboardHeaderCoworkers => 'COWORKERS';
+  String dashboardCoworkerBarsSemanticsLabel(
+    String name,
+    int ads,
+    int leads,
+    int sales,
+  ) {
+    return '$name: $ads ads, $leads leads, $sales sales';
+  }
 
   @override
-  String get dashboardHeaderAds => 'ADS';
+  String get dashboardHeaderCoworkers => 'Coworkers';
 
   @override
-  String get dashboardHeaderLeads => 'LEADS';
+  String get dashboardHeaderAds => 'Ads';
 
   @override
-  String get dashboardHeaderSales => 'SALES';
+  String get dashboardHeaderLeads => 'Leads';
+
+  @override
+  String get dashboardHeaderSales => 'Sales';
 
   @override
   String get dashboardTileAdsCreatedLabel => 'Ads created';
@@ -2137,6 +2484,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardTileTapToManageSubtitle => 'tap to manage';
+
+  @override
+  String get dashboardTileTapToViewSubtitle => 'tap to view';
 
   @override
   String get dashboardRangeSubtitleAll => 'all time';
@@ -2211,7 +2561,39 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t load your notifications.';
 
   @override
+  String get notificationsMarkAllReadLabel => 'Mark all read';
+
+  @override
+  String get notificationsMarkedAllReadToastMessage =>
+      'All notifications marked read';
+
+  @override
+  String get notificationsMarkAllReadPendingLabel => 'Marking all read';
+
+  @override
+  String get notificationsMarkAllReadErrorMessage =>
+      'Couldn\'t mark your notifications read.';
+
+  @override
   String get notificationsEmptyMessage => 'No notifications yet.';
+
+  @override
+  String get notificationsEmptyStateDetailMessage =>
+      'New leads, ad approvals and publish results show up here.';
+
+  @override
+  String get notificationsEmptyStateActionLabel => 'Refresh';
+
+  @override
+  String get notificationsAgentOnlyMessage =>
+      'Notifications are available to agents only.';
+
+  @override
+  String get notificationsSignInPromptMessage =>
+      'Sign in to see your notifications.';
+
+  @override
+  String get notificationsGoBackLabel => 'Go back';
 
   @override
   String notificationsUnreadSemanticsLabel(String title) {
@@ -2258,8 +2640,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messagesScreenTitle => 'Messages';
 
   @override
-  String get messagesComingSoonBanner =>
-      'Messaging is coming soon. For now, contact leads by phone.';
+  String get messagesComingSoonTitle => 'Messaging is coming soon';
+
+  @override
+  String get messagesComingSoonBody =>
+      'For now, contact leads by phone. Every lead card carries a tap-to-call number.';
+
+  @override
+  String get messagesOpenLeadsAction => 'Open Leads';
 
   @override
   String get connectedAccountsScreenTitle => 'Connected Accounts';
@@ -2268,10 +2656,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get connectedAccountsInstagramToggleTitle => 'Create Instagram post';
 
   @override
+  String get connectedAccountsInstagramToggleSubtitle =>
+      'Status — on when at least one account is linked';
+
+  @override
   String get connectedAccountsTelegramToggleTitle => 'Create Telegram post';
 
   @override
+  String get connectedAccountsTelegramToggleSubtitle =>
+      'Status — on when a channel is linked';
+
+  @override
   String get connectedAccountsYoutubeToggleTitle => 'Create Youtube post';
+
+  @override
+  String get connectedAccountsThreadsToggleTitle => 'Create Threads post';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceToggleTitle =>
+      'Create Facebook Marketplace post';
+
+  @override
+  String get connectedAccountsXToggleTitle => 'Create X post';
+
+  @override
+  String get connectedAccountsLinkedinToggleTitle => 'Create LinkedIn post';
 
   @override
   String get connectedAccountsInstagramLoadErrorMessage =>
@@ -2359,10 +2768,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'Beta — not available in this build.';
 
   @override
+  String get connectedAccountsThreadsUnavailableNoteMessage =>
+      'Threads posting needs a Threads profile linked to an Instagram professional account — this build never requests that permission.';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceUnavailableNoteMessage =>
+      'Facebook Marketplace has no compliant automation path on any platform — its listings have to be posted by hand.';
+
+  @override
+  String get connectedAccountsXUnavailableNoteMessage =>
+      'X posting needs its own X API app on a paid write tier — neither is set up in this build.';
+
+  @override
+  String get connectedAccountsLinkedinUnavailableNoteMessage =>
+      'LinkedIn posting needs an approved LinkedIn Marketing API app — this build has no LinkedIn credentials.';
+
+  @override
   String get connectedAccountsConnectedStatusLabel => 'Connected';
 
   @override
   String get connectedAccountsNotConnectedStatusLabel => 'Not connected';
+
+  @override
+  String get connectedAccountsInstagramBrowserHint =>
+      'Opens your system browser — Meta does not permit OAuth inside an in-app WebView.';
+
+  @override
+  String get connectedAccountsOtherChannelsHint =>
+      'OLX has no persistent account to connect — OLX cross-posting runs from the desktop app only.';
 
   @override
   String get leadsCommitFieldUppercaseLabel => 'COMMIT';
@@ -2372,4 +2805,100 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get languageSheetCloseLabel => 'Close';
+
+  @override
+  String get galleryPreviousPhotoSemanticsLabel => 'Previous photo';
+
+  @override
+  String get galleryNextPhotoSemanticsLabel => 'Next photo';
+
+  @override
+  String get contactPhoneFieldHint =>
+      'Uzbekistan numbers only — +998 and nine digits.';
+
+  @override
+  String get leadsPhoneFormatHint =>
+      'Uzbekistan numbers only — +998 and nine digits.';
+
+  @override
+  String get filterPriceAnyOptionLabel => 'Any price';
+
+  @override
+  String agentsAdsGridActiveCountLabel(int count) {
+    return '$count active';
+  }
+
+  @override
+  String get permissionsPrimerLeadBody =>
+      'Two permissions, asked once. You can change either of them later in Settings.';
+
+  @override
+  String get authLoginLeadBody =>
+      'Sign in to save listings, message agents, and manage your business.';
+
+  @override
+  String get authRegisterLeadBody =>
+      'Browsing, saving and messaging work on any account. A realtor account adds the Work tab — listings, leads and publishing.';
+
+  @override
+  String get authRegisterFullNameHint => 'Dilnoza Yusupova';
+
+  @override
+  String get authEmailHint => 'you@example.com';
+
+  @override
+  String get profileSignedOutContactUsRowSubtitle =>
+      'Questions, issues and suggestions';
+
+  @override
+  String get profileAgentEditProfileRowSubtitle => 'Avatar, name, phone, email';
+
+  @override
+  String get profileAgentConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get profileAgentSettingsRowSubtitle =>
+      'Language, notifications, about';
+
+  @override
+  String get profileAgentMessagesRowSubtitle => 'Coming soon';
+
+  @override
+  String get profileBuyerUpdateProfileRowSubtitle =>
+      'Name, phone, email, password';
+
+  @override
+  String get profileBuyerRegisterAsAgentRowSubtitle =>
+      'Opens a Google Form in your browser';
+
+  @override
+  String get settingsConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get settingsLogoutRowSubtitle => 'You will need to sign in again';
+
+  @override
+  String get editProfilePasswordHelper =>
+      'At least 6 characters. Only needed if you are changing it.';
+
+  @override
+  String get sharedLoadMoreLoadingLabel => 'Loading more…';
+
+  @override
+  String get leadsKanbanLongPressHint => 'Long-press a card to move it';
+
+  @override
+  String leadsCallBackFlagLabel(String when) {
+    return 'Call back $when';
+  }
+
+  @override
+  String get leadsOptionalFieldHint => 'Optional';
+
+  @override
+  String leadsMoveToContextLine(String name, String status) {
+    return '$name is in $status.';
+  }
 }

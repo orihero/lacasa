@@ -3,9 +3,16 @@
 // (see the README's former "Known gaps" entry) — every test below pumps
 // SearchScreen directly inside a themed MaterialApp + ProviderScope, with
 // searchRepositoryProvider/recentSearchesRepositoryProvider overridden to
-// fakes — no real network, no real keystore, no coupling to the bundled
-// fixtures being unchanged. Same shape as home_feed_screen_test.dart and
-// saved_listings_screen_test.dart.
+// fakes — no real network, no real keystore. Same shape as
+// home_feed_screen_test.dart and saved_listings_screen_test.dart.
+//
+// Everything *else* the screen reaches (the filter sheet's count preview and
+// its region vocabulary, the favourite store) is pinned by
+// `ambientRepositoryOverrides` from test/support/: the bundled fixture
+// repositories are deleted and every provider now builds a live
+// implementation around `LaCasaApi.create()`, so an un-overridden provider
+// fires real HTTP out of the test process and hangs until pumpAndSettle
+// times out.
 //
 // The two tests that actually navigate (map toggle handoff, listing
 // tap-through) build a small stub GoRouter instead of the bare MaterialApp,
@@ -20,6 +27,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
+import 'package:lacasa_mobile/features/filter/state/regions_repository_provider.dart';
+import 'package:lacasa_mobile/features/map_view/map_view_args.dart';
 import 'package:lacasa_mobile/features/search/search.dart';
 import 'package:lacasa_mobile/features/search/state/recent_searches_repository_provider.dart';
 import 'package:lacasa_mobile/features/search/state/search_providers.dart';
@@ -29,8 +38,11 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
+import '../../support/ambient_repository_overrides.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
+import '../filter/support/fake_regions_data.dart';
 import 'support/fake_recent_searches_repository.dart';
+import 'support/fake_regions_repository.dart';
 import 'support/fake_search_repository.dart';
 import 'support/search_test_ads.dart';
 
@@ -59,9 +71,23 @@ void main() {
       // after Retry" assertions stay exact.
       retry: (retryCount, error) => null,
       overrides: [
+        // Everything this screen touches incidentally — the filter sheet's
+        // count preview, the favourite heart's backing store, whatever the
+        // shell reaches — answered inertly and off the network. The four
+        // providers this file supplies itself are switched off below,
+        // because Riverpod rejects a duplicate override outright.
+        ...ambientRepositoryOverrides(
+          favourites: false,
+          recentSearches: false,
+          regions: false,
+          search: false,
+        ),
         searchRepositoryProvider.overrideWithValue(repository),
         recentSearchesRepositoryProvider.overrideWithValue(
           recentsRepository ?? FakeRecentSearchesRepository(),
+        ),
+        regionsRepositoryProvider.overrideWithValue(
+          FakeRegionsRepository(testRegionsData),
         ),
         favouriteAdIdsRepositoryProvider.overrideWithValue(
           FakeFavouriteAdIdsRepository(),
@@ -92,9 +118,18 @@ void main() {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
       overrides: [
+        ...ambientRepositoryOverrides(
+          favourites: false,
+          recentSearches: false,
+          regions: false,
+          search: false,
+        ),
         searchRepositoryProvider.overrideWithValue(repository),
         recentSearchesRepositoryProvider.overrideWithValue(
           recentsRepository ?? FakeRecentSearchesRepository(),
+        ),
+        regionsRepositoryProvider.overrideWithValue(
+          FakeRegionsRepository(testRegionsData),
         ),
         favouriteAdIdsRepositoryProvider.overrideWithValue(
           FakeFavouriteAdIdsRepository(),
@@ -121,7 +156,12 @@ void main() {
         GoRoute(
           path: RoutePaths.mapView,
           builder: (context, state) {
-            final ads = (state.extra as List<Ad>?) ?? const <Ad>[];
+            // `_openMap` sends a `MapViewArgs`, not a bare `List<Ad>` — the
+            // real `map-view` route needs the branch prefix and the
+            // single-listing `focusAd` mode alongside the snapshot (see
+            // `map_view_args.dart`). Only the snapshot matters here; the
+            // assertions below are about *which ads* the handoff carries.
+            final ads = (state.extra as MapViewArgs?)?.ads ?? const <Ad>[];
             return Scaffold(
               body: Text(
                 'map-stub-${ads.length}-${ads.map((ad) => ad.id).join(",")}',
@@ -151,10 +191,12 @@ void main() {
   /// `filterOption-<value>` row inside it. Same shape as
   /// `filter_sheet_buyer_test.dart`'s own `selectPickerOption` — reused here
   /// rather than reinvented, per that file's doc comment on why City moved
-  /// off `TextField`. This screen's default (non-live) `filterRepositoryProvider`
-  /// / `regionsRepositoryProvider` wiring already serves
-  /// `filter_regions_fixtures.dart`'s bundled single region ('Tashkent') with
-  /// no override needed here, same as `filter_sheet_buyer_test.dart`.
+  /// off `TextField`. The vocabulary the picker offers comes from the
+  /// `FakeRegionsRepository(testRegionsData)` override the pump helpers
+  /// install: `regionsRepositoryProvider` builds the live repository
+  /// unconditionally now (the bundled `filter_regions_fixtures.dart` and the
+  /// `FLUTTER_TEST` switch that used to force it are gone), and the ambient
+  /// stand-in serves an empty vocabulary with nothing to pick.
   Future<void> selectCity(WidgetTester tester, String value) async {
     final field = find.byKey(const ValueKey('filterField-city'));
     await tester.ensureVisible(field);
@@ -452,9 +494,18 @@ void main() {
         final container = ProviderContainer(
           retry: (retryCount, error) => null,
           overrides: [
+            ...ambientRepositoryOverrides(
+              favourites: false,
+              recentSearches: false,
+              regions: false,
+              search: false,
+            ),
             searchRepositoryProvider.overrideWithValue(repo),
             recentSearchesRepositoryProvider.overrideWithValue(
               FakeRecentSearchesRepository(),
+            ),
+            regionsRepositoryProvider.overrideWithValue(
+              FakeRegionsRepository(testRegionsData),
             ),
             favouriteAdIdsRepositoryProvider.overrideWithValue(
               FakeFavouriteAdIdsRepository(),
@@ -481,7 +532,7 @@ void main() {
 
         expect(find.byType(ShimmerBox), findsWidgets);
         expect(find.text('Retry'), findsNothing);
-        expect(find.text('No listings found.'), findsNothing);
+        expect(find.text('No listings match your search.'), findsNothing);
 
         gate.complete();
         await tester.pumpAndSettle();
@@ -490,33 +541,208 @@ void main() {
     );
 
     testWidgets(
-      'empty: shows the SCREENS.md-corrected "No listings found." copy',
+      'empty with no filters applied: shows §4\'s own "No listings match '
+      'your search." copy and offers nothing to clear',
       (tester) async {
         await pumpSearchScreen(
           tester,
           repository: FakeSearchRepository(ads: const []),
         );
 
-        expect(find.text('No listings found.'), findsOneWidget);
+        // SCREENS.md §4 names this screen's own empty-state copy, so it wins
+        // over §1's convention (3) — that convention corrects the web app's
+        // misspelled "Not fount post" to "No listings found", which is what
+        // §10's Ads List still shows (agent_profile_screen_test.dart). Same
+        // sentence as map-view's mapNoResultsMessage, which is the same
+        // search rendered on a map.
+        expect(find.text('No listings match your search.'), findsOneWidget);
+        // Nothing was filtered out, so there is nothing to clear — offering
+        // the action here would be an exit from a door the user never
+        // walked through.
+        expect(find.text('Clear filters'), findsNothing);
       },
     );
 
-    testWidgets('a failed fetch offers Retry, which re-fetches', (
-      tester,
-    ) async {
+    testWidgets(
+      'empty with filters applied: says so, and Clear filters re-fetches '
+      'without them',
+      (tester) async {
+        final repo = FakeSearchRepository(
+          ads: [
+            searchAd(
+              id: 'ad-1',
+              title: 'Bright flat in Chilonzor',
+              city: 'Tashkent',
+              district: 'Chilonzor',
+            ),
+          ],
+        );
+        final container = await pumpSearchScreen(tester, repository: repo);
+
+        // A query the buyer can see in the field, plus a filter set that
+        // matches nothing — the exact shape of "you filtered yourself out
+        // of a market that has what you want".
+        await tester.enterText(
+          find.byKey(const ValueKey('searchInputField')),
+          'chilonzor',
+        );
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+        expect(find.text('Bright flat in Chilonzor'), findsOneWidget);
+
+        container
+            .read(appliedSearchFiltersProvider.notifier)
+            .apply(const AdFilters(city: 'Samarkand'));
+        await tester.pumpAndSettle();
+
+        // Not §4's sentence: the market is not empty, this buyer's filter
+        // set is.
+        expect(find.text('No listings match your filters.'), findsOneWidget);
+        expect(find.text('No listings match your search.'), findsNothing);
+
+        await tester.tap(find.text('Clear filters'));
+        await tester.pumpAndSettle();
+
+        expect(container.read(activeFilterCountProvider), 0);
+        expect(find.text('Bright flat in Chilonzor'), findsOneWidget);
+        // The query is a separately visible affordance — the word is still
+        // sitting in the search field — so clearing filters must not
+        // silently empty it too.
+        expect(container.read(searchQueryProvider), 'chilonzor');
+        expect(
+          tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+          'chilonzor',
+        );
+      },
+    );
+
+    testWidgets(
+      'a failed fetch with no connection names the connection, not the '
+      'screen, and Retry re-fetches',
+      (tester) async {
+        final repo = FakeSearchRepository(
+          error: const NetworkException('offline'),
+        );
+        await pumpSearchScreen(tester, repository: repo);
+
+        // Was "Couldn't load listings." — one of a dozen identical anonymous
+        // per-screen sentences an offline app used to fragment into. See
+        // `lib/shared/widgets/read_error.dart`.
+        expect(
+          find.text('No connection. Check your network and try again.'),
+          findsOneWidget,
+        );
+        expect(find.text("Couldn't load listings."), findsNothing);
+        expect(repo.fetchCallCount, 1);
+
+        await tester.tap(find.text('Retry'));
+        await tester.pumpAndSettle();
+
+        expect(repo.fetchCallCount, 2);
+      },
+    );
+
+    testWidgets(
+      'Retry swaps the error card for the skeleton while the refetch is in '
+      'flight',
+      (tester) async {
+        final repo = FakeSearchRepository(
+          error: const NetworkException('offline'),
+          ads: [searchAd(id: 'ad-1', title: 'Bright flat in Chilonzor')],
+        );
+        await pumpSearchScreen(tester, repository: repo);
+        expect(
+          find.byKey(const ValueKey('searchResultsErrorState')),
+          findsOneWidget,
+        );
+
+        // Let the retry succeed, but hold it open so the in-flight frame can
+        // actually be inspected. `ref.invalidate` is a *refresh*, not a
+        // reload, so the state during this window is an `AsyncError` that
+        // merely reports `isLoading: true` — `when`'s `loading:` branch is
+        // skipped for it (skipLoadingOnRefresh defaults to true). Before the
+        // error branch checked `isLoading` itself, this whole window
+        // re-rendered the identical error card and the tap looked dead.
+        final gate = Completer<void>();
+        repo.error = null;
+        repo.hold = gate;
+
+        await tester.tap(find.text('Retry'));
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('searchResultsErrorState')),
+          findsNothing,
+        );
+        expect(find.byType(ShimmerBox), findsWidgets);
+
+        // Not settling until the gate opens: ShimmerBox animates forever.
+        gate.complete();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ShimmerBox), findsNothing);
+        expect(find.text('Bright flat in Chilonzor'), findsOneWidget);
+        expect(repo.fetchCallCount, 2);
+      },
+    );
+
+    testWidgets(
+      'a failure that did reach the server keeps this screen\'s own copy',
+      (tester) async {
+        // Not a NetworkException: the request got an answer, it was just a
+        // bad one. "Which screen failed" really is the most specific thing
+        // the app knows here, so the per-screen string stays.
+        final repo = FakeSearchRepository(error: Exception('boom'));
+        await pumpSearchScreen(tester, repository: repo);
+
+        expect(find.text("Couldn't load listings."), findsOneWidget);
+        expect(
+          find.text('No connection. Check your network and try again.'),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets('pull-to-refresh re-runs the current search', (tester) async {
       final repo = FakeSearchRepository(
-        error: const NetworkException('offline'),
+        ads: [searchAd(id: 'ad-1', title: 'Bright flat in Chilonzor')],
       );
       await pumpSearchScreen(tester, repository: repo);
-
-      expect(find.text("Couldn't load listings."), findsOneWidget);
       expect(repo.fetchCallCount, 1);
 
-      await tester.tap(find.text('Retry'));
+      await tester.fling(
+        find.byType(CustomScrollView),
+        const Offset(0, 250),
+        1000,
+      );
       await tester.pumpAndSettle();
 
+      // Nothing else on this screen re-runs a search whose inputs haven't
+      // changed, so without this gesture a listing that went live a minute
+      // ago is unreachable.
       expect(repo.fetchCallCount, 2);
     });
+
+    testWidgets(
+      'the pull gesture still works when the results are empty',
+      (tester) async {
+        // The moment a user is most likely to pull is the moment the
+        // scroller is too short to overscroll by default — hence
+        // `AlwaysScrollableScrollPhysics` on the CustomScrollView.
+        final repo = FakeSearchRepository(ads: const []);
+        await pumpSearchScreen(tester, repository: repo);
+        expect(repo.fetchCallCount, 1);
+
+        await tester.fling(
+          find.byType(CustomScrollView),
+          const Offset(0, 250),
+          1000,
+        );
+        await tester.pumpAndSettle();
+
+        expect(repo.fetchCallCount, 2);
+      },
+    );
   });
 
   group('sort control — server-side sort (search_providers.dart documents)', () {
@@ -654,18 +880,33 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('filterSheet-apply')));
         await tester.pumpAndSettle();
 
-        // Re-fetched against the newly-applied filters — Furniture/Repair
-        // carry their SCREENS.md §3.5 stated defaults too, since the sheet
-        // seeds them whenever the incoming value was null (see
-        // `filter_sheet.dart#_seedDefaults`).
+        // Re-fetched against the newly-applied filters, and against *only*
+        // those: a fresh open of the sheet now pre-selects nothing, so the
+        // outgoing filter set carries exactly what this test tapped — City
+        // — and Furniture/Repair stay null because the buyer never touched
+        // them. (The sheet used to seed SCREENS.md §3.5's stated defaults
+        // into any null Furniture/Repair on open, which meant opening
+        // Filters to set one field silently applied two more; see
+        // `filter_sheet_buyer_test.dart`'s "a fresh open pre-selects
+        // nothing" regression test for the full rationale.)
         expect(repo.fetchCallCount, 2);
         expect(repo.lastFilters?.city, 'Tashkent');
-        expect(repo.lastFilters?.furniture, Furniture.withFurniture);
-        expect(repo.lastFilters?.repairment, Repairment.notRepaired);
+        expect(repo.lastFilters?.furniture, isNull);
+        expect(repo.lastFilters?.repairment, isNull);
 
-        // The toolbar badge previews the resulting active-filter count.
+        // The toolbar badge previews the resulting active-filter count —
+        // one, for the single field the buyer actually chose.
         expect(find.byKey(const ValueKey('filtersBadge')), findsOneWidget);
-        expect(find.text('3'), findsOneWidget);
+        // Scoped to the badge rather than searched screen-wide: "1" is a
+        // short enough string that an unscoped `find.text` would be one
+        // stray digit in a card away from matching something else.
+        expect(
+          find.descendant(
+            of: find.byKey(const ValueKey('filtersBadge')),
+            matching: find.text('1'),
+          ),
+          findsOneWidget,
+        );
       },
     );
 

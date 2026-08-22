@@ -48,10 +48,7 @@ List<ChoiceOption<Repairment>> _repairOptions(AppLocalizations l10n) => [
 ];
 
 List<ChoiceOption<Furniture>> _furnitureOptions(AppLocalizations l10n) => [
-  ChoiceOption(
-    Furniture.withFurniture,
-    l10n.listingEditorFurnitureWithOption,
-  ),
+  ChoiceOption(Furniture.withFurniture, l10n.listingEditorFurnitureWithOption),
   ChoiceOption(
     Furniture.withoutFurniture,
     l10n.listingEditorFurnitureWithoutOption,
@@ -136,7 +133,7 @@ class DetailsStep extends StatelessWidget {
                 onChanged: onChanged,
               ),
             ),
-            const SizedBox(width: AppSpacing.base),
+            const SizedBox(width: kListingFieldPairGap),
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-area'),
@@ -167,7 +164,7 @@ class DetailsStep extends StatelessWidget {
                 onChanged: onChanged,
               ),
             ),
-            const SizedBox(width: AppSpacing.base),
+            const SizedBox(width: kListingFieldPairGap),
             Expanded(
               child: ListingTextField(
                 key: const ValueKey('listingField-floors'),
@@ -203,30 +200,44 @@ class DetailsStep extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        ListingTextField(
-          key: const ValueKey('listingField-price'),
-          label: l10n.listingEditorPriceFieldLabel,
-          controller: fields.price,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+        // `.two` again — Price and Price type share one row, and the live
+        // preview `.hint` sits *below* the pair, not between the two
+        // fields (mockup line 2823).
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ListingTextField(
+                key: const ValueKey('listingField-price'),
+                label: l10n.listingEditorPriceFieldLabel,
+                controller: fields.price,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                onChanged: onChanged,
+              ),
+            ),
+            const SizedBox(width: kListingFieldPairGap),
+            Expanded(
+              child: ChoiceChipGroup<CurrencyCode>(
+                label: l10n.listingEditorPriceTypeFieldLabel,
+                keyPrefix: 'listingPriceType',
+                options: _priceTypeOptions(l10n),
+                selected: fields.priceType,
+                allowDeselect: false,
+                onChanged: (v) {
+                  fields.priceType = v!;
+                  onChanged();
+                },
+              ),
+            ),
           ],
-          onChanged: onChanged,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpacing.sm),
         _PricePreview(fields: fields),
-        const SizedBox(height: AppSpacing.lg),
-        ChoiceChipGroup<CurrencyCode>(
-          label: l10n.listingEditorPriceTypeFieldLabel,
-          keyPrefix: 'listingPriceType',
-          options: _priceTypeOptions(l10n),
-          selected: fields.priceType,
-          allowDeselect: false,
-          onChanged: (v) {
-            fields.priceType = v!;
-            onChanged();
-          },
-        ),
         const SizedBox(height: AppSpacing.lg),
         ChoiceChipGroup<AdStage>(
           label: l10n.listingEditorStatusFieldLabel,
@@ -253,7 +264,6 @@ class DetailsStep extends StatelessWidget {
         ListingTextField(
           key: const ValueKey('listingField-description'),
           label: l10n.listingEditorDescriptionFieldLabel,
-          required: true,
           controller: fields.description,
           errorText: fields.descriptionError,
           maxLines: 5,

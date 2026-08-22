@@ -17,11 +17,16 @@
  *  2. Promoting to admin gets the strongest wording on the screen. Every other
  *     transition on this list is undone by making the opposite one; granting
  *     admin hands the recipient the power to make that reversal impossible.
+ *
+ * Every function takes `t` first, matching every resolver in @/lib/labels: the
+ * sentences are user-facing copy and this app ships in en/ru/uz, so the
+ * branches choose an i18n KEY rather than an English string.
  */
+import type { TFunction } from "i18next";
 import type { AdminUserRow } from "@lacasa/api-client";
 import type { UserRoleKey } from "@lacasa/domain";
 import { formatCount } from "@/lib/format";
-import { USER_ROLE_LABEL } from "@/lib/labels";
+import { userRoleLabel } from "@/lib/labels";
 
 export function isAdminGrant(currentRole: UserRoleKey, nextRole: UserRoleKey): boolean {
   return nextRole === "admin" && currentRole !== "admin";
@@ -37,14 +42,22 @@ export function isAdminRevoke(currentRole: UserRoleKey, nextRole: UserRoleKey): 
  * against the row they clicked. Returns null when the account owns neither,
  * because "0 ads and 0 leads stay put" is noise in a sentence that exists only
  * to reassure someone about data they can see.
+ *
+ * Singular/plural is per-number and independent (`1 ad and 12 leads`), and the
+ * nouns are their own keys rather than i18next plural forms: the numbers are
+ * already formatted by `formatCount` ("1,284"), so nothing here can be handed
+ * to i18next's `count` selector.
  */
-function ownedClause(counts: AdminUserRow["counts"] | undefined): string | null {
+function ownedClause(t: TFunction, counts: AdminUserRow["counts"] | undefined): string | null {
   const ads = counts?.ads ?? 0;
   const leads = counts?.leads ?? 0;
   if (!ads && !leads) return null;
-  return `${formatCount(ads)} ${ads === 1 ? "ad" : "ads"} and ${formatCount(leads)} ${
-    leads === 1 ? "lead" : "leads"
-  }`;
+  return t("ownedClause", {
+    ads: formatCount(ads),
+    adsNoun: ads === 1 ? t("nounAd") : t("nounAds"),
+    leads: formatCount(leads),
+    leadsNoun: leads === 1 ? t("nounLead") : t("nounLeads"),
+  });
 }
 
 /**
@@ -52,61 +65,60 @@ function ownedClause(counts: AdminUserRow["counts"] | undefined): string | null 
  * `user.role` is the role the row was loaded with, which is exactly what the
  * admin is deciding against — if it has since changed under them the server's
  * own re-read inside the transaction is what settles it.
+ *
+ * The branch order is load-bearing: the no-op check comes first, then the two
+ * admin transitions, so `admin -> coworker` is an admin REVOKE rather than a
+ * coworker promotion.
  */
-export function roleChangeConsequence(user: AdminUserRow, nextRole: UserRoleKey): string {
+export function roleChangeConsequence(
+  t: TFunction,
+  user: AdminUserRow,
+  nextRole: UserRoleKey,
+): string {
   const name = user.fullName;
 
   if (nextRole === user.role) {
-    return `${name} already holds the ${USER_ROLE_LABEL[user.role]} role. Choose a different role to make a change.`;
+    return t("roleConsequenceUnchanged", { name, role: userRoleLabel(t, user.role) });
   }
 
   if (isAdminGrant(user.role, nextRole)) {
-    return (
-      `Admin is the widest role on the platform. ${name} will be able to change anyone's role — including yours — approve or reject any realtor application, and read every account, ad and lead in the control room. ` +
-      `Nothing here can take that back except another role change made from an admin session, and the server refuses even that once they are the only admin left. Grant this only to someone who already has that authority off-screen.`
-    );
+    return t("roleConsequenceAdminGrant", { name });
   }
 
   if (isAdminRevoke(user.role, nextRole)) {
-    return (
-      `${name} loses control-room access on their next request: no applications, no users, no audit log. ` +
-      `The server refuses this if they are the last admin account, and refuses it outright if ${name} is you.`
-    );
+    return t("roleConsequenceAdminRevoke", { name });
   }
 
-  const owned = ownedClause(user.counts);
-
   if (nextRole === "coworker") {
-    return (
-      `${name} will act inside their owning agent's data instead of their own — the same leads and listings that agent sees. ` +
-      `The server refuses this unless an agent has already invited the account, because a coworker with no agent behind it can reach the Work tab and see nothing.`
-    );
+    return t("roleConsequenceCoworker", { name });
   }
 
   if (nextRole === "agent") {
-    return (
-      `${name} will be able to post listings and work leads under their own name. ` +
-      `Their realtor application is left exactly as it stands — approving an application is the separate action on the Applications screen, and this does not stand in for it.`
-    );
+    return t("roleConsequenceAgent", { name });
   }
 
   // nextRole === "user": the buyer role, which is the only demotion that can
   // strand data behind it.
+  const owned = ownedClause(t, user.counts);
   return owned
-    ? `${name} loses the Work tab. Nothing is deleted: the ${owned} on this account stay exactly where they are, owned by someone who can no longer manage them.`
-    : `${name} loses the Work tab and keeps only the buyer side of the app.`;
+    ? t("roleConsequenceBuyerOwned", { name, owned })
+    : t("roleConsequenceBuyer", { name });
 }
 
 /**
- * The confirm button's own words. "Change role" everywhere except the admin
- * transitions, where the label names the power being handed over or taken
- * away — the last thing read before the click should not be a verb that fits
- * any of the four options equally.
+ * The confirm button's own words. "Change to {Role}" everywhere except the
+ * admin transitions, where the label names the power being handed over or
+ * taken away — the last thing read before the click should not be a verb that
+ * fits any of the four options equally.
  */
-export function roleChangeConfirmLabel(currentRole: UserRoleKey, nextRole: UserRoleKey): string {
-  if (isAdminGrant(currentRole, nextRole)) return "Grant admin access";
-  if (isAdminRevoke(currentRole, nextRole)) return "Remove admin access";
-  return `Change to ${USER_ROLE_LABEL[nextRole]}`;
+export function roleChangeConfirmLabel(
+  t: TFunction,
+  currentRole: UserRoleKey,
+  nextRole: UserRoleKey,
+): string {
+  if (isAdminGrant(currentRole, nextRole)) return t("confirmGrantAdmin");
+  if (isAdminRevoke(currentRole, nextRole)) return t("confirmRemoveAdmin");
+  return t("confirmChangeToRole", { role: userRoleLabel(t, nextRole) });
 }
 
 /**
@@ -142,19 +154,19 @@ function errorCode(error: unknown): string | null {
  * a house phrase: this is an internal tool, and "connect ECONNREFUSED" is more
  * actionable to the person reading it than "something went wrong".
  */
-export function roleChangeErrorMessage(error: unknown): string {
+export function roleChangeErrorMessage(t: TFunction, error: unknown): string {
   switch (errorCode(error)) {
     case "self_demotion":
-      return "You cannot remove your own admin access. Ask another admin to do it for you.";
+      return t("errorSelfDemotion");
     case "last_admin":
-      return "This is the only admin account left. Promote someone else to admin first, then come back and demote this one.";
+      return t("errorLastAdmin");
     case "coworker_needs_agent":
-      return "A coworker must belong to an agent. Nobody has invited this account to an agency yet, and there is no way to assign one from here — the agent adds them from their own Coworkers screen.";
+      return t("errorCoworkerNeedsAgent");
     case "not_found":
-      return "This account no longer exists. Close this and reload the directory.";
+      return t("errorNotFound");
     default:
       break;
   }
   if (error instanceof Error && error.message) return error.message;
-  return "The role change did not go through.";
+  return t("errorRoleChangeFailed");
 }

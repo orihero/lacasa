@@ -1,0 +1,81 @@
+// Field / Input / Select / SearchInput — apps/web's filter-bar geometry.
+@import "../responsive.scss";
+
+.field {
+  display: flex;
+  flex-direction: column;
+
+  .field__label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  // `.filter .item label { font-size: 10px; }`
+  .field__label-text {
+    font-size: 10px;
+    color: #2b2d42;
+  }
+
+  .field__hint {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #8d99ae;
+  }
+}
+
+// `.filter .item input, select { padding: 10px; border: 1px solid #e0e0e0;
+// border-radius: 5px; font-size: 14px; }` plus the focus border every input in
+// apps/web takes: `input:focus { border: 1px solid #fece51; }`.
+.field__control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #2b2d42;
+  background-color: #ffffff;
+  outline: none;
+
+  &:focus {
+    border: 1px solid #fece51;
+  }
+
+  &:disabled {
+    background-color: #f5f6fa;
+    color: #8d99ae;
+  }
+}
+
+.field__control--select {
+  // Native caret, native dropdown — see Field.tsx.
+  cursor: pointer;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  background-color: #ffffff;
+  color: #8d99ae;
+
+  // The ring lives on the wrapper so the box and the magnifier light up
+  // together — the input inside has no border of its own to light up.
+  &:focus-within {
+    border: 1px solid #fece51;
+  }
+
+  .search-input__control {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #2b2d42;
+  }
+}

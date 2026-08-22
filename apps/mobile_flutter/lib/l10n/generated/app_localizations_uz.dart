@@ -98,6 +98,11 @@ class AppLocalizationsUz extends AppLocalizations {
   String get homeCategoryRetailLabel => 'Savdo maydoni';
 
   @override
+  String homeCategoryChipSemanticsLabel(String category) {
+    return '$category e\'lonlarini ko\'rsatish';
+  }
+
+  @override
   String get homeExploreNearbySectionTitle => 'Yaqin atrofda';
 
   @override
@@ -111,6 +116,10 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get homeFeedEmptyMessage => 'Hozircha e\'lonlar mavjud emas.';
+
+  @override
+  String get homeFeedCategoryEmptyMessage =>
+      'Bu toifada hozircha e\'lonlar yo\'q.';
 
   @override
   String get homePromoOneTitle => 'Bitta post,\nHar bir kanalda';
@@ -145,22 +154,30 @@ class AppLocalizationsUz extends AppLocalizations {
   }
 
   @override
+  String homeAgentRatingCaption(String rating, int count) {
+    return '★ $rating ($count)';
+  }
+
+  @override
   String get homeTopDistrictsSectionTitle => 'Top tumanlar';
 
   @override
   String get homeTopDistrictsExploreLinkLabel => 'Ko\'rish';
 
   @override
-  String get homeDistrictChilonzorName => 'Chilonzor';
+  String homeDistrictListingsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta e\'lon',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get homeDistrictYunusobodName => 'Yunusobod';
-
-  @override
-  String get homeDistrictSergeliName => 'Sergeli';
-
-  @override
-  String get homeDistrictMirobodName => 'Mirobod';
+  String homeDistrictTapSemanticsLabel(String district) {
+    return '$district tumanidagi e\'lonlarni ko\'rsatish';
+  }
 
   @override
   String get searchScreenTitle => 'Qidiruv';
@@ -188,7 +205,12 @@ class AppLocalizationsUz extends AppLocalizations {
   String get searchResultsRetryMessage => 'E\'lonlarni yuklab bo\'lmadi.';
 
   @override
-  String get searchResultsEmptyMessage => 'E\'lonlar topilmadi.';
+  String get searchResultsEmptyMessage =>
+      'Qidiruvingizga mos e\'lon topilmadi.';
+
+  @override
+  String get searchResultsFilteredEmptyMessage =>
+      'Filtrlaringizga mos e\'lon topilmadi.';
 
   @override
   String get searchRecentSearchesSectionTitle => 'So\'nggi qidiruvlar';
@@ -198,6 +220,9 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get filterSheetTitle => 'Filtrlar';
+
+  @override
+  String get filterSheetCloseLabel => 'Yopish';
 
   @override
   String get filterCountErrorMessage =>
@@ -326,6 +351,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get filterStoreyFieldLabel => 'Qavat';
 
   @override
+  String get listingOverviewSectionTitle => 'Umumiy ma\'lumot';
+
+  @override
   String get listingDescriptionSectionTitle => 'Tavsif';
 
   @override
@@ -384,6 +412,9 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get listingNavShareSemanticsLabel => 'Ulashish';
+
+  @override
+  String get listingHeroVideoBadgeLabel => 'Video';
 
   @override
   String get listingLinkCopiedToastMessage =>
@@ -477,6 +508,13 @@ class AppLocalizationsUz extends AppLocalizations {
       'Bu media turini ko\'rib chiqib bo\'lmaydi.';
 
   @override
+  String get galleryOpenVideoExternallyLabel => 'Videoni ochish';
+
+  @override
+  String get galleryVideoLinkCopiedToastMessage =>
+      'Videoni ochib bo\'lmadi — havola nusxalandi. Ko\'rish uchun uni brauzerga joylashtiring.';
+
+  @override
   String galleryPositionSemanticsLabel(int current, int total) {
     return 'Galereyadagi o\'rni: $total tadan $current';
   }
@@ -504,14 +542,22 @@ class AppLocalizationsUz extends AppLocalizations {
   String get mapShowListSemanticsLabel => 'Ro\'yxatni ko\'rsatish';
 
   @override
-  String mapPinnedAllCountLabel(int count) {
-    return 'Xaritada $count ta';
-  }
-
-  @override
   String mapPinnedPartialCountLabel(int pinned, int total) {
     return 'Xaritada $total tadan $pinned';
   }
+
+  @override
+  String mapPartialResultsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Dastlabki $count ta e\'lon ko\'rsatilmoqda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mapUpdatingResultsLabel => 'Yangilanmoqda…';
 
   @override
   String get mapFiltersButtonLabel => 'Filtrlar';
@@ -597,8 +643,8 @@ class AppLocalizationsUz extends AppLocalizations {
   String get sharedNoReviewsYetLabel => 'Hali sharhlar yo\'q';
 
   @override
-  String sharedRatingLabel(String rating, int count) {
-    return 'Sharh: $rating/5 ($count)';
+  String sharedRatingLabel(String rating) {
+    return 'Sharh: $rating/5';
   }
 
   @override
@@ -630,19 +676,24 @@ class AppLocalizationsUz extends AppLocalizations {
   String get sharedLeadStatusAcceptedLabel => 'Qabul qilingan';
 
   @override
-  String get sharedPublishStatusPendingLabel => 'E\'lon qilinmagan';
+  String get sharedPublishStatusPendingLabel => 'PENDING';
 
   @override
-  String get sharedPublishStatusAwaitingReviewLabel => 'Ko\'rib chiqilmoqda';
+  String get sharedPublishStatusAwaitingReviewLabel =>
+      'DRAFTED_AWAITING_REVIEW';
 
   @override
-  String get sharedPublishStatusPublishedLabel => 'E\'lon qilindi';
+  String get sharedPublishStatusPublishedLabel => 'PUBLISHED';
 
   @override
-  String get sharedPublishStatusFailedLabel => 'Xatolik';
+  String get sharedPublishStatusFailedLabel => 'FAILED';
 
   @override
   String get sharedGenericErrorMessage => 'Nimadir xato ketdi.';
+
+  @override
+  String get sharedOfflineErrorMessage =>
+      'Internet aloqasi yo\'q. Tarmog\'ingizni tekshirib, qaytadan urinib ko\'ring.';
 
   @override
   String get sharedShowPasswordLabel => 'Parolni ko\'rsatish';
@@ -678,8 +729,28 @@ class AppLocalizationsUz extends AppLocalizations {
       'Sevimlilarni yangilab bo\'lmadi';
 
   @override
+  String get sharedFavouriteAddSemanticsLabel => 'Sevimlilarga qo\'shish';
+
+  @override
+  String get sharedFavouriteRemoveSemanticsLabel =>
+      'Sevimlilardan olib tashlash';
+
+  @override
+  String get sharedSignInToSaveMessage =>
+      'E\'lonlarni saqlash uchun tizimga kiring';
+
+  @override
+  String get sharedSignInActionLabel => 'Kirish';
+
+  @override
+  String get sharedClearFiltersActionLabel => 'Filtrlarni tozalash';
+
+  @override
   String get sharedLoadMoreFailedLabel =>
       'Ko\'proq yuklab bo\'lmadi — Qayta urinish';
+
+  @override
+  String get sharedLoadMoreLabel => 'Yana yuklash';
 
   @override
   String get sharedRetryLabel => 'Qayta urinish';
@@ -701,6 +772,9 @@ class AppLocalizationsUz extends AppLocalizations {
   }
 
   @override
+  String get sharedPricePerMonthSuffix => '/oyiga';
+
+  @override
   String get navTabHomeLabel => 'Bosh sahifa';
 
   @override
@@ -708,6 +782,18 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get navTabWorkLabel => 'Ish';
+
+  @override
+  String get navTabDashboardLabel => 'Statistika';
+
+  @override
+  String get navTabMyAdsLabel => 'E\'lonlarim';
+
+  @override
+  String get navTabLeadsLabel => 'Lidlar';
+
+  @override
+  String get navTabCoworkersLabel => 'Hamkasblar';
 
   @override
   String get navTabAgentsLabel => 'Rieltorlar';
@@ -813,6 +899,10 @@ class AppLocalizationsUz extends AppLocalizations {
   String get listingEditorWizardCreateLabel => 'Yaratish';
 
   @override
+  String get listingEditorWizardDisabledReasonMessage =>
+      'Davom etish uchun majburiy maydonlarni to\'ldiring.';
+
+  @override
   String get listingEditorStepBasicsLabel => 'Asosiy';
 
   @override
@@ -825,12 +915,37 @@ class AppLocalizationsUz extends AppLocalizations {
   String get listingEditorStepPublishLabel => 'E\'lon qilish';
 
   @override
+  String listingEditorStepGoToSemanticsLabel(String step) {
+    return '$step bosqichiga o\'tish';
+  }
+
+  @override
   String get listingEditorCreatePublishNoticeMessage =>
       'E\'lon qilish ushbu e\'lon yaratilgandan so\'ng mavjud bo\'ladi — \"Yaratish\"ni bosing, so\'ngra e\'lonning tahrirlash ekranidagi har bir kanal uchun tugmalardan foydalaning.';
 
   @override
+  String get listingEditorSummaryCardTitle => 'Qisqacha ma\'lumot';
+
+  @override
+  String listingEditorSummaryPhotosCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta fotosurat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get listingEditorSummaryNotSetLabel => 'Kiritilmagan';
+
+  @override
   String get listingEditorPendingUploadsMessage =>
       'Fotosurat/video yuklanib bo\'lguncha kuting.';
+
+  @override
+  String get listingEditorFailedUploadsMessage =>
+      'Ba\'zi fotosurat/video yuklanmadi. Saqlashdan oldin ularni o\'chirib, qaytadan qo\'shing.';
 
   @override
   String get listingEditorCreatePendingLabel => 'Yaratilmoqda';
@@ -1023,6 +1138,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get listingEditorAddVideoButtonLabel => 'Video qo\'shish';
 
   @override
+  String get listingEditorAddVideoOptionalHint => 'Ixtiyoriy · 70 MB gacha';
+
+  @override
   String get listingEditorMediaLimitsHint =>
       '5 tagacha rasm (har biri 5MB gacha). Ixtiyoriy bitta video, 70MB gacha.';
 
@@ -1048,6 +1166,9 @@ class AppLocalizationsUz extends AppLocalizations {
   }
 
   @override
+  String get listingEditorRetryUploadLabel => 'Qayta yuklash';
+
+  @override
   String get listingEditorPublishSectionLabel => 'E\'lon qilish';
 
   @override
@@ -1063,7 +1184,17 @@ class AppLocalizationsUz extends AppLocalizations {
   String get listingEditorChannelOlxLabel => 'OLX';
 
   @override
-  String get listingEditorChannelRealtingLabel => 'Realting';
+  String get listingEditorChannelThreadsLabel => 'Threads';
+
+  @override
+  String get listingEditorChannelFacebookMarketplaceLabel =>
+      'Facebook Marketplace';
+
+  @override
+  String get listingEditorChannelXLabel => 'X';
+
+  @override
+  String get listingEditorChannelLinkedinLabel => 'LinkedIn';
 
   @override
   String get listingEditorChannelUnknownLabel => 'Noma\'lum kanal';
@@ -1077,6 +1208,22 @@ class AppLocalizationsUz extends AppLocalizations {
       'OLX\'ga chop etish faqat desktop ilovasida mavjud (brauzer kengaytmasi talab qilinadi).';
 
   @override
+  String get listingEditorThreadsUnavailableHint =>
+      'Threads\'ga e\'lon qilish uchun Instagram professional hisobiga bog\'langan Threads profili kerak — bu versiya bunday ruxsatni so\'ramaydi.';
+
+  @override
+  String get listingEditorFacebookMarketplaceUnavailableHint =>
+      'Facebook Marketplace\'da hech bir platformada qoidalarga mos avtomatlashtirish yo\'li yo\'q — e\'lonlar u yerga qo\'lda joylashtiriladi.';
+
+  @override
+  String get listingEditorXUnavailableHint =>
+      'X\'ga e\'lon qilish uchun alohida X API ilovasi va pullik yozish tarifi kerak — bu versiyada ikkalasi ham yo\'q.';
+
+  @override
+  String get listingEditorLinkedinUnavailableHint =>
+      'LinkedIn\'ga e\'lon qilish uchun tasdiqlangan LinkedIn Marketing API ilovasi kerak — bu versiyada LinkedIn hisob ma\'lumotlari yo\'q.';
+
+  @override
   String get listingEditorPublishStatusLinkLabel => 'E\'lon qilish holati';
 
   @override
@@ -1086,6 +1233,11 @@ class AppLocalizationsUz extends AppLocalizations {
   @override
   String get listingEditorInstagramLoadErrorMessage =>
       'Ulangan Instagram hisoblarini yuklab bo\'lmadi.';
+
+  @override
+  String listingEditorInstagramFollowersSubtitle(String count) {
+    return 'Instagram · $count obunachi';
+  }
 
   @override
   String get listingEditorNoInstagramAccountMessage =>
@@ -1152,10 +1304,6 @@ class AppLocalizationsUz extends AppLocalizations {
       'OLX\'ga joylashtirish brauzer kengaytmasi orqali amalga oshiriladi, bunda odam ko\'rib chiqib \"E\'lon qilish\"ni bosadi. Buning o\'rniga kengaytmadan qayta urinib ko\'ring.';
 
   @override
-  String get listingEditorRealtingNonRetryableReason =>
-      'Realting\'dagi e\'lonlar rejalashtirilgan feed orqali sinxronlanadi, har bir e\'lon uchun alohida chaqiruv orqali emas. Bu yerda qayta urinish uchun hech narsa yo\'q.';
-
-  @override
   String get listingEditorUnknownChannelReason =>
       'Noma\'lum e\'lon qilish kanali.';
 
@@ -1204,7 +1352,69 @@ class AppLocalizationsUz extends AppLocalizations {
   String get myListingsEmptyStateMessage => 'E\'lonlar topilmadi.';
 
   @override
+  String get myListingsFilteredEmptyStateMessage =>
+      'Filtrlaringizga mos e\'lon yo\'q.';
+
+  @override
+  String get myListingsEmptyStateActionLabel => 'Yangi e\'lon yaratish';
+
+  @override
   String get myListingsEditButtonSemanticsLabel => 'Tahrirlash';
+
+  @override
+  String get myListingsStageAllLabel => 'Barchasi';
+
+  @override
+  String myListingsStageCountActiveLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta faol',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountSoldLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta sotilgan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageCountDraftLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta qoralama',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String myListingsStageFilterSemanticsLabel(String stage) {
+    return '$stage e\'lonlarni ko\'rsatish';
+  }
+
+  @override
+  String get myListingsChannelPublishedLabel => 'E\'lon qilindi';
+
+  @override
+  String get myListingsChannelFailedLabel => 'Xatolik';
+
+  @override
+  String get myListingsChannelPendingLabel => 'E\'lon qilinmoqda…';
+
+  @override
+  String get myListingsChannelNotPublishedLabel => 'E\'lon qilinmagan';
+
+  @override
+  String myListingsChannelBadgeSemanticsLabel(String channel, String status) {
+    return '$channel — $status';
+  }
 
   @override
   String get agentsDirectoryScreenTitle => 'Rieltorlar';
@@ -1248,6 +1458,9 @@ class AppLocalizationsUz extends AppLocalizations {
   String get agentsInfoAddressLabel => 'Manzil:';
 
   @override
+  String get agentsInfoRatingLabel => 'Reyting:';
+
+  @override
   String get agentsInfoCallButtonLabel => 'Qo\'ng\'iroq';
 
   @override
@@ -1262,11 +1475,6 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get agentsAdsGridHeading => 'E\'lonlar ro\'yxati';
-
-  @override
-  String agentsAdsGridHeadingWithCount(int count) {
-    return 'E\'lonlar ro\'yxati ($count)';
-  }
 
   @override
   String get reviewsRatingRequiredError => 'Iltimos, reyting tanlang.';
@@ -1382,6 +1590,23 @@ class AppLocalizationsUz extends AppLocalizations {
   String get profileAgentLanguageRowTitle => 'Til';
 
   @override
+  String get profileAgentWorkspaceGroupLabel => 'Ish maydoni';
+
+  @override
+  String get profileAgentBrowseModeRowTitle => 'E\'lonlarni ko\'rish';
+
+  @override
+  String get profileAgentBrowseModeRowSubtitle =>
+      'Mijoz kabi qidiring va ko\'ring';
+
+  @override
+  String get profileAgentWorkModeRowTitle => 'Ish maydoniga o\'tish';
+
+  @override
+  String get profileAgentWorkModeRowSubtitle =>
+      'Statistika, e\'lonlar, lidlar va hamkasblar';
+
+  @override
   String get profileAgentSessionGroupLabel => 'Sessiya';
 
   @override
@@ -1397,6 +1622,18 @@ class AppLocalizationsUz extends AppLocalizations {
   String get profileBuyerSavedListingsRowTitle => 'Saqlangan e\'lonlar';
 
   @override
+  String profileBuyerSavedListingsRowSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ta e\'lon',
+      one: '$count ta e\'lon',
+      zero: 'E\'lonlar yo\'q',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get profileBuyerUpdateProfileRowTitle => 'Profilni yangilash';
 
   @override
@@ -1405,6 +1642,35 @@ class AppLocalizationsUz extends AppLocalizations {
   @override
   String get profileBuyerRegisterAsAgentRowTitle =>
       'Rieltor sifatida ro\'yxatdan o\'tish';
+
+  @override
+  String get profileBuyerRealtorPendingRowTitle =>
+      'Rieltor arizasi ko\'rib chiqilmoqda';
+
+  @override
+  String profileBuyerRealtorPendingRowSubtitle(String phone) {
+    return 'Biz $phone raqamiga qo\'ng\'iroq qilamiz — odatda bir ish kuni ichida.';
+  }
+
+  @override
+  String get profileBuyerRealtorPendingNoPhoneSubtitle =>
+      'Biz sizga qo\'ng\'iroq qilamiz — odatda bir ish kuni ichida.';
+
+  @override
+  String get profileBuyerRealtorRejectedRowTitle =>
+      'Rieltor arizasi tasdiqlanmadi';
+
+  @override
+  String get profileBuyerRealtorRejectedRowSubtitle =>
+      'Biz bilan bog\'laning — buni birga ko\'rib chiqamiz.';
+
+  @override
+  String get profileBuyerRealtorRejectedActionLabel => 'Biz bilan bog\'laning';
+
+  @override
+  String profileBuyerRealtorAppliedAtLabel(String date) {
+    return 'Ariza sanasi: $date';
+  }
 
   @override
   String get profileBuyerSessionGroupLabel => 'Sessiya';
@@ -1450,6 +1716,10 @@ class AppLocalizationsUz extends AppLocalizations {
   String get authLoginInvalidCredentialsError => 'Email yoki parol noto\'g\'ri';
 
   @override
+  String get authLoginForgotPasswordHintMessage =>
+      'Unutdingizmi? «Parolni unutdingizmi?» tugmasini bosing.';
+
+  @override
   String get authLoginNetworkErrorMessage =>
       'Internet aloqasi yo\'q. Tarmog\'ingizni tekshirib, qaytadan urinib ko\'ring.';
 
@@ -1467,6 +1737,18 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get authLoginSubmitButtonLabel => 'Kirish';
+
+  @override
+  String get authLoginForgotPasswordLinkLabel => 'Parolni unutdingizmi?';
+
+  @override
+  String authLoginForgotPasswordContactMessage(String email) {
+    return '$email uchun parolni unutdim va tizimga kira olmayapman. Uni tiklashga yordam bering.';
+  }
+
+  @override
+  String get authLoginForgotPasswordContactMessageNoEmail =>
+      'Parolimni unutdim va tizimga kira olmayapman. Uni tiklashga yordam bering.';
 
   @override
   String get authLoginFooterLinkText => 'Hisobingiz yo\'qmi?';
@@ -1559,6 +1841,32 @@ class AppLocalizationsUz extends AppLocalizations {
   @override
   String get authRegisterInvalidPhoneError =>
       'Telefon raqami formati noto\'g\'ri';
+
+  @override
+  String get authRegisterFullNameRequiredError =>
+      'To\'liq ism kiritilishi shart';
+
+  @override
+  String get authRegisterPhoneRequiredError =>
+      'Telefon raqami kiritilishi shart';
+
+  @override
+  String get authRegisterEmailRequiredError => 'Email kiritilishi shart';
+
+  @override
+  String get authRegisterEmailInvalidError =>
+      'Email manzili formati noto\'g\'ri';
+
+  @override
+  String get authRegisterPasswordRequiredError => 'Parol kiritilishi shart';
+
+  @override
+  String get authRegisterPasswordTooShortError =>
+      'Parol kamida 6 ta belgidan iborat bo\'lishi kerak';
+
+  @override
+  String get authRegisterAgencyNameRequiredError =>
+      'Agentlik nomi kiritilishi shart';
 
   @override
   String get authRegisterRealtorSuccessToast =>
@@ -1715,6 +2023,10 @@ class AppLocalizationsUz extends AppLocalizations {
   String get contactMessageFieldLabel => 'Xabar';
 
   @override
+  String get contactMessageFieldHintText =>
+      'Bu kvartirani shu hafta ko\'rmoqchiman.';
+
+  @override
   String get contactSendButtonLabel => 'Xabar yuborish';
 
   @override
@@ -1756,6 +2068,14 @@ class AppLocalizationsUz extends AppLocalizations {
       'Ko\'chirib bo\'lmadi — qayta urinib ko\'ring.';
 
   @override
+  String get leadsCardMoveFailedLabel => 'Ko\'chirib bo\'lmadi';
+
+  @override
+  String leadsCardMoveRetrySemanticsLabel(String status) {
+    return '«$status» ga ko\'chirishni qayta urinib ko\'rish';
+  }
+
+  @override
   String get leadsCreateScreenTitle => 'Lid yaratish';
 
   @override
@@ -1777,7 +2097,7 @@ class AppLocalizationsUz extends AppLocalizations {
   String get leadsFieldSourceLabel => 'Manba';
 
   @override
-  String get leadsCreateCommitHint => 'Bu lid nimani izlayapti?';
+  String get leadsCreateCommitHint => 'Ular nimani qidiryapti?';
 
   @override
   String get leadsCreateFullNameRequiredError => 'Ism kiritilishi shart';
@@ -1854,10 +2174,18 @@ class AppLocalizationsUz extends AppLocalizations {
   String get leadsDetailCloseLabel => 'Yopish';
 
   @override
+  String get leadsCallButtonLabel => 'Qo\'ng\'iroq';
+
+  @override
+  String leadsCallSemanticsLabel(String phone) {
+    return 'Qo\'ng\'iroq qilish: $phone';
+  }
+
+  @override
   String get leadsDetailLoadErrorMessage => 'Bu lidni yuklab bo\'lmadi.';
 
   @override
-  String get leadsDeleteLeadButtonLabel => 'Lidni o\'chirish';
+  String get leadsDeleteLeadButtonLabel => 'O\'chirish';
 
   @override
   String leadsCommitMinLengthError(int min) {
@@ -1871,7 +2199,7 @@ class AppLocalizationsUz extends AppLocalizations {
   String get leadsConversationSheetTitle => 'Suhbat haqida qisqacha yozing';
 
   @override
-  String get leadsConversationHint => 'Nima haqida gaplashdingiz?';
+  String get leadsConversationHint => 'Kamida 10 ta belgi';
 
   @override
   String get leadsMoveToSheetTitle => 'Ko\'chirish…';
@@ -1884,6 +2212,9 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get coworkersEmptyMessage => 'Hozircha hamkasblar yo\'q.';
+
+  @override
+  String get coworkersEmptyStateActionLabel => 'Hamkasb qo\'shish';
 
   @override
   String get coworkersAddNewButtonLabel => '+ Yangi hamkasb qo\'shish';
@@ -1963,7 +2294,7 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get coworkersPasswordHintKeepCurrent =>
-      'Joriy parolni saqlab qolish uchun bo\'sh qoldiring';
+      'Joriy parolni saqlash uchun bo\'sh qoldiring';
 
   @override
   String get coworkersFullNameRequiredError => 'To\'liq ism kiritilishi shart';
@@ -2027,11 +2358,6 @@ class AppLocalizationsUz extends AppLocalizations {
   @override
   String get coworkersReadOnlyNoteMessage =>
       'Faqat rieltorlar hamkasblarni tahrirlashi yoki o\'chirishi mumkin.';
-
-  @override
-  String coworkersActivitySummaryLine(String listings, String active) {
-    return '$listings · Faol: $active';
-  }
 
   @override
   String get coworkersActivityJustNow => 'Hozirgina';
@@ -2099,6 +2425,11 @@ class AppLocalizationsUz extends AppLocalizations {
   String get dashboardLegendSold => 'Sotilgan';
 
   @override
+  String dashboardChartSemanticsLabel(String range, int created, int sold) {
+    return 'E\'lonlar statistikasi, $range: $created ta yaratilgan, $sold ta sotilgan';
+  }
+
+  @override
   String dashboardCaptionHour(String hour) {
     return 'Soat $hour';
   }
@@ -2119,11 +2450,19 @@ class AppLocalizationsUz extends AppLocalizations {
   }
 
   @override
+  String dashboardCaptionAllTimeChartNote(String range) {
+    return '$range · diagrammada shu oy';
+  }
+
+  @override
   String get dashboardCoworkerStatisticsLoadErrorMessage =>
       'Hamkasblar statistikasini yuklab bo\'lmadi';
 
   @override
   String get dashboardNoCoworkersMessage => 'Hozircha hamkasblar yo\'q.';
+
+  @override
+  String get dashboardAddCoworkerButtonLabel => 'Hamkasb qo\'shish';
 
   @override
   String get dashboardLegendAdsCount => 'E\'lonlar soni';
@@ -2135,16 +2474,26 @@ class AppLocalizationsUz extends AppLocalizations {
   String get dashboardLegendSaleCount => 'Sotuvlar soni';
 
   @override
-  String get dashboardHeaderCoworkers => 'HAMKASBLAR';
+  String dashboardCoworkerBarsSemanticsLabel(
+    String name,
+    int ads,
+    int leads,
+    int sales,
+  ) {
+    return '$name: $ads ta e\'lon, $leads ta lid, $sales ta sotuv';
+  }
 
   @override
-  String get dashboardHeaderAds => 'E\'LONLAR';
+  String get dashboardHeaderCoworkers => 'Hamkasblar';
 
   @override
-  String get dashboardHeaderLeads => 'LIDLAR';
+  String get dashboardHeaderAds => 'E\'lonlar';
 
   @override
-  String get dashboardHeaderSales => 'SOTUVLAR';
+  String get dashboardHeaderLeads => 'Lidlar';
+
+  @override
+  String get dashboardHeaderSales => 'Sotuvlar';
 
   @override
   String get dashboardTileAdsCreatedLabel => 'Yaratilgan e\'lonlar';
@@ -2160,6 +2509,9 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get dashboardTileTapToManageSubtitle => 'boshqarish uchun bosing';
+
+  @override
+  String get dashboardTileTapToViewSubtitle => 'ko\'rish uchun bosing';
 
   @override
   String get dashboardRangeSubtitleAll => 'barcha vaqt';
@@ -2232,7 +2584,40 @@ class AppLocalizationsUz extends AppLocalizations {
       'Bildirishnomalaringizni yuklab bo\'lmadi.';
 
   @override
+  String get notificationsMarkAllReadLabel => 'Hammasi o\'qildi';
+
+  @override
+  String get notificationsMarkedAllReadToastMessage =>
+      'Barcha bildirishnomalar o\'qilgan deb belgilandi';
+
+  @override
+  String get notificationsMarkAllReadPendingLabel =>
+      'O\'qilgan deb belgilanmoqda';
+
+  @override
+  String get notificationsMarkAllReadErrorMessage =>
+      'Bildirishnomalarni o\'qilgan deb belgilab bo\'lmadi.';
+
+  @override
   String get notificationsEmptyMessage => 'Hozircha bildirishnomalar yo\'q.';
+
+  @override
+  String get notificationsEmptyStateDetailMessage =>
+      'Bu yerda yangi lidlar, e\'lon tasdiqlari va e\'lon qilish natijalari paydo bo\'ladi.';
+
+  @override
+  String get notificationsEmptyStateActionLabel => 'Yangilash';
+
+  @override
+  String get notificationsAgentOnlyMessage =>
+      'Bildirishnomalar faqat rieltorlar uchun mavjud.';
+
+  @override
+  String get notificationsSignInPromptMessage =>
+      'Bildirishnomalaringizni ko\'rish uchun tizimga kiring.';
+
+  @override
+  String get notificationsGoBackLabel => 'Orqaga qaytish';
 
   @override
   String notificationsUnreadSemanticsLabel(String title) {
@@ -2279,8 +2664,14 @@ class AppLocalizationsUz extends AppLocalizations {
   String get messagesScreenTitle => 'Xabarlar';
 
   @override
-  String get messagesComingSoonBanner =>
-      'Xabar yozish tez orada qo\'shiladi. Hozircha lidlar bilan telefon orqali bog\'laning.';
+  String get messagesComingSoonTitle => 'Xabar yozish tez orada qo\'shiladi';
+
+  @override
+  String get messagesComingSoonBody =>
+      'Hozircha lidlar bilan telefon orqali bog\'laning. Har bir lid kartasida bosib qo\'ng\'iroq qilish mumkin bo\'lgan raqam bor.';
+
+  @override
+  String get messagesOpenLeadsAction => 'Lidlarni ochish';
 
   @override
   String get connectedAccountsScreenTitle => 'Ulangan hisoblar';
@@ -2289,10 +2680,31 @@ class AppLocalizationsUz extends AppLocalizations {
   String get connectedAccountsInstagramToggleTitle => 'Instagram post yaratish';
 
   @override
+  String get connectedAccountsInstagramToggleSubtitle =>
+      'Holat — kamida bitta hisob ulanganda yoqiladi';
+
+  @override
   String get connectedAccountsTelegramToggleTitle => 'Telegram post yaratish';
 
   @override
+  String get connectedAccountsTelegramToggleSubtitle =>
+      'Holat — kanal ulanganda yoqiladi';
+
+  @override
   String get connectedAccountsYoutubeToggleTitle => 'Youtube post yaratish';
+
+  @override
+  String get connectedAccountsThreadsToggleTitle => 'Threads post yaratish';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceToggleTitle =>
+      'Facebook Marketplace post yaratish';
+
+  @override
+  String get connectedAccountsXToggleTitle => 'X post yaratish';
+
+  @override
+  String get connectedAccountsLinkedinToggleTitle => 'LinkedIn post yaratish';
 
   @override
   String get connectedAccountsInstagramLoadErrorMessage =>
@@ -2379,10 +2791,34 @@ class AppLocalizationsUz extends AppLocalizations {
       'Beta — bu versiyada mavjud emas.';
 
   @override
+  String get connectedAccountsThreadsUnavailableNoteMessage =>
+      'Threads\'ga e\'lon qilish uchun Instagram professional hisobiga bog\'langan Threads profili kerak — bu versiya bunday ruxsatni so\'ramaydi.';
+
+  @override
+  String get connectedAccountsFacebookMarketplaceUnavailableNoteMessage =>
+      'Facebook Marketplace\'da hech bir platformada qoidalarga mos avtomatlashtirish yo\'li yo\'q — e\'lonlar u yerga qo\'lda joylashtiriladi.';
+
+  @override
+  String get connectedAccountsXUnavailableNoteMessage =>
+      'X\'ga e\'lon qilish uchun alohida X API ilovasi va pullik yozish tarifi kerak — bu versiyada ikkalasi ham yo\'q.';
+
+  @override
+  String get connectedAccountsLinkedinUnavailableNoteMessage =>
+      'LinkedIn\'ga e\'lon qilish uchun tasdiqlangan LinkedIn Marketing API ilovasi kerak — bu versiyada LinkedIn hisob ma\'lumotlari yo\'q.';
+
+  @override
   String get connectedAccountsConnectedStatusLabel => 'Ulangan';
 
   @override
   String get connectedAccountsNotConnectedStatusLabel => 'Ulanmagan';
+
+  @override
+  String get connectedAccountsInstagramBrowserHint =>
+      'Tizim brauzeringizda ochiladi — Meta ilova ichidagi WebView\'da OAuth\'ga ruxsat bermaydi.';
+
+  @override
+  String get connectedAccountsOtherChannelsHint =>
+      'OLX\'da ulanadigan doimiy hisob yo\'q — OLX\'ga nashr qilish faqat desktop ilovadan ishlaydi.';
 
   @override
   String get leadsCommitFieldUppercaseLabel => 'IZOH';
@@ -2392,4 +2828,102 @@ class AppLocalizationsUz extends AppLocalizations {
 
   @override
   String get languageSheetCloseLabel => 'Yopish';
+
+  @override
+  String get galleryPreviousPhotoSemanticsLabel => 'Oldingi rasm';
+
+  @override
+  String get galleryNextPhotoSemanticsLabel => 'Keyingi rasm';
+
+  @override
+  String get contactPhoneFieldHint =>
+      'Faqat O\'zbekiston raqamlari — +998 va to\'qqiz raqam.';
+
+  @override
+  String get leadsPhoneFormatHint =>
+      'Faqat O\'zbekiston raqamlari — +998 va to\'qqiz raqam.';
+
+  @override
+  String get filterPriceAnyOptionLabel => 'Har qanday narx';
+
+  @override
+  String agentsAdsGridActiveCountLabel(int count) {
+    return '$count ta faol';
+  }
+
+  @override
+  String get permissionsPrimerLeadBody =>
+      'Ikkita ruxsat, bir marta so\'raladi. Ikkalasini ham keyinroq Sozlamalarda o\'zgartirishingiz mumkin.';
+
+  @override
+  String get authLoginLeadBody =>
+      'E\'lonlarni saqlash, rieltorlarga yozish va biznesingizni boshqarish uchun tizimga kiring.';
+
+  @override
+  String get authRegisterLeadBody =>
+      'Ko\'rish, saqlash va yozish har qanday hisobda ishlaydi. Rieltor hisobi Ish bo\'limini qo\'shadi — e\'lonlar, lidlar va e\'lon qilish.';
+
+  @override
+  String get authRegisterFullNameHint => 'Dilnoza Yusupova';
+
+  @override
+  String get authEmailHint => 'you@example.com';
+
+  @override
+  String get profileSignedOutContactUsRowSubtitle =>
+      'Savollar, muammolar va takliflar';
+
+  @override
+  String get profileAgentEditProfileRowSubtitle =>
+      'Avatar, ism, telefon, e-pochta';
+
+  @override
+  String get profileAgentConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get profileAgentSettingsRowSubtitle =>
+      'Til, bildirishnomalar, ilova haqida';
+
+  @override
+  String get profileAgentMessagesRowSubtitle => 'Tez orada';
+
+  @override
+  String get profileBuyerUpdateProfileRowSubtitle =>
+      'Ism, telefon, e-pochta, parol';
+
+  @override
+  String get profileBuyerRegisterAsAgentRowSubtitle =>
+      'Brauzeringizda Google Form ochiladi';
+
+  @override
+  String get settingsConnectedAccountsRowSubtitle =>
+      'Instagram, Telegram, YouTube';
+
+  @override
+  String get settingsLogoutRowSubtitle => 'Qaytadan kirishingiz kerak bo‘ladi';
+
+  @override
+  String get editProfilePasswordHelper =>
+      'Kamida 6 ta belgi. Faqat uni o\'zgartirmoqchi bo\'lsangiz kerak bo\'ladi.';
+
+  @override
+  String get sharedLoadMoreLoadingLabel => 'Yana yuklanmoqda…';
+
+  @override
+  String get leadsKanbanLongPressHint =>
+      'Kartani ko\'chirish uchun bosib turing';
+
+  @override
+  String leadsCallBackFlagLabel(String when) {
+    return 'Qayta qo‘ng‘iroq $when';
+  }
+
+  @override
+  String get leadsOptionalFieldHint => 'Ixtiyoriy';
+
+  @override
+  String leadsMoveToContextLine(String name, String status) {
+    return '$name hozir «$status» bosqichida.';
+  }
 }

@@ -93,10 +93,14 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
     final fullName = _fullName.text.trim();
     final phone = _phone.text.trim();
     setState(() {
-      _fullNameError = fullName.isEmpty ? l10n.leadsCreateFullNameRequiredError : null;
+      _fullNameError = fullName.isEmpty
+          ? l10n.leadsCreateFullNameRequiredError
+          : null;
       _phoneError = phone.isEmpty
           ? l10n.leadsCreatePhoneRequiredError
-          : (Formatters.isValidUzPhone(phone) ? null : l10n.leadsPhoneInvalidError);
+          : (Formatters.isValidUzPhone(phone)
+                ? null
+                : l10n.leadsPhoneInvalidError);
     });
     return _fullNameError == null && _phoneError == null;
   }
@@ -112,26 +116,35 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
 
     setState(() => _submitting = true);
     try {
-      await ref.read(leadsProvider.notifier).createLead(
-        LeadWriteInput(
-          fullName: OptionalField(_fullName.text.trim()),
-          phone: OptionalField(_phone.text.trim()),
-          email: email.isEmpty ? null : OptionalField(email),
-          budget: budgetText.isEmpty ? null : OptionalField(double.tryParse(budgetText)),
-          comment: commit.isEmpty ? null : OptionalField(commit),
-          status: OptionalField(_status),
-          source: source.isEmpty ? null : OptionalField(source),
-        ),
-      );
+      await ref
+          .read(leadsProvider.notifier)
+          .createLead(
+            LeadWriteInput(
+              fullName: OptionalField(_fullName.text.trim()),
+              phone: OptionalField(_phone.text.trim()),
+              email: email.isEmpty ? null : OptionalField(email),
+              budget: budgetText.isEmpty
+                  ? null
+                  : OptionalField(double.tryParse(budgetText)),
+              comment: commit.isEmpty ? null : OptionalField(commit),
+              status: OptionalField(_status),
+              source: source.isEmpty ? null : OptionalField(source),
+            ),
+          );
       if (!mounted) return;
       context.go(RoutePaths.workLeads);
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsCreatedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).leadsCreatedToastMessage,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).leadsCreateErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).leadsCreateErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -170,7 +183,9 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
               NavRow(title: l10n.leadsCreateScreenTitle, onBack: _handleCancel),
               Expanded(
                 child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    overscroll: false,
+                  ),
                   child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
                       AppSpacing.screenGutter,
@@ -195,29 +210,40 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                           controller: _phone,
                           errorText: _phoneError,
                           hintText: '+998901234567',
+                          hintLine: l10n.leadsPhoneFormatHint,
                           keyboardType: TextInputType.phone,
                           textInputAction: TextInputAction.next,
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9+]'),
+                            ),
                           ],
                           onChanged: () => setState(() {}),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        LeadTextField(
-                          label: l10n.leadsFieldEmailLabel,
-                          controller: _email,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          onChanged: () => setState(() {}),
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                        LeadTextField(
-                          label: l10n.leadsFieldBudgetLabel,
-                          controller: _budget,
-                          hintText: '50000',
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          textInputAction: TextInputAction.next,
-                          onChanged: () => setState(() {}),
+                        // `<div class="two">` — Email and Budget share one
+                        // row (`.two{grid-template-columns:1fr 1fr;gap:11px}`),
+                        // as do Source and Coworker below. Full name and
+                        // Phone stay full width, per the mockup.
+                        LeadFieldPair(
+                          first: LeadTextField(
+                            label: l10n.leadsFieldEmailLabel,
+                            controller: _email,
+                            hintText: l10n.leadsOptionalFieldHint,
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            onChanged: () => setState(() {}),
+                          ),
+                          second: LeadTextField(
+                            label: l10n.leadsFieldBudgetLabel,
+                            controller: _budget,
+                            hintText: l10n.leadsOptionalFieldHint,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            textInputAction: TextInputAction.next,
+                            onChanged: () => setState(() {}),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         LeadTextField(
@@ -234,16 +260,26 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                           onChanged: (v) => setState(() => _status = v),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        LeadTextField(
-                          label: l10n.leadsFieldSourceLabel,
-                          controller: _source,
-                          textInputAction: TextInputAction.done,
-                          onChanged: () => setState(() {}),
-                        ),
-                        if (isAgent) ...[
-                          const SizedBox(height: AppSpacing.lg),
-                          const LeadCoworkerField(coworkerName: null),
-                        ],
+                        // Source pairs with Coworker for an agent session;
+                        // with no Coworker field to sit beside, it takes the
+                        // full width rather than half a row next to a blank.
+                        if (isAgent)
+                          LeadFieldPair(
+                            first: LeadTextField(
+                              label: l10n.leadsFieldSourceLabel,
+                              controller: _source,
+                              textInputAction: TextInputAction.done,
+                              onChanged: () => setState(() {}),
+                            ),
+                            second: const LeadCoworkerField(coworkerName: null),
+                          )
+                        else
+                          LeadTextField(
+                            label: l10n.leadsFieldSourceLabel,
+                            controller: _source,
+                            textInputAction: TextInputAction.done,
+                            onChanged: () => setState(() {}),
+                          ),
                         const SizedBox(height: AppSpacing.section),
                         Row(
                           children: [
@@ -253,7 +289,7 @@ class _CreateLeadScreenState extends ConsumerState<CreateLeadScreen> {
                                 onTap: _handleCancel,
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.base),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: _PrimaryButton(
                                 label: l10n.leadsSaveButtonLabel,
@@ -327,6 +363,9 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
+/// `.btn--ghost glf` — `.btn--ghost` contributes only `color:var(--ink)`, so
+/// the button's surface is the flat-form glass (white with a hairline rim),
+/// not a grey fill.
 class _SecondaryButton extends StatelessWidget {
   const _SecondaryButton({required this.label, required this.onTap});
 
@@ -341,11 +380,12 @@ class _SecondaryButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
+      child: GlassSurface(
+        variant: GlassVariant.flatForm,
+        borderRadius: BorderRadius.circular(AppRadii.pillButton),
         height: 52,
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.sunk, borderRadius: BorderRadius.circular(AppRadii.pillButton)),
-        child: Text(label, style: type.rowTitle.copyWith(color: colors.ink2)),
+        child: Text(label, style: type.rowTitle.copyWith(color: colors.ink)),
       ),
     );
   }

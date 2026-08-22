@@ -15,7 +15,6 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../theme/theme.dart';
 import '../data/gallery_item.dart';
 
 class GalleryThumbnailStrip extends StatelessWidget {
@@ -30,64 +29,74 @@ class GalleryThumbnailStrip extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onSelect;
 
-  static const double _size = 56;
+  /// `.gv__th{width:62px;height:62px;border-radius:14px;opacity:.5}` with
+  /// `.gv__th.on{opacity:1;box-shadow:0 0 0 2px #fff}` — the inactive tile
+  /// is dimmed, not outlined; only the active one takes a ring.
+  static const double _size = 62;
+  static const double _radius = 14;
 
   /// The vertical footprint this strip reserves at the bottom of the
   /// screen (its own height) — exposed so `photo_gallery_screen.dart` can
   /// stack [GalleryPageDots] just above it without the two overlapping.
   static const double reservedHeight = _size;
 
+  /// `.gv__strip{bottom:24px}` — exposed for the same reason.
+  static const double bottomInset = 24;
+
   @override
   Widget build(BuildContext context) {
     return Positioned(
       left: 0,
       right: 0,
-      bottom: AppSpacing.lg,
+      // `.gv__strip{bottom:24px;gap:9px;padding:0 18px}`.
+      bottom: bottomInset,
       child: SizedBox(
         height: _size,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenGutter,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+          separatorBuilder: (_, _) => const SizedBox(width: 9),
           itemBuilder: (context, i) {
             final active = i == currentIndex;
             final item = items[i];
             return Semantics(
               button: true,
               selected: active,
-              label: AppLocalizations.of(context).galleryThumbnailSemanticsLabel(
-                i + 1,
-                items.length,
-              ),
+              label: AppLocalizations.of(
+                context,
+              ).galleryThumbnailSemanticsLabel(i + 1, items.length),
               child: GestureDetector(
                 onTap: () => onSelect(i),
-                child: AnimatedContainer(
+                child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 150),
-                  width: _size,
-                  height: _size,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadii.sm),
-                    border: Border.all(
-                      color: active ? Colors.white : Colors.white24,
-                      width: active ? 2 : 1,
+                  opacity: active ? 1 : 0.5,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: _size,
+                    height: _size,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(_radius),
+                      border: active
+                          ? Border.all(color: Colors.white, width: 2)
+                          : null,
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: item.isPhoto
+                        ? (item.url.isEmpty
+                              ? const _ThumbPlaceholder(
+                                  icon: Icons.image_rounded,
+                                )
+                              : Image.network(
+                                  item.url,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      const _ThumbPlaceholder(
+                                        icon: Icons.image_rounded,
+                                      ),
+                                ))
+                        : const _ThumbPlaceholder(icon: Icons.videocam_rounded),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: item.isPhoto
-                      ? (item.url.isEmpty
-                            ? const _ThumbPlaceholder(icon: Icons.image_rounded)
-                            : Image.network(
-                                item.url,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const _ThumbPlaceholder(
-                                      icon: Icons.image_rounded,
-                                    ),
-                              ))
-                      : const _ThumbPlaceholder(icon: Icons.videocam_rounded),
                 ),
               ),
             );

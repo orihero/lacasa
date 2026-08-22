@@ -131,6 +131,12 @@ void main() {
       expect(result, isNotNull);
       expect(result!.status!.value, LeadStatus.needToCallBack);
       expect(result!.callbackDate, isNotNull);
+      // `LeadWriteInput` serializes with `toIso8601String()`, which emits the
+      // trailing `Z` only for a UTC [DateTime]; the picker hands back a local
+      // one, so this conversion is what keeps the wire carrying an instant
+      // rather than bare wall-clock digits for the server to reinterpret in
+      // its own zone.
+      expect(result!.callbackDate!.value!.isUtc, isTrue);
       // Nothing else per contract §3.3.
       expect(result!.conversationComment, isNull);
       expect(result!.comment, isNull);

@@ -115,6 +115,16 @@ to `{ items: Ad[], nextCursor: string | null }` instead:
   a stray `?stage=` can never leak a non-active ad — `listAds` always forces
   `stage=ACTIVE` on that path regardless of what filters resolved to.
 
+**`countOnly=true` is a third response shape.** On both endpoints, sending it
+returns `{ count: number }` and nothing else — a `prisma.ad.count()` over the
+exact same `where` the list branch would have used, so the number can never
+disagree with the results behind it (it inherits the public feed's forced
+`stage=ACTIVE`, `/my/ads`'s `agentId` scope, and the `q` search). `sort`,
+`limit` and `cursor` are ignored on this branch: a count is order- and
+page-independent. It exists because the mobile filter sheet's live
+"Apply Filters (N)" preview re-fires on every debounced field edit and
+previously had to download the whole matching result set to read its length.
+
 Every serialized ad carries three fields added for the Liquid Glass listing
 detail (docs/10 §3):
 
@@ -262,9 +272,9 @@ the agent originally reviewed. Response on success is identical in shape to
 the direct-publish endpoints: `{ publication, results }`.
 
 Error codes: `404 unknown_channel` (`:channel` isn't a real publish channel),
-`400 not_retryable` (`:channel` is `youtube`, `olx`, or `realting` — each has
+`400 not_retryable` (`:channel` is `youtube` or `olx` — each has
 its own reason in `message`: YouTube has no server call to retry, OLX is
-human-gated in the extension, Realting syncs on a cron), `403 forbidden` /
+human-gated in the extension), `403 forbidden` /
 `404 ad_not_found` (ownership — for a real `:adId` this is the `Ad.agentId`
 check every other `/publish/*` route uses; for a still-open `draft-<uuid>`
 `:adId`, which has no `Ad` row to check against, ownership instead resolves

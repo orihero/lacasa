@@ -1,0 +1,29 @@
+// Applications — the two things the theme and the shared primitives cannot say
+// for this screen.
+//
+// Everything else here is already house style: the panel is `ui/Panel`, the
+// table is `ui/Table`, the tabs are `ui/Seg`, the toolbar row is the shell's
+// `.ads-new`, and the consequence notice is `ui/States`' Notice. There is no
+// screen-level gutter — `<main>` supplies apps/web's 15px padding.
+@import "../../responsive.scss";
+
+// The one no-value glyph, in the quiet ink apps/web uses for a secondary line.
+// Faint on purpose: an em dash has to be visibly a REPORTED ABSENCE rather than
+// a cell that failed to render, and it must not compete with the values around
+// it when a queue is being scanned a row at a time.
+//
+// `title` on the same span carries the longer reason on the rows that have one
+// (an account with a realtor status but no application block), so the cursor
+// stays a text cursor and the hover text is the browser's own.
+.applications__blank {
+  color: #8d99ae;
+}
+
+// The applicant's name inside a sentence — the stale-decision banner and both
+// consequence paragraphs. Bold and in the primary ink, so the person the
+// sentence is about is the part of it that is read first, while the sentence
+// still reads as one sentence rather than as a heading plus a body.
+.applications__name {
+  font-weight: 700;
+  color: #2b2d42;
+}

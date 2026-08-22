@@ -1,51 +1,46 @@
 /**
- * ApplicationsScreen.test — the review queue's UI, with its data layer
- * (`@/data/useApplications`) and its icon module (`@/ui/icons`) mocked.
+ * ApplicationsScreen.test — the review queue's UI.
  *
- * WHY THE HOOKS ARE MOCKED RATHER THAN A REAL QueryClientProvider MOUNTED:
- * @tanstack/react-query and @phosphor-icons/react both satisfy every
- * workspace's semver range with a single copy, so npm hoists them to the repo
- * ROOT — where their own `import "react"` resolves to apps/web's React 18,
- * while every file under apps/admin/src resolves to this app's nested React
- * 19. Two dispatchers in one tree, and rendering either package here dies
- * immediately: `QueryClientProvider` throws "Cannot read properties of null
- * (reading 'useEffect')" and a Phosphor glyph throws "Objects are not valid as
- * a React child". Both were verified in this workspace before this file was
- * written. `resolve.dedupe` in vitest.config.ts fixes react/react-dom for the
- * app's OWN modules but does not reach these externalized dependencies.
- * apps/console hit exactly this and mocks the same two modules; the request
- * side of the contract is covered instead by useApplications.test.ts, which
- * drives the real @lacasa/api-client over a faked Transport.
+ * The DATA HOOKS are mocked; the 409 GUARD IS NOT. `isApplicationAlreadyDecided`
+ * is kept real (via importOriginal) because it is the behaviour under test in the
+ * last describe block — a mocked guard would assert only that this file calls
+ * itself. The request side of the contract is covered by useApplications.test.ts,
+ * which drives the real @lacasa/api-client over a faked Transport.
  *
- * The screen imports `isApplicationAlreadyDecided` from the same data module,
- * and that one is kept REAL (via importOriginal) — the 409 guard rail is the
- * behaviour under test here, and a mocked version of it would test nothing.
+ * Mocking the hooks rather than seeding a real QueryClient is a choice about what
+ * these assertions are for: several of them are statements about the arguments
+ * the screen passes DOWN ("the hook is called with 'rejected' after the tab
+ * changes", "mutate is called with exactly { userId, decision }", "only the row
+ * whose id matches the in-flight variables is disabled"), and those are cheapest
+ * and most legible when the seam is the hook itself. The old app's OTHER mocking
+ * gymnastics — a hand-rolled render(), a faked icon module — were React 18/19
+ * hoisting workarounds and are gone: this suite mounts through the app's real
+ * providers and renders real lucide glyphs.
  */
-import { act } from "react";
-import { screen, within } from "@testing-library/dom";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@lacasa/domain";
 import { formatDateTime } from "@/lib/format";
 import { useApplications, useDecideApplication } from "@/data/useApplications";
+import { renderWithProviders } from "@/test/render";
 import { ApplicationsScreen } from "../ApplicationsScreen";
-import { render } from "@/test/render";
-import { makeApplication, makeSoloApplication, makePage } from "./fixtures";
+import { makeApplication, makeApplicationWithoutProfile, makePage, makeSoloApplication } from "./fixtures";
 
 vi.mock("@/data/useApplications", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/data/useApplications")>();
   return { ...actual, useApplications: vi.fn(), useDecideApplication: vi.fn() };
 });
 
-vi.mock("@/ui/icons", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/ui/icons")>();
-  const FakeIcon = (props: Record<string, unknown>) => <svg data-testid="fake-icon" {...props} />;
-  const faked = Object.fromEntries(Object.keys(actual).map((key) => [key, FakeIcon]));
-  return { ...actual, ...faked };
-});
-
 type ApplicationsQuery = ReturnType<typeof useApplications>;
 type DecideMutation = ReturnType<typeof useDecideApplication>;
+
+function render() {
+  // withAuth: false — this screen never reads the session, and the real
+  // AuthProvider would fire a mount-time GET /auth/me that has nothing to do
+  // with anything asserted here.
+  return renderWithProviders(<ApplicationsScreen />, { withAuth: false });
+}
 
 function mockQuery(overrides: Record<string, unknown> = {}) {
   const query = {
@@ -92,16 +87,6 @@ function alreadyDecidedError(): ApiError {
   return error;
 }
 
-async function click(element: Element) {
-  // `act` imported from 'react' (which this file, living under apps/admin/src,
-  // resolves to the correct nested copy) — @testing-library/user-event is
-  // itself hoisted to the workspace root and cannot batch its updates against
-  // this tree on its own. Same workaround as apps/console's suite.
-  await act(async () => {
-    await userEvent.click(element);
-  });
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -111,10 +96,10 @@ describe("ApplicationsScreen — loading, empty and error states", () => {
     mockQuery({ isPending: true });
     mockDecide();
 
-    const { container } = render(<ApplicationsScreen />);
+    const { container } = render();
 
     expect(container.querySelectorAll("tbody tr")).toHaveLength(6);
-    expect(container.querySelector(".animate-pulse")).not.toBeNull();
+    expect(container.querySelector(".MuiSkeleton-pulse")).not.toBeNull();
     expect(screen.queryByText("Otabek Yusupov")).not.toBeInTheDocument();
   });
 
@@ -122,9 +107,12 @@ describe("ApplicationsScreen — loading, empty and error states", () => {
     mockRows([]);
     mockDecide();
 
-    const { container } = render(<ApplicationsScreen />);
+    const { container } = render();
 
     expect(screen.getByText("The queue is clear")).toBeInTheDocument();
+    expect(
+      screen.getByText("No realtor application is waiting on a decision."),
+    ).toBeInTheDocument();
     expect(container.querySelectorAll("tbody tr")).toHaveLength(0);
   });
 
@@ -132,10 +120,10 @@ describe("ApplicationsScreen — loading, empty and error states", () => {
     const query = mockQuery({ isError: true, error: new Error("Network down") });
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("Network down")).toBeInTheDocument();
-    await click(screen.getByRole("button", { name: "Try again" }));
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(query.refetch).toHaveBeenCalledOnce();
   });
 
@@ -147,7 +135,7 @@ describe("ApplicationsScreen — loading, empty and error states", () => {
     });
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("Otabek Yusupov")).toBeInTheDocument();
     expect(screen.getByText(/rows below are from the last successful load/)).toBeInTheDocument();
@@ -159,7 +147,7 @@ describe("ApplicationsScreen — the queue", () => {
     mockRows([makeApplication()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("Otabek Yusupov")).toBeInTheDocument();
     expect(screen.getByText("otabek@lacasa.uz")).toBeInTheDocument();
@@ -176,46 +164,48 @@ describe("ApplicationsScreen — the queue", () => {
     mockRows([makeSoloApplication()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("Solo")).toBeInTheDocument();
     // Agency name and team size — two genuinely absent values on a solo row.
     expect(screen.getAllByText("—")).toHaveLength(2);
+    // No hover text on those two: "the applicant left this blank" needs no
+    // explaining, unlike a payload that carried no application at all.
+    for (const dash of screen.getAllByText("—")) {
+      expect(dash).not.toHaveAttribute("title");
+    }
   });
 
   it("renders a row whose application block never arrived, instead of taking the whole app down with it", () => {
-    // The endpoint filters on `realtorStatus` alone, while serializeUser.js
-    // returns `realtor: null` for any row that never got a `realtorKind` —
-    // two independent columns, as adminService.serializeApplicationRow's own
-    // comment says. @lacasa/api-client types the field non-null, so only a
-    // cast can express what the wire really sends. This is not hypothetical:
-    // apps/api/prisma/seed.js creates agent@lacasa.dev with no kind and
-    // seed-olx.js then sets its status to APPROVED, so a seeded database
-    // serves exactly this row on the Approved tab — and reading `.kind` off
-    // it threw a TypeError with no error boundary above to catch it.
-    const withoutApplication = {
-      ...makeApplication(),
-      realtor: null,
-    } as unknown as ReturnType<typeof makeApplication>;
-    mockRows([withoutApplication]);
+    mockRows([makeApplicationWithoutProfile()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("Otabek Yusupov")).toBeInTheDocument();
     // Kind, agency name, team size and applied-at: four facts the payload
-    // carries nothing for, every one of them reported absent, none invented.
-    expect(screen.getAllByText("—")).toHaveLength(4);
+    // carries nothing for, every one reported absent, none invented.
+    const dashes = screen.getAllByText("—");
+    expect(dashes).toHaveLength(4);
+    for (const dash of dashes) {
+      expect(dash).toHaveAttribute(
+        "title",
+        "This account carries a realtor status but no application details — nothing was recorded when the status was set.",
+      );
+    }
+    // The decision endpoints key on realtorStatus, which is what put this row in
+    // the list — so it is still decidable.
+    expect(screen.getByRole("button", { name: "Approve Otabek Yusupov" })).toBeEnabled();
   });
 
   it("reports the loaded count and pages on demand through the cursor, not a page number", async () => {
     const query = mockRows([makeApplication(), makeSoloApplication()], "cursor-2");
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByText("2")).toBeInTheDocument();
-    await click(screen.getByRole("button", { name: /Load more/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Load more/ }));
     expect(query.fetchNextPage).toHaveBeenCalledOnce();
   });
 
@@ -223,12 +213,12 @@ describe("ApplicationsScreen — the queue", () => {
     mockRows([makeApplication()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
     expect(
       screen.getByText(/Approving promotes the account's role from Buyer to Agent/),
     ).toBeInTheDocument();
 
-    await click(screen.getByRole("button", { name: "Approved" }));
+    await userEvent.click(screen.getByRole("button", { name: "Approved" }));
     expect(
       screen.queryByText(/Approving promotes the account's role from Buyer to Agent/),
     ).not.toBeInTheDocument();
@@ -238,11 +228,11 @@ describe("ApplicationsScreen — the queue", () => {
     mockRows([makeApplication()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approved" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approved" }));
 
-    // The status filter is what changed; the fixture rows are re-rendered
-    // under it because the mocked hook ignores its argument.
+    // The status filter is what changed; the fixture rows are re-rendered under
+    // it because the mocked hook ignores its argument.
     expect(screen.queryByRole("button", { name: /^Approve / })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Reject / })).not.toBeInTheDocument();
     expect(screen.getByText("Decided")).toBeInTheDocument();
@@ -252,11 +242,36 @@ describe("ApplicationsScreen — the queue", () => {
     mockRows([makeApplication()]);
     mockDecide();
 
-    render(<ApplicationsScreen />);
+    render();
     expect(vi.mocked(useApplications).mock.calls.at(-1)?.[0]).toBe("pending");
 
-    await click(screen.getByRole("button", { name: "Rejected" }));
+    await userEvent.click(screen.getByRole("button", { name: "Rejected" }));
     expect(vi.mocked(useApplications).mock.calls.at(-1)?.[0]).toBe("rejected");
+  });
+
+  it("names the group of status tabs and marks the selected one pressed", () => {
+    mockRows([makeApplication()]);
+    mockDecide();
+
+    render();
+
+    const tabs = screen.getByRole("group", { name: "Application status" });
+    expect(within(tabs).getByRole("button", { name: "Pending" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(tabs).getByRole("button", { name: "Approved" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    // The order the server's three states are read in, and no counts on any of
+    // them — the real numbers live on an endpoint this screen never calls.
+    expect(within(tabs).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Pending",
+      "Approved",
+      "Rejected",
+    ]);
+    expect(screen.getByText("Newest accounts first")).toBeInTheDocument();
   });
 });
 
@@ -265,8 +280,8 @@ describe("ApplicationsScreen — confirming a decision", () => {
     mockRows([makeApplication({ id: "user-9", fullName: "Otabek Yusupov" })]);
     const decide = mockDecide();
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
 
     // Nothing has been sent yet: the dialog is the guard rail, not a receipt.
     expect(decide.mutate).not.toHaveBeenCalled();
@@ -276,29 +291,38 @@ describe("ApplicationsScreen — confirming a decision", () => {
     expect(dialog.textContent).toContain("grants");
     expect(dialog.textContent).toContain("agent access to the platform");
 
-    await click(within(dialog).getByRole("button", { name: "Approve" }));
+    const confirm = within(dialog).getByRole("button", { name: "Approve" });
+    // The irreversible treatment is quarantined to Reject — approving is a
+    // grant, and a grant must not wear the colour that means "no way back".
+    expect(confirm.className).not.toContain("containedError");
+    // ...and the dialog never opens with the confirm button under the Enter key
+    // that opened it.
+    expect(confirm).not.toHaveFocus();
+
+    await userEvent.click(confirm);
     expect(decide.mutate).toHaveBeenCalledWith(
       { userId: "user-9", decision: "approve" },
       expect.anything(),
     );
   });
 
-  it("styles Reject as the destructive confirmation and says the account stays a buyer", async () => {
+  it("styles Reject as the irreversible confirmation and says the account stays a buyer", async () => {
     mockRows([makeApplication({ id: "user-9" })]);
     const decide = mockDecide();
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Reject Otabek Yusupov" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Reject Otabek Yusupov" }));
 
     const dialog = screen.getByRole("dialog", { name: "Reject realtor application" });
     expect(dialog.textContent).toContain("Their account stays a buyer");
+    expect(dialog.textContent).toContain("cannot be reversed from here");
 
     const confirm = within(dialog).getByRole("button", { name: "Reject" });
-    // `danger` (magenta) is quarantined to irreversible confirmation on this
-    // surface — this is the one control on the screen entitled to it.
-    expect(confirm.className).toContain("border-danger");
+    // `danger` is quarantined to irreversible confirmation on this surface, and
+    // this is the one control on the screen entitled to it.
+    expect(confirm.className).toContain("containedError");
 
-    await click(confirm);
+    await userEvent.click(confirm);
     expect(decide.mutate).toHaveBeenCalledWith(
       { userId: "user-9", decision: "reject" },
       expect.anything(),
@@ -309,14 +333,17 @@ describe("ApplicationsScreen — confirming a decision", () => {
     mockRows([makeApplication()]);
     const decide = mockDecide();
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
-    await click(
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    await userEvent.click(
       within(screen.getByRole("dialog")).getByRole("button", { name: "Cancel" }),
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(decide.mutate).not.toHaveBeenCalled();
+    // Cancelling always resets the mutation, so the next dialog cannot open
+    // showing somebody else's failure.
+    expect(decide.reset).toHaveBeenCalled();
   });
 
   it("shows a failed decision inside the dialog instead of closing it", async () => {
@@ -326,8 +353,8 @@ describe("ApplicationsScreen — confirming a decision", () => {
       error: new ApiError("internal", "Database is unavailable", 500),
     });
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
 
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("alert").textContent).toContain("Database is unavailable");
@@ -337,16 +364,18 @@ describe("ApplicationsScreen — confirming a decision", () => {
 describe("ApplicationsScreen — another admin got there first", () => {
   it("closes the dialog and explains the 409 plainly rather than raising a failure", async () => {
     mockRows([makeApplication({ fullName: "Otabek Yusupov" })]);
-    // The mutation reports the conflict through mutate()'s own onError, which
-    // is where the screen decides between "explain it" and "keep the dialog
-    // open with an error".
+    // The mutation reports the conflict through mutate()'s own onError, which is
+    // where the screen decides between "explain it" and "keep the dialog open
+    // with an error".
     const decide = mockDecide({
       mutate: vi.fn((_vars, handlers) => handlers.onError(alreadyDecidedError())),
     });
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
-    await click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }),
+    );
 
     expect(decide.mutate).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -354,21 +383,37 @@ describe("ApplicationsScreen — another admin got there first", () => {
     const banner = screen.getByText(/was already decided by another admin/);
     expect(banner.textContent).toContain("Otabek Yusupov");
     expect(banner.textContent).toContain("nothing was changed");
-    // Explicitly NOT an error: no alert, and none of the error palette.
+    // Explicitly NOT an error: no alert anywhere, and none of the error palette.
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(banner.closest("[role='status']")?.className).not.toContain("err");
+    expect(banner.closest("[role='status']")?.className).not.toContain("inline-banner--error");
   });
 
   it("clears the notice when the admin moves to another tab", async () => {
     mockRows([makeApplication()]);
     mockDecide({ mutate: vi.fn((_vars, handlers) => handlers.onError(alreadyDecidedError())) });
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
-    await click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }),
+    );
     expect(screen.getByText(/was already decided by another admin/)).toBeInTheDocument();
 
-    await click(screen.getByRole("button", { name: "Rejected" }));
+    await userEvent.click(screen.getByRole("button", { name: "Rejected" }));
+    expect(screen.queryByText(/was already decided by another admin/)).not.toBeInTheDocument();
+  });
+
+  it("dismisses the notice on request, and only on request", async () => {
+    mockRows([makeApplication()]);
+    mockDecide({ mutate: vi.fn((_vars, handlers) => handlers.onError(alreadyDecidedError())) });
+
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByText(/was already decided by another admin/)).not.toBeInTheDocument();
   });
 
@@ -376,9 +421,11 @@ describe("ApplicationsScreen — another admin got there first", () => {
     mockRows([makeApplication()]);
     mockDecide({ mutate: vi.fn((_vars, handlers) => handlers.onSuccess()) });
 
-    render(<ApplicationsScreen />);
-    await click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
-    await click(within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }));
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Approve Otabek Yusupov" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Approve" }),
+    );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText(/was already decided by another admin/)).not.toBeInTheDocument();
@@ -391,9 +438,10 @@ describe("ApplicationsScreen — another admin got there first", () => {
     ]);
     mockDecide({ isPending: true, variables: { userId: "user-1", decision: "approve" } });
 
-    render(<ApplicationsScreen />);
+    render();
 
     expect(screen.getByRole("button", { name: "Approve Otabek Yusupov" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reject Otabek Yusupov" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Approve Kamola Rashidova" })).toBeEnabled();
   });
 });

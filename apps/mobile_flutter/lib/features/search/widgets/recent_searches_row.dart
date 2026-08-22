@@ -42,30 +42,35 @@ class RecentSearchesRow extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Owned here rather than by the parent screen so it collapses
+            // with the row itself when there are no recents.
+            const SizedBox(height: AppSpacing.section),
             SectionHeader(
               title: l10n.searchRecentSearchesSectionTitle,
               linkLabel: l10n.searchRecentSearchesClearLabel,
               onLink: () => ref.read(recentSearchesProvider.notifier).clear(),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenGutter,
-                ),
-                itemCount: queries.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final query = queries[index];
-                  return _RecentChip(
-                    key: ValueKey('recentSearchChip-$index'),
-                    label: query,
-                    onTap: () => onSelect(query),
-                  );
-                },
+            // 9px per the mockup's `<div class="opts" style="margin-top:9px">`.
+            const SizedBox(height: 9),
+            // A plain wrapping `.opts` group — the nowrap/scroll override is
+            // scoped to `.tools .opts` and doesn't reach these chips, so a
+            // fourth chip drops to a second row instead of being clipped off
+            // the right edge with no affordance.
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenGutter,
+              ),
+              child: Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  for (var index = 0; index < queries.length; index++)
+                    _RecentChip(
+                      key: ValueKey('recentSearchChip-$index'),
+                      label: queries[index],
+                      onTap: () => onSelect(queries[index]),
+                    ),
+                ],
               ),
             ),
           ],
@@ -88,26 +93,41 @@ class _RecentChip extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: GlassSurface(
-        variant: GlassVariant.onSurface,
-        borderRadius: AppRadii.pill,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.history_rounded, size: 14, color: colors.muted),
-            const SizedBox(width: AppSpacing.xs),
-            ConstrainedBox(
+      // `.opt{height:38px;border-radius:19px;padding:0 15px;font-size:12px;
+      // font-weight:500}` — text only, the mockup's chips carry no leading
+      // glyph. `body` is the 12px role and the weight is the override, the
+      // same pairing `choice_chip_group.dart` uses for its own `.opt`.
+      //
+      // The height is stated by a [SizedBox] and the vertical centring by a
+      // shrink-wrapping [Center], rather than by `GlassSurface`'s own
+      // `height`/`alignment`: that pair puts an `alignment` on the widget's
+      // outer [Container], which makes the box *expand* to the width it is
+      // offered. Inside the [Wrap] above that is the full gutter-to-gutter
+      // width, so every chip became a full-width bar on its own line
+      // (`.opt` is an inline-flex pill sized to its label). Under the old
+      // horizontal [ListView] the offered width was unbounded, so the same
+      // code shrink-wrapped and the bug could not show.
+      child: SizedBox(
+        height: 38,
+        child: GlassSurface(
+          variant: GlassVariant.onSurface,
+          borderRadius: AppRadii.pill,
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          child: Center(
+            widthFactor: 1,
+            child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 140),
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: type.rowTitle.copyWith(color: colors.ink),
+                style: type.body.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: colors.ink,
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

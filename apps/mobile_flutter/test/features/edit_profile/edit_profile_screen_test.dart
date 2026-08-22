@@ -76,7 +76,8 @@ void main() {
       overrides: [
         authRepositoryProvider.overrideWithValue(repo),
         hasPersistedAuthTokenProvider.overrideWithValue(false),
-        if (mediaPicker != null) mediaPickerProvider.overrideWithValue(mediaPicker),
+        if (mediaPicker != null)
+          mediaPickerProvider.overrideWithValue(mediaPicker),
         if (uploadsRepository != null)
           uploadsRepositoryProvider.overrideWithValue(uploadsRepository),
       ],
@@ -92,7 +93,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/profile',
-          builder: (context, state) => const Scaffold(body: Text('profile-root')),
+          builder: (context, state) =>
+              const Scaffold(body: Text('profile-root')),
           routes: [
             GoRoute(
               path: 'edit',
@@ -108,7 +110,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -176,7 +184,10 @@ void main() {
     ) async {
       await pumpScreen(tester, signedInUser: _user());
 
-      await tester.enterText(find.widgetWithText(TextField, 'Dilnoza Yusupova'), '');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Dilnoza Yusupova'),
+        '',
+      );
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
@@ -218,7 +229,10 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Password must be at least 6 characters'), findsOneWidget);
+      expect(
+        find.text('Password must be at least 6 characters'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a blank password never blocks submit', (tester) async {
@@ -237,9 +251,7 @@ void main() {
   });
 
   group('submit — only changed fields are sent', () {
-    testWidgets('an untouched form sends every field as null', (
-      tester,
-    ) async {
+    testWidgets('an untouched form sends every field as null', (tester) async {
       final repo = RecordingAuthRepository(updateProfileResult: _user());
       await pumpScreen(tester, signedInUser: _user(), repository: repo);
 
@@ -253,9 +265,7 @@ void main() {
       expect(args.password, isNull);
     });
 
-    testWidgets('editing only the phone sends only the phone', (
-      tester,
-    ) async {
+    testWidgets('editing only the phone sends only the phone', (tester) async {
       final repo = RecordingAuthRepository(updateProfileResult: _user());
       await pumpScreen(tester, signedInUser: _user(), repository: repo);
 
@@ -296,9 +306,7 @@ void main() {
   });
 
   group('submit success', () {
-    testWidgets('pops and shows §3.18\'s exact success toast', (
-      tester,
-    ) async {
+    testWidgets('pops and shows §3.18\'s exact success toast', (tester) async {
       final repo = RecordingAuthRepository(updateProfileResult: _user());
       await pumpScreen(tester, signedInUser: _user(), repository: repo);
 
@@ -311,6 +319,20 @@ void main() {
 
       expect(find.text('profile-root'), findsOneWidget);
       expect(find.text('Profile successfully updated!'), findsOneWidget);
+
+      // §10.4 — both of this screen's toasts used to be bare SnackBars,
+      // rendering Material's docked dark-grey bar with no status glyph while
+      // the avatar-upload failures three lines away already used the §5
+      // floating card toast.
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.behavior, SnackBarBehavior.floating);
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byIcon(Icons.check_circle_rounded),
+        ),
+        findsOneWidget,
+      );
     });
   });
 
@@ -337,6 +359,15 @@ void main() {
 
       expect(
         find.text('Error updating profile: Email is already registered'),
+        findsOneWidget,
+      );
+      // §10.4 — and an *error* toast, with the 4s budget and the red glyph,
+      // not the same anonymous grey bar a success used to get.
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byIcon(Icons.error_rounded),
+        ),
         findsOneWidget,
       );
       // The form is left in place with the entered value — a failed save
@@ -421,7 +452,10 @@ void main() {
 
     testWidgets('reverting a field back to its original value clears the '
         'dirty flag — no dialog on Cancel', (tester) async {
-      await pumpScreen(tester, signedInUser: _user(phoneNumber: '+998901112233'));
+      await pumpScreen(
+        tester,
+        signedInUser: _user(phoneNumber: '+998901112233'),
+      );
 
       final field = find.widgetWithText(TextField, '+998901112233');
       await tester.enterText(field, '+998907654321');

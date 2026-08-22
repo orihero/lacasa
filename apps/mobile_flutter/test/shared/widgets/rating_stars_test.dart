@@ -36,7 +36,7 @@ void main() {
   ) async {
     await pump(tester, const RatingStars(average: 4.5, count: 2));
 
-    expect(find.text('Review: 4.5/5 (2)'), findsOneWidget);
+    expect(find.text('Review: 4.5/5'), findsOneWidget);
     expect(find.text('No reviews yet'), findsNothing);
   });
 
@@ -46,7 +46,7 @@ void main() {
       await pump(tester, const RatingStars(average: 4.6, count: 3));
 
       // 4.6 rounds to 5 filled stars, but the text stays the exact 4.6 value.
-      expect(find.text('Review: 4.6/5 (3)'), findsOneWidget);
+      expect(find.text('Review: 4.6/5'), findsOneWidget);
       expect(find.byIcon(Icons.star_rounded), findsNWidgets(5));
       expect(find.byIcon(Icons.star_outline_rounded), findsNothing);
     },

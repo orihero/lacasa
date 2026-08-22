@@ -89,14 +89,16 @@ class FakeDashboardRepository implements DashboardRepository {
   /// `dashboard_screen_test.dart`'s cases only care about the stat tiles or
   /// the coworker section, not the chart. 12 buckets, day granularity, dated
   /// the 1st–12th of a fixed reference month (the same `DateTime.utc(2024,
-  /// 3, day)` anchor [FixtureDashboardRepository] uses) so
+  /// 3, day)` anchor the deleted fixture repository used) so
   /// `ads_statistics_panel.dart`'s caption renders the legacy-familiar "Days
   /// 1–12" the "static 12-point chart" test asserts on, without this fake
   /// reaching into `lib/shared/fixtures/work_seed_data.dart` for it. Counts
   /// are honestly zero rather than fabricated — [AdsSeries]'s own doc
   /// comment already establishes that a zero-filled bucket is a legitimate
   /// real response shape, not a placeholder that needs faking believable
-  /// numbers.
+  /// numbers. That also makes this default the chart's **all-zero** case —
+  /// the one that used to print a y-axis tick of "1" over a flat baseline,
+  /// and now prints the 0 it actually reaches.
   static final AdsSeries _defaultAdsSeries = AdsSeries(
     granularity: SeriesGranularity.day,
     from: DateTime.utc(2024, 3, 1),

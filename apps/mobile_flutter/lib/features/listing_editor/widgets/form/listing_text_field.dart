@@ -15,6 +15,25 @@ import 'package:flutter/services.dart';
 import '../../../../shared/shared.dart';
 import '../../../../theme/theme.dart';
 
+/// `.two{grid-template-columns:1fr 1fr;gap:11px}` — the horizontal gap
+/// between two half-width fields sharing one row (City/District,
+/// Rooms/Area, Storey/Floors, Price/Price type).
+const double kListingFieldPairGap = 11;
+
+/// `.inp,.selbox{height:52px}` — every single-line form control in this
+/// feature is a fixed 52dp tall, so a text input and the picker beside it
+/// line up exactly.
+const double kListingControlHeight = 52;
+
+/// `.ta{min-height:96px}` — multi-line inputs grow from here.
+const double kListingTextAreaMinHeight = 96;
+
+/// `.inp,.ta,.selbox{font-size:13px}` — one step up from the shared `body`
+/// token (12px), which other screens rely on, so the bump lives at this
+/// call site rather than in the theme.
+TextStyle listingControlTextStyle(LaCasaTypography type) =>
+    type.body.copyWith(fontSize: 13);
+
 class ListingTextField extends StatelessWidget {
   const ListingTextField({
     super.key,
@@ -50,6 +69,40 @@ class ListingTextField extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final hasError = errorText != null;
+    final isMultiline = maxLines > 1;
+    final controlStyle = listingControlTextStyle(type);
+
+    final field = GlassSurface(
+      variant: GlassVariant.flatForm,
+      borderRadius: BorderRadius.circular(AppRadii.control),
+      // `.inp` is a fixed 52px flex box with `padding:0 16px`; `.ta` grows
+      // from a 96px minimum with `padding:15px 16px`.
+      height: isMultiline ? null : kListingControlHeight,
+      alignment: isMultiline ? null : Alignment.centerLeft,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: isMultiline ? 15 : 0,
+      ),
+      child: TextField(
+        controller: controller,
+        enabled: enabled,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        maxLines: maxLines,
+        textCapitalization: textCapitalization,
+        onChanged: (_) => onChanged?.call(),
+        style: controlStyle.copyWith(color: colors.ink),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+          hintText: hintText,
+          hintStyle: controlStyle.copyWith(color: colors.faint),
+          suffixText: suffixText,
+          suffixStyle: type.bodySmall.copyWith(color: colors.muted),
+        ),
+      ),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,32 +110,14 @@ class ListingTextField extends StatelessWidget {
         FieldLabel(label, required: required),
         Opacity(
           opacity: enabled ? 1 : 0.5,
-          child: GlassSurface(
-            variant: GlassVariant.flatForm,
-            borderRadius: BorderRadius.circular(AppRadii.control),
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: maxLines > 1 ? AppSpacing.base : 4,
-            ),
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              keyboardType: keyboardType,
-              inputFormatters: inputFormatters,
-              maxLines: maxLines,
-              textCapitalization: textCapitalization,
-              onChanged: (_) => onChanged?.call(),
-              style: type.body.copyWith(color: colors.ink),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: hintText,
-                hintStyle: type.body.copyWith(color: colors.faint),
-                suffixText: suffixText,
-                suffixStyle: type.bodySmall.copyWith(color: colors.muted),
-              ),
-            ),
-          ),
+          child: isMultiline
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: kListingTextAreaMinHeight,
+                  ),
+                  child: field,
+                )
+              : field,
         ),
         if (hasError) ...[
           const SizedBox(height: AppSpacing.sm),

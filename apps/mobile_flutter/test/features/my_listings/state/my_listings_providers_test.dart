@@ -98,6 +98,32 @@ void main() {
         expect(repo.fetchMyAdsCallCount, 3);
       });
 
+      test('the stage-count strip is session-scoped too', () async {
+        // Same reasoning as the ad list: nothing tears this provider down
+        // across a sign-out/sign-in, so an agent who switches accounts
+        // would keep reading the previous account's draft count above the
+        // new account's ads.
+        final repo = FakeMyListingsRepository();
+        final container = ProviderContainer(
+          retry: (retryCount, error) => null,
+          overrides: [myListingsRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+
+        container
+            .read(authSessionProvider.notifier)
+            .signIn(myListingsAuthUser(id: 'agent-a', fullName: 'Agent A'));
+        await container.read(myListingsStageCountsProvider.future);
+        expect(repo.fetchStageCountsCallCount, 1);
+
+        container
+            .read(authSessionProvider.notifier)
+            .signIn(myListingsAuthUser(id: 'agent-b', fullName: 'Agent B'));
+        await container.read(myListingsStageCountsProvider.future);
+
+        expect(repo.fetchStageCountsCallCount, 2);
+      });
+
       test(
         'previewing a different role for the same user via setRole does not '
         'refetch — only a real change of signed-in identity should',
@@ -133,4 +159,81 @@ void main() {
       );
     },
   );
+
+  group('the publish-status batch key (UX audit §9.2)', () {
+    test('refires when the visible ad set grows, and only then', () async {
+      final repo = FakeMyListingsRepository(
+        ads: [
+          for (var i = 0; i < myListingsPageSize * 3; i++)
+            myListingAd(id: 'ad-$i'),
+        ],
+      );
+      final container = ProviderContainer(
+        retry: (retryCount, error) => null,
+        overrides: [myListingsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(myListingsResultsProvider.future);
+      await container.read(myListingsPublishStatusesProvider.future);
+      expect(repo.fetchPublishStatusesCallCount, 1);
+      expect(repo.lastPublishStatusAdIds, hasLength(myListingsPageSize));
+
+      final notifier = container.read(myListingsResultsProvider.notifier);
+      await notifier.loadMore();
+      await container.read(myListingsPublishStatusesProvider.future);
+      expect(repo.fetchPublishStatusesCallCount, 2);
+      expect(repo.lastPublishStatusAdIds, hasLength(myListingsPageSize * 2));
+
+      // A *failed* load-more rebuilds `MyListingsPageState` twice
+      // (`isLoadingMore`, then `loadMoreFailed`) while leaving the set of
+      // visible ads exactly as it was. This is what
+      // `myListingsLoadedAdIdsProvider` being a joined `String` buys: `List`
+      // has identity equality in Dart, so a `Provider<List<String>>` would
+      // report a change on each of those rebuilds and fire a redundant
+      // batch request for an unchanged page. A third call here is that
+      // regression.
+      repo.adsError = const NetworkException('offline');
+      await notifier.loadMore();
+      await container.read(myListingsPublishStatusesProvider.future);
+
+      expect(repo.fetchPublishStatusesCallCount, 2);
+      expect(repo.lastPublishStatusAdIds, hasLength(myListingsPageSize * 2));
+    });
+
+    test('caps the id list at the route\'s documented 200-id ceiling', () async {
+      // `GET /publish/status` slices at 200 server-side; sending more would
+      // silently drop the tail anyway. Capping here keeps the request legal
+      // instead of letting an agent who has scrolled twenty pages get a
+      // request the server truncates.
+      const total = 250;
+      final repo = FakeMyListingsRepository(
+        ads: [for (var i = 0; i < total; i++) myListingAd(id: 'ad-$i')],
+      );
+      final container = ProviderContainer(
+        retry: (retryCount, error) => null,
+        overrides: [myListingsRepositoryProvider.overrideWithValue(repo)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(myListingsResultsProvider.future);
+      final notifier = container.read(myListingsResultsProvider.notifier);
+      // Bounded rather than `while (…)`: a `loadMore` that silently stopped
+      // making progress would hang the whole suite instead of failing.
+      for (var page = 0; page < total ~/ myListingsPageSize; page++) {
+        await notifier.loadMore();
+      }
+      expect(
+        container.read(myListingsResultsProvider).value?.ads,
+        hasLength(total),
+      );
+      await container.read(myListingsPublishStatusesProvider.future);
+
+      expect(repo.lastPublishStatusAdIds, hasLength(publishStatusBatchLimit));
+      // The cap takes the head — the rows an agent scrolled past — rather
+      // than the tail, so the ids requested are always a prefix of what is
+      // loaded.
+      expect(repo.lastPublishStatusAdIds!.first, 'ad-0');
+    });
+  });
 }

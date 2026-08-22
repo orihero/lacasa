@@ -1,22 +1,27 @@
 /**
- * LoadMore — the pagination footer for every list on this surface.
+ * LoadMore — the pagination footer under every list on this surface.
  *
  * NOT numbered pages, and that is forced by the API rather than chosen: every
- * admin list is keyset-paged on `(createdAt desc, id desc)` with an opaque
- * `cursor` that is just the last row's id (see the endpoint contract). There
- * is no page count to render and no way to jump to page 7 — a numbered pager
- * would be a lie about what the server can do. What keyset paging buys in
- * exchange is that a row cannot be silently skipped when a new signup lands
- * mid-scroll, which on an approvals queue matters more than random access.
+ * admin list is keyset-paged on `(createdAt desc, id desc)` behind an opaque
+ * cursor that is just the last row's id. There is no page count and no way to
+ * jump to page 7, so MUI's `TablePagination` — which apps/web uses on all three
+ * of its tables — could only be rendered by inventing a total (PRECEDENCE.md,
+ * conflict 1). What keyset paging buys in exchange is that a row cannot be
+ * silently skipped when a new signup lands mid-scroll, which on an approvals
+ * queue matters more than random access.
  *
- * The loaded count is always shown, even on the last page, because "24 rows"
- * with no more to fetch and "24 rows so far" are different facts and an admin
- * deciding whether a queue is empty needs to know which one they are looking
- * at. `total` is optional: most of these endpoints do not return one, and
- * this component will not invent "of ~100" from a page size.
+ * THE LOADED COUNT IS ALWAYS SHOWN, even on the last page: "24 records" with
+ * nothing left to fetch and "24 records loaded" with more behind it are
+ * different facts, and an admin deciding whether a queue is empty needs to know
+ * which one they are reading.
+ *
+ * `total` is optional and MUST NEVER BE INVENTED from a page size ("of ~100" is
+ * forbidden). Pass only a total the server actually returned.
  */
-import { CaretDownIcon } from "./icons";
+import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
+import { ChevronDown } from "./icons";
+import "./loadMore.scss";
 
 export function LoadMore({
   loaded,
@@ -24,36 +29,39 @@ export function LoadMore({
   hasMore,
   isFetching,
   onLoadMore,
-  noun = "records",
+  noun,
 }: {
   loaded: number;
-  /** Only pass one the server actually returned — never an estimate. */
+  /** Only ever a total the server returned. */
   total?: number;
   hasMore: boolean;
   isFetching?: boolean;
   onLoadMore: () => void;
+  /** "applications", "accounts", "events". Defaults to "records". */
   noun?: string;
 }) {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex items-center gap-3 border-t border-line px-[15px] py-2.5">
-      <span className="text-tiny text-muted">
-        <span className="font-mono text-record text-ink-2">{loaded}</span>
-        {total !== undefined ? (
+    <div className="load-more">
+      <span className="load-more__count">
+        <span className="load-more__value">{loaded}</span>
+        {total === undefined ? null : (
           <>
             {" / "}
-            <span className="font-mono text-record text-ink-2">{total}</span>
+            <span className="load-more__value">{total}</span>
           </>
-        ) : null}{" "}
-        {noun}
-        {hasMore ? " loaded" : ""}
+        )}{" "}
+        {noun ?? t("nounRecords")}
+        {hasMore ? ` ${t("loadedSuffix")}` : ""}
       </span>
-      <div className="ml-auto">
+      <div className="load-more__action">
         {hasMore ? (
-          <Button icon={CaretDownIcon} onClick={onLoadMore} disabled={isFetching}>
-            {isFetching ? "Loading…" : "Load more"}
+          <Button icon={ChevronDown} onClick={onLoadMore} disabled={isFetching}>
+            {isFetching ? t("loading") : t("loadMore")}
           </Button>
         ) : (
-          <span className="text-tiny text-faint">End of list</span>
+          <span className="load-more__end">{t("endOfList")}</span>
         )}
       </div>
     </div>

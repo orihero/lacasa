@@ -1,23 +1,18 @@
-/// Picks [FixtureRegionsRepository] or [LiveRegionsRepository] once, per
-/// `filter_mode.dart`'s `useLiveFilterApi` switch — the same switch
-/// `filterRepositoryProvider` uses, since the region/district picker is
-/// part of the same `filter-sheet` screen, not an independently-toggled
-/// surface.
+/// Builds the [RegionsRepository] behind `filter-sheet`'s City/District
+/// cascade. Live is the only shipping implementation (the bundled-fixture
+/// one and `filter_mode.dart`'s `useLiveFilterApi` switch are gone); the
+/// provider seam remains so tests can override the vocabulary, same as
+/// `filterRepositoryProvider`.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/filter_mode.dart';
-import '../data/fixture_regions_repository.dart';
 import '../data/live_regions_repository.dart';
 import '../data/regions_repository.dart';
 
 final regionsRepositoryProvider = Provider<RegionsRepository>((ref) {
-  if (useLiveFilterApi) {
-    return LiveRegionsRepository(LaCasaApi.create());
-  }
-  return const FixtureRegionsRepository();
+  return LiveRegionsRepository(LaCasaApi.create());
 });
 
 /// The cached region/district vocabulary — static reference data

@@ -1,0 +1,57 @@
+// The distribution rows inside the overview's two narrow panels.
+//
+// The row rhythm is the console's list rhythm — `.menu-list li { padding: 10px
+// 20px }` trimmed to a panel's 15px gutter — and the bar is drawn in the two
+// greys apps/web already uses for a sunk track and a neutral fill: `#f5f6fa`
+// (the app canvas, which is what a recess looks like on a white panel) and
+// `#8d99ae` (its muted ink).
+@import "../../responsive.scss";
+
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 13px 15px;
+
+  .breakdown__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 12px;
+  }
+
+  .breakdown__label {
+    min-width: 0;
+    // One line, always: two panels of wrapping labels stop being scannable.
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: #2b2d42;
+  }
+
+  // The count is the fact on this row, so it is set the way every other record
+  // number in this app is: monospace, tabular, ink.
+  .breakdown__value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: #2b2d42;
+  }
+
+  .breakdown__bar {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    height: 6px;
+    overflow: hidden;
+    background-color: #f5f6fa;
+    border: 1px solid #dedede;
+  }
+
+  .breakdown__fill {
+    display: block;
+    height: 100%;
+    // Neutral on purpose — see CountBreakdown.tsx's header.
+    background-color: #8d99ae;
+  }
+}

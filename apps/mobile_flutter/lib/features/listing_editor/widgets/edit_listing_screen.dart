@@ -30,6 +30,7 @@ import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../my_listings/state/my_listings_providers.dart';
+import '../listing_editor_error_message.dart';
 import '../state/listing_editor_providers.dart';
 import '../state/listing_editor_repository_provider.dart';
 import 'form/basics_step.dart';
@@ -78,6 +79,16 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     return confirmDiscardChanges(context);
   }
 
+  /// Where the back arrow, the system back gesture and a successful [_save]
+  /// all end up. `pop` is the normal path and now genuinely fires: this
+  /// screen is declared as a child of `my-listings` and pushed from its row
+  /// edit icon, so there is always that screen — with its applied filters
+  /// and paged scroll position — underneath. (It used to be a direct child
+  /// of `/work` reached by `context.go`, which left nothing to pop and sent
+  /// every saved edit to the Work branch's role default instead of back to
+  /// My Ads.) The `go` fallback still matters for the one entry that isn't
+  /// a push: a deep link, or a restored route stack, that opens this screen
+  /// cold.
   void _leave() {
     if (context.canPop()) {
       context.pop();
@@ -100,10 +111,18 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
       setState(() {});
       return;
     }
-    // See `create_listing_screen.dart`'s identical guard — a still-
-    // uploading photo/video has no URL yet to persist.
+    // See `create_listing_screen.dart`'s identical pair of guards — a
+    // still-uploading photo/video has no URL yet to persist, and a failed
+    // one never will. Without the second, Save dropped the failed item from
+    // `photos[]` and still reported "Successfully updated"; unlike
+    // `create-listing` there is no step to jump back to, because this
+    // screen renders the picker inline with everything else.
     if (_fields.hasPendingUploads) {
       LaCasaToast.showError(context, l10n.listingEditorPendingUploadsMessage);
+      return;
+    }
+    if (_fields.hasFailedUploads) {
+      LaCasaToast.showError(context, l10n.listingEditorFailedUploadsMessage);
       return;
     }
 
@@ -122,7 +141,10 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
             ),
         pending: l10n.listingEditorUpdatePendingLabel,
         success: l10n.listingEditorUpdateSuccessMessage,
-        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
+        // See `create_listing_screen.dart`'s identical call — a rejected
+        // field value and a dead connection used to be reported with the
+        // same "Something went wrong."
+        errorMessage: (error) => listingEditorErrorMessage(l10n, error),
       );
       if (!mounted) return;
       setState(() => _touched = false);
@@ -154,12 +176,20 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
             ref.read(listingEditorRepositoryProvider).delete(widget.adId),
         pending: l10n.listingEditorDeletePendingLabel,
         success: l10n.listingEditorDeleteSuccessMessage,
-        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
+        // Same lift as [_save]'s — and it matters more here, since the two
+        // failures this endpoint actually produces (a 403 for a coworker
+        // session that slipped past [canDelete], a 409 for an ad already
+        // gone) both arrive as `ApiErrorException` with a server sentence
+        // that says which.
+        errorMessage: (error) => listingEditorErrorMessage(l10n, error),
       );
       // See `create_listing_screen.dart`'s identical call — the deleted ad
       // must disappear from `my-listings` and every dashboard cache too.
       invalidateAdCaches(ref);
       if (!mounted) return;
+      // `go`, deliberately, where [_leave]'s save/back path pops: the ad
+      // this route's `:id` names no longer exists, so the entry must leave
+      // the branch's history entirely rather than stay one Back away.
       context.go(RoutePaths.workMyListings);
     } catch (_) {
       if (!mounted) return;
@@ -172,6 +202,11 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final adAsync = ref.watch(editListingAdProvider(widget.adId));
+    // The mockup ends this screen's `.nav` with the listing's own status
+    // pill. It is simply absent while the ad is still loading or failed —
+    // the header renders once, outside `adAsync.when`, so the pill is read
+    // off `AsyncValue.value` rather than duplicating the nav per branch.
+    final headerAd = adAsync.value;
     // `AgentAdsResource.delete` is AGENT only server-side (see that
     // method's own doc comment) — hide Delete for a coworker session
     // rather than let it 403 as a surprise, matching this repository's own
@@ -194,6 +229,9 @@ class _EditListingScreenState extends ConsumerState<EditListingScreen> {
                 title: l10n.listingEditorEditNavTitle,
                 onBack: _handleBack,
                 backKey: const ValueKey('editListing-back'),
+                trailing: [
+                  if (headerAd != null) AdStagePill(stage: headerAd.stage),
+                ],
               ),
               Expanded(
                 child: adAsync.when(
@@ -329,14 +367,11 @@ class _FormBody extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BasicsStep(fields: fields, onChanged: onFieldChanged),
-            const SizedBox(height: AppSpacing.section),
-            DetailsStep(
-              fields: fields,
-              onChanged: onFieldChanged,
-              showHashtags: false,
-            ),
-            const SizedBox(height: AppSpacing.section),
+            // The mockup opens this screen with the photo grid ("Photos"
+            // grouplab, `margin-top:0`) and only then runs Title → City/
+            // District → … → Publish. The two photo blocks stay distinct
+            // (§27: the existing gallery is "separate from the new-upload
+            // picker").
             FieldLabel(l10n.listingEditorExistingPhotosLabel),
             ExistingPhotosGrid(photos: photos, onChanged: onPhotosChanged),
             const SizedBox(height: AppSpacing.section),
@@ -347,10 +382,65 @@ class _FormBody extends StatelessWidget {
               existingPhotoCount: photos.length,
             ),
             const SizedBox(height: AppSpacing.section),
+            BasicsStep(fields: fields, onChanged: onFieldChanged),
+            const SizedBox(height: AppSpacing.section),
+            DetailsStep(
+              fields: fields,
+              onChanged: onFieldChanged,
+              showHashtags: false,
+            ),
+            const SizedBox(height: AppSpacing.section),
             PublishSection(ad: ad, showPublishStatusLink: true),
             const SizedBox(height: AppSpacing.section),
+            // `.btns{display:flex;gap:10px}` with `.btns .btn{flex:1}` —
+            // Delete and Save sit side by side, Delete on the left. With
+            // Delete hidden (a coworker session) Save simply takes the
+            // whole row.
             Row(
               children: [
+                if (canDelete) ...[
+                  Expanded(
+                    child: GestureDetector(
+                      key: const ValueKey('editListing-delete'),
+                      onTap: submitting || deleting ? null : onDelete,
+                      child: Opacity(
+                        opacity: submitting || deleting ? 0.6 : 1,
+                        child: Container(
+                          height: 52,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(
+                              AppRadii.pillButton,
+                            ),
+                            border: Border.all(
+                              color: AppStatusColors.dangerBorder,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: deleting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation(
+                                      AppStatusColors.errorText,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  l10n.listingEditorDeleteButtonLabel,
+                                  style: type.rowTitle.copyWith(
+                                    color: AppStatusColors.errorText,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
                 Expanded(
                   child: GestureDetector(
                     key: const ValueKey('editListing-save'),
@@ -389,45 +479,6 @@ class _FormBody extends StatelessWidget {
                 ),
               ],
             ),
-            if (canDelete) ...[
-              const SizedBox(height: AppSpacing.base),
-              GestureDetector(
-                key: const ValueKey('editListing-delete'),
-                onTap: submitting || deleting ? null : onDelete,
-                child: Opacity(
-                  opacity: submitting || deleting ? 0.6 : 1,
-                  child: Container(
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(AppRadii.pillButton),
-                      border: Border.all(
-                        color: AppStatusColors.dangerBorder,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: deleting
-                        ? SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation(
-                                AppStatusColors.errorText,
-                              ),
-                            ),
-                          )
-                        : Text(
-                            l10n.listingEditorDeleteButtonLabel,
-                            style: type.rowTitle.copyWith(
-                              color: AppStatusColors.errorText,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

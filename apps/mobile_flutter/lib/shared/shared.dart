@@ -12,7 +12,6 @@
 /// directly importable too, for a caller that wants only one piece.
 library;
 
-export 'fixtures/work_seed_data.dart';
 export 'formatters/formatters.dart';
 export 'state/favourite_ad_ids_provider.dart';
 export 'state/favourite_ad_ids_repository.dart';
@@ -37,9 +36,13 @@ export 'widgets/load_more_footer.dart';
 export 'widgets/media_source_sheet.dart';
 export 'widgets/nav_row.dart';
 export 'widgets/price_pill.dart';
+export 'widgets/read_error.dart';
 export 'widgets/rating_stars.dart';
+export 'widgets/row_listing_card.dart';
 export 'widgets/section_header.dart';
+export 'widgets/shadow_safe_clip.dart';
 export 'widgets/sign_out_confirm.dart';
 export 'widgets/status_pill.dart';
+export 'widgets/tap_target.dart';
 export 'widgets/toast.dart';
 export 'widgets/visibility_toggle.dart';

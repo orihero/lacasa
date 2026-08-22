@@ -58,7 +58,10 @@ class Publication {
 /// exactly 5 of these, in [Channel.allChannels] order, with a synthesized
 /// `PENDING`/all-null row for any channel that's never been attempted (the
 /// server does this synthesis, not this client — see the API contract
-/// survey).
+/// survey). The four display-only channels never appear here —
+/// [Channel.fromWire] cannot produce one, and [Channel.allChannels] (which
+/// is what the server's own `ALL_CHANNELS` mirrors) does not list one; see
+/// [Channel.publishSurfaceChannels] for why the app-side list is separate.
 class ChannelStatus {
   final Channel channel;
   final PublishStatus status;

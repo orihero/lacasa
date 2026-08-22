@@ -6,14 +6,20 @@
 /// - **Next** validates only the *current* step's required fields before
 ///   advancing, blocking with inline errors if invalid (steps 3/4 have no
 ///   required fields of their own, so Next always advances from them).
-/// - **Back** never re-validates.
+/// - **Back** never re-validates — and neither does a tap on a completed
+///   step of the indicator, which is the same backward move made in one
+///   gesture instead of three (see `form/step_indicator.dart`).
 /// - **Create** exists only on the final step (Step 4) and submits the
-///   whole collected form in one `POST /ads` call.
+///   whole collected form in one `POST /ads` call, against the read-only
+///   recap [_SummaryCard] prints directly above it.
 ///
 /// **Step 3 Photos is a real picker** — see `form/photos_step.dart`'s own
-/// doc comment for the pick/upload/attach flow. [_submit] blocks (with a
-/// toast, landing back on step 3) rather than submit while a photo/video is
-/// still mid-upload — see its own comment.
+/// doc comment for the pick/upload/attach flow. [_submit] refuses to submit
+/// (with a toast, landing back on step 3) while any picked photo/video is
+/// still mid-upload **or has failed** — either way its URL is not going on
+/// `photos[]`, and creating the ad without it behind a success toast is the
+/// silent drop this app's honesty rule forbids. See [_submit]'s own
+/// comments.
 ///
 /// **Discard confirmation** (§5's unsaved-form-dismissal rule, `
 /// create-listing` named explicitly): the header close "X" and the system
@@ -31,13 +37,17 @@ import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../my_listings/state/my_listings_providers.dart';
+import '../listing_editor_error_message.dart';
 import '../state/listing_editor_repository_provider.dart';
+import 'channel_tile.dart';
 import 'form/basics_step.dart';
 import 'form/details_step.dart';
 import 'form/listing_form_fields.dart';
 import 'form/photos_step.dart';
+import 'form/publish_section.dart' show channelLabel, olxUnavailableHint;
 import 'form/step_indicator.dart';
 import 'form/wizard_footer.dart';
+import 'publish_channels_sheet.dart' show kChannelRowGap;
 
 class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
@@ -81,6 +91,20 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
 
   void _back() {
     setState(() => _step -= 1);
+  }
+
+  /// The step indicator's tap target (finding: the indicator was purely
+  /// decorative, so fixing a typo'd Title from step 4 cost three Backs and
+  /// three Nexts). Deliberately the same "never re-validates" contract
+  /// **Back** has — the user is moving to a step they already passed, and
+  /// §5 is explicit that only Next validates.
+  ///
+  /// Ignores anything that is not strictly backward, belt-and-braces on top
+  /// of the indicator only offering completed steps: a forward jump would
+  /// skip the very validation Next exists to run.
+  void _goToStep(int step) {
+    if (step >= _step) return;
+    setState(() => _step = step);
   }
 
   Future<bool> _confirmDiscard() async {
@@ -134,6 +158,18 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
       LaCasaToast.showError(context, l10n.listingEditorPendingUploadsMessage);
       return;
     }
+    // A **failed** upload is the same silent drop with none of the "wait a
+    // few seconds" excuse: it will never produce a URL, so it contributes
+    // nothing to `photos[]` — and until this guard existed it sailed
+    // straight past the check above, published an ad missing a photo the
+    // user could still see sitting in the picker, and said "Successfully
+    // created" while doing it. Landing back on step 3 is the point: the
+    // message names a tile, so the tile has to be on screen.
+    if (_fields.hasFailedUploads) {
+      setState(() => _step = 2);
+      LaCasaToast.showError(context, l10n.listingEditorFailedUploadsMessage);
+      return;
+    }
 
     setState(() => _submitting = true);
     try {
@@ -149,7 +185,13 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
             ),
         pending: l10n.listingEditorCreatePendingLabel,
         success: l10n.listingEditorCreateSuccessMessage,
-        errorMessage: (_) => l10n.listingEditorGenericErrorMessage,
+        // Was `(_) => listingEditorGenericErrorMessage`, which threw the
+        // typed exception away and reported "Something went wrong." for a
+        // server validation rejection and for being offline alike — on the
+        // app's longest form, where knowing which one it was decides
+        // whether the user edits a field or moves to better signal. See
+        // `listing_editor_error_message.dart`.
+        errorMessage: (error) => listingEditorErrorMessage(l10n, error),
       );
       // `my-listings` and the dashboard's stat tiles/chart/workspace links
       // each cache an independent copy of the caller's ad list, and both
@@ -189,7 +231,15 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                 onClose: _handleClose,
                 closeKey: const ValueKey('createListing-close'),
               ),
-              ListingWizardStepIndicator(currentStep: _step),
+              ListingWizardStepIndicator(
+                currentStep: _step,
+                // Backward only — [ListingWizardStepIndicator] hands this
+                // callback nothing but already-completed steps, and
+                // [_goToStep] re-asserts it. See §5's step-progression
+                // rule: Next is what validates, so jumping *forward* over
+                // an unvalidated step would be a way around it.
+                onStepTapped: _goToStep,
+              ),
               Expanded(
                 child: ScrollConfiguration(
                   behavior: const MaterialScrollBehavior().copyWith(
@@ -214,7 +264,7 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
                         fields: _fields,
                         onChanged: _onFieldChanged,
                       ),
-                      _ => const _PublishStepNotice(),
+                      _ => _PublishStep(fields: _fields),
                     },
                   ),
                 ),
@@ -235,30 +285,289 @@ class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   }
 }
 
-/// Step 4's own copy — an honest stand-in for the real per-channel publish
-/// buttons §26 describes: publishing only becomes possible once this ad
-/// exists server-side (`Ad.id` is required by every `PublishResource` call),
-/// which happens the moment **Create** is tapped, not before. `edit-listing`
-/// is where the real `PublishSection` (buttons that open
-/// `publish-channels-sheet`) lives, for exactly this reason.
-class _PublishStepNotice extends StatelessWidget {
-  const _PublishStepNotice();
+/// Step 4 — a read-only recap of what is about to be submitted, then §26's
+/// "buttons per connected channel (Instagram/Telegram/YouTube); OLX shown
+/// disabled". Every channel row is rendered, matching the mockup's `.stack`
+/// of `.lrow glf` rows, but **none of them is tappable**: publishing needs
+/// an `Ad.id` (every `PublishResource` call requires one), which only exists
+/// the moment **Create** is tapped. The leading hint says so in words rather
+/// than leaving the rows to look merely broken; `edit-listing` is where the
+/// same rows become live (see `form/publish_section.dart`).
+///
+/// **The [_SummaryCard] is why this step is not just four dead rows.** The
+/// three steps behind it are gone from the screen by the time Create is
+/// reachable, so the only thing the last, irreversible tap used to be
+/// pressed against was memory. The card reprints the fields a mistake would
+/// actually hurt in — title, where it is, what it costs, how big it is, how
+/// many photos made it — so a wrong one is visible *before* the POST rather
+/// than on `my-listings` afterwards. It is deliberately read-only: the step
+/// indicator (now tappable, see [_CreateListingScreenState._goToStep]) is
+/// how a wrong value gets fixed, so there is exactly one editor per field.
+class _PublishStep extends StatelessWidget {
+  const _PublishStep({required this.fields});
+
+  final ListingFormFields fields;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.campaign_outlined, size: 26, color: colors.faint),
-        const SizedBox(height: AppSpacing.base),
+        _SummaryCard(fields: fields),
+        const SizedBox(height: AppSpacing.section),
         Text(
-          AppLocalizations.of(context).listingEditorCreatePublishNoticeMessage,
-          style: type.body.copyWith(color: colors.ink2),
+          l10n.listingEditorCreatePublishNoticeMessage,
+          style: type.bodySmall.copyWith(color: colors.faint),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _PublishChannelRow(
+          channel: Channel.instagram,
+          title: channelLabel(l10n, Channel.instagram),
+        ),
+        const SizedBox(height: kChannelRowGap),
+        _PublishChannelRow(
+          channel: Channel.telegram,
+          title: channelLabel(l10n, Channel.telegram),
+        ),
+        const SizedBox(height: kChannelRowGap),
+        _PublishChannelRow(
+          channel: Channel.youtube,
+          title: channelLabel(l10n, Channel.youtube),
+          subtitle: l10n.listingEditorYoutubeUnavailableHint,
+        ),
+        const SizedBox(height: kChannelRowGap),
+        _PublishChannelRow(
+          channel: Channel.olx,
+          title: channelLabel(l10n, Channel.olx),
+          subtitle: olxUnavailableHint(l10n),
         ),
       ],
+    );
+  }
+}
+
+/// The read-only recap at the top of Step 4 — see [_PublishStep]'s own doc
+/// comment for why it exists.
+///
+/// Every label here is the *same* ARB key the field's own editor uses
+/// (`listingEditorTitleFieldLabel` and friends), never a summary-specific
+/// paraphrase: a recap that renamed the fields would be a second vocabulary
+/// for the user to map back onto steps 1–2. Only the two values with no
+/// field of their own are composed here — the price preview (mirroring
+/// `details_step.dart`'s own live preview, down to the currency suffix) and
+/// the photo count.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.fields});
+
+  final ListingFormFields fields;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return GlassSurface(
+      key: const ValueKey('createListing-summary'),
+      variant: GlassVariant.flatForm,
+      borderRadius: BorderRadius.circular(AppRadii.card),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.listingEditorSummaryCardTitle,
+            style: type.panelHeading.copyWith(color: colors.ink),
+          ),
+          const SizedBox(height: AppSpacing.base),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-title'),
+            label: l10n.listingEditorTitleFieldLabel,
+            value: _orNull(fields.title.text),
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-city'),
+            label: l10n.listingEditorCityFieldLabel,
+            value: _orNull(fields.city.text),
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-district'),
+            label: l10n.listingEditorDistrictFieldLabel,
+            value: _orNull(fields.district.text),
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-price'),
+            label: l10n.listingEditorPriceFieldLabel,
+            value: _price(l10n),
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-rooms'),
+            label: l10n.listingEditorRoomsFieldLabel,
+            value: switch (int.tryParse(fields.rooms.text.trim())) {
+              final rooms? => l10n.sharedRoomsCount(rooms),
+              null => null,
+            },
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-area'),
+            label: l10n.listingEditorAreaFieldLabel,
+            value: switch (double.tryParse(fields.area.text.trim())) {
+              final area? =>
+                '${Formatters.trimNum(area)} ${l10n.listingEditorAreaUnitSuffix}',
+              null => null,
+            },
+          ),
+          _SummaryRow(
+            rowKey: const ValueKey('createListing-summary-photos'),
+            label: l10n.listingEditorStepPhotosLabel,
+            // Successful photo uploads only — a still-uploading or failed
+            // tile is not going on `photos[]` (see
+            // `ListingFormFields.uploadedMediaUrls`), and a count that
+            // included one would be exactly the false reassurance this card
+            // is here to remove. Video is excluded because §26 counts it
+            // separately from the 5-photo cap.
+            value: l10n.listingEditorSummaryPhotosCount(
+              fields.media
+                  .where(
+                    (m) => !m.isVideo && m.status == MediaUploadStatus.done,
+                  )
+                  .length,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Mirrors `details_step.dart`'s `_PricePreview` — same grouped numeral,
+  /// same localized currency suffix, same "nothing typed yet" branch — so
+  /// the recap can never disagree with the live preview the user just saw
+  /// under the Price field.
+  String? _price(AppLocalizations l10n) {
+    final value = double.tryParse(fields.price.text.trim());
+    if (value == null) return null;
+    return l10n.listingEditorPricePreviewText(
+      Formatters.groupedNumber(value),
+      fields.priceType == CurrencyCode.uzs
+          ? l10n.listingEditorPriceTypeUzsOption
+          : l10n.listingEditorPriceTypeUsdOption,
+    );
+  }
+
+  static String? _orNull(String text) =>
+      text.trim().isEmpty ? null : text.trim();
+}
+
+/// One `label · value` line of [_SummaryCard]. A `null` [value] prints
+/// `listingEditorSummaryNotSetLabel` in the value slot — never in the label
+/// slot, and never by dropping the row: an optional field the user left
+/// empty is information, and a silently missing row would read as "this
+/// screen forgot about Rooms" rather than "Rooms is blank".
+class _SummaryRow extends StatelessWidget {
+  const _SummaryRow({
+    required this.rowKey,
+    required this.label,
+    required this.value,
+  });
+
+  final Key rowKey;
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final text = value;
+
+    return Padding(
+      key: rowKey,
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: type.specMeta.copyWith(color: colors.muted),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              text ?? l10n.listingEditorSummaryNotSetLabel,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: type.specMeta.copyWith(
+                color: text == null ? colors.faint : colors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One `.lrow glf` row on Step 4 — brand tile, channel name, optional
+/// subtitle. Dimmed and inert (see [_PublishStep]).
+///
+/// **No trailing chevron, on any row.** Three of the four used to draw one.
+/// A chevron is this app's "tapping this goes somewhere" mark everywhere
+/// else it appears (`_AddVideoRow`, `publish_section.dart`'s live rows),
+/// and none of these rows goes anywhere — the `Opacity(0.5)` said "not yet"
+/// while the chevron said "try me", and the chevron is the half that was
+/// lying. `edit-listing`'s equivalent rows keep theirs because there they
+/// are true.
+class _PublishChannelRow extends StatelessWidget {
+  const _PublishChannelRow({
+    required this.channel,
+    required this.title,
+    this.subtitle,
+  });
+
+  final Channel channel;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return Opacity(
+      opacity: 0.5,
+      child: GlassSurface(
+        variant: GlassVariant.flatForm,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+        child: Row(
+          children: [
+            ChannelIconTile(channel: channel),
+            const SizedBox(width: AppSpacing.base),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title, style: type.rowTitle.copyWith(color: colors.ink)),
+                  if (subtitle case final s?) ...[
+                    const SizedBox(height: 2),
+                    Text(s, style: type.specMeta.copyWith(color: colors.muted)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

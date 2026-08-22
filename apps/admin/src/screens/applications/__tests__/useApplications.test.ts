@@ -1,36 +1,23 @@
 /**
- * useApplications.test — the applications screen's data layer, driven against
- * a REAL @lacasa/api-client wired to a faked Transport (the same double
- * packages/api-client/src/testing/fakeTransport.ts provides for that package's
- * own suite; it is not reachable from here because the package only publishes
- * `dist`, so an equivalent recorder is built inline below).
+ * useApplications.test — the applications screen's data layer, driven against a
+ * REAL @lacasa/api-client wired to a faked Transport.
  *
  * Going through the real `admin` resource rather than stubbing
- * `apiClient.admin.listApplications` is the whole point: what this file is
- * checking is the CONTRACT — that the queue asks for `/admin/applications`
- * with the status and page size it thinks it is asking for, that the cursor is
- * threaded through as `pageParam` and omitted entirely on the first page, and
- * that a decision hits the approve/reject endpoint for the right user. A
- * stubbed resource would assert only that this file calls itself.
+ * `apiClient.admin.listApplications` is the whole point: what this file checks is
+ * the CONTRACT — that the queue asks for `/admin/applications` with the status
+ * and page size it thinks it is asking for, that the cursor is threaded through
+ * as `pageParam` and omitted entirely on the first page, and that a decision hits
+ * the approve/reject endpoint for the right user. A stubbed resource would assert
+ * only that this file calls itself.
  *
- * NOTHING HERE MOUNTS REACT, and that is not a stylistic choice: apps/web pins
- * React 18 and claims the hoisted copy at the repo root, so the hoisted
- * @tanstack/react-query resolves its own `react` to that copy while this app's
- * components resolve to the nested React 19 — rendering a hook through
- * `useInfiniteQuery` here dies with "Cannot read properties of null (reading
- * 'useEffect')" before any assertion runs (verified; src/test/render.tsx
- * documents the same split for react-dom). useApplications.ts is therefore
- * split into plain options factories plus two one-line hooks, and this file
- * exercises the factories.
- *
- * It lives under screens/applications/__tests__ rather than next to the module
- * it tests because src/data/ belongs to the whole app and this screen's agent
- * owns only its own directory.
+ * Nothing here mounts React. That was once forced by a React 18/19 hoisting
+ * conflict; it is now simply the cheapest way to pin a request shape and a set of
+ * invalidation keys, neither of which needs a tree to be true.
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Transport, TransportRequest } from "@lacasa/api-client";
 import { ApiError } from "@lacasa/domain";
-import { queryKeys } from "@/data/queryKeys";
+import { queryKeys } from "@/lib/queryKeys";
 import {
   APPLICATIONS_PAGE_SIZE,
   applicationsQueryOptions,
@@ -40,9 +27,8 @@ import {
 } from "@/data/useApplications";
 import { makeApplication, makePage } from "./fixtures";
 
-// vi.hoisted, because the vi.mock factory below is lifted above the imports
-// and cannot close over an ordinary module-scope const — the base URL included,
-// which is why it lives in here rather than next to the other constants.
+// vi.hoisted, because the vi.mock factory below is lifted above the imports and
+// cannot close over an ordinary module-scope const — the base URL included.
 const server = vi.hoisted(() => {
   const baseUrl = "http://admin.test/api";
   const calls: TransportRequest[] = [];
@@ -75,6 +61,7 @@ const server = vi.hoisted(() => {
 vi.mock("@/lib/apiClient", async () => {
   const { createLaCasaApiClient } = await import("@lacasa/api-client");
   return {
+    API_BASE_URL: server.baseUrl,
     apiClient: createLaCasaApiClient({
       transport: server.transport,
       tokenStorage: {
@@ -93,7 +80,7 @@ beforeEach(() => {
 /** The one call the fake transport recorded. Fails loudly if there wasn't exactly one. */
 function onlyCall(): TransportRequest {
   expect(server.calls).toHaveLength(1);
-  return server.calls[0]!;
+  return server.calls[0] as TransportRequest;
 }
 
 describe("applicationsQueryOptions", () => {
@@ -115,8 +102,8 @@ describe("applicationsQueryOptions", () => {
     expect(call.query).toEqual({
       status: "pending",
       limit: APPLICATIONS_PAGE_SIZE,
-      // Undefined, never "" — an empty cursor would mean "the empty cursor"
-      // to the server rather than "start at the beginning".
+      // Undefined, never "" — an empty cursor would mean "the empty cursor" to
+      // the server rather than "start at the beginning".
       cursor: undefined,
     });
   });
@@ -187,16 +174,17 @@ describe("decideApplicationMutationOptions", () => {
   }
 
   function invalidatedKeys(client: ReturnType<typeof stubClient>) {
-    return client.invalidateQueries.mock.calls.map(([arg]) => arg.queryKey);
+    return client.invalidateQueries.mock.calls.map(
+      ([arg]) => (arg as { queryKey: readonly unknown[] }).queryKey,
+    );
   }
 
   it("approves through the approve endpoint", async () => {
     server.replyWith({ user: { id: "u1" } });
-    await decideApplicationMutationOptions(stubClient()).mutationFn!(
+    await decideApplicationMutationOptions(stubClient()).mutationFn?.(
       { userId: "u1", decision: "approve" },
       // react-query hands the mutationFn a MutationFunctionContext it does not
-      // read; nothing in this codebase should have to construct one to test
-      // the request it makes.
+      // read; nothing here should have to construct one to test the request.
       undefined as never,
     );
 
@@ -207,7 +195,7 @@ describe("decideApplicationMutationOptions", () => {
 
   it("rejects through the reject endpoint", async () => {
     server.replyWith({ user: { id: "u2" } });
-    await decideApplicationMutationOptions(stubClient()).mutationFn!(
+    await decideApplicationMutationOptions(stubClient()).mutationFn?.(
       { userId: "u2", decision: "reject" },
       undefined as never,
     );
@@ -217,9 +205,13 @@ describe("decideApplicationMutationOptions", () => {
 
   it("invalidates the queue, the overview counts and the users directory on success", () => {
     const client = stubClient();
-    const options = decideApplicationMutationOptions(client);
 
-    options.onSuccess!({ user: { id: "u1" } } as never, { userId: "u1", decision: "approve" }, undefined, undefined as never);
+    decideApplicationMutationOptions(client).onSuccess?.(
+      { user: { id: "u1" } } as never,
+      { userId: "u1", decision: "approve" },
+      undefined,
+      undefined as never,
+    );
 
     expect(invalidatedKeys(client)).toEqual([
       queryKeys.applications.all,
@@ -233,7 +225,7 @@ describe("decideApplicationMutationOptions", () => {
     const conflict = new ApiError("internal" as never, "Already decided", 409);
     Object.defineProperty(conflict, "code", { value: "not_pending" });
 
-    decideApplicationMutationOptions(client).onError!(
+    decideApplicationMutationOptions(client).onError?.(
       conflict,
       { userId: "u1", decision: "approve" },
       undefined,
@@ -247,7 +239,7 @@ describe("decideApplicationMutationOptions", () => {
   it("leaves the cache alone when the decision simply failed", () => {
     const client = stubClient();
 
-    decideApplicationMutationOptions(client).onError!(
+    decideApplicationMutationOptions(client).onError?.(
       new ApiError("internal", "Boom", 500),
       { userId: "u1", decision: "reject" },
       undefined,

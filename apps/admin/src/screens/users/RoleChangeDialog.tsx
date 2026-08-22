@@ -19,13 +19,14 @@
  * in the same slot a server refusal would appear in.
  */
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import type { AdminUserRow } from "@lacasa/api-client";
 import type { UserRoleKey } from "@lacasa/domain";
 import { ConfirmDialog } from "@/ui/ConfirmDialog";
 import { Field, Select } from "@/ui/Field";
 import { Notice } from "@/ui/States";
 import { Tag } from "@/ui/Tag";
-import { USER_ROLE_LABEL, USER_ROLE_ORDER, USER_ROLE_TONE } from "@/lib/labels";
+import { USER_ROLE_ORDER, userRoleLabel, userRoleTone } from "@/lib/labels";
 import {
   isAdminGrant,
   isAdminRevoke,
@@ -33,6 +34,7 @@ import {
   roleChangeConsequence,
   roleChangeErrorMessage,
 } from "./roleChangeCopy";
+import "./roleChangeDialog.scss";
 
 export function RoleChangeDialog({
   user,
@@ -48,6 +50,7 @@ export function RoleChangeDialog({
   onConfirm: (role: UserRoleKey) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [nextRole, setNextRole] = useState<UserRoleKey>(user.role);
   const [noopAttempted, setNoopAttempted] = useState(false);
 
@@ -59,27 +62,27 @@ export function RoleChangeDialog({
   // different role" hint must never sit on top of a real `last_admin`.
   const message: ReactNode =
     error != null
-      ? roleChangeErrorMessage(error)
+      ? roleChangeErrorMessage(t, error)
       : noopAttempted
-        ? "That is the role this account already has. Pick a different one, or cancel."
+        ? t("roleUnchangedWarning")
         : null;
 
   return (
     <ConfirmDialog
-      title="Change role"
+      title={t("dialogChangeRoleTitle")}
       subject={
         <>
-          <span className="block">
+          <span className="role-dialog__subject-line">
             {user.fullName} · {user.email}
           </span>
           {/* The full UUID, not lib/format's truncated display form: this is
               the last place the admin can check they are acting on the row
               they meant, and a prefix is not proof of identity. */}
-          <span className="mt-0.5 block text-faint">{user.id}</span>
+          <span className="role-dialog__subject-id">{user.id}</span>
         </>
       }
-      consequence={roleChangeConsequence(user, nextRole)}
-      confirmLabel={roleChangeConfirmLabel(user.role, nextRole)}
+      consequence={roleChangeConsequence(t, user, nextRole)}
+      confirmLabel={roleChangeConfirmLabel(t, user.role, nextRole)}
       tone={irreversibleTone ? "danger" : "accent"}
       busy={busy}
       error={message}
@@ -93,18 +96,17 @@ export function RoleChangeDialog({
       onCancel={onCancel}
     >
       {grantingAdmin ? (
-        <Notice tone="danger" title="This is the strongest permission the platform has.">
-          Every other role change on this screen is undone by making the opposite one. This one hands
-          over the ability to make that reversal impossible.
+        <Notice tone="danger" title={t("adminGrantNoticeTitle")}>
+          {t("adminGrantNoticeBody")}
         </Notice>
       ) : null}
 
-      <div className="mb-3 flex items-center gap-2 text-tiny uppercase tracking-caps text-muted">
-        Current role
-        <Tag tone={USER_ROLE_TONE[user.role]}>{USER_ROLE_LABEL[user.role]}</Tag>
+      <div className="role-dialog__current">
+        {t("currentRole")}
+        <Tag tone={userRoleTone(user.role)}>{userRoleLabel(t, user.role)}</Tag>
       </div>
 
-      <Field label="New role">
+      <Field label={t("newRole")}>
         <Select
           value={nextRole}
           onChange={(event) => {
@@ -113,9 +115,11 @@ export function RoleChangeDialog({
           }}
         >
           {USER_ROLE_ORDER.map((role) => (
+            // One interpolated child, not two: an <option> with several text
+            // children is an option whose `.text` an assistive tech (and a
+            // test) has to reassemble.
             <option key={role} value={role}>
-              {USER_ROLE_LABEL[role]}
-              {role === user.role ? " (current)" : ""}
+              {`${userRoleLabel(t, role)}${role === user.role ? t("roleOptionCurrentSuffix") : ""}`}
             </option>
           ))}
         </Select>

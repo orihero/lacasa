@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:lacasa_mobile/api/api.dart';
+import 'package:lacasa_mobile/features/auth/state/auth_repository_provider.dart';
 import 'package:lacasa_mobile/features/saved_listings/saved_listings.dart';
 import 'package:lacasa_mobile/features/saved_listings/state/saved_listings_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
@@ -20,6 +21,7 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../shared/support/fake_favourite_ad_ids_repository.dart';
+import '../auth/support/fake_auth_repository.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'support/fake_saved_listings_repository.dart';
 
@@ -71,6 +73,7 @@ void main() {
     WidgetTester tester, {
     required FakeSavedListingsRepository repository,
     Set<String>? favouriteAdIds,
+    FakeFavouriteAdIdsRepository? favouritesRepository,
     UserRole? role = UserRole.user,
     bool withBackStack = true,
     Locale locale = const Locale('en'),
@@ -80,7 +83,10 @@ void main() {
       overrides: [
         savedListingsRepositoryProvider.overrideWithValue(repository),
         favouriteAdIdsRepositoryProvider.overrideWithValue(
-          FakeFavouriteAdIdsRepository(savedAdIds: favouriteAdIds ?? const {}),
+          favouritesRepository ??
+              FakeFavouriteAdIdsRepository(
+                savedAdIds: favouriteAdIds ?? const {},
+              ),
         ),
       ],
     );
@@ -141,18 +147,12 @@ void main() {
 
   group('header', () {
     testWidgets('shows the §3.17 title', (tester) async {
-      await pumpScreen(
-        tester,
-        repository: FakeSavedListingsRepository(),
-      );
+      await pumpScreen(tester, repository: FakeSavedListingsRepository());
       expect(find.text('Saved Listings'), findsOneWidget);
     });
 
     testWidgets('back pops to the route below', (tester) async {
-      await pumpScreen(
-        tester,
-        repository: FakeSavedListingsRepository(),
-      );
+      await pumpScreen(tester, repository: FakeSavedListingsRepository());
 
       await tester.tap(find.bySemanticsLabel('Back'));
       await tester.pumpAndSettle();
@@ -197,10 +197,7 @@ void main() {
         repository: FakeSavedListingsRepository(ads: const []),
       );
 
-      expect(
-        find.text("You haven't saved any listings yet."),
-        findsOneWidget,
-      );
+      expect(find.text("You haven't saved any listings yet."), findsOneWidget);
     });
 
     testWidgets('a load failure shows Retry and re-fetches', (tester) async {
@@ -282,10 +279,12 @@ void main() {
     });
   });
 
-  group('un-hearting on this screen (SCREENS.md §3.17 — favourites ARE the content)', () {
-    testWidgets(
-      'un-hearting a card removes it from the grid immediately',
-      (tester) async {
+  group(
+    'un-hearting on this screen (SCREENS.md §3.17 — favourites ARE the content)',
+    () {
+      testWidgets('un-hearting a card removes it from the grid immediately', (
+        tester,
+      ) async {
         final repo = FakeSavedListingsRepository(
           ads: [
             savedAd(id: 'ad-1', title: 'Bright 3-room apartment'),
@@ -308,17 +307,126 @@ void main() {
         expect(find.text('Bright 3-room apartment'), findsNothing);
         // The untouched card stays exactly where it was.
         expect(find.text('Quiet studio near the metro'), findsOneWidget);
-      },
-    );
+      });
 
-    testWidgets(
-      "a favourite set that hasn't seeded yet doesn't hide freshly-loaded "
-      'cards (the race the diff-based pruning avoids)',
-      (tester) async {
-        // The favourites repository seeds asynchronously; this test asserts
-        // the grid still shows both cards once everything settles, i.e. the
-        // still-empty-momentarily shared set never gets read as "not
-        // actually saved" — see `saved_listings_providers.dart`.
+      testWidgets(
+        "a favourite set that hasn't seeded yet doesn't hide freshly-loaded "
+        'cards (the race the diff-based pruning avoids)',
+        (tester) async {
+          // The favourites repository seeds asynchronously; this test asserts
+          // the grid still shows both cards once everything settles, i.e. the
+          // still-empty-momentarily shared set never gets read as "not
+          // actually saved" — see `saved_listings_providers.dart`.
+          final repo = FakeSavedListingsRepository(
+            ads: [
+              savedAd(id: 'ad-1', title: 'Bright 3-room apartment'),
+              savedAd(id: 'ad-2', title: 'Quiet studio near the metro'),
+            ],
+          );
+
+          await pumpScreen(
+            tester,
+            repository: repo,
+            favouriteAdIds: {'ad-1', 'ad-2'},
+          );
+
+          expect(find.text('Bright 3-room apartment'), findsOneWidget);
+          expect(find.text('Quiet studio near the metro'), findsOneWidget);
+        },
+      );
+
+      // The optimistic toggle reverts on failure by putting the id *back*
+      // into the shared set. Reading removals only, this screen kept the card
+      // hidden forever — an ad still saved server-side, still hearted
+      // everywhere else, missing from the one screen that lists saved ads.
+      testWidgets(
+        'an unsave that fails puts the card back (the revert half of the diff)',
+        (tester) async {
+          final favourites = FakeFavouriteAdIdsRepository(
+            savedAdIds: const {'ad-1', 'ad-2'},
+            unsaveError: const NetworkException('offline'),
+          );
+          final repo = FakeSavedListingsRepository(
+            ads: [
+              savedAd(id: 'ad-1', title: 'Bright 3-room apartment'),
+              savedAd(id: 'ad-2', title: 'Quiet studio near the metro'),
+            ],
+          );
+
+          final container = await pumpScreen(
+            tester,
+            repository: repo,
+            favouritesRepository: favourites,
+          );
+
+          await tester.tap(find.byKey(const ValueKey('favourite-ad-1')));
+          await tester.pumpAndSettle();
+
+          expect(favourites.unsaveCallCount, 1);
+          // The failure was surfaced to the user, and the shared set is back
+          // to the truth — both already worked before this fix.
+          expect(find.text("Couldn't update favourites"), findsOneWidget);
+          expect(
+            container.read(favouriteAdIdsProvider).contains('ad-1'),
+            isTrue,
+          );
+          // …and so is the grid — the symptom this test exists for — re-read
+          // from the server rather than re-inserted from a stale in-memory
+          // `Ad`.
+          expect(find.text('Bright 3-room apartment'), findsOneWidget);
+          expect(find.text('Quiet studio near the metro'), findsOneWidget);
+          expect(repo.fetchCallCount, 2);
+        },
+      );
+
+      testWidgets(
+        'the reconciling re-fetch never blanks the grid into skeletons',
+        (tester) async {
+          // Same failure, but with the reconciling fetch (the *second* call)
+          // frozen, so the window the user would see is observable. It must
+          // keep showing cards: this is a correction on top of an error
+          // toast, not a fresh load.
+          final gate = Completer<void>();
+          final favourites = FakeFavouriteAdIdsRepository(
+            savedAdIds: const {'ad-1', 'ad-2'},
+            unsaveError: const NetworkException('offline'),
+          );
+          final repo = FakeSavedListingsRepository(
+            ads: [
+              savedAd(id: 'ad-1', title: 'Bright 3-room apartment'),
+              savedAd(id: 'ad-2', title: 'Quiet studio near the metro'),
+            ],
+            hold: gate,
+            holdFromCall: 2,
+          );
+
+          await pumpScreen(
+            tester,
+            repository: repo,
+            favouritesRepository: favourites,
+          );
+
+          await tester.tap(find.byKey(const ValueKey('favourite-ad-1')));
+          // Frames, not `pumpAndSettle`: the second fetch is still in flight
+          // (and `ShimmerBox` would animate forever if one were on screen).
+          await tester.pump();
+          await tester.pump();
+
+          expect(repo.fetchCallCount, 2);
+          expect(find.byType(ShimmerBox), findsNothing);
+          expect(find.text('Quiet studio near the metro'), findsOneWidget);
+
+          gate.complete();
+          await tester.pumpAndSettle();
+
+          expect(find.text('Bright 3-room apartment'), findsOneWidget);
+        },
+      );
+
+      testWidgets('a successful unsave does not re-fetch', (tester) async {
+        // The reconciliation is keyed on the *revert*, so the ordinary happy
+        // path must stay a single round trip — no `GET /saved-ads` tax on
+        // every heart tap.
         final repo = FakeSavedListingsRepository(
           ads: [
             savedAd(id: 'ad-1', title: 'Bright 3-room apartment'),
@@ -332,43 +440,181 @@ void main() {
           favouriteAdIds: {'ad-1', 'ad-2'},
         );
 
-        expect(find.text('Bright 3-room apartment'), findsOneWidget);
-        expect(find.text('Quiet studio near the metro'), findsOneWidget);
-      },
-    );
-  });
+        await tester.tap(find.byKey(const ValueKey('favourite-ad-1')));
+        await tester.pumpAndSettle();
 
-  group('signed-out deep link (SCREENS.md §3.17 — only linked from profile-buyer)', () {
-    testWidgets('shows a sign-in prompt instead of an empty grid', (
+        expect(repo.fetchCallCount, 1);
+        expect(find.text('Bright 3-room apartment'), findsNothing);
+      });
+    },
+  );
+
+  group(
+    'signed-out deep link (SCREENS.md §3.17 — only linked from profile-buyer)',
+    () {
+      testWidgets('shows a sign-in prompt instead of an empty grid', (
+        tester,
+      ) async {
+        final repo = FakeSavedListingsRepository(
+          ads: [savedAd(id: 'ad-1', title: 'Bright 3-room apartment')],
+        );
+
+        await pumpScreen(tester, repository: repo, role: null);
+
+        expect(
+          find.text('Sign in to see your saved listings.'),
+          findsOneWidget,
+        );
+        expect(find.text("You haven't saved any listings yet."), findsNothing);
+        // The gate is before the fetch — a signed-out session never calls the
+        // (would-401) endpoint.
+        expect(repo.fetchCallCount, 0);
+      });
+
+      testWidgets('Sign In opens `login`', (tester) async {
+        await pumpScreen(
+          tester,
+          repository: FakeSavedListingsRepository(),
+          role: null,
+        );
+
+        await tester.tap(find.text('Sign In'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('login-stub'), findsOneWidget);
+      });
+    },
+  );
+
+  // §7.6 — on a cold start `AuthSessionNotifier` returns
+  // `signedOut(isRestoring: true)` while it validates the persisted token
+  // against `/me`. Reading `isSignedIn` alone, this screen spent that window
+  // telling a signed-in user they were logged out.
+  group('cold start while the session is being restored', () {
+    /// Builds the screen with a persisted token and a `/me` call that never
+    /// resolves — i.e. frozen in the restoring window. No `pumpAndSettle`
+    /// anywhere: `ShimmerBox` animates for as long as it is on screen.
+    Future<({ProviderContainer container, Completer<void> gate})> pumpRestoring(
+      WidgetTester tester, {
+      required FakeSavedListingsRepository repository,
+      AuthUser? restoredUser,
+    }) async {
+      final gate = Completer<void>();
+      final container = ProviderContainer(
+        retry: (retryCount, error) => null,
+        overrides: [
+          savedListingsRepositoryProvider.overrideWithValue(repository),
+          favouriteAdIdsRepositoryProvider.overrideWithValue(
+            FakeFavouriteAdIdsRepository(),
+          ),
+          hasPersistedAuthTokenProvider.overrideWithValue(true),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(
+              currentUserHold: gate,
+              currentUserResult: restoredUser,
+              currentUserError: restoredUser == null
+                  ? ApiErrorException(
+                      statusCode: 401,
+                      body: const ApiErrorBody(
+                        code: ApiErrorCode.unauthorized,
+                        message: 'Unauthorized',
+                      ),
+                    )
+                  : null,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      // Reading the notifier is what starts the restore — the same thing
+      // `main.dart` does by building the app over this provider.
+      container.read(authSessionProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.light(),
+            home: const SavedListingsScreen(),
+          ),
+        ),
+      );
+      await tester.pump();
+      return (container: container, gate: gate);
+    }
+
+    testWidgets('renders skeletons, never the "you are logged out" copy', (
+      tester,
+    ) async {
+      final repo = FakeSavedListingsRepository();
+      final pumped = await pumpRestoring(tester, repository: repo);
+
+      expect(
+        find.byKey(const ValueKey('savedListingsRestoringSkeleton')),
+        findsOneWidget,
+      );
+      expect(find.byType(ShimmerBox), findsWidgets);
+      // The claim that was false: this user may well be signed in.
+      expect(find.text('Sign in to see your saved listings.'), findsNothing);
+      expect(find.text('Sign In'), findsNothing);
+      // Still no fetch — the session isn't known yet either way.
+      expect(repo.fetchCallCount, 0);
+
+      // Let the restore settle before the test ends: the `/me` call is
+      // wrapped in `Future.timeout`, and leaving that timer pending trips
+      // the harness's "a Timer is still pending" check.
+      pumped.gate.complete();
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('a restore that succeeds resolves into the real grid', (
       tester,
     ) async {
       final repo = FakeSavedListingsRepository(
         ads: [savedAd(id: 'ad-1', title: 'Bright 3-room apartment')],
       );
-
-      await pumpScreen(tester, repository: repo, role: null);
-
-      expect(
-        find.text('Sign in to see your saved listings.'),
-        findsOneWidget,
-      );
-      expect(find.text("You haven't saved any listings yet."), findsNothing);
-      // The gate is before the fetch — a signed-out session never calls the
-      // (would-401) endpoint.
-      expect(repo.fetchCallCount, 0);
-    });
-
-    testWidgets('Sign In opens `login`', (tester) async {
-      await pumpScreen(
+      final pumped = await pumpRestoring(
         tester,
-        repository: FakeSavedListingsRepository(),
-        role: null,
+        repository: repo,
+        restoredUser: AuthUser.fromJson(const {
+          'id': 'user-1',
+          'fullName': 'Dilnoza Yusupova',
+          'email': 'dilnoza@example.com',
+          'role': 'user',
+          'phoneNumber': '+998901112233',
+          'avatar': null,
+          'agentId': null,
+          'tgChatIds': <int>[],
+          'igAccounts': <Map<String, dynamic>>[],
+          'igAssistConsentAt': null,
+          'realtor': null,
+        }),
       );
 
-      await tester.tap(find.text('Sign In'));
+      pumped.gate.complete();
       await tester.pumpAndSettle();
 
-      expect(find.text('login-stub'), findsOneWidget);
+      expect(find.text('Bright 3-room apartment'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('savedListingsRestoringSkeleton')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a restore that fails resolves into the sign-in prompt', (
+      tester,
+    ) async {
+      final pumped = await pumpRestoring(
+        tester,
+        repository: FakeSavedListingsRepository(),
+      );
+
+      pumped.gate.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sign in to see your saved listings.'), findsOneWidget);
     });
   });
 

@@ -79,7 +79,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -95,9 +101,7 @@ void main() {
   }
 
   group('rows (SCREENS.md §3.19)', () {
-    testWidgets('shows the header and the always-present rows', (
-      tester,
-    ) async {
+    testWidgets('shows the header and the always-present rows', (tester) async {
       await pumpSettings(
         tester,
         authRepository: FakeAuthRepository(),
@@ -121,9 +125,7 @@ void main() {
       expect(find.text('Connected Accounts'), findsOneWidget);
     });
 
-    testWidgets('Connected Accounts is hidden for a coworker', (
-      tester,
-    ) async {
+    testWidgets('Connected Accounts is hidden for a coworker', (tester) async {
       await pumpSettings(
         tester,
         authRepository: FakeAuthRepository(),
@@ -170,7 +172,11 @@ void main() {
         role: UserRole.user,
       );
 
-      expect(find.text('Ru'), findsOneWidget);
+      // The subtitle is the language's own name for itself
+      // (`AppLanguage.nativeName`), matching the mockup's "English" — not
+      // the abbreviated "Ru" the sheet's radio row uses as its title.
+      expect(find.text('Русский'), findsOneWidget);
+      expect(find.text('Ru'), findsNothing);
     });
 
     testWidgets('tapping it opens language-sheet', (tester) async {
@@ -184,11 +190,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // language-sheet's own three radio rows — proof the real sheet
-      // opened, not a stand-in. "En" appears twice once the sheet is open:
-      // the settings row's own subtitle (still in the tree underneath) plus
-      // the sheet's own "En" radio option — "Uz" is unambiguous since only
-      // the sheet renders it.
-      expect(find.text('En'), findsNWidgets(2));
+      // opened, not a stand-in. Only the sheet renders the abbreviated
+      // "En"/"Uz" titles now that the settings row's subtitle shows the
+      // native name ("English") instead.
+      expect(find.text('En'), findsOneWidget);
       expect(find.text('Uz'), findsOneWidget);
     });
   });
@@ -209,9 +214,7 @@ void main() {
       );
     });
 
-    testWidgets('tapping it flips and persists the preference', (
-      tester,
-    ) async {
+    testWidgets('tapping it flips and persists the preference', (tester) async {
       final notifications = FakeNotificationsPreferenceRepository(
         initial: true,
       );
@@ -229,7 +232,9 @@ void main() {
       // switch's own label never surfaces as a distinct semantics node —
       // see `settings_screen.dart`'s own note on
       // `settingsNotificationsSwitch`.
-      await tester.tap(find.byKey(const ValueKey('settingsNotificationsSwitch')));
+      await tester.tap(
+        find.byKey(const ValueKey('settingsNotificationsSwitch')),
+      );
       await tester.pumpAndSettle();
 
       expect(notifications.saved, [false]);
@@ -241,7 +246,9 @@ void main() {
       // switch's own label never surfaces as a distinct semantics node —
       // see `settings_screen.dart`'s own note on
       // `settingsNotificationsSwitch`.
-      await tester.tap(find.byKey(const ValueKey('settingsNotificationsSwitch')));
+      await tester.tap(
+        find.byKey(const ValueKey('settingsNotificationsSwitch')),
+      );
       await tester.pumpAndSettle();
 
       expect(notifications.saved, [false, true]);
@@ -261,21 +268,56 @@ void main() {
 
       expect(find.text('La Casa $appVersion'), findsOneWidget);
     });
+
+    // §10.4 — this used to be a bare SnackBar, rendering Material's docked
+    // dark-grey bar instead of SCREENS.md §5's floating card toast.
+    testWidgets('the toast is a LaCasaToast, and a neutral one', (
+      tester,
+    ) async {
+      await pumpSettings(
+        tester,
+        authRepository: FakeAuthRepository(),
+        role: UserRole.user,
+      );
+
+      await tester.tap(find.text('About'));
+      await tester.pumpAndSettle();
+
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.behavior, SnackBarBehavior.floating);
+      // Info, not success: the row answered a question, it didn't complete
+      // an operation.
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byIcon(Icons.info_outline_rounded),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.byIcon(Icons.check_circle_rounded),
+        ),
+        findsNothing,
+      );
+    });
   });
 
   group('Logout', () {
-    testWidgets('tapping the row opens a confirm dialog, not an immediate sign-out', (
-      tester,
-    ) async {
-      final repo = FakeAuthRepository();
-      await pumpSettings(tester, authRepository: repo, role: UserRole.agent);
+    testWidgets(
+      'tapping the row opens a confirm dialog, not an immediate sign-out',
+      (tester) async {
+        final repo = FakeAuthRepository();
+        await pumpSettings(tester, authRepository: repo, role: UserRole.agent);
 
-      await tester.tap(find.text('Logout'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Logout'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Log out?'), findsOneWidget);
-      expect(repo.signOutCallCount, 0);
-    });
+        expect(find.text('Log out?'), findsOneWidget);
+        expect(repo.signOutCallCount, 0);
+      },
+    );
 
     testWidgets('Cancel dismisses without signing out', (tester) async {
       final repo = FakeAuthRepository();
@@ -313,6 +355,37 @@ void main() {
         expect(repo.signOutCallCount, 1);
         expect(container.read(authSessionProvider).isSignedIn, isFalse);
         expect(find.text('profile-root'), findsOneWidget);
+      },
+    );
+
+    // §10.4, and the one warning on this screen that genuinely is an error:
+    // the account may sign itself back in on next launch.
+    testWidgets(
+      'a keystore that refuses to drop the token warns through the error toast',
+      (tester) async {
+        final repo = FakeAuthRepository(
+          signOutError: StateError('keystore unavailable'),
+        );
+        await pumpSettings(tester, authRepository: repo, role: UserRole.agent);
+
+        await tester.tap(find.text('Logout'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('profileLogoutConfirm')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining("the saved session couldn't be removed"),
+          findsOneWidget,
+        );
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.behavior, SnackBarBehavior.floating);
+        expect(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.byIcon(Icons.error_rounded),
+          ),
+          findsOneWidget,
+        );
       },
     );
   });

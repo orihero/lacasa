@@ -25,6 +25,20 @@
 /// `lead_form_controls.dart#LeadCoworkerField`'s doc comment: it resolves
 /// and displays [Lead.coworkerId] (a real field) but cannot write a new
 /// selection, because `LeadWriteInput` carries no `coworkerId` at all.
+///
+/// **A call button sits in the header beside the close "X"**, dialling via
+/// [dialOrCopyPhone] exactly as `listing-detail`, `agent-profile` and
+/// `profile-agent` do. Phone here is an editable [LeadTextField] — the field
+/// is for *correcting* the number, and correcting it is not the same act as
+/// using it, so before this pass the whole leads CRM (a "Need To Call Back"
+/// column included) could not place a single call. The button reads the
+/// live controller rather than [Lead.phone] so it always dials what the
+/// sheet is currently showing, and is **omitted, not disabled, when that is
+/// empty**: an agent who has cleared the field is mid-edit, and a dead
+/// circle sitting there says less than nothing. (`agent-profile` disables
+/// its equivalent instead — the difference is that its number is read-only,
+/// so "this agent has no number" is a fact worth stating; here it is just a
+/// half-typed form.)
 library;
 
 import 'package:flutter/material.dart';
@@ -42,7 +56,10 @@ import 'lead_form_controls.dart';
 /// Opens the sheet for [leadId] — see contract §3.4 for the exact,
 /// fixed signature every caller (including `work_misc`'s
 /// `NotificationsScreen`) depends on.
-Future<void> showLeadDetailSheet(BuildContext context, {required String leadId}) {
+Future<void> showLeadDetailSheet(
+  BuildContext context, {
+  required String leadId,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -96,7 +113,9 @@ class _StatusSheet extends StatelessWidget {
       height: 260,
       decoration: BoxDecoration(
         color: colors.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.sheet)),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadii.sheet),
+        ),
       ),
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -120,7 +139,52 @@ class _GrabHandle extends StatelessWidget {
       width: 38,
       height: 4,
       margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-      decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
+      decoration: BoxDecoration(
+        color: colors.line,
+        borderRadius: AppRadii.pill,
+      ),
+    );
+  }
+}
+
+/// The header's call affordance — the same 34dp filled circle
+/// [LeadSheetCloseButton] draws, so the pair reads as one control group,
+/// with the accent reserved for the action that actually leaves the app.
+///
+/// Wrapped in a [TapTarget] at 44dp rather than the widget's own 48dp
+/// default (the "say why" its doc comment asks for): the header row's other
+/// control is a bare 34dp circle, and 44 — Apple's floor — keeps the row's
+/// height within a few pixels of the mockup's `.sh__h` while still giving
+/// this one a real, thumb-sized box.
+class _CallButton extends StatelessWidget {
+  const _CallButton({
+    super.key,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  final String semanticsLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    return TapTarget(
+      minSize: 44,
+      semanticsLabel: semanticsLabel,
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: colors.sunk, shape: BoxShape.circle),
+        child: const Icon(
+          Icons.phone_rounded,
+          size: 16,
+          color: AppAccent.color,
+        ),
+      ),
     );
   }
 }
@@ -163,7 +227,9 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
     );
     _commit = TextEditingController(text: lead.comment ?? '');
     _source = TextEditingController(text: lead.source ?? '');
-    _status = lead.status == LeadStatus.unknown ? LeadStatus.newLead : lead.status;
+    _status = lead.status == LeadStatus.unknown
+        ? LeadStatus.newLead
+        : lead.status;
     _callbackDate = lead.callbackDate;
   }
 
@@ -184,7 +250,9 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
     final phone = _phone.text.trim();
     final budgetText = _budget.text.trim();
     setState(() {
-      _fullNameError = fullName.isEmpty ? l10n.leadsDetailFullNameRequiredError : null;
+      _fullNameError = fullName.isEmpty
+          ? l10n.leadsDetailFullNameRequiredError
+          : null;
       _phoneError = phone.isEmpty || Formatters.isValidUzPhone(phone)
           ? null
           : l10n.leadsPhoneInvalidError;
@@ -192,7 +260,9 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
           ? null
           : l10n.leadsBudgetInvalidError;
     });
-    return _fullNameError == null && _phoneError == null && _budgetError == null;
+    return _fullNameError == null &&
+        _phoneError == null &&
+        _budgetError == null;
   }
 
   Future<void> _save() async {
@@ -207,33 +277,52 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
 
     setState(() => _submitting = true);
     try {
-      await ref.read(leadsProvider.notifier).updateLead(
-        widget.lead.id,
-        LeadWriteInput(
-          fullName: OptionalField(_fullName.text.trim()),
-          phone: OptionalField(phone),
-          email: OptionalField(email.isEmpty ? null : email),
-          budget: OptionalField(budgetText.isEmpty ? null : double.tryParse(budgetText)),
-          comment: OptionalField(commit.isEmpty ? null : commit),
-          status: OptionalField(_status),
-          source: OptionalField(source.isEmpty ? null : source),
-          // Only meaningful for `need_to_call_back` — cleared when the
-          // status is anything else, so a stale reminder doesn't linger on
-          // a lead that has since moved on.
-          callbackDate: OptionalField(
-            _status == LeadStatus.needToCallBack ? _callbackDate : null,
-          ),
-        ),
-      );
+      await ref
+          .read(leadsProvider.notifier)
+          .updateLead(
+            widget.lead.id,
+            LeadWriteInput(
+              fullName: OptionalField(_fullName.text.trim()),
+              phone: OptionalField(phone),
+              email: OptionalField(email.isEmpty ? null : email),
+              budget: OptionalField(
+                budgetText.isEmpty ? null : double.tryParse(budgetText),
+              ),
+              comment: OptionalField(commit.isEmpty ? null : commit),
+              status: OptionalField(_status),
+              source: OptionalField(source.isEmpty ? null : source),
+              // Only meaningful for `need_to_call_back` — cleared when the
+              // status is anything else, so a stale reminder doesn't linger on
+              // a lead that has since moved on.
+              //
+              // `.toUtc()` is the write half of this screen's timezone fix
+              // (see `pickLeadDateTime`'s doc comment for the read half):
+              // `LeadWriteInput` serializes with `toIso8601String()`, which
+              // emits a trailing `Z` **only** for a UTC [DateTime] and
+              // otherwise sends bare wall-clock digits the server's own
+              // `new Date(...)` resolves in the *server's* zone. Without this,
+              // a 09:00 Tashkent call-back picked here came back as 14:00.
+              callbackDate: OptionalField(
+                _status == LeadStatus.needToCallBack
+                    ? _callbackDate?.toUtc()
+                    : null,
+              ),
+            ),
+          );
       if (!mounted) return;
       Navigator.of(context).pop();
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsUpdatedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).leadsUpdatedToastMessage,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).leadsUpdateErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).leadsUpdateErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -251,13 +340,18 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
       await ref.read(leadsProvider.notifier).deleteLead(widget.lead.id);
       if (!mounted) return;
       Navigator.of(context).pop();
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).leadsDeletedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).leadsDeletedToastMessage,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _deleting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).leadsDeleteErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).leadsDeleteErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -297,18 +391,20 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
     final l10n = AppLocalizations.of(context);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      // `.sh{left:8px;right:8px;bottom:8px;border-radius:34px;
+      // padding:10px 18px 22px}` — a floating, fully-rounded card inset from
+      // the screen edges. The route is opened with a transparent background,
+      // so the inset reveals the scrim rather than a seam.
       child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadii.sheet)),
+          borderRadius: BorderRadius.circular(34),
         ),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.base,
-          AppSpacing.xl,
-          AppSpacing.xl,
-        ),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 22),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -324,56 +420,70 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                       style: type.sheetTitle.copyWith(color: colors.ink),
                     ),
                   ),
-                  Semantics(
-                    button: true,
-                    label: l10n.leadsDetailCloseLabel,
-                    child: GestureDetector(
-                      key: const ValueKey('leadDetail-close'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Icon(Icons.close_rounded, size: 20, color: colors.ink2),
+                  // Omitted outright for an empty phone — see this file's doc
+                  // comment for why this one is a hide rather than
+                  // `agent-profile`'s disable.
+                  if (_phone.text.trim() case final phone
+                      when phone.isNotEmpty) ...[
+                    _CallButton(
+                      key: const ValueKey('leadDetail-call'),
+                      semanticsLabel: l10n.leadsCallSemanticsLabel(phone),
+                      onTap: () => dialOrCopyPhone(context, ref, phone),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
+                  ],
+                  LeadSheetCloseButton(
+                    key: const ValueKey('leadDetail-close'),
+                    semanticsLabel: l10n.leadsDetailCloseLabel,
+                    onTap: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.section),
-              LeadTextField(
-                label: l10n.leadsFieldFullNameLabel,
-                controller: _fullName,
-                errorText: _fullNameError,
-                textInputAction: TextInputAction.next,
-                keyboardType: TextInputType.name,
-                onChanged: () => setState(() {}),
+              // `<div class="two">` — Full name + Phone share one row, as do
+              // Email + Budget and Source + Coworker below (`.two{
+              // grid-template-columns:1fr 1fr;gap:11px}`).
+              LeadFieldPair(
+                first: LeadTextField(
+                  label: l10n.leadsFieldFullNameLabel,
+                  controller: _fullName,
+                  errorText: _fullNameError,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.name,
+                  onChanged: () => setState(() {}),
+                ),
+                second: LeadTextField(
+                  label: l10n.leadsFieldPhoneLabel,
+                  controller: _phone,
+                  errorText: _phoneError,
+                  hintText: '+998901234567',
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                  ],
+                  onChanged: () => setState(() {}),
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              LeadTextField(
-                label: l10n.leadsFieldPhoneLabel,
-                controller: _phone,
-                errorText: _phoneError,
-                hintText: '+998901234567',
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
-                ],
-                onChanged: () => setState(() {}),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              LeadTextField(
-                label: l10n.leadsFieldEmailLabel,
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                onChanged: () => setState(() {}),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              LeadTextField(
-                label: l10n.leadsFieldBudgetLabel,
-                controller: _budget,
-                errorText: _budgetError,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                textInputAction: TextInputAction.next,
-                onChanged: () => setState(() {}),
+              LeadFieldPair(
+                first: LeadTextField(
+                  label: l10n.leadsFieldEmailLabel,
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onChanged: () => setState(() {}),
+                ),
+                second: LeadTextField(
+                  label: l10n.leadsFieldBudgetLabel,
+                  controller: _budget,
+                  errorText: _budgetError,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: TextInputAction.next,
+                  onChanged: () => setState(() {}),
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               LeadTextField(
@@ -392,23 +502,53 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                 const SizedBox(height: AppSpacing.lg),
                 KeyedSubtree(
                   key: const ValueKey('leadDetail-callTime'),
-                  child: LeadDateTimeField(value: _callbackDate, onTap: _pickCallbackDate),
+                  child: LeadDateTimeField(
+                    value: _callbackDate,
+                    onTap: _pickCallbackDate,
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.lg),
-              LeadTextField(
-                label: l10n.leadsFieldSourceLabel,
-                controller: _source,
-                textInputAction: TextInputAction.done,
-                onChanged: () => setState(() {}),
-              ),
-              if (isAgent) ...[
-                const SizedBox(height: AppSpacing.lg),
-                LeadCoworkerField(coworkerName: coworkerName),
-              ],
+              // Source pairs with Coworker for an agent session; with no
+              // Coworker field to sit beside, it takes the full width rather
+              // than half a row next to a blank.
+              if (isAgent)
+                LeadFieldPair(
+                  first: LeadTextField(
+                    label: l10n.leadsFieldSourceLabel,
+                    controller: _source,
+                    textInputAction: TextInputAction.done,
+                    onChanged: () => setState(() {}),
+                  ),
+                  second: LeadCoworkerField(coworkerName: coworkerName),
+                )
+              else
+                LeadTextField(
+                  label: l10n.leadsFieldSourceLabel,
+                  controller: _source,
+                  textInputAction: TextInputAction.done,
+                  onChanged: () => setState(() {}),
+                ),
               const SizedBox(height: AppSpacing.section),
+              // `.btns{display:flex;gap:10px}` with `.btns .btn{flex:1}` —
+              // Delete, Cancel and Save share one row at equal width; Delete
+              // is a real button, not a bare text link. Delete is AGENT-only
+              // (see this file's doc comment), so a coworker session gets the
+              // same row minus that child.
               Row(
                 children: [
+                  if (isAgent) ...[
+                    Expanded(
+                      child: _SheetButton(
+                        key: const ValueKey('leadDetail-delete'),
+                        label: l10n.leadsDeleteLeadButtonLabel,
+                        danger: true,
+                        submitting: _deleting,
+                        onTap: busy ? null : _delete,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('leadDetail-cancel'),
@@ -416,7 +556,7 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                       onTap: busy ? null : () => Navigator.of(context).pop(),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.base),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _SheetButton(
                       key: const ValueKey('leadDetail-save'),
@@ -428,31 +568,6 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
                   ),
                 ],
               ),
-              if (isAgent) ...[
-                const SizedBox(height: AppSpacing.base),
-                Center(
-                  child: GestureDetector(
-                    key: const ValueKey('leadDetail-delete'),
-                    onTap: busy ? null : _delete,
-                    child: Opacity(
-                      opacity: busy ? 0.5 : 1,
-                      child: _deleting
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppStatusColors.errorText,
-                              ),
-                            )
-                          : Text(
-                              l10n.leadsDeleteLeadButtonLabel,
-                              style: type.label.copyWith(color: AppStatusColors.errorText),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -461,53 +576,88 @@ class _LeadDetailFormState extends ConsumerState<_LeadDetailForm> {
   }
 }
 
+/// One `.btn` — `.btn--acc` ([primary], accent gradient), `.btn--danger glf`
+/// ([danger], flat glass under a pink rim) or `.btn--ghost glf` (the default,
+/// plain flat glass). All three are the same 54px-ish pill; none of them is a
+/// bare text link.
 class _SheetButton extends StatelessWidget {
   const _SheetButton({
     super.key,
     required this.label,
     required this.onTap,
     this.primary = false,
+    this.danger = false,
     this.submitting = false,
   });
 
   final String label;
   final VoidCallback? onTap;
   final bool primary;
+  final bool danger;
   final bool submitting;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final radius = BorderRadius.circular(AppRadii.pillButton);
+    final foreground = primary
+        ? Colors.white
+        : (danger ? AppStatusColors.errorText : colors.ink);
+
+    final Widget content = submitting
+        ? SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation(foreground),
+            ),
+          )
+        : Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: type.rowTitle.copyWith(color: foreground),
+          );
+
+    Widget body = primary
+        ? Container(
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: AppAccent.gradient,
+              borderRadius: radius,
+            ),
+            child: content,
+          )
+        : GlassSurface(
+            variant: GlassVariant.flatForm,
+            borderRadius: radius,
+            height: 52,
+            alignment: Alignment.center,
+            child: content,
+          );
+
+    if (danger) {
+      // `.btn--danger{box-shadow:inset 0 0 0 1px rgba(224,53,95,.4)}` — a rim
+      // drawn over the glass, no fill of its own.
+      body = DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(
+            color: AppStatusColors.errorText.withValues(alpha: 0.4),
+          ),
+        ),
+        child: body,
+      );
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Opacity(
-        opacity: onTap == null ? 0.5 : 1,
-        child: Container(
-          height: 52,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: primary ? AppAccent.gradient : null,
-            color: primary ? null : colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-          ),
-          child: submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
-                  ),
-                )
-              : Text(
-                  label,
-                  style: type.rowTitle.copyWith(color: primary ? Colors.white : colors.ink2),
-                ),
-        ),
-      ),
+      child: Opacity(opacity: onTap == null ? 0.5 : 1, child: body),
     );
   }
 }

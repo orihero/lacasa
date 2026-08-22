@@ -12,8 +12,30 @@
 /// endpoints already accept a list of targets in a single request. YouTube
 /// has no direct-publish call at all (only a report-back), so it does not
 /// appear in this sheet's list at all, matching §28's own text (which lists
-/// only "connected Instagram accounts / Telegram channels"). OLX is
-/// always visible-but-disabled with §5's fixed hint string.
+/// only "connected Instagram accounts / Telegram channels").
+///
+/// **The sheet ends with five inert rows** — OLX, then the four
+/// display-only channels of ruling 7.13 (Threads, Facebook Marketplace, X,
+/// LinkedIn) — drawn by [_UnavailableChannelRow] from the file-local
+/// [_inertSheetChannels] list. Every one of them is visible-but-disabled
+/// with its own reason line from
+/// [channelUnavailableHint]: OLX because cross-posting runs from the desktop
+/// extension (§5's fixed hint string), Threads because it would need a
+/// Threads profile linked to an Instagram professional account, Facebook
+/// Marketplace because no compliant automation path exists on any platform,
+/// X because it would need a paid-tier X API app, LinkedIn because it would
+/// need approved Marketing API credentials. None of them carries a checkbox,
+/// so none can ever join the selection **Publish** fans out — which is the
+/// point: this sheet's checked set feeds real network calls, and only
+/// Instagram and Telegram have one.
+///
+/// **[_inertSheetChannels] is hand-written and sheet-local on purpose** —
+/// it is deliberately *not* [Channel.publishSurfaceChannels] minus the
+/// enabled two. That list contains YouTube, and YouTube's absence from this
+/// sheet is a decision recorded in the paragraph above; deriving the rows
+/// would silently re-add it the moment someone read the two lists as
+/// interchangeable. Nor is it [Channel.allChannels], which is the server's
+/// status-response contract and has no business shaping a picker.
 ///
 /// **Telegram has no per-channel metadata** (ruling 7.10 — `AuthUser
 /// .tgChatIds` is a bare list of ints, no title/avatar/member count per
@@ -38,9 +60,24 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
+import '../listing_editor_error_message.dart';
 import '../state/listing_editor_providers.dart';
 import '../state/listing_editor_repository_provider.dart';
-import 'form/publish_section.dart' show channelLabel, olxUnavailableHint;
+import 'channel_tile.dart';
+import 'form/publish_section.dart' show channelLabel, channelUnavailableHint;
+
+/// The channels this sheet lists but can never publish to, top to bottom,
+/// rendered by [_UnavailableChannelRow] after the Telegram section — see
+/// this file's doc comment for why each is inert and why this list is
+/// written out here rather than derived from
+/// [Channel.publishSurfaceChannels].
+const List<Channel> _inertSheetChannels = [
+  Channel.olx,
+  Channel.threads,
+  Channel.facebookMarketplace,
+  Channel.x,
+  Channel.linkedin,
+];
 
 Future<void> showPublishChannelsSheet(BuildContext context, {required Ad ad}) {
   return showModalBottomSheet<void>(
@@ -119,7 +156,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
         }
       } on ApiException catch (e) {
         anyFailure = true;
-        failedIgUsernames.add(_messageFor(l10n, e));
+        failedIgUsernames.add(listingEditorErrorMessage(l10n, e));
       }
     }
 
@@ -136,7 +173,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
         if (response.results.any((r) => !r.ok)) telegramFailed = true;
       } on ApiException catch (e) {
         telegramFailed = true;
-        telegramError = _messageFor(l10n, e);
+        telegramError = listingEditorErrorMessage(l10n, e);
       }
     }
 
@@ -180,14 +217,6 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
     Navigator.of(context).pop();
   }
 
-  static String _messageFor(AppLocalizations l10n, ApiException e) {
-    if (e is ApiErrorException) return e.message;
-    if (e is NetworkException) {
-      return l10n.listingEditorNetworkErrorMessage;
-    }
-    return l10n.listingEditorGenericErrorMessage;
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -201,21 +230,29 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
         (_selectedIgUserIds.isNotEmpty || _selectedChatIds.isNotEmpty) &&
         !_publishing;
 
+    // `.sh{left:8px;right:8px;bottom:8px;border-radius:34px;padding:10px
+    // 18px 22px;max-height:86%}` — an inset, fully-rounded sheet sized to
+    // its content, not a full-bleed panel pinned to a fixed height.
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: AppSpacing.md,
+        right: AppSpacing.md,
+        bottom:
+            MediaQuery.of(context).viewInsets.bottom +
+            MediaQuery.of(context).padding.bottom +
+            AppSpacing.md,
       ),
-      child: FractionallySizedBox(
-        heightFactor: 0.82,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: colors.card,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(AppRadii.sheet),
-              topRight: Radius.circular(AppRadii.sheet),
-            ),
+            borderRadius: BorderRadius.circular(34),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: AppSpacing.sm),
               Container(
@@ -228,10 +265,10 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenGutter,
-                  AppSpacing.lg,
-                  AppSpacing.base,
-                  AppSpacing.base,
+                  18,
+                  AppSpacing.md,
+                  18,
+                  AppSpacing.xs,
                 ),
                 child: Row(
                   children: [
@@ -241,26 +278,49 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                         style: type.sheetTitle.copyWith(color: colors.ink),
                       ),
                     ),
-                    GestureDetector(
-                      key: const ValueKey('publishChannelsSheet-close'),
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: colors.ink2,
-                        size: 22,
+                    const SizedBox(width: 10),
+                    // `.sh__h .rnd{width:34px;height:34px;background:
+                    // var(--sunk)}` — the ✕ sits in its own grey circle.
+                    Semantics(
+                      button: true,
+                      label: l10n.sharedNavRowCloseLabel,
+                      child: GestureDetector(
+                        key: const ValueKey('publishChannelsSheet-close'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: colors.sunk,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.close_rounded,
+                              color: colors.ink,
+                              size: 16,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
+              Flexible(
                 child: ScrollConfiguration(
                   behavior: const MaterialScrollBehavior().copyWith(
                     overscroll: false,
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenGutter,
+                    padding: const EdgeInsets.fromLTRB(
+                      18,
+                      AppSpacing.lg,
+                      18,
+                      0,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,7 +351,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                             }),
                           ),
                         ),
-                        const SizedBox(height: AppSpacing.section),
+                        const SizedBox(height: kChannelRowGap),
                         _TelegramSection(
                           chatIds: tgChatIds,
                           selected: _selectedChatIds,
@@ -301,8 +361,15 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                             }
                           }),
                         ),
-                        const SizedBox(height: AppSpacing.section),
-                        const _OlxRow(),
+                        for (final channel in _inertSheetChannels) ...[
+                          const SizedBox(height: kChannelRowGap),
+                          _UnavailableChannelRow(
+                            key: ValueKey(
+                              'publishChannelsSheet-${channel.name}',
+                            ),
+                            channel: channel,
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.section),
                       ],
                     ),
@@ -310,12 +377,7 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.screenGutter,
-                  AppSpacing.base,
-                  AppSpacing.screenGutter,
-                  AppSpacing.lg,
-                ),
+                padding: const EdgeInsets.fromLTRB(18, AppSpacing.lg, 18, 22),
                 child: Row(
                   children: [
                     Expanded(
@@ -396,6 +458,9 @@ class _PublishChannelsSheetState extends ConsumerState<PublishChannelsSheet> {
   }
 }
 
+/// `.stack{gap:11px}` — the vertical gap between two `.lrow` channel rows.
+const double kChannelRowGap = 11;
+
 class _InstagramSection extends StatelessWidget {
   const _InstagramSection({
     required this.accounts,
@@ -413,27 +478,38 @@ class _InstagramSection extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
+    if (accounts.isEmpty) {
+      return Text(
+        l10n.listingEditorNoInstagramAccountMessage,
+        style: type.bodySmall.copyWith(color: colors.faint),
+      );
+    }
+
+    // No section heading: the mockup's sheet is one flat `.stack` of rows,
+    // each carrying its own channel name as the row's subtitle
+    // ("Instagram · 4,210 followers"). `followersCount` is independently
+    // optional on the wire (ruling 7.9 — the Graph API call filling it in
+    // can fail while the token stays valid), so an account without one
+    // falls back to the bare channel name rather than a fabricated "0".
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          channelLabel(l10n, Channel.instagram),
-          style: type.panelHeading.copyWith(color: colors.ink),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (accounts.isEmpty)
-          Text(
-            l10n.listingEditorNoInstagramAccountMessage,
-            style: type.bodySmall.copyWith(color: colors.faint),
-          )
-        else
-          for (final account in accounts)
-            _CheckRow(
-              key: ValueKey('publishChannelsSheet-ig-${account.igUserId}'),
-              label: account.username ?? account.igUserId,
-              checked: selected.contains(account.igUserId),
-              onTap: () => onToggle(account.igUserId),
-            ),
+        for (final account in accounts) ...[
+          if (account != accounts.first) const SizedBox(height: kChannelRowGap),
+          _CheckRow(
+            key: ValueKey('publishChannelsSheet-ig-${account.igUserId}'),
+            channel: Channel.instagram,
+            label: account.username ?? account.igUserId,
+            subtitle: switch (account.followersCount) {
+              final n? => l10n.listingEditorInstagramFollowersSubtitle(
+                Formatters.groupedNumber(n),
+              ),
+              null => channelLabel(l10n, Channel.instagram),
+            },
+            checked: selected.contains(account.igUserId),
+            onTap: () => onToggle(account.igUserId),
+          ),
+        ],
       ],
     );
   }
@@ -456,82 +532,116 @@ class _TelegramSection extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
+    if (chatIds.isEmpty) {
+      return Text(
+        l10n.listingEditorNoTelegramChannelMessage,
+        style: type.bodySmall.copyWith(color: colors.faint),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          channelLabel(l10n, Channel.telegram),
-          style: type.panelHeading.copyWith(color: colors.ink),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        if (chatIds.isEmpty)
-          Text(
-            l10n.listingEditorNoTelegramChannelMessage,
-            style: type.bodySmall.copyWith(color: colors.faint),
-          )
-        else
-          for (final chatId in chatIds)
-            _CheckRow(
-              key: ValueKey('publishChannelsSheet-tg-$chatId'),
-              // No per-channel title exists on this build's wire data
-              // (ruling 7.10) — the raw chat id is the honest label.
-              label: l10n.listingEditorTelegramChannelRowLabel(chatId),
-              checked: selected.contains(chatId),
-              onTap: () => onToggle(chatId),
-            ),
+        for (final chatId in chatIds) ...[
+          if (chatId != chatIds.first) const SizedBox(height: kChannelRowGap),
+          _CheckRow(
+            key: ValueKey('publishChannelsSheet-tg-$chatId'),
+            channel: Channel.telegram,
+            // No per-channel title exists on this build's wire data
+            // (ruling 7.10) — the raw chat id is the honest label, and
+            // the mockup's "· 1,864 members" has no wire source at all,
+            // so no follower/member count is invented here.
+            label: l10n.listingEditorTelegramChannelRowLabel(chatId),
+            subtitle: channelLabel(l10n, Channel.telegram),
+            checked: selected.contains(chatId),
+            onTap: () => onToggle(chatId),
+          ),
+        ],
       ],
     );
   }
 }
 
-class _OlxRow extends StatelessWidget {
-  const _OlxRow();
+/// One of the sheet's trailing inert rows — was `_OlxRow`, generalized to
+/// take its [channel] once the four display-only channels of ruling 7.13
+/// needed exactly the same treatment. The rendering is unchanged from the
+/// OLX-only version (same [GlassSurface], same 0.55 opacity, same
+/// [ChannelIconTile], same two text styles, still no checkbox), so OLX's
+/// shipped appearance and its widget tests are untouched; only the two
+/// strings and the tile's brand now come from the channel.
+///
+/// Structurally distinct from [_CheckRow], not a disabled variant of it:
+/// there is no `.chk` box to disable, no `onTap`, and no [Semantics]
+/// `checked` state — a row that cannot be selected should not announce
+/// itself as an unselected checkbox to a screen reader.
+class _UnavailableChannelRow extends StatelessWidget {
+  const _UnavailableChannelRow({super.key, required this.channel});
+
+  final Channel channel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    // Non-null for every member of [_inertSheetChannels] — the `!` is
+    // pinned by that list's contents, and `channelUnavailableHint` returns
+    // null only for the two enabled channels and the decode fallback,
+    // neither of which this sheet ever renders.
+    final hint = channelUnavailableHint(l10n, channel)!;
 
+    // `.lrow glf is-off` — same card shape as a channel row, dimmed, with
+    // the neutral `.lrow__ic` tile and no checkbox at all.
     return Opacity(
       opacity: 0.55,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.check_box_outline_blank_rounded,
-                size: 20,
-                color: colors.faint,
+      child: GlassSurface(
+        variant: GlassVariant.flatForm,
+        borderRadius: BorderRadius.circular(AppRadii.card),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+        child: Row(
+          children: [
+            ChannelIconTile(channel: channel),
+            const SizedBox(width: AppSpacing.base),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    channelLabel(l10n, channel),
+                    style: type.rowTitle.copyWith(color: colors.ink),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hint,
+                    style: type.specMeta.copyWith(color: colors.muted),
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.base),
-              Text(
-                channelLabel(l10n, Channel.olx),
-                style: type.rowTitle.copyWith(color: colors.ink2),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            olxUnavailableHint(l10n),
-            style: type.caption.copyWith(color: colors.faint),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
+/// One `.lrow glf` channel row: brand tile, account handle over the
+/// channel name, and a `.chk` box on the right — accent-gradient with a
+/// white check when on, a 1.5px inset hairline when off.
 class _CheckRow extends StatelessWidget {
   const _CheckRow({
     super.key,
+    required this.channel,
     required this.label,
+    required this.subtitle,
     required this.checked,
     required this.onTap,
   });
 
+  final Channel channel;
   final String label;
+  final String subtitle;
   final bool checked;
   final VoidCallback onTap;
 
@@ -540,29 +650,73 @@ class _CheckRow extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        child: Row(
-          children: [
-            Icon(
-              checked
-                  ? Icons.check_box_rounded
-                  : Icons.check_box_outline_blank_rounded,
-              size: 20,
-              color: checked ? AppAccent.color : colors.muted,
-            ),
-            const SizedBox(width: AppSpacing.base),
-            Expanded(
-              child: Text(
-                label,
-                style: type.rowTitle.copyWith(color: colors.ink),
+    return Semantics(
+      checked: checked,
+      label: '$label, $subtitle',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          borderRadius: BorderRadius.circular(AppRadii.card),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          child: Row(
+            children: [
+              ChannelIconTile(channel: channel),
+              const SizedBox(width: AppSpacing.base),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: type.rowTitle.copyWith(color: colors.ink),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      overflow: TextOverflow.ellipsis,
+                      style: type.specMeta.copyWith(color: colors.muted),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.base),
+              _CheckBox(checked: checked),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// `.chk{width:24px;height:24px;border-radius:8px;box-shadow:inset 0 0 0
+/// 1.5px var(--line)}` / `.chk.on{background:var(--accent-grad);color:#fff}`.
+class _CheckBox extends StatelessWidget {
+  const _CheckBox({required this.checked});
+
+  final bool checked;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    return Container(
+      width: 24,
+      height: 24,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: checked ? AppAccent.gradient : null,
+        borderRadius: BorderRadius.circular(AppRadii.xs),
+        border: checked ? null : Border.all(color: colors.line, width: 1.5),
+        boxShadow: checked ? AppShadows.accentGlow : null,
+      ),
+      child: checked
+          ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+          : null,
     );
   }
 }

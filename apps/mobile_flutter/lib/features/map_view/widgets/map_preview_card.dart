@@ -46,11 +46,12 @@ class MapPreviewCard extends StatelessWidget {
       key: ValueKey('mapPreview-${ad.id}'),
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
+      // `.map__prev{border-radius:24px;padding:9px}` wrapping an `.lcard`.
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: BorderRadius.circular(AppRadii.card),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.16),
@@ -61,34 +62,42 @@ class MapPreviewCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // `.lcard__ph{width:106px;height:96px;border-radius:16px}`.
             ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.sm),
+              borderRadius: BorderRadius.circular(16),
               child: SizedBox(
-                width: 68,
-                height: 68,
+                width: 106,
+                height: 96,
                 child: ListingPhoto(
                   url: ad.photos.isEmpty ? null : ad.photos.first,
                 ),
               ),
             ),
+            // `.lcard{gap:12px}`.
             const SizedBox(width: AppSpacing.base),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    ad.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: type.rowTitle.copyWith(color: colors.ink),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
+                  // `.lcard__b` leads with the price (`.lcard__p`, 14/700),
+                  // then the title (`.lcard__t`, 12/600), then the spec
+                  // line — the order a buyer scans a map result in.
                   Text(
                     Formatters.price(ad),
                     style: LaCasaTypography.tabular(
                       type.cardPrice,
                     ).copyWith(color: colors.ink),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    ad.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.rowTitle.copyWith(
+                      fontSize: 12,
+                      color: colors.ink,
+                    ),
                   ),
                   // Dropped rather than shown as "null room" when the ad
                   // states no room count — the same honest-gap rule
@@ -102,12 +111,6 @@ class MapPreviewCard extends StatelessWidget {
                   ],
                 ],
               ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: colors.faint,
             ),
           ],
         ),

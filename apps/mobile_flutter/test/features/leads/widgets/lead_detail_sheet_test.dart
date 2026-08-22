@@ -10,8 +10,11 @@ import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/leads/leads.dart';
 import 'package:lacasa_mobile/features/leads/state/leads_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../../shared/support/fake_link_launcher.dart';
 import '../support/fake_leads_repository.dart';
 import '../support/lead_fixtures.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
@@ -22,10 +25,17 @@ void main() {
     required FakeLeadsRepository repository,
     required String leadId,
     UserRole? role = UserRole.agent,
+    // Only the test that actually taps Call needs one — see
+    // `agent_profile_screen_test.dart` for the same arrangement.
+    LinkLauncher? linkLauncher,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
-      overrides: [leadsRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        leadsRepositoryProvider.overrideWithValue(repository),
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
+      ],
     );
     addTearDown(container.dispose);
     container.read(authSessionProvider.notifier).setRole(role);
@@ -123,6 +133,92 @@ void main() {
     });
   });
 
+  group('call the lead (§32 header)', () {
+    testWidgets('the header Call button dials the lead', (tester) async {
+      final launcher = FakeLinkLauncher();
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpSheet(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        leadId: 'lead-1',
+        linkLauncher: launcher,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('leadDetail-call')));
+      await tester.pumpAndSettle();
+
+      expect(launcher.dialed, ['+998901234501']);
+    });
+
+    testWidgets('the Call button announces itself as "Call {phone}"', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpSheet(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        leadId: 'lead-1',
+      );
+
+      final target = tester.widget<TapTarget>(
+        find.descendant(
+          of: find.byKey(const ValueKey('leadDetail-call')),
+          matching: find.byType(TapTarget),
+        ),
+      );
+      expect(target.semanticsLabel, 'Call +998901234501');
+    });
+
+    testWidgets('a lead with no phone gets no Call button — the close X stays', (
+      tester,
+    ) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova', phone: null);
+      await pumpSheet(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        leadId: 'lead-1',
+      );
+
+      expect(find.byKey(const ValueKey('leadDetail-call')), findsNothing);
+      expect(find.byKey(const ValueKey('leadDetail-close')), findsOneWidget);
+    });
+
+    testWidgets('clearing the phone field hides the Call button', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpSheet(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        leadId: 'lead-1',
+      );
+
+      expect(find.byKey(const ValueKey('leadDetail-call')), findsOneWidget);
+
+      // The button dials what the sheet is currently showing, not the
+      // last-saved `Lead.phone` — see the file's doc comment.
+      await tester.enterText(
+        find.widgetWithText(TextField, '+998901234501'),
+        '',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('leadDetail-call')), findsNothing);
+    });
+  });
+
   group('validation', () {
     testWidgets('an empty Full name blocks Save', (tester) async {
       final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
@@ -156,6 +252,60 @@ void main() {
 
       expect(find.text('Invalid Uzbekistan phone number'), findsOneWidget);
       expect(repo.updateCallCount, 0);
+    });
+  });
+
+  group('timezone (§32 — Call time is a wall clock)', () {
+    // `Lead.callbackDate` is decoded by `DateTime.tryParse`, so a `Z`-suffixed
+    // wire value carries the UTC flag and `Formatters.date` would read UTC
+    // calendar/clock fields straight off it. Derived rather than hardcoded
+    // because a test process's local zone is whatever machine runs it — under
+    // UTC this is a tautology, under UTC+5 (this app's market) it fails the
+    // moment the conversion is dropped.
+    testWidgets('the Call time field shows the instant in local time', (
+      tester,
+    ) async {
+      final due = DateTime.utc(2026, 8, 10, 4);
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        status: LeadStatus.needToCallBack,
+        callbackDate: due,
+      );
+      await pumpSheet(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        leadId: 'lead-1',
+      );
+
+      expect(find.text(Formatters.date(due.toLocal())), findsOneWidget);
+    });
+
+    testWidgets('Save sends the call-back as a UTC instant', (tester) async {
+      final due = DateTime.utc(2026, 8, 10, 4);
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        status: LeadStatus.needToCallBack,
+        callbackDate: due,
+      );
+      final repo = FakeLeadsRepository(leads: [lead]);
+      await pumpSheet(tester, repository: repo, leadId: 'lead-1');
+
+      await tester.ensureVisible(find.byKey(const ValueKey('leadDetail-save')));
+      await tester.tap(find.byKey(const ValueKey('leadDetail-save')));
+      await tester.pumpAndSettle();
+
+      final sent = repo.lastUpdateInput!.callbackDate!.value!;
+      expect(
+        sent.isUtc,
+        isTrue,
+        reason:
+            'LeadWriteInput serializes with toIso8601String(), which only '
+            'emits the trailing Z for a UTC DateTime — a local one puts bare '
+            'wall-clock digits on the wire for the server to reinterpret',
+      );
+      expect(sent.isAtSameMomentAs(due), isTrue);
     });
   });
 

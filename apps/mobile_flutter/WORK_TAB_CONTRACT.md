@@ -93,24 +93,50 @@ it will not go hunting for a differently-named class.
 
 ### 2.1 Routes added this pass (already wired to `PlaceholderScreen`, ready for you)
 
-New `RoutePaths` constants (all under the Work branch unless noted), all currently
-routed to `_placeholder(...)` in `app_router.dart` — the integration pass swaps each
-`builder:`/`pageBuilder:` line to your real class once you're done:
+New `RoutePaths` constants (all under the Work branch unless noted), wired to
+`_placeholder(...)` in `app_router.dart` when this pass was written — the integration
+pass swapped each `builder:`/`pageBuilder:` line to the real class once each feature
+landed, and every one of them now points at a real screen.
+
+**The strings below are what `route_paths.dart` actually declares today** (re-read
+against that file 2026-08-14), which for several of them is *not* what this pass
+originally wrote. Every Work route is now nested under the branch root that owns it,
+so a deep link — or a hardware Back — resolves to a stack with a real screen
+underneath the top page instead of a lone page over a blank `/work`. Read paths from
+the constants, never by retyping a literal.
 
 ```
 RoutePaths.workCreateLead        = '/work/leads/create'
 RoutePaths.workAddCoworker       = '/work/coworkers/create'
-RoutePaths.workNotifications     = '/work/notifications'
-RoutePaths.workMessages          = '/work/messages'
-RoutePaths.workListingDetail     = '/work/listing/:id'   // NEW — my-listings' own
+RoutePaths.workNotifications     = '/work/dashboard/notifications'  // reached from the
+                                                          // header bell, and Dashboard
+                                                          // is the branch that owns
+                                                          // that header
+RoutePaths.workMessages          = '/work/profile/messages'  // reached from
+                                                          // profile-agent's row
+RoutePaths.workListingDetail     = '/work/my-listings/listing/:id'  // my-listings' own
                                                           // listing-detail push target,
                                                           // this branch didn't have one
 ```
 
-Already existed and unchanged: `work`, `workDashboard`, `workMyListings`, `workLeads`,
-`workLeadsKanban`, `workCoworkers`, `workCoworkerDetail`, `workSettings`,
+The constants themselves already existed for `work`, `workDashboard`, `workMyListings`,
+`workLeads`, `workLeadsKanban`, `workCoworkers`, `workCoworkerDetail`, `workSettings`,
 `workConnectedAccounts`, `workEditListing`, `workPublishStatus`, `createListing`
-(top-level), `profileConnectedAccounts`, `profileMessages`, `homeNotifications`.
+(top-level), `profileConnectedAccounts`, `profileMessages`, `homeNotifications` — but
+several of *their* strings moved in the same re-parenting: `workSettings` is
+`/work/profile/settings`, `workConnectedAccounts` is
+`/work/profile/connected-accounts`, and `workEditListing`/`workPublishStatus` are
+`/work/my-listings/edit-listing/:id` and `/work/my-listings/publish-status/:id`. `work`
+itself (`/work`) is redirect-only and renders nothing: coworker → `workMyListings`,
+agent → `workDashboard`.
+
+> **Superseded since this pass was written:** `workEditListing` and `workPublishStatus`
+> are no longer flat children of `/work`. Both are now declared under `my-listings` —
+> `/work/my-listings/edit-listing/:id` and `/work/my-listings/publish-status/:id` — so
+> the screen a Back press reveals is My Ads (filters and paged scroll position intact),
+> not the blank `/work` placeholder that `_WorkPlaceholder` then bounced onward to
+> Statistics. That placeholder widget is gone with it. Keep reading paths from the
+> `RoutePaths` constants and nothing else has to change; the shape of the strings did.
 
 **Sheets are never routes** — `lead-detail`, `kanban-move-sheet`, `publish-channels-sheet`,
 `delete-confirm` are all `show...Sheet`/`show...Dialog` functions called directly from a
@@ -125,8 +151,31 @@ invent a route path for any of these.
 use `context.go(...)` to the absolute Work path, not `context.push`, regardless of which
 branch you're pushing from — `push` only makes sense within one branch's own stack (see
 every other branch's own `listing-detail`/`agent-profile` copies for the pattern this
-follows). Within the Work branch itself (e.g. `dashboard`'s bell → `workNotifications`),
-either `push` or `go` is fine since both stay on the same branch.
+follows). `notifications_screen.dart`'s `_handleTap` is the live example and stays on
+`go`.
+
+**Within a branch, `push` whenever the source screen has to still be there
+underneath; `go` only for cross-branch entry by absolute path.** Nesting depth is not
+the test — *what the user expects Back to reveal* is. `go` replaces the branch's whole
+stack, so anything the source screen was holding goes with it, and it is never the
+right call for a navigation the user will back out of.
+
+Both of `my-listings`' children are that case and both **`push`**: the edit icon →
+`workEditListing`, and `edit-listing`'s "Publish Status" link → `workPublishStatus`.
+When those two were `go`n instead, (a) the very My Ads screen the user came from was
+thrown away, filters and paging included, and (b) a *dirty* `edit-listing` form was
+torn down with no "Discard changes?" prompt — `PopScope` is a pop-only hook and never
+sees a replace. `dashboard`'s bell → `workNotifications` is the same shape one level
+up and pushes for the same reason: the Dashboard is what a Back out of the bell should
+reveal.
+
+The one `go` in this branch's own code is the cross-branch case paragraph one
+describes — `notifications_screen.dart`'s `_handleTap`, arriving from the Dashboard
+branch at an absolute path in the My Ads or Coworkers branch. That is entry into a
+different branch, not a step deeper into the current one, and it is why every Work
+route is nested under its own branch root: the absolute path resolves to a real stack
+(`[my-listings, edit-listing]`), so even a `go` — and a deep link, and a cold-start
+restore — lands with a screen underneath it.
 
 ---
 
@@ -372,7 +421,7 @@ class PublishResource {
 `channel`/`status` populated (external url/id/timestamp/error are always `null` on that
 one endpoint's response shape).
 
-`Channel` enum: `telegram, instagram, youtube, olx, realting, unknown` (`.wire` is the
+`Channel` enum: `telegram, instagram, youtube, olx, unknown` (`.wire` is the
 raw upper-case string). `PublishStatus` enum: `pending, draftedAwaitingReview,
 published, failed, unknown` (also raw upper-case on the wire).
 
@@ -556,11 +605,9 @@ lib/features/<name>/
   <name>.dart                       # barrel, exports only widgets/<root_screen>.dart(s)
   data/
     <name>_repository.dart          # abstract interface, throws ApiException subtypes only
-    fixture_<name>_repository.dart  # offline impl, default, reads work_seed_data.dart
-    live_<name>_repository.dart     # thin adapter over LaCasaApi
-    <name>_mode.dart                # const bool useLive<Name>Api = bool.fromEnvironment('LACASA_<NAME>_LIVE_API');
+    live_<name>_repository.dart     # thin adapter over LaCasaApi, the only impl
   state/
-    <name>_repository_provider.dart # Provider<XRepository> picking fixture vs live
+    <name>_repository_provider.dart # Provider<XRepository> building the live impl
     <name>_providers.dart           # AsyncNotifier/FutureProvider/Notifier providers
   widgets/
     ...screen + supporting widgets
@@ -771,6 +818,45 @@ a stored flag — this client persists its own client-side read-state watermark
 `uzs` ("so'm") as `create-listing`'s default `priceType`; `apps/console`'s own form
 defaults to `usd`. **Ruling**: follow the spec — default to `uzs`. This is a one-line
 form-state default, not a data-availability question.
+
+**7.13 — Threads / Facebook Marketplace / X / LinkedIn are display-only channels, and
+`Channel` now carries two kinds of member.** The product wants these four named on the
+publish surfaces and on `connected-accounts`. `apps/api` has nothing behind any of them:
+no route, no `Channel` Postgres-enum value, no credentials — and the server is not being
+changed for this. **Ruling**: they are added to the `Channel` enum and to every app-side
+channel surface, rendered in the app's established visibly-disabled state — the exact
+treatment ruling 7.10 gave YouTube and §7.3 gave OLX — each with its own honest,
+localized reason (`listingEditor<Name>UnavailableHint`,
+`connectedAccounts<Name>UnavailableNoteMessage`). No connect flow, no enabled control, no
+invented endpoint.
+
+The load-bearing half of this ruling is the list boundary in `lib/api/models/enums.dart`.
+`Channel.allChannels` is a description of *someone else's* response — it mirrors the
+server's `ALL_CHANNELS`, which drives `GET /publish/ads/:adId/status`, and the server
+synthesizes a `PENDING` placeholder row for every entry with no publish attempt. It stays
+**frozen at exactly four members in exactly their current order** (`telegram`,
+`instagram`, `youtube`, `olx`). A second, app-only list —
+`Channel.publishSurfaceChannels` — describes *our own UI*: eight entries in publish-row
+render order, excluding `unknown` (a decode fallback). Appending the four new members to `allChannels` instead would give
+every ad four permanently-PENDING status rows that no action in the app could ever
+clear. `test/api/channel_display_list_test.dart` pins both lists, and
+`publish_status_screen_test.dart`'s "exactly 4 channel rows" assertion is the
+second tripwire — if it ever sees eight rows, the two lists were merged.
+
+Three consequences follow from the four members having no server representation, and all
+three are deliberate: `Channel.fromWire` gains **no** cases for them (the server can never
+send those strings, so a `FAILED`/`PENDING` row for one of these channels is formally
+unreachable — which is also why they get no `NonRetryableReason` copy); `Channel.wire` and
+`publish_resource.dart`'s `_retryChannelSegment` gain arms that **throw**, following
+`Channel.unknown`'s own precedent in `wire`, because `wire`'s invariant across that file
+is "returns a string the live API understands" and returning `'THREADS'` would break it
+silently; and enabled-vs-disabled is expressed by one documented predicate,
+`Channel.hasServerPublishPath` (true only for `telegram`/`instagram`), so the surfaces
+branch on a fact about the API rather than on a hardcoded `enabled: false` repeated per
+row. Note `hasServerPublishPath` is **not** interchangeable with
+`publish_status_screen.dart`'s `_isRetryableChannel`: they list the same members today and
+ask different questions (a retryable row also needs a stored original request
+server-side). OLX behaviour is untouched by this ruling.
 
 ---
 

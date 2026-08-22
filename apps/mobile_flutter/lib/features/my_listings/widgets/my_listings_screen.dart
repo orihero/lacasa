@@ -1,4 +1,6 @@
-/// `my-listings` (SCREENS.md §25) — header "My Ads". Toolbar: **"Filter"**
+/// `my-listings` (SCREENS.md §25) — header "My Ads", with both of §25's
+/// controls riding the nav header itself as round icon buttons (the
+/// mockup's `.nav .rnd` pair), not a second toolbar row: **"Filter"**
 /// → the CRM variant of `filter-sheet` (`showCrmFilterSheet`, build
 /// contract rule 3/§3.1 — Sort + Status appended); **"+"** (Create New
 /// Post) → `create-listing`. Rows: thumbnail; `#{id}`; Created At; City;
@@ -9,6 +11,15 @@
 /// `data/my_listings_repository.dart`'s doc comment for how, and
 /// `README.md`'s Known gaps for why this used to be a client-side-only
 /// window.
+///
+/// **Three additions beyond §25's literal anatomy**, all from the UX audit,
+/// each with its own file-level rationale:
+/// - [MyListingsStageStrip] under the header — the All/Active/Sold/Draft
+///   counts (§1 "Relocate"/§5.6), which also make the session-sticky stage
+///   filter visible where it is applied.
+/// - Per-row publish-channel badges (§9.2), inside `my_listing_row.dart`.
+/// - A pull-to-refresh and two distinguishable empty states (§9.3/§9.4),
+///   inside `my_listings_list.dart`.
 ///
 /// **Router wiring**: this screen takes no constructor arguments and reads
 /// no path params (build contract §2's exact table) — swap
@@ -41,7 +52,7 @@ import '../../../theme/theme.dart';
 import '../../filter/filter.dart';
 import '../state/my_listings_providers.dart';
 import 'my_listings_list.dart';
-import 'my_listings_toolbar.dart';
+import 'my_listings_stage_strip.dart';
 
 class MyListingsScreen extends ConsumerStatefulWidget {
   const MyListingsScreen({super.key});
@@ -109,16 +120,33 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
   // consistent with every other branch's own listing-detail entry point
   // (`SearchScreen._openListingDetail`, `AgentProfileScreen`'s grid, …).
   void _openListingDetail(Ad ad) {
-    context.push('${RoutePaths.work}/listing/${ad.id}');
+    context.push(RoutePaths.workListingDetail.replaceFirst(':id', ad.id));
   }
 
-  // `edit-listing` IS one of §2.2's Work-only-concept screens — its own
-  // table row explicitly calls for `context.go`, not `push`, regardless of
-  // which branch is doing the pushing (irrelevant here, since this screen
-  // only ever lives in the Work branch anyway, but followed literally per
-  // the contract).
+  // `edit-listing` is one of build contract §2.2's "Work-only concept"
+  // screens, but §2.2's `context.go` rule is about reaching one from
+  // *another branch* (the bell in Home's header, say) — its own last
+  // sentence says either verb is fine within the Work branch, and this
+  // screen only ever lives in that branch. So this pushes: `go` replaces
+  // the branch stack, which threw away this very screen (its applied
+  // filters, its paged scroll position) on every edit-icon tap and left
+  // `edit-listing`'s own `_leave()`/back arrow with nothing to pop to —
+  // see `edit_listing_screen.dart`'s `_leave`. `edit-listing` is declared
+  // as a child of `my-listings` in `app_router.dart` precisely so this
+  // push has a real page underneath it.
   void _openEditListing(Ad ad) {
-    context.go('${RoutePaths.work}/edit-listing/${ad.id}');
+    context.push(RoutePaths.workEditListing.replaceFirst(':id', ad.id));
+  }
+
+  /// The row's channel badges tap through to `publish-status` (UX audit
+  /// §9.2) — the screen that carries what a tint cannot: the error message
+  /// on a FAILED row, the external URL on a PUBLISHED one, and Retry.
+  /// Pushed, not `go`ne, for the same reason `_openEditListing` is: both
+  /// routes are declared as children of `my-listings` in `app_router.dart`
+  /// precisely so this screen (its filters, its paged scroll position)
+  /// survives underneath them.
+  void _openPublishStatus(Ad ad) {
+    context.push(RoutePaths.workPublishStatus.replaceFirst(':id', ad.id));
   }
 
   void _pop(BuildContext context) {
@@ -146,22 +174,29 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // The mockup's `.nav` carries both actions itself — a round
+            // glass "filter" button and a round `--pill`-filled "+" —
+            // rather than a second toolbar row below the header, so both
+            // ride NavRow's own `trailing` slot.
             NavRow(
               title: AppLocalizations.of(context).myListingsNavTitle,
               onBack: () => _pop(context),
+              trailing: [
+                _FiltersButton(count: activeCount, onTap: _openFilters),
+                const SizedBox(width: AppSpacing.xs),
+                _CreateButton(onTap: _openCreate),
+              ],
             ),
-            const SizedBox(height: AppSpacing.base),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenGutter,
-              ),
-              child: MyListingsToolbar(
-                activeFilterCount: activeCount,
-                onOpenFilters: _openFilters,
-                onCreate: _openCreate,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.base),
+            // The stage-count strip rides the header, above the scroll
+            // view rather than inside it — see
+            // `my_listings_stage_strip.dart`: it is both the counts an
+            // agent opens this screen for and the only always-visible
+            // statement that a (session-sticky) stage filter is on, and
+            // neither job survives being scrolled off the top.
+            // No spacer around it: the strip owns its own padding and
+            // collapses to zero height when the counts are unavailable, so
+            // a spacer here would leave a gap with nothing in it.
+            const MyListingsStageStrip(),
             Expanded(
               child: ScrollConfiguration(
                 behavior: const MaterialScrollBehavior().copyWith(
@@ -171,11 +206,107 @@ class _MyListingsScreenState extends ConsumerState<MyListingsScreen> {
                   scrollController: _scrollController,
                   onTapAd: _openListingDetail,
                   onTapEdit: _openEditListing,
+                  onTapPublishStatus: _openPublishStatus,
+                  onCreate: _openCreate,
                 ),
               ),
             ),
             SizedBox(height: MediaQuery.of(context).padding.bottom + 90),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.nav .rnd.gl` — the header's round glass filter button. SCREENS.md
+/// §25 names this control **"Filter"**; the mockup shows no label next to
+/// the glyph, so the word survives as the Semantics label instead.
+class _FiltersButton extends StatelessWidget {
+  const _FiltersButton({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).myListingsFilterButtonLabel,
+      child: GestureDetector(
+        key: const ValueKey('myListingsFiltersButton'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GlassSurface(
+              variant: GlassVariant.onSurface,
+              borderRadius: AppRadii.pill,
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              child: Icon(Icons.tune_rounded, size: 18, color: colors.ink),
+            ),
+            if (count > 0)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  key: const ValueKey('myListingsFiltersBadge'),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.pill,
+                    borderRadius: AppRadii.pill,
+                    border: Border.all(color: colors.screen, width: 2),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: type.caption.copyWith(color: colors.pillInk),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.nav .rnd.acc` — the header's round "+" button. Its fill is
+/// `var(--pill)`/`var(--pill-ink)`, not the accent gradient: `.rnd.acc`
+/// inside a `.nav` resolves to the ink pill (mockup lines 204-205).
+class _CreateButton extends StatelessWidget {
+  const _CreateButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).myListingsCreateButtonSemanticsLabel,
+      child: GestureDetector(
+        key: const ValueKey('myListingsCreateButton'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.pill,
+            borderRadius: AppRadii.pill,
+          ),
+          child: Icon(Icons.add_rounded, size: 20, color: colors.pillInk),
         ),
       ),
     );

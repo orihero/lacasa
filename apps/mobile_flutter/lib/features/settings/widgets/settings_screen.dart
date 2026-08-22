@@ -51,9 +51,18 @@
 /// amount of real information, so it shows the app name and a
 /// hand-transcribed version string (see `data/app_version.dart` for why
 /// that's transcribed rather than read from `PackageInfo` — no new
-/// dependency in this slice) via a toast on tap, the same
-/// `ScaffoldMessenger`/`SnackBar` mechanism `contact_sheet.dart` and
-/// `favourite_button.dart` already use for transient feedback.
+/// dependency in this slice) via a toast on tap.
+///
+/// **Both of this screen's toasts go through [LaCasaToast], not a bare
+/// [SnackBar]** (this run's audit §10.4). A raw `SnackBar(content: Text(…))`
+/// inherits Material's *docked dark-grey* bar with no status glyph, which is
+/// a visibly different component from the floating `colors.card` toast
+/// SCREENS.md §5 specifies and every other confirmation in this app renders.
+/// The About row uses [LaCasaToast.showInfo] rather than `showSuccess`: a
+/// green check on "La Casa 1.0.0" claims an operation completed when the row
+/// only answered a question. The failed-sign-out message is a genuine
+/// [LaCasaToast.showError] — it warns that the account may sign itself back
+/// in on next launch, and gets the 4s error budget rather than 2.5s.
 ///
 /// **Logout's confirm copy is not spec'd either.** §3.19 says only "(red, →
 /// `delete-confirm`-style confirm)" — `delete-confirm` itself (§3.38) is a
@@ -125,14 +134,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (!mounted) return;
     if (!tokenCleared) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(
-              context,
-            ).settingsSignOutTokenNotClearedMessage,
-          ),
-        ),
+      // LaCasaToast, not a bare SnackBar — see this file's doc comment on
+      // the About row for the same swap and the reason behind both.
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).settingsSignOutTokenNotClearedMessage,
       );
     }
     // Navigate away either way — the session itself is gone.
@@ -172,9 +178,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _LanguageRow(
-                        key: ValueKey('settingsLanguageRow'),
-                      ),
+                      const _LanguageRow(key: ValueKey('settingsLanguageRow')),
                       const SizedBox(height: AppSpacing.base),
                       const _NotificationsRow(
                         key: ValueKey('settingsNotificationsRow'),
@@ -182,13 +186,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (showConnectedAccounts) ...[
                         const SizedBox(height: AppSpacing.base),
                         ListRow(
-                          key: const ValueKey(
-                            'settingsConnectedAccountsRow',
-                          ),
-                          icon: Icons.dynamic_feed_outlined,
+                          key: const ValueKey('settingsConnectedAccountsRow'),
+                          // `stack-fill` — layered sheets, matching
+                          // `profile_agent_screen.dart`'s row for the same
+                          // destination.
+                          icon: Icons.layers_rounded,
                           title: AppLocalizations.of(
                             context,
                           ).settingsConnectedAccountsRowTitle,
+                          // A static `.lrow__s` descriptor of the channels
+                          // the screen behind it manages — deliberately not
+                          // a live "n connected" count, which this screen
+                          // watches no provider for.
+                          subtitle: AppLocalizations.of(
+                            context,
+                          ).settingsConnectedAccountsRowSubtitle,
                           onTap: () => context.push(
                             '${widget.branchPrefix}/connected-accounts',
                           ),
@@ -198,22 +210,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ListRow(
                         key: const ValueKey('settingsAboutRow'),
                         icon: Icons.info_outline_rounded,
-                        title: AppLocalizations.of(context).settingsAboutRowTitle,
+                        title: AppLocalizations.of(
+                          context,
+                        ).settingsAboutRowTitle,
                         subtitle: AppLocalizations.of(
                           context,
                         ).settingsAboutRowSubtitle(appVersion),
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                ).settingsAboutToastMessage(
-                                  appName,
-                                  appVersion,
-                                ),
-                              ),
-                            ),
+                          // Neutral, not success: tapping About didn't
+                          // accomplish anything, it answered a question.
+                          LaCasaToast.showInfo(
+                            context,
+                            AppLocalizations.of(
+                              context,
+                            ).settingsAboutToastMessage(appName, appVersion),
                           );
                         },
                       ),
@@ -281,13 +291,25 @@ class _NavRow extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
+              // `.nav .rnd.gl` — a 38px round glass chip inside the 44px
+              // tap target, not a bare glyph on the screen background.
               child: SizedBox(
                 width: 44,
                 height: 44,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: colors.ink,
+                child: Center(
+                  child: GlassSurface(
+                    variant: GlassVariant.onSurface,
+                    borderRadius: AppRadii.pill,
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    distortionWidth: 8,
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 22,
+                      color: colors.ink,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -327,7 +349,11 @@ class _LanguageRow extends ConsumerWidget {
     return ListRow(
       icon: Icons.translate_rounded,
       title: AppLocalizations.of(context).settingsLanguageRowTitle,
-      subtitle: selected.label,
+      // The mockup's subtitle is the language's own name for itself
+      // ("English"), not the abbreviated radio-row label ("En") — see
+      // `AppLanguage.nativeName`, which the two profile screens' Language
+      // rows and the sheet's own second line all read too.
+      subtitle: selected.nativeName,
       onTap: () => showLanguageSheet(context),
     );
   }
@@ -432,11 +458,7 @@ class _NotificationsSwitch extends StatelessWidget {
 }
 
 class _LogoutRow extends StatelessWidget {
-  const _LogoutRow({
-    super.key,
-    required this.loggingOut,
-    required this.onTap,
-  });
+  const _LogoutRow({super.key, required this.loggingOut, required this.onTap});
 
   final bool loggingOut;
   final VoidCallback? onTap;
@@ -448,7 +470,7 @@ class _LogoutRow extends StatelessWidget {
       title: AppLocalizations.of(context).settingsLogoutRowTitle,
       subtitle: loggingOut
           ? AppLocalizations.of(context).settingsLoggingOutLabel
-          : null,
+          : AppLocalizations.of(context).settingsLogoutRowSubtitle,
       danger: true,
       onTap: onTap,
       // `.lrow--danger` never pairs with a trailing chevron (`ListRow`'s

@@ -8,16 +8,11 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/fixture_listing_detail_repository.dart';
-import '../data/listing_detail_mode.dart';
 import '../data/listing_detail_repository.dart';
 import '../data/live_listing_detail_repository.dart';
 
 final listingDetailRepositoryProvider = Provider<ListingDetailRepository>((
   ref,
 ) {
-  if (useLiveListingDetailApi) {
-    return LiveListingDetailRepository(LaCasaApi.create());
-  }
-  return const FixtureListingDetailRepository();
+  return LiveListingDetailRepository(LaCasaApi.create());
 });

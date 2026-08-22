@@ -24,7 +24,15 @@ abstract class HomeFeedRepository {
   /// Explore Nearby grid — one list, two views of it (build spec, "On the
   /// source data for rails 5 and 8"). Already scoped to active listings by
   /// the server (or, for the fixture, by construction).
-  Future<List<Ad>> fetchFeed();
+  ///
+  /// [filters] is what the category chip row narrows the feed with (it
+  /// sets `type` and nothing else). Filtering happens server-side rather
+  /// than over an already-fetched list because `GET /ads` is unpaged only
+  /// as long as nobody sends `limit`/`cursor` — narrowing the request keeps
+  /// Top Districts' counts exact for the selected category instead of
+  /// tallying a client-side subset of one page (see
+  /// `state/top_districts_provider.dart`).
+  Future<List<Ad>> fetchFeed({AdFilters filters});
 
   /// Top 5 agents by [AgentSummary.adsCount], descending.
   Future<List<AgentSummary>> fetchTopAgents();

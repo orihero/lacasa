@@ -246,6 +246,85 @@ describe("listAds", () => {
   });
 });
 
+// ?countOnly=true -- the third response shape, added so the mobile filter
+// sheet's live "Apply Filters (N)" preview stops downloading every matching
+// row just to read its length. Each of these fails against the pre-change
+// service, which had no countOnly branch at all and would have gone on to
+// call findMany() (there is no `findMany` stub in these fake prismas, so the
+// proxy in createFakePrisma throws "no stub for .findMany()").
+describe("listAds ?countOnly=true", () => {
+  it("answers { count } from prisma.ad.count and never selects a row", async () => {
+    const count = vi.fn().mockResolvedValue(42);
+    const prisma = createFakePrisma({ ad: { count } });
+
+    const result = await adService.listAds({ prisma }, { city: "Tashkent", countOnly: "true" });
+
+    expect(result).toEqual({ count: 42 });
+    expect(count).toHaveBeenCalledWith({ where: { city: "Tashkent", stage: "ACTIVE" } });
+  });
+
+  it("counts the same rows the matching list call would return -- ACTIVE-forced on the public feed", async () => {
+    const count = vi.fn().mockResolvedValue(0);
+    const prisma = createFakePrisma({ ad: { count } });
+
+    // A stray ?stage= can't widen the count any more than it can widen the
+    // list (see the "can never leak a non-ACTIVE ad" case above); if it
+    // could, the button would promise results the feed behind it withholds.
+    await adService.listAds({ prisma }, { stage: "3", countOnly: "true" });
+
+    expect(count).toHaveBeenCalledWith({ where: { stage: "ACTIVE" } });
+  });
+
+  it("counts through the ?q= search too, not around it", async () => {
+    const count = vi.fn().mockResolvedValue(3);
+    const prisma = createFakePrisma({ ad: { count } });
+
+    await adService.listAds({ prisma }, { q: "Sunny", countOnly: "true" });
+
+    expect(count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        stage: "ACTIVE",
+        OR: expect.arrayContaining([{ title: { contains: "Sunny", mode: "insensitive" } }]),
+      }),
+    });
+  });
+
+  it("inherits the agentId scope on /my/ads, where stage stays caller-controlled", async () => {
+    const count = vi.fn().mockResolvedValue(5);
+    const prisma = createFakePrisma({ ad: { count } });
+
+    await adService.listAds({ prisma }, { stage: "2", countOnly: "true" }, { agentId: "agent-1" });
+
+    expect(count).toHaveBeenCalledWith({ where: { agentId: "agent-1", stage: "SOLD" } });
+  });
+
+  it("ignores sort/limit/cursor -- a count is order- and page-independent", async () => {
+    const count = vi.fn().mockResolvedValue(7);
+    const prisma = createFakePrisma({ ad: { count } });
+
+    const result = await adService.listAds(
+      { prisma },
+      { countOnly: "true", sort: "priceDesc", limit: "10", cursor: "whatever" },
+    );
+
+    // Not the paged envelope, despite ?limit= being present: countOnly is
+    // gated before isPagedRequest().
+    expect(result).toEqual({ count: 7 });
+    expect(count).toHaveBeenCalledWith({ where: { stage: "ACTIVE" } });
+  });
+
+  it("only triggers on the literal 'true' -- any other value is an ordinary list request", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const count = vi.fn();
+    const prisma = createFakePrisma({ ad: { findMany, count } });
+
+    const result = await adService.listAds({ prisma }, { countOnly: "1" });
+
+    expect(Array.isArray(result)).toBe(true);
+    expect(count).not.toHaveBeenCalled();
+  });
+});
+
 describe("getAd", () => {
   it("returns null when the ad doesn't exist", async () => {
     const prisma = createFakePrisma({ ad: { findUnique: vi.fn().mockResolvedValue(null) } });

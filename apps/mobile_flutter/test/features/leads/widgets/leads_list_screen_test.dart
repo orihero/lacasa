@@ -13,8 +13,11 @@ import 'package:lacasa_mobile/features/leads/leads.dart';
 import 'package:lacasa_mobile/features/leads/state/leads_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/platform/link_launcher.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../../shared/support/fake_link_launcher.dart';
 import '../support/fake_leads_repository.dart';
 import '../support/lead_fixtures.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
@@ -24,10 +27,18 @@ void main() {
     WidgetTester tester, {
     required FakeLeadsRepository repository,
     UserRole? role = UserRole.agent,
+    // Only the test that actually taps the phone needs one: the real
+    // `LinkLauncher` would hit `url_launcher`'s missing plugin under the test
+    // binding — same arrangement as `agent_profile_screen_test.dart`.
+    LinkLauncher? linkLauncher,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
-      overrides: [leadsRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        leadsRepositoryProvider.overrideWithValue(repository),
+        if (linkLauncher != null)
+          linkLauncherProvider.overrideWithValue(linkLauncher),
+      ],
     );
     addTearDown(container.dispose);
     container.read(authSessionProvider.notifier).setRole(role);
@@ -129,6 +140,63 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('leadRow-lead-1')));
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const ValueKey('leadDetail-close')), findsOneWidget);
+    });
+
+    testWidgets('tapping the phone dials it instead of opening the sheet', (
+      tester,
+    ) async {
+      final launcher = FakeLinkLauncher();
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpScreen(
+        tester,
+        repository: FakeLeadsRepository(leads: [lead]),
+        linkLauncher: launcher,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('leadRowCall-lead-1')));
+      await tester.pumpAndSettle();
+
+      expect(launcher.dialed, ['+998901234501']);
+      // The deepest hit-tested recognizer wins, so the row's own tap target
+      // never fires for a tap on the phone.
+      expect(find.byKey(const ValueKey('leadDetail-close')), findsNothing);
+    });
+
+    testWidgets('the phone target announces itself as "Call {phone}"', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: '+998901234501',
+      );
+      await pumpScreen(tester, repository: FakeLeadsRepository(leads: [lead]));
+
+      final target = tester.widget<TapTarget>(
+        find.byKey(const ValueKey('leadRowCall-lead-1')),
+      );
+      expect(target.semanticsLabel, 'Call +998901234501');
+    });
+
+    testWidgets('a lead with no phone has no call target at all', (
+      tester,
+    ) async {
+      final lead = makeLead(
+        id: 'lead-1',
+        fullName: 'Dilnoza Yusupova',
+        phone: null,
+      );
+      await pumpScreen(tester, repository: FakeLeadsRepository(leads: [lead]));
+
+      expect(find.byKey(const ValueKey('leadRowCall-lead-1')), findsNothing);
+      // The row itself still opens the sheet.
+      await tester.tap(find.byKey(const ValueKey('leadRow-lead-1')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('leadDetail-close')), findsOneWidget);
     });
 

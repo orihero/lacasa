@@ -5,13 +5,13 @@
 // succeeds). Exercised against a FakeTransport (no real network) and an
 // in-memory fake watermark repository (no platform channel).
 
+import 'package:lacasa_mobile/features/work_misc/data/work_notification.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/work_misc/data/live_notifications_repository.dart';
 import 'package:lacasa_mobile/features/work_misc/data/notifications_watermark_repository.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
-import 'package:lacasa_mobile/shared/shared.dart';
 
 import '../../../api/support/fake_transport.dart';
 
@@ -187,10 +187,10 @@ void main() {
         ],
       );
       final repository = LiveNotificationsRepository(
-      LaCasaApi(buildClient()),
-      watermark,
-      _l10n,
-    );
+        LaCasaApi(buildClient()),
+        watermark,
+        _l10n,
+      );
 
       final result = await repository.fetchNotifications();
 

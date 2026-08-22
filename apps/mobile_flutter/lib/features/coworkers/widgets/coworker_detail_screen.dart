@@ -51,7 +51,6 @@ import '../../../navigation/route_paths.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../work_dashboard/state/dashboard_providers.dart';
-import '../state/coworker_metrics.dart';
 import '../state/coworkers_providers.dart';
 import '../state/coworkers_repository_provider.dart';
 
@@ -65,9 +64,7 @@ class CoworkerDetailScreen extends ConsumerWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final coworker = ref.watch(coworkerDetailProvider(coworkerId));
     final canManage =
-        ref.watch(authSessionProvider.select((s) => s.role)) ==
-        UserRole.agent;
-    final summariesAsync = ref.watch(coworkerSummariesProvider);
+        ref.watch(authSessionProvider.select((s) => s.role)) == UserRole.agent;
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -84,11 +81,8 @@ class CoworkerDetailScreen extends ConsumerWidget {
                 loading: () => const _FormSkeleton(),
                 error: (error, stackTrace) =>
                     _ErrorState(error: error, coworkerId: coworkerId),
-                data: (coworker) => _CoworkerForm(
-                  coworker: coworker,
-                  canManage: canManage,
-                  summariesAsync: summariesAsync,
-                ),
+                data: (coworker) =>
+                    _CoworkerForm(coworker: coworker, canManage: canManage),
               ),
             ),
           ],
@@ -156,7 +150,11 @@ class _FormSkeleton extends StatelessWidget {
         children: [
           const SizedBox(height: AppSpacing.lg),
           const Center(
-            child: ShimmerBox(width: 84, height: 84, borderRadius: AppRadii.pill),
+            child: ShimmerBox(
+              width: 84,
+              height: 84,
+              borderRadius: AppRadii.pill,
+            ),
           ),
           const SizedBox(height: AppSpacing.section),
           for (var i = 0; i < 3; i++) ...[
@@ -173,20 +171,10 @@ class _FormSkeleton extends StatelessWidget {
 }
 
 class _CoworkerForm extends ConsumerStatefulWidget {
-  const _CoworkerForm({
-    required this.coworker,
-    required this.canManage,
-    required this.summariesAsync,
-  });
+  const _CoworkerForm({required this.coworker, required this.canManage});
 
   final Coworker coworker;
   final bool canManage;
-
-  /// Backs [summaryFor] — see `coworkers_repository.dart`'s doc comment and
-  /// WORK_TAB_CONTRACT.md ruling 7.6. Independent of the coworker fetch
-  /// itself, so a failed summary fetch degrades only this read-only summary
-  /// line, never the editable form beneath it.
-  final AsyncValue<List<CoworkerSummary>> summariesAsync;
 
   @override
   ConsumerState<_CoworkerForm> createState() => _CoworkerFormState();
@@ -269,7 +257,9 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
     final password = _password.text;
 
     setState(() {
-      _fullNameError = fullName.isEmpty ? l10n.coworkersFullNameRequiredError : null;
+      _fullNameError = fullName.isEmpty
+          ? l10n.coworkersFullNameRequiredError
+          : null;
       // §36 quotes one combined message for phone — see this file's doc
       // comment.
       _phoneError = Formatters.isValidUzPhone(phone)
@@ -295,7 +285,10 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
     // `hasPendingUploads`, whose "block Save with a message" precedent this
     // mirrors rather than awaiting the upload inline.
     if (_avatarUploading) {
-      LaCasaToast.showError(context, AppLocalizations.of(context).coworkersUploadWaitMessage);
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).coworkersUploadWaitMessage,
+      );
       return;
     }
 
@@ -319,7 +312,9 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                 ? OptionalField(phone)
                 : null,
             email: email != coworker.email ? OptionalField(email) : null,
-            avatar: _avatarUrl != coworker.avatar ? OptionalField(_avatarUrl) : null,
+            avatar: _avatarUrl != coworker.avatar
+                ? OptionalField(_avatarUrl)
+                : null,
             password: password.isEmpty ? null : OptionalField(password),
           );
       ref.invalidate(coworkersListProvider);
@@ -329,14 +324,19 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersUpdatedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).coworkersUpdatedToastMessage,
+      );
       _leave();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).coworkersUpdateErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).coworkersUpdateErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -356,14 +356,19 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersDeletedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).coworkersDeletedToastMessage,
+      );
       _leave();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _deleting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).coworkersDeleteErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).coworkersDeleteErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -412,18 +417,16 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                         fullName: _fullName.text,
                         semanticsLabel: l10n.coworkersChangePhotoLabel,
                         onUploaded: (url) => setState(() => _avatarUrl = url),
-                        onError: (message) => LaCasaToast.showError(context, message),
+                        onError: (message) =>
+                            LaCasaToast.showError(context, message),
                         onUploadStateChanged: (busy) =>
                             setState(() => _avatarUploading = busy),
                       )
-                    : AgentAvatar(avatarUrl: _avatarUrl, fullName: _fullName.text, size: 84),
-              ),
-              const SizedBox(height: AppSpacing.base),
-              Center(
-                child: _ActivitySummary(
-                  coworkerId: widget.coworker.id,
-                  summariesAsync: widget.summariesAsync,
-                ),
+                    : AgentAvatar(
+                        avatarUrl: _avatarUrl,
+                        fullName: _fullName.text,
+                        size: 84,
+                      ),
               ),
               const SizedBox(height: AppSpacing.section),
               LabelledFormField(
@@ -473,15 +476,21 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
               ),
               const SizedBox(height: AppSpacing.section),
               if (widget.canManage) ...[
+                // `.btns{display:flex;gap:10px}` with `.btns .btn{flex:1}` —
+                // Delete, Cancel and Save share one row at equal width.
                 Row(
                   children: [
+                    Expanded(
+                      child: _DeleteButton(deleting: _deleting, onTap: _delete),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: _SecondaryButton(
                         label: l10n.coworkersCancelButtonLabel,
                         onTap: _handleCancel,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.base),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: _PrimaryButton(
                         label: l10n.coworkersSaveButtonLabel,
@@ -491,66 +500,19 @@ class _CoworkerFormState extends ConsumerState<_CoworkerForm> {
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.base),
-                _DeleteButton(deleting: _deleting, onTap: _delete),
               ] else ...[
-                _SecondaryButton(label: l10n.coworkersCancelButtonLabel, onTap: _handleCancel),
-                const SizedBox(height: AppSpacing.base),
-                _ReadOnlyNote(
-                  message: l10n.coworkersReadOnlyNoteMessage,
+                _SecondaryButton(
+                  label: l10n.coworkersCancelButtonLabel,
+                  onTap: _handleCancel,
                 ),
+                const SizedBox(height: AppSpacing.base),
+                _ReadOnlyNote(message: l10n.coworkersReadOnlyNoteMessage),
               ],
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-/// "{N} listings · Active {relative time}" — a read-only summary line, not
-/// part of §36's form fields (that section names none), added on top of the
-/// spec's literal field set to actually surface the figures
-/// WORK_TAB_CONTRACT.md ruling 7.6 asks screens to show. Both numbers now
-/// come from the one server-folded [CoworkerSummary] row
-/// (`GET /statistics/coworkers/summary`) instead of two separately-folded
-/// lists. Renders "—" for a figure that could not be determined
-/// (loading/error/no data), never a fabricated number — same rule
-/// `coworkers_list_screen.dart`'s row trailing follows.
-class _ActivitySummary extends StatelessWidget {
-  const _ActivitySummary({
-    required this.coworkerId,
-    required this.summariesAsync,
-  });
-
-  final String coworkerId;
-  final AsyncValue<List<CoworkerSummary>> summariesAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final l10n = AppLocalizations.of(context);
-
-    // One `.when` for the whole line, not two, so a loading/error state
-    // can't accidentally mix with `AsyncValue.value`'s "last known data"
-    // behaviour (which can stay non-null across a subsequent error) — the
-    // two halves of this line always agree on which state they're in.
-    final text = summariesAsync.when(
-      data: (summaries) {
-        final summary = summaryFor(coworkerId, summaries);
-        if (summary == null) return l10n.coworkersActivitySummaryLine('—', '—');
-        final count = summary.adsCreatedCount;
-        final listingsLabel = l10n.coworkersListingsCount(count);
-        final latest = summary.lastActiveAt;
-        final activeLabel = latest == null ? '—' : coworkerActivityLabel(l10n, latest);
-        return l10n.coworkersActivitySummaryLine(listingsLabel, activeLabel);
-      },
-      loading: () => l10n.coworkersActivitySummaryLine('…', '…'),
-      error: (error, stackTrace) => l10n.coworkersActivitySummaryLine('—', '—'),
-    );
-
-    return Text(text, style: type.bodySmall.copyWith(color: colors.muted));
   }
 }
 
@@ -570,7 +532,10 @@ class _ReadOnlyNote extends StatelessWidget {
         Icon(Icons.info_outline_rounded, size: 14, color: colors.faint),
         const SizedBox(width: AppSpacing.xs),
         Flexible(
-          child: Text(message, style: type.caption.copyWith(color: colors.faint)),
+          child: Text(
+            message,
+            style: type.caption.copyWith(color: colors.faint),
+          ),
         ),
       ],
     );
@@ -634,6 +599,9 @@ class _PrimaryButton extends StatelessWidget {
   }
 }
 
+/// `.btn--ghost glf` — `.btn--ghost` contributes only `color:var(--ink)`, so
+/// the button's surface is the flat-form glass (white with a hairline rim),
+/// not a grey fill.
 class _SecondaryButton extends StatelessWidget {
   const _SecondaryButton({required this.label, required this.onTap});
 
@@ -650,16 +618,16 @@ class _SecondaryButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          borderRadius: BorderRadius.circular(AppRadii.pillButton),
           height: 52,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-          ),
           child: Text(
             label,
-            style: type.rowTitle.copyWith(color: colors.ink2),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: type.rowTitle.copyWith(color: colors.ink),
           ),
         ),
       ),
@@ -667,6 +635,9 @@ class _SecondaryButton extends StatelessWidget {
   }
 }
 
+/// `.btn--danger glf` — the same flat-form glass as Cancel under a thin pink
+/// rim (`box-shadow:inset 0 0 0 1px rgba(224,53,95,.4)`) with a pink label;
+/// no fill of its own.
 class _DeleteButton extends StatelessWidget {
   const _DeleteButton({required this.deleting, required this.onTap});
 
@@ -676,6 +647,7 @@ class _DeleteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final radius = BorderRadius.circular(AppRadii.pillButton);
 
     return Semantics(
       button: true,
@@ -685,30 +657,39 @@ class _DeleteButton extends StatelessWidget {
         onTap: deleting ? null : onTap,
         child: Opacity(
           opacity: deleting ? 0.6 : 1,
-          child: Container(
-            height: 52,
-            alignment: Alignment.center,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
             decoration: BoxDecoration(
-              color: AppStatusColors.dangerIconBg,
-              borderRadius: BorderRadius.circular(AppRadii.pillButton),
+              borderRadius: radius,
+              border: Border.all(
+                color: AppStatusColors.errorText.withValues(alpha: 0.4),
+              ),
             ),
-            child: deleting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation(
-                        AppStatusColors.errorText,
+            child: GlassSurface(
+              variant: GlassVariant.flatForm,
+              borderRadius: radius,
+              height: 52,
+              alignment: Alignment.center,
+              child: deleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(
+                          AppStatusColors.errorText,
+                        ),
+                      ),
+                    )
+                  : Text(
+                      AppLocalizations.of(context).coworkersDeleteButtonLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: type.rowTitle.copyWith(
+                        color: AppStatusColors.errorText,
                       ),
                     ),
-                  )
-                : Text(
-                    AppLocalizations.of(context).coworkersDeleteButtonLabel,
-                    style: type.rowTitle.copyWith(
-                      color: AppStatusColors.errorText,
-                    ),
-                  ),
+            ),
           ),
         ),
       ),

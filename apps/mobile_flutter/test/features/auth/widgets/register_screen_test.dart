@@ -95,7 +95,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/profile',
-          builder: (context, state) => const Scaffold(body: Text('profile-root')),
+          builder: (context, state) =>
+              const Scaffold(body: Text('profile-root')),
         ),
         GoRoute(
           path: RoutePaths.login,
@@ -116,7 +117,13 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(locale: locale, localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -131,10 +138,10 @@ void main() {
     return (container: container, router: router, repo: repo);
   }
 
-  Future<
-    ({ProviderContainer container, GoRouter router})
-  >
-  pumpRegisterWith(WidgetTester tester, AuthRepository repository) async {
+  Future<({ProviderContainer container, GoRouter router})> pumpRegisterWith(
+    WidgetTester tester,
+    AuthRepository repository,
+  ) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
       overrides: [
@@ -162,7 +169,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -261,21 +273,35 @@ void main() {
     testWidgets('the reciprocal footer link pushes to login', (tester) async {
       await pumpRegister(tester);
 
-      await scrollToAndTap(tester, find.text('Already have an account? Sign in'));
+      await scrollToAndTap(
+        tester,
+        find.text('Already have an account? Sign in'),
+      );
 
       expect(find.text('login-stub'), findsOneWidget);
     });
   });
 
+  // §7.7 — every client-side failure used to collapse into one
+  // "Required fields are not filled" banner rendered under the submit
+  // button, i.e. after all seven fields on the Agency branch. These assert
+  // the replacement: a message under each offending field, no banner, and
+  // all fields evaluated per tap rather than only the first failure.
   group('client-side validation', () {
-    testWidgets('empty required fields show "Required fields are not filled"', (
+    testWidgets('an empty form names every missing field, under that field', (
       tester,
     ) async {
       final result = await pumpRegister(tester);
 
       await scrollToAndTap(tester, find.text('Sign up'));
 
-      expect(find.text('Required fields are not filled'), findsOneWidget);
+      expect(find.text('Full name is required'), findsOneWidget);
+      expect(find.text('Phone number is required'), findsOneWidget);
+      expect(find.text('Email is required'), findsOneWidget);
+      expect(find.text('Password is required'), findsOneWidget);
+      // The banner is now reserved for server/network failures.
+      expect(find.byKey(const ValueKey('registerErrorBanner')), findsNothing);
+      expect(find.text('Required fields are not filled'), findsNothing);
       expect(result.repo.registerCallCount, 0);
     });
 
@@ -291,9 +317,54 @@ void main() {
       await scrollToAndTap(tester, find.text('Sign up'));
 
       expect(find.text('Invalid phone number format'), findsOneWidget);
+      // Emptiness is checked before shape, so a filled-but-wrong phone must
+      // not also claim the field is missing.
+      expect(find.text('Phone number is required'), findsNothing);
     });
 
-    testWidgets('agency without an agency name is blocked', (tester) async {
+    testWidgets('a malformed email is caught before the round trip', (
+      tester,
+    ) async {
+      final result = await pumpRegister(tester);
+
+      await tester.enterText(find.byType(TextField).at(0), 'Dilnoza Yusupova');
+      await tester.enterText(find.byType(TextField).at(1), '+998901234567');
+      await tester.enterText(find.byType(TextField).at(2), 'dilnoza.lacasa.uz');
+      await tester.enterText(find.byType(TextField).at(3), 'secret1');
+      await scrollToAndTap(tester, find.text('Sign up'));
+
+      expect(find.text('Invalid email address format'), findsOneWidget);
+      expect(result.repo.registerCallCount, 0);
+    });
+
+    testWidgets(
+      'a password under six characters is caught before the round trip',
+      (tester) async {
+        final result = await pumpRegister(tester);
+
+        await tester.enterText(
+          find.byType(TextField).at(0),
+          'Dilnoza Yusupova',
+        );
+        await tester.enterText(find.byType(TextField).at(1), '+998901234567');
+        await tester.enterText(
+          find.byType(TextField).at(2),
+          'dilnoza@lacasa.uz',
+        );
+        await tester.enterText(find.byType(TextField).at(3), 'short');
+        await scrollToAndTap(tester, find.text('Sign up'));
+
+        expect(
+          find.text('Password must be at least 6 characters'),
+          findsOneWidget,
+        );
+        expect(result.repo.registerCallCount, 0);
+      },
+    );
+
+    testWidgets('agency without an agency name names that field', (
+      tester,
+    ) async {
       final result = await pumpRegister(tester);
 
       await scrollToAndTap(tester, find.text('Realtor'));
@@ -302,27 +373,126 @@ void main() {
       await fillBuyerFields(tester);
       await scrollToAndTap(tester, find.text('Create realtor account'));
 
-      expect(find.text('Required fields are not filled'), findsOneWidget);
+      // The whole point of §7.7: the message is attached to the field seven
+      // rows above the button, not rendered as a banner beside the button.
+      expect(find.text('Agency name is required'), findsOneWidget);
+      expect(find.byKey(const ValueKey('registerErrorBanner')), findsNothing);
       expect(result.repo.registerCallCount, 0);
+    });
+
+    testWidgets(
+      'a malformed office phone is rejected but an empty one is not',
+      (tester) async {
+        final repo = FakeAuthRepository(
+          registerResult: authUser(email: 'dilnoza@lacasa.uz'),
+        );
+        await pumpRegister(tester, repository: repo);
+
+        await scrollToAndTap(tester, find.text('Realtor'));
+        await scrollToAndTap(tester, find.text('Agency'));
+        await fillBuyerFields(tester);
+        await tester.enterText(find.byType(TextField).at(4), 'La Casa Realty');
+        await tester.enterText(find.byType(TextField).at(5), '712001020');
+        await scrollToAndTap(tester, find.text('Create realtor account'));
+
+        expect(find.text('Invalid phone number format'), findsOneWidget);
+        expect(repo.registerCallCount, 0);
+
+        // §3.13: "Office phone" is optional — cleared, the form submits.
+        await tester.enterText(find.byType(TextField).at(5), '');
+        await scrollToAndTap(tester, find.text('Create realtor account'));
+
+        expect(repo.registerCallCount, 1);
+      },
+    );
+
+    testWidgets('fixing a field clears its error on the next attempt', (
+      tester,
+    ) async {
+      await pumpRegister(tester);
+
+      await scrollToAndTap(tester, find.text('Sign up'));
+      expect(find.text('Full name is required'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).at(0), 'Dilnoza Yusupova');
+      await scrollToAndTap(tester, find.text('Sign up'));
+
+      expect(find.text('Full name is required'), findsNothing);
+      // …and the others, which were never fixed, are still reported.
+      expect(find.text('Email is required'), findsOneWidget);
+    });
+  });
+
+  // §7.8 — nothing in this app registered a field with iOS Keychain /
+  // Android Autofill / a third-party manager before this change, which is
+  // what made the absent password reset (§7.4) permanent rather than merely
+  // annoying.
+  group('password managers', () {
+    testWidgets(
+      'the form is one AutofillGroup with hints on every credential field',
+      (tester) async {
+        await pumpRegister(tester);
+
+        expect(find.byType(AutofillGroup), findsOneWidget);
+
+        List<String>? hintsAt(int index) => tester
+            .widget<TextField>(find.byType(TextField).at(index))
+            .autofillHints
+            ?.toList();
+
+        expect(hintsAt(0), [AutofillHints.name]);
+        expect(hintsAt(1), [AutofillHints.telephoneNumber]);
+        expect(hintsAt(2), [AutofillHints.username, AutofillHints.email]);
+        // `newPassword`, not `password` — this field creates a credential.
+        expect(hintsAt(3), [AutofillHints.newPassword]);
+      },
+    );
+
+    testWidgets('the office phone carries no hint', (tester) async {
+      await pumpRegister(tester);
+
+      await scrollToAndTap(tester, find.text('Realtor'));
+      await scrollToAndTap(tester, find.text('Agency'));
+
+      final officePhone = tester.widget<TextField>(
+        find.byType(TextField).at(5),
+      );
+      // A second `telephoneNumber` in the same group makes the platform
+      // guess which number is the user's own — see register_screen.dart.
+      expect(officePhone.autofillHints, isNull);
     });
   });
 
   group('success', () {
-    testWidgets('a buyer signup calls registerAccount with no realtor block, then navigates home', (
-      tester,
-    ) async {
-      final repo = FakeAuthRepository(
-        registerResult: authUser(email: 'dilnoza@lacasa.uz'),
-      );
-      await pumpRegister(tester, repository: repo);
+    testWidgets(
+      'a buyer signup calls registerAccount with no realtor block, then navigates home',
+      (tester) async {
+        final repo = FakeAuthRepository(
+          registerResult: authUser(email: 'dilnoza@lacasa.uz'),
+        );
+        await pumpRegister(tester, repository: repo);
 
-      await fillBuyerFields(tester);
-      await scrollToAndTap(tester, find.text('Sign up'));
+        await fillBuyerFields(tester);
+        await scrollToAndTap(tester, find.text('Sign up'));
 
-      expect(find.text('home-stub'), findsOneWidget);
-      expect(find.text('User successfully created.'), findsOneWidget);
-      expect(repo.registerCallCount, 1);
-    });
+        expect(find.text('home-stub'), findsOneWidget);
+        expect(find.text('User successfully created.'), findsOneWidget);
+        expect(repo.registerCallCount, 1);
+
+        // §10.4 — this used to be a bare SnackBar, rendering Material's docked
+        // dark-grey bar with no status glyph instead of SCREENS.md §5's
+        // floating card toast.
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        expect(snackBar.behavior, SnackBarBehavior.floating);
+        expect(
+          find.descendant(
+            of: find.byType(SnackBar),
+            matching: find.byIcon(Icons.check_circle_rounded),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('a solo realtor signup shows the realtor toast', (
       tester,
@@ -347,9 +517,7 @@ void main() {
   });
 
   group('server errors', () {
-    testWidgets('409 emailTaken renders under the Email field', (
-      tester,
-    ) async {
+    testWidgets('409 emailTaken renders under the Email field', (tester) async {
       final repo = FakeAuthRepository(
         registerError: ApiErrorException(
           statusCode: 409,
@@ -367,28 +535,29 @@ void main() {
       expect(find.text('Email is already registered'), findsOneWidget);
     });
 
-    testWidgets('a 400 validation failure shows the server message as a form banner', (
-      tester,
-    ) async {
-      final repo = FakeAuthRepository(
-        registerError: ApiErrorException(
-          statusCode: 400,
-          body: const ApiErrorBody(
-            code: ApiErrorCode.validation,
-            message: 'Password must be at least 6 characters',
+    testWidgets(
+      'a 400 validation failure shows the server message as a form banner',
+      (tester) async {
+        final repo = FakeAuthRepository(
+          registerError: ApiErrorException(
+            statusCode: 400,
+            body: const ApiErrorBody(
+              code: ApiErrorCode.validation,
+              message: 'Password must be at least 6 characters',
+            ),
           ),
-        ),
-      );
-      await pumpRegister(tester, repository: repo);
+        );
+        await pumpRegister(tester, repository: repo);
 
-      await fillBuyerFields(tester);
-      await scrollToAndTap(tester, find.text('Sign up'));
+        await fillBuyerFields(tester);
+        await scrollToAndTap(tester, find.text('Sign up'));
 
-      expect(
-        find.text('Password must be at least 6 characters'),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.text('Password must be at least 6 characters'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('full-screen spinner', () {
@@ -442,41 +611,46 @@ void main() {
   // Same widths, ru/uz — the Realtor/Agency form is the screen's most
   // crowded state (chips, hint text, extra fields), so it is the state most
   // likely to overflow once the same words run 30-50%+ longer.
-  group('layout holds at real phone widths under ru/uz with the agency form open', () {
-    const localizedRealtorLabel = {'ru': 'Риелтор', 'uz': 'Rieltor'};
-    const localizedAgencyLabel = {'ru': 'Агентство', 'uz': 'Agentlik'};
+  group(
+    'layout holds at real phone widths under ru/uz with the agency form open',
+    () {
+      const localizedRealtorLabel = {'ru': 'Риелтор', 'uz': 'Rieltor'};
+      const localizedAgencyLabel = {'ru': 'Агентство', 'uz': 'Agentlik'};
 
-    for (final locale in const [Locale('ru'), Locale('uz')]) {
-      for (final size in const [
-        (label: 'small android', size: Size(360, 800)),
-        (label: 'iphone 14', size: Size(390, 844)),
-        (label: 'pro max', size: Size(430, 932)),
-      ]) {
-        testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
-          tester,
-        ) async {
-          tester.view.physicalSize = size.size;
-          tester.view.devicePixelRatio = 1.0;
-          addTearDown(tester.view.resetPhysicalSize);
-          addTearDown(tester.view.resetDevicePixelRatio);
+      for (final locale in const [Locale('ru'), Locale('uz')]) {
+        for (final size in const [
+          (label: 'small android', size: Size(360, 800)),
+          (label: 'iphone 14', size: Size(390, 844)),
+          (label: 'pro max', size: Size(430, 932)),
+        ]) {
+          testWidgets('no overflow at ${size.label} (${locale.languageCode})', (
+            tester,
+          ) async {
+            tester.view.physicalSize = size.size;
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
 
-          await pumpRegister(tester, locale: locale);
-          await tester.tap(find.text(localizedRealtorLabel[locale.languageCode]!));
-          await tester.pumpAndSettle();
-          // Wrap (see register_screen.dart's fix for this exact overflow)
-          // can push the Agency chip below the fold at the narrowest
-          // widths, so scroll it into view before tapping rather than
-          // relying on tap()'s off-screen warning being harmless.
-          final agencyChip = find.text(
-            localizedAgencyLabel[locale.languageCode]!,
-          );
-          await tester.ensureVisible(agencyChip);
-          await tester.tap(agencyChip);
-          await tester.pumpAndSettle();
+            await pumpRegister(tester, locale: locale);
+            await tester.tap(
+              find.text(localizedRealtorLabel[locale.languageCode]!),
+            );
+            await tester.pumpAndSettle();
+            // Wrap (see register_screen.dart's fix for this exact overflow)
+            // can push the Agency chip below the fold at the narrowest
+            // widths, so scroll it into view before tapping rather than
+            // relying on tap()'s off-screen warning being harmless.
+            final agencyChip = find.text(
+              localizedAgencyLabel[locale.languageCode]!,
+            );
+            await tester.ensureVisible(agencyChip);
+            await tester.tap(agencyChip);
+            await tester.pumpAndSettle();
 
-          expect(tester.takeException(), isNull);
-        });
+            expect(tester.takeException(), isNull);
+          });
+        }
       }
-    }
-  });
+    },
+  );
 }

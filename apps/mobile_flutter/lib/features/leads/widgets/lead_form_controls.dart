@@ -19,9 +19,22 @@ import '../../../theme/theme.dart';
 /// plain Flutter `showDatePicker`/`showTimePicker` (no new dependency, see
 /// `WORK_TAB_CONTRACT.md` §5). Returns `null` if the user backs out of
 /// either step.
-Future<DateTime?> pickLeadDateTime(BuildContext context, {DateTime? initial}) async {
+///
+/// **[initial] is converted to local time before it seeds either picker.**
+/// `lead-detail` passes `Lead.callbackDate` straight through, and that field
+/// is decoded by `DateTime.tryParse` from a `Z`-suffixed ISO string — so it
+/// carries the UTC flag, and `showDatePicker`/`TimeOfDay.fromDateTime` read
+/// *UTC* calendar and clock fields off it. Re-opening a 09:00 Tashkent
+/// (UTC+5) call-back would have offered 04:00 as its starting point, and a
+/// pre-05:00 one would have opened on the previous day. `.toLocal()` on an
+/// already-local value (the picker's own previous result, `kanban-move-
+/// sheet`'s `_callTime`) is a no-op, so this is safe for every caller.
+Future<DateTime?> pickLeadDateTime(
+  BuildContext context, {
+  DateTime? initial,
+}) async {
   final now = DateTime.now();
-  final seed = initial ?? now;
+  final seed = initial?.toLocal() ?? now;
   final date = await showDatePicker(
     context: context,
     initialDate: seed,
@@ -37,8 +50,73 @@ Future<DateTime?> pickLeadDateTime(BuildContext context, {DateTime? initial}) as
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }
 
+/// `<div class="two">` — two `.field`s side by side at equal width
+/// (`.two{grid-template-columns:1fr 1fr;gap:11px}`), tops aligned so an error
+/// or hint line under one half doesn't shift the other. Used by `lead-detail`
+/// and `create-lead`, which both pair Email+Budget and Source+Coworker.
+class LeadFieldPair extends StatelessWidget {
+  const LeadFieldPair({super.key, required this.first, required this.second});
+
+  final Widget first;
+  final Widget second;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 11),
+        Expanded(child: second),
+      ],
+    );
+  }
+}
+
+/// `.sh__h .rnd` — the filled 34px close circle every bottom sheet in the
+/// mockup carries at the top-right of its title row. Shared by `lead-detail`,
+/// `kanban-move-sheet` and the "Move to…" sheet rather than copied three
+/// times.
+class LeadSheetCloseButton extends StatelessWidget {
+  const LeadSheetCloseButton({
+    super.key,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  final String semanticsLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: colors.sunk, shape: BoxShape.circle),
+          child: Icon(Icons.close_rounded, size: 16, color: colors.ink),
+        ),
+      ),
+    );
+  }
+}
+
 /// The select-shaped "Call time" tap target both callers of
 /// [pickLeadDateTime] render around it.
+///
+/// [value] is rendered `.toLocal()` for the same reason [pickLeadDateTime]
+/// seeds itself that way — see that function's doc comment: `lead-detail`'s
+/// value can arrive straight off `Lead.callbackDate`, which carries the UTC
+/// flag, and `Formatters.date` reads calendar/clock fields off whatever
+/// zone the [DateTime] is in.
 class LeadDateTimeField extends StatelessWidget {
   const LeadDateTimeField({
     super.key,
@@ -64,7 +142,10 @@ class LeadDateTimeField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label ?? l10n.leadsCallTimeLabel, style: type.label.copyWith(color: colors.muted)),
+        Text(
+          label ?? l10n.leadsCallTimeLabel,
+          style: type.label.copyWith(color: colors.muted),
+        ),
         const SizedBox(height: AppSpacing.sm),
         GestureDetector(
           onTap: onTap,
@@ -79,13 +160,19 @@ class LeadDateTimeField extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    value == null ? l10n.leadsSelectDateLabel : Formatters.date(value!),
+                    value == null
+                        ? l10n.leadsSelectDateLabel
+                        : Formatters.date(value!.toLocal()),
                     style: type.body.copyWith(
                       color: value == null ? colors.faint : colors.ink,
                     ),
                   ),
                 ),
-                Icon(Icons.calendar_month_outlined, size: 18, color: colors.muted),
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 18,
+                  color: colors.muted,
+                ),
               ],
             ),
           ),
@@ -100,14 +187,15 @@ class LeadDateTimeField extends StatelessWidget {
 /// itself reads (`shared/widgets/status_pill.dart`) rather than a
 /// second, independently-translated set of ARB entries for the identical
 /// five strings (SCREENS.md §30's exact display copy).
-String leadStatusLabel(AppLocalizations l10n, LeadStatus status) => switch (status) {
-  LeadStatus.newLead => l10n.sharedLeadStatusNewLabel,
-  LeadStatus.couldNotConnect => l10n.sharedLeadStatusCouldNotConnectLabel,
-  LeadStatus.needToCallBack => l10n.sharedLeadStatusNeedToCallBackLabel,
-  LeadStatus.rejected => l10n.sharedLeadStatusRejectedLabel,
-  LeadStatus.accepted => l10n.sharedLeadStatusAcceptedLabel,
-  LeadStatus.unknown => l10n.sharedStatusUnknownLabel,
-};
+String leadStatusLabel(AppLocalizations l10n, LeadStatus status) =>
+    switch (status) {
+      LeadStatus.newLead => l10n.sharedLeadStatusNewLabel,
+      LeadStatus.couldNotConnect => l10n.sharedLeadStatusCouldNotConnectLabel,
+      LeadStatus.needToCallBack => l10n.sharedLeadStatusNeedToCallBackLabel,
+      LeadStatus.rejected => l10n.sharedLeadStatusRejectedLabel,
+      LeadStatus.accepted => l10n.sharedLeadStatusAcceptedLabel,
+      LeadStatus.unknown => l10n.sharedStatusUnknownLabel,
+    };
 
 /// A labelled text input on the flat-glass form material, with an optional
 /// per-field [errorText] line (matching `shared/widgets/
@@ -117,16 +205,26 @@ String leadStatusLabel(AppLocalizations l10n, LeadStatus status) => switch (stat
 /// comment for why: this form's fields (Commit's `maxLines: 3`, a fixed
 /// vertical padding regardless of line count) aren't quite that shape
 /// either, closer to `ListingTextField`'s reasons than identical to them.
+///
+/// A field with [maxLines] > 1 is the mockup's `<textarea class="ta glf">`
+/// — `.ta{height:auto;min-height:96px;padding:15px 16px;line-height:1.55;
+/// resize:none;display:block}` — which rests at a *doubled* height, not at
+/// one line that happens to be allowed to grow. Flutter's `TextField` opens
+/// at `minLines` (defaulting to one line) regardless of `maxLines`, so
+/// [minLines] defaults to [maxLines] here: that is what makes Commit read
+/// as free text next to the single-line Email/Budget/Source boxes.
 class LeadTextField extends StatelessWidget {
   const LeadTextField({
     super.key,
     required this.label,
     required this.controller,
     this.errorText,
+    this.hintLine,
     this.hintText,
     this.keyboardType,
     this.textInputAction,
     this.maxLines = 1,
+    this.minLines,
     this.inputFormatters,
     this.onChanged,
     this.enabled = true,
@@ -135,10 +233,25 @@ class LeadTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String? errorText;
+
+  /// The static `.hint` line under the box — a format rule the user needs
+  /// before submitting (create-lead's "+998 and nine digits"), unlike
+  /// [hintText], which is inside the field and vanishes on the first
+  /// keystroke. Suppressed while [errorText] is set: the mockup never
+  /// stacks a hint under an error.
+  final String? hintLine;
+
   final String? hintText;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final int maxLines;
+
+  /// Resting height in lines. Left unset by every current caller, which
+  /// takes the `.ta` default described in this class's doc comment: the
+  /// field opens at [maxLines] when it is multi-line, and at one line
+  /// otherwise.
+  final int? minLines;
+
   final List<TextInputFormatter>? inputFormatters;
   final VoidCallback? onChanged;
   final bool enabled;
@@ -152,7 +265,10 @@ class LeadTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label.toUpperCase(), style: type.label.copyWith(color: colors.muted)),
+        Text(
+          label.toUpperCase(),
+          style: type.label.copyWith(color: colors.muted),
+        ),
         const SizedBox(height: AppSpacing.sm),
         GlassSurface(
           variant: GlassVariant.flatForm,
@@ -166,6 +282,7 @@ class LeadTextField extends StatelessWidget {
             keyboardType: keyboardType,
             textInputAction: textInputAction,
             maxLines: maxLines,
+            minLines: minLines ?? (maxLines > 1 ? maxLines : null),
             inputFormatters: inputFormatters,
             enabled: enabled,
             onChanged: (_) => onChanged?.call(),
@@ -179,6 +296,18 @@ class LeadTextField extends StatelessWidget {
             ),
           ),
         ),
+        if (!hasError && hintLine != null) ...[
+          // `.hint{margin-top:6px;padding-left:3px;font-size:10.5px;
+          // line-height:1.5;color:var(--faint)}`.
+          const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.only(left: 3),
+            child: Text(
+              hintLine!,
+              style: type.micro.copyWith(color: colors.faint, height: 1.5),
+            ),
+          ),
+        ],
         if (hasError) ...[
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -193,7 +322,9 @@ class LeadTextField extends StatelessWidget {
               Expanded(
                 child: Text(
                   errorText!,
-                  style: type.bodySmall.copyWith(color: AppStatusColors.errorText),
+                  style: type.bodySmall.copyWith(
+                    color: AppStatusColors.errorText,
+                  ),
                 ),
               ),
             ],
@@ -229,14 +360,17 @@ class LeadStatusField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.leadsStatusFieldLabel, style: type.label.copyWith(color: colors.muted)),
+        Text(
+          l10n.leadsStatusFieldLabel,
+          style: type.label.copyWith(color: colors.muted),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
             for (final status in LeadStatus.kanbanOrder)
-              _StatusChip(
+              LeadOptionChip(
                 key: ValueKey('leadStatus-${status.wire}'),
                 label: leadStatusLabel(l10n, status),
                 isOn: status == value,
@@ -249,8 +383,11 @@ class LeadStatusField extends StatelessWidget {
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({
+/// The mockup's `.opt` pill — the mobile stand-in for the web app's `<select>`
+/// enums. Used by [LeadStatusField] and by `leads-kanban`'s "Move to…" sheet,
+/// which the mockup draws with the same `.opts`/`.opt` group.
+class LeadOptionChip extends StatelessWidget {
+  const LeadOptionChip({
     super.key,
     required this.label,
     required this.isOn,
@@ -266,12 +403,18 @@ class _StatusChip extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final foreground = isOn ? colors.pillInk : colors.ink;
-    final content = Text(label, style: type.rowTitle.copyWith(color: foreground));
+    final content = Text(
+      label,
+      style: type.rowTitle.copyWith(color: foreground),
+    );
 
     final chip = isOn
         ? Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-            decoration: BoxDecoration(color: colors.pill, borderRadius: AppRadii.pill),
+            decoration: BoxDecoration(
+              color: colors.pill,
+              borderRadius: AppRadii.pill,
+            ),
             alignment: Alignment.center,
             child: content,
           )
@@ -313,7 +456,10 @@ class LeadCoworkerField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.leadsCoworkerFieldLabel, style: type.label.copyWith(color: colors.muted)),
+        Text(
+          l10n.leadsCoworkerFieldLabel,
+          style: type.label.copyWith(color: colors.muted),
+        ),
         const SizedBox(height: AppSpacing.sm),
         Opacity(
           opacity: 0.6,

@@ -6,7 +6,7 @@
 
 // Every channel an ad can be published to, in the fixed order the status
 // grid (GET /api/publish/ads/:adId/status) renders them.
-export const ALL_CHANNELS = ['TELEGRAM', 'INSTAGRAM', 'YOUTUBE', 'OLX', 'REALTING'] as const;
+export const ALL_CHANNELS = ['TELEGRAM', 'INSTAGRAM', 'YOUTUBE', 'OLX'] as const;
 export type Channel = (typeof ALL_CHANNELS)[number];
 
 // The subset of channels the extension can currently autofill.

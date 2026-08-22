@@ -33,6 +33,11 @@ void main() {
               path: 'messages',
               builder: (context, state) => const MessagesScreen(),
             ),
+            GoRoute(
+              path: 'leads',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('leads-stub')),
+            ),
           ],
         ),
       ],
@@ -42,7 +47,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -61,16 +71,29 @@ void main() {
       expect(find.text('Messages'), findsOneWidget);
     });
 
-    testWidgets('shows the exact placeholder sentence, not invented copy', (
+    testWidgets('shows the exact placeholder copy, not invented copy', (
       tester,
     ) async {
       await pumpScreen(tester);
+      // `.empty h3` + `.empty p` — SCREENS.md §23's sentence, split into
+      // the mockup's heading/paragraph pair.
+      expect(find.text('Messaging is coming soon'), findsOneWidget);
       expect(
         find.text(
-          'Messaging is coming soon. For now, contact leads by phone.',
+          'For now, contact leads by phone. Every lead card carries a '
+          'tap-to-call number.',
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('Open Leads routes to the leads list', (tester) async {
+      await pumpScreen(tester);
+
+      await tester.tap(find.text('Open Leads'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('leads-stub'), findsOneWidget);
     });
   });
 

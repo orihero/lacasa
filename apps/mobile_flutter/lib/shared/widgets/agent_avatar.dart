@@ -30,43 +30,47 @@ class AgentAvatar extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
+    // A name we don't have is not an initial — it's an empty slot. The
+    // source's own uploader placeholder is a person silhouette on `--sunk`
+    // (`.upl__ph` + `<i data-i="user-fill">`), which is what an unfilled
+    // add-coworker form shows; a literal "?" read as a broken value.
+    final Widget fallback = fullName.trim().isEmpty
+        ? ColoredBox(
+            color: colors.sunk,
+            child: Center(
+              child: Icon(Icons.person, size: size * 0.4, color: colors.faint),
+            ),
+          )
+        : ColoredBox(
+            color: colors.sunk,
+            child: Center(
+              child: Text(
+                _initials(fullName),
+                style: type.cardTitle.copyWith(
+                  color: colors.ink2,
+                  fontSize: size * 0.34,
+                ),
+              ),
+            ),
+          );
+
     return ClipOval(
       child: SizedBox(
         width: size,
         height: size,
         child: avatarUrl == null || avatarUrl!.isEmpty
-            ? ColoredBox(
-                color: colors.sunk,
-                child: Center(
-                  child: Text(
-                    _initials(fullName),
-                    style: type.cardTitle.copyWith(
-                      color: colors.ink2,
-                      fontSize: size * 0.34,
-                    ),
-                  ),
-                ),
-              )
+            ? fallback
             : Image.network(
                 avatarUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => ColoredBox(
-                  color: colors.sunk,
-                  child: Center(
-                    child: Text(
-                      _initials(fullName),
-                      style: type.cardTitle.copyWith(
-                        color: colors.ink2,
-                        fontSize: size * 0.34,
-                      ),
-                    ),
-                  ),
-                ),
+                errorBuilder: (context, error, stackTrace) => fallback,
               ),
       ),
     );
   }
 
+  /// Only ever called with a non-empty name — the empty case renders the
+  /// silhouette above instead of a placeholder character.
   String _initials(String name) {
     final parts = name
         .trim()

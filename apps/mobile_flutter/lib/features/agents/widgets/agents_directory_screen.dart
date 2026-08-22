@@ -69,7 +69,9 @@ class AgentsDirectoryScreen extends ConsumerWidget {
                       message: AppLocalizations.of(
                         context,
                       ).agentsDirectoryLoadErrorMessage,
-                      actionLabel: AppLocalizations.of(context).sharedRetryLabel,
+                      actionLabel: AppLocalizations.of(
+                        context,
+                      ).sharedRetryLabel,
                       onAction: () => ref.invalidate(agentsDirectoryProvider),
                     ),
                   ),
@@ -153,7 +155,9 @@ class _AgentsSkeletonList extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: BorderRadius.circular(AppRadii.card),
+          // Matches `AgentCard`'s own `.acard` radius so the skeleton
+          // doesn't visibly change shape on load.
+          borderRadius: BorderRadius.circular(AppRadii.cardLg),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,6 +168,13 @@ class _AgentsSkeletonList extends StatelessWidget {
               borderRadius: AppRadii.pill,
             ),
             const SizedBox(width: AppSpacing.base),
+            // Five stacked bars, `AppSpacing.xs` apart — [AgentCard]'s body
+            // is a name over a `.acard__r` rating/ads line and up to three
+            // `.acard__l` contact lines, each of which carries
+            // `margin-top:4px`. There is deliberately no pill here: the
+            // card's separate "Ads:" pill is gone (see [AgentCard]'s
+            // `_RatingAdsLine`), so drawing one would be a placeholder for
+            // an element that never arrives.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,23 +184,29 @@ class _AgentsSkeletonList extends StatelessWidget {
                     height: 11,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.xs),
                   ShimmerBox(
                     width: 110,
                     height: 9,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                   ShimmerBox(
                     width: 160,
                     height: 9,
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(height: AppSpacing.base),
-                  const ShimmerBox(
-                    width: 62,
-                    height: 22,
-                    borderRadius: AppRadii.pill,
+                  const SizedBox(height: AppSpacing.xs),
+                  ShimmerBox(
+                    width: 180,
+                    height: 9,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ShimmerBox(
+                    width: 130,
+                    height: 9,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ],
               ),

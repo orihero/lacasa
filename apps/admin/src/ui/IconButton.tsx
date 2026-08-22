@@ -1,21 +1,25 @@
 /**
- * IconButton — the topbar's square `.ib` control and every icon-only row
- * action. `label` is required, not optional: the mockup fakes these as bare
- * `<span class="i">` glyphs with no accessible name at all, and a surface
- * whose buttons lock accounts must not ship a control a screen reader
- * announces as nothing.
+ * IconButton — the topbar's square controls and any icon-only action.
  *
- * `dot` renders the notification pip (`.ib__d`). Its ring is `ring-2
- * ring-card` — a solid, zero-blur "cut a gap in the background" trick rather
- * than an elevation shadow, so it reads cleanly against the dark canvas
- * whatever surface the button sits on.
+ * `label` is REQUIRED, not optional, and is used as both `aria-label` and
+ * `title`: a surface whose buttons lock other people's accounts must not ship a
+ * control a screen reader announces as nothing. That is the whole reason this
+ * primitive exists rather than a bare `<MuiIconButton>`.
+ *
+ * `dot` renders a notification pip and is `aria-hidden` — it is a visual
+ * echo of something the page already says in text. The topbar's bell
+ * deliberately does NOT pass it: there is no notifications model behind this
+ * surface, and a pip would be a fabricated "something needs you" on the one
+ * screen whose entire job is telling an admin what needs them.
  */
+import MuiIconButton from "@mui/material/IconButton";
 import type { ButtonHTMLAttributes } from "react";
-import clsx from "clsx";
 import type { IconComponent } from "./icons";
 
-export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface IconButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
   icon: IconComponent;
+  /** Used as both `aria-label` and `title`. Required. */
   label: string;
   dot?: boolean;
   size?: "sm";
@@ -26,30 +30,49 @@ export function IconButton({
   label,
   dot,
   size,
-  className,
   type = "button",
+  className,
   ...props
 }: IconButtonProps) {
   const sm = size === "sm";
   return (
-    <button
+    <MuiIconButton
       type={type}
       aria-label={label}
       title={label}
-      className={clsx(
-        "relative inline-grid shrink-0 place-items-center rounded-control border border-line bg-sunk text-ink-2 transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc",
-        sm ? "h-[25px] w-[25px]" : "h-[29px] w-[29px]",
-        className,
-      )}
+      className={className}
+      sx={{
+        position: "relative",
+        flex: "none",
+        // Square, like everything else here — the theme sets
+        // `shape.borderRadius: 0` and MUI's icon buttons are round by default.
+        borderRadius: 0,
+        width: sm ? "30px" : "36px",
+        height: sm ? "30px" : "36px",
+        // apps/web's filter-control box, at icon size.
+        border: "1px solid #e0e0e0",
+        backgroundColor: "#ffffff",
+        color: "#8d99ae",
+        "&:hover": { backgroundColor: "#eeeeee" },
+        "&.Mui-disabled": { borderColor: "#e0e0e0" },
+      }}
       {...props}
     >
-      <Icon size={sm ? 12 : 14} />
+      <Icon size={sm ? 14 : 16} aria-hidden="true" />
       {dot ? (
         <span
           aria-hidden="true"
-          className="absolute right-[5px] top-[5px] h-1.5 w-1.5 rounded-full bg-acc ring-2 ring-card"
+          style={{
+            position: "absolute",
+            top: "5px",
+            right: "5px",
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            backgroundColor: "#fece51",
+          }}
         />
       ) : null}
-    </button>
+    </MuiIconButton>
   );
 }

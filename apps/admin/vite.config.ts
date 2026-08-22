@@ -3,31 +3,29 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // Port 5275, strictPort — 5273 is apps/web and 5274 is apps/console, and all
-// three are expected to run side by side. strictPort (rather than Vite's
-// default "take the next free port") matters more here than anywhere else:
-// this surface hands out destructive power over other people's accounts, and
-// an admin who bookmarked :5275 must never find the agent console answering
-// there because the admin app quietly slid to :5276.
+// three are expected to run side by side (apps/api/src/lib/config.js lists all
+// three in its CORS example). strictPort — rather than Vite's default "take the
+// next free port" — matters more on THIS surface than anywhere else: it hands
+// out destructive power over other people's accounts, and an admin who
+// bookmarked :5275 must never find the agent console answering there because
+// the admin app quietly slid to :5276.
 //
-// dedupe: apps/web still runs React 18, so npm's workspace hoister leaves a
-// React 18 copy at the repo root and nests this app's React 19 one arm's
-// length away in apps/admin/node_modules. react-router-dom, react-query and
-// @phosphor-icons/react satisfy every workspace's semver range with a single
-// copy, so npm hoists THEM to the root too — where their internal `require
-// ("react")` resolves to the root's React 18, not our nested React 19. Two
-// live React copies in one render tree means two dispatchers, which throws
-// ("Invalid hook call" / "Objects are not valid as a React child") the moment
-// any hook fires inside those hoisted packages. `dedupe` makes Vite's own
-// resolver — which every import in the module graph goes through, including
-// ones inside node_modules — answer every `import "react"`/`"react-dom"`
-// with the exact same file, so there is only ever one dispatcher.
+// NO `resolve.dedupe` HERE, DELIBERATELY. The previous build of this app ran
+// React 19 while apps/web ran React 18, so npm's hoister left a React 18 copy
+// at the repo root and nested this app's React 19 one arm's length away — and
+// packages hoisted to the root (react-router-dom, react-query) resolved their
+// own `require("react")` to the root's 18, putting two dispatchers in one
+// render tree. `dedupe` was the fix for that split. This rebuild is on React
+// 18.2.0, pinned to the same range as apps/web, so there is exactly one React
+// in the workspace and nothing left to deduplicate. If a future workspace
+// moves off 18 and the "Invalid hook call" symptom comes back, that comment
+// is the history — reinstate dedupe here and in vitest.config.ts together.
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
-    dedupe: ["react", "react-dom"],
   },
   server: {
     port: 5275,

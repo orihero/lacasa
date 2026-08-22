@@ -1,6 +1,14 @@
-// Verifies lib/api/app_mode.dart's central claim: that this process is
-// reliably detectable as `flutter test`, and that the fixtures/live
-// resolution built on top of that detection behaves as documented.
+// Verifies lib/api/app_mode.dart's remaining claim: that this process is
+// reliably detectable as `flutter test`.
+//
+// This file used to also cover `useLiveApiByDefault` and
+// `resolveUseLiveApi` — the fixtures/live resolution that every feature's
+// `data/<feature>_mode.dart` switch read. Those are gone: the bundled
+// fixture repositories were deleted, so there is no second data source to
+// resolve between and nothing left to test there. What remains is the
+// predicate itself, which `shared/map/map_tile_layer_provider.dart` still
+// depends on for a reason unrelated to fixtures (serving blank map tiles
+// under test instead of fetching real OpenStreetMap ones).
 
 import 'dart:io' show Platform;
 
@@ -14,38 +22,10 @@ void main() {
       // actually set (and not 'false') when `flutter test` runs this suite.
       // Asserted against the real Platform.environment, not a fake — if
       // flutter_tools ever stops setting this, or changes its value, this
-      // is the test that catches it instead of every widget test silently
-      // starting to fire real HTTP.
+      // is the test that catches it instead of the map layer silently
+      // starting to fetch real tiles over the network.
       expect(Platform.environment['FLUTTER_TEST'], 'true');
       expect(isRunningUnderFlutterTest, isTrue);
-    });
-  });
-
-  group('useLiveApiByDefault', () {
-    test('is false while running under flutter test', () {
-      // No LACASA_USE_FIXTURES define is passed to this test run, so the
-      // only thing that could be forcing fixtures here is the FLUTTER_TEST
-      // guard itself — which is exactly what this asserts.
-      expect(useLiveApiByDefault, isFalse);
-    });
-  });
-
-  group('resolveUseLiveApi', () {
-    test('an unset override ("") defers to useLiveApiByDefault', () {
-      expect(resolveUseLiveApi(''), useLiveApiByDefault);
-    });
-
-    test('"true" forces live regardless of useLiveApiByDefault', () {
-      expect(resolveUseLiveApi('true'), isTrue);
-    });
-
-    test('"false" forces fixtures regardless of useLiveApiByDefault', () {
-      expect(resolveUseLiveApi('false'), isFalse);
-    });
-
-    test('an unrecognized value is treated the same as unset', () {
-      expect(resolveUseLiveApi('yes'), useLiveApiByDefault);
-      expect(resolveUseLiveApi('1'), useLiveApiByDefault);
     });
   });
 }

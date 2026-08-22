@@ -131,6 +131,6 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(r'$ 420/month'), findsOneWidget);
+    expect(find.text(r'$420/month'), findsOneWidget);
   });
 }

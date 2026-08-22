@@ -1,0 +1,162 @@
+// Loading / empty / error / notice.
+@import "../responsive.scss";
+
+// The spinner. apps/web renders `<Triangle color="#4fa94d">` from
+// react-loader-spinner on every screen; that package is not a dependency here
+// and MUI's CircularProgress is explicitly foreign to the house style, so this
+// is a hand-written ring in apps/web's spinner green. Same colour, same
+// position, no new dependency.
+@keyframes control-room-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// Compound selector so this wins against index.scss's `.loading` whatever order
+// the two stylesheets end up in.
+.loading.state-loading {
+  flex-direction: column;
+  gap: 12px;
+
+  .state-loading__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #eeeeee;
+    border-top-color: #4fa94d;
+    border-radius: 50%;
+    animation: control-room-spin 0.9s linear infinite;
+  }
+
+  .state-loading__label {
+    font-size: 13px;
+    color: #8d99ae;
+  }
+}
+
+.state-empty,
+.state-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.state-empty {
+  .state-empty__icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    border: 1px solid #dedede;
+    background-color: #f5f6fa;
+    color: #8d99ae;
+  }
+
+  .state-empty__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2b2d42;
+  }
+
+  // apps/web's empty-state grey: `<p style={{ color: "#888" }}>`.
+  .state-empty__sub {
+    max-width: 460px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #888;
+  }
+
+  .state-empty__action {
+    margin-top: 8px;
+  }
+}
+
+.state-error {
+  .state-error__icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 4px;
+    background-color: #fcf5f3;
+    color: rgb(216, 72, 53);
+  }
+
+  .state-error__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2b2d42;
+  }
+
+  // The server's own words, never a generic apology.
+  .state-error__message {
+    max-width: 520px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #2b2d42;
+  }
+
+  // The raw code, in the same face the table shows ids in — `not_pending` is
+  // something an admin can act on.
+  .state-error__code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: #8d99ae;
+  }
+
+  .state-error__action {
+    margin-top: 8px;
+  }
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+  // apps/web's warm blush, the tint it uses behind its own standing panels.
+  background-color: #fcf5f3;
+  border: 1px solid #dedede;
+  // The bar carries the tone; the fill stays quiet, because this banner sits
+  // above every row of the queue and has to be readable a hundred times.
+  border-left: 4px solid #fece51;
+
+  .notice__icon {
+    display: flex;
+    flex: none;
+    margin-top: 1px;
+    color: #fece51;
+  }
+
+  .notice__text {
+    min-width: 0;
+  }
+
+  .notice__title {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: #2b2d42;
+  }
+
+  .notice__body {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #2b2d42;
+  }
+
+  &.notice--danger {
+    border-color: rgb(216, 72, 53);
+    border-left-width: 4px;
+
+    .notice__icon {
+      color: rgb(216, 72, 53);
+    }
+  }
+}

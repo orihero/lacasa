@@ -13,39 +13,23 @@
  * `PATCH /admin/users/:id/role` with `{ role }` as its body are exactly the
  * facts that break silently when a resource is renamed.
  *
- * WHY `@tanstack/react-query` AND `@/ui/icons` ARE FAKED ANYWAY — the same
- * React 18/19 hoisting split src/test/render.tsx documents, reaching one layer
- * further out. Both packages are hoisted to the *workspace root*
- * (node_modules/@tanstack/react-query, node_modules/@phosphor-icons/react)
- * while this app keeps its own nested React 19; vitest externalises anything
- * under node_modules, so it is loaded by Node's own resolution and
- * vitest.config.ts's `resolve.dedupe` — which only governs modules Vite
- * transforms — never reaches it. The result is that react-query's internals
- * call the ROOT react@18.3.1's `useEffect` while the tree is being rendered by
- * this app's react-dom@19.2.3, and React 18's dispatcher is null:
- *
- *     TypeError: Cannot read properties of null (reading 'useEffect')
- *       ❯ QueryClientProvider .../@tanstack/react-query/src/QueryClientProvider.tsx:33
- *
- * This is a TEST-ONLY failure — `vite dev`/`vite build` transform and dedupe
- * the same imports, so the browser gets one React — and the fix belongs in
- * apps/admin/vitest.config.ts (`test.server.deps.inline` for those two
- * packages), which this screen does not own. Until then the three react-query
- * hooks `@/data/useUsers` actually uses are re-implemented below against THIS
- * app's React: small enough to read in one screen, and they keep every line
- * of the hook under test — parameter normalisation, cursor handling, the
- * invalidation keys — genuinely executing.
+ * REAL @tanstack/react-query, REAL @/ui/icons. The deleted app's suite faked
+ * both, but only to work around a React 18/19 hoisting split in that
+ * workspace — an environment workaround, not behaviour worth reproducing.
+ * This app is on React 18 with exactly one React in the tree, so the query
+ * library's own retry, invalidation-prefix and infinite-page semantics are
+ * what these tests run against.
  */
-import { act } from "react";
-import { fireEvent, screen, within } from "@testing-library/dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminPage, AdminUserRow, TransportRequest } from "@lacasa/api-client";
 import { ApiError, type ErrorCode } from "@lacasa/domain";
-import { render } from "@/test/render";
+import i18n from "@/i18n";
+import { createTestQueryClient, renderWithProviders } from "@/test/render";
 import { UsersScreen } from "../UsersScreen";
 
 /**
- * Shared between the test body and the module factories below, which vitest
+ * Shared between the test body and the module factory below, which vitest
  * hoists above every import in this file — `vi.hoisted` is what lets both
  * sides reach the same object.
  */
@@ -54,15 +38,16 @@ const wire = vi.hoisted(() => ({
   respond(req: TransportRequest): unknown {
     throw new Error(`no responder set for ${req.method} ${req.url}`);
   },
-  /** Every `queryClient.invalidateQueries` argument the mutation passed. */
-  invalidated: [] as unknown[],
-  /** Refetch callbacks of the mounted list, so an invalidation can fire them. */
-  refetchers: new Set<() => void>(),
 }));
 
 vi.mock("@/lib/apiClient", async () => {
   const { createLaCasaApiClient } = await import("@lacasa/api-client");
   return {
+    API_BASE_URL: "http://admin.test/api",
+    localStorageTokenStorage: {
+      getToken: () => Promise.resolve("test-token"),
+      setToken: () => Promise.resolve(),
+    },
     apiClient: createLaCasaApiClient({
       transport: {
         request<T>(req: TransportRequest): Promise<T> {
@@ -79,144 +64,6 @@ vi.mock("@/lib/apiClient", async () => {
       baseUrl: "http://admin.test/api",
     }),
   };
-});
-
-vi.mock("@tanstack/react-query", async () => {
-  const { useCallback, useEffect, useRef, useState } = await import("react");
-
-  interface Page {
-    items: unknown[];
-    nextCursor: string | null;
-  }
-  interface InfiniteOptions {
-    queryKey: readonly unknown[];
-    queryFn: (ctx: { pageParam: string | undefined }) => Promise<Page>;
-    initialPageParam: string | undefined;
-    getNextPageParam: (page: Page) => string | undefined;
-  }
-  interface MutationOptions<V> {
-    mutationFn: (variables: V) => Promise<unknown>;
-    onSuccess?: (data: unknown, variables: V) => void;
-  }
-  type Status = "pending" | "success" | "error";
-
-  function useInfiniteQuery(options: InfiniteOptions) {
-    const [pages, setPages] = useState<Page[]>([]);
-    const [status, setStatus] = useState<Status>("pending");
-    const [error, setError] = useState<unknown>(null);
-    const [fetchingNext, setFetchingNext] = useState(false);
-    const [nonce, setNonce] = useState(0);
-    const pagesRef = useRef<Page[]>(pages);
-    pagesRef.current = pages;
-
-    // Serialised, not the array itself: the screen builds a fresh key object
-    // on every render, so an identity comparison would refetch forever.
-    const key = JSON.stringify(options.queryKey);
-    // The options object is likewise rebuilt each render; the key and the
-    // refetch nonce are the only things that should restart a fetch.
-    useEffect(() => {
-      let cancelled = false;
-      setStatus("pending");
-      setPages([]);
-      setError(null);
-      options.queryFn({ pageParam: options.initialPageParam }).then(
-        (page) => {
-          if (cancelled) return;
-          setPages([page]);
-          setStatus("success");
-        },
-        (failure) => {
-          if (cancelled) return;
-          setError(failure);
-          setStatus("error");
-        },
-      );
-      return () => {
-        cancelled = true;
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key, nonce]);
-
-    const refetch = useCallback(() => setNonce((n) => n + 1), []);
-
-    useEffect(() => {
-      wire.refetchers.add(refetch);
-      return () => {
-        wire.refetchers.delete(refetch);
-      };
-    }, [refetch]);
-
-    const last = pages[pages.length - 1];
-    const nextCursor = last ? options.getNextPageParam(last) : undefined;
-
-    const fetchNextPage = useCallback(() => {
-      const tail = pagesRef.current[pagesRef.current.length - 1];
-      const cursor = tail ? options.getNextPageParam(tail) : undefined;
-      if (cursor === undefined) return Promise.resolve();
-      setFetchingNext(true);
-      return options.queryFn({ pageParam: cursor }).then((page) => {
-        setPages((prev) => [...prev, page]);
-        setFetchingNext(false);
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key]);
-
-    return {
-      data: status === "success" ? { pages } : undefined,
-      isPending: status === "pending",
-      isError: status === "error",
-      error,
-      hasNextPage: nextCursor !== undefined,
-      isFetchingNextPage: fetchingNext,
-      fetchNextPage,
-      refetch,
-    };
-  }
-
-  function useMutation<V>(options: MutationOptions<V>) {
-    const [isPending, setPending] = useState(false);
-    const [error, setError] = useState<unknown>(null);
-
-    const mutate = (variables: V, callbacks?: { onSuccess?: () => void }) => {
-      setPending(true);
-      setError(null);
-      options.mutationFn(variables).then(
-        (data) => {
-          setPending(false);
-          options.onSuccess?.(data, variables);
-          callbacks?.onSuccess?.();
-        },
-        (failure) => {
-          setPending(false);
-          setError(failure);
-        },
-      );
-    };
-
-    return { mutate, isPending, error, reset: () => setError(null) };
-  }
-
-  function useQueryClient() {
-    return {
-      // Records the key it was handed AND refetches every mounted list. The
-      // key matching a real QueryClient's prefix semantics is queryKeys.ts's
-      // job; what this screen's test can check is which keys the mutation
-      // declared stale, which is asserted directly.
-      invalidateQueries(filters: unknown) {
-        wire.invalidated.push(filters);
-        for (const refetch of wire.refetchers) refetch();
-        return Promise.resolve();
-      },
-    };
-  }
-
-  return { useInfiniteQuery, useMutation, useQueryClient };
-});
-
-vi.mock("@/ui/icons", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/ui/icons")>();
-  const FakeIcon = (props: Record<string, unknown>) => <svg data-testid="icon" {...props} />;
-  return { ...actual, ...Object.fromEntries(Object.keys(actual).map((key) => [key, FakeIcon])) };
 });
 
 // ---------------------------------------------------------------------------
@@ -271,31 +118,6 @@ function usersPage(
 // ---------------------------------------------------------------------------
 // Harness
 
-/**
- * Lets every pending microtask (the token read, the transport promise, the
- * state updates each resolves into) land, with React flushing in between.
- * Several passes because one fetch crosses more than one `await`.
- */
-async function settle(passes = 6) {
-  for (let i = 0; i < passes; i += 1) {
-    await act(async () => {
-      await Promise.resolve();
-    });
-  }
-}
-
-function click(element: Element) {
-  act(() => {
-    fireEvent.click(element);
-  });
-}
-
-function change(element: Element, value: string) {
-  act(() => {
-    fireEvent.change(element, { target: { value } });
-  });
-}
-
 const getCalls = (method: TransportRequest["method"]) =>
   wire.calls.filter((call) => call.method === method);
 
@@ -327,14 +149,37 @@ function apiError(code: string, message: string, status: number): ApiError {
   return new ApiError(code as ErrorCode, message, status);
 }
 
-function openRoleDialog(fullName: string): HTMLElement {
-  click(screen.getByRole("button", { name: `Change role for ${fullName}` }));
-  return screen.getByRole("dialog");
+function mount(queryClient = createTestQueryClient()) {
+  // withAuth: false — this screen reads no session, and mounting the real
+  // AuthProvider would put its own GET /auth/me at the head of wire.calls.
+  return renderWithProviders(<UsersScreen />, { withAuth: false, queryClient });
 }
+
+async function openRoleDialog(fullName: string): Promise<HTMLElement> {
+  fireEvent.click(screen.getByRole("button", { name: `Change role for ${fullName}` }));
+  return screen.findByRole("dialog");
+}
+
+/**
+ * The footer's running count, reassembled: LoadMore renders the number in its
+ * own element, so the sentence is spread across three text nodes.
+ */
+function footerCount(): string {
+  return screen.getByText(/accounts/, { selector: ".load-more__count" }).textContent ?? "";
+}
+
+function rowFor(fullName: string): HTMLElement {
+  const row = screen.getByText(fullName).closest("tr");
+  if (!row) throw new Error(`no row rendered for ${fullName}`);
+  return row;
+}
+
+beforeAll(async () => {
+  await i18n.changeLanguage("en");
+});
 
 beforeEach(() => {
   wire.calls.length = 0;
-  wire.invalidated.length = 0;
   wire.respond = () => usersPage([AGENT, BUYER]);
 });
 
@@ -342,10 +187,11 @@ beforeEach(() => {
 
 describe("UsersScreen", () => {
   it("lists accounts with their role, realtor status, counts and joined date", async () => {
-    render(<UsersScreen />);
-    await settle();
+    mount();
+    await screen.findByText("Javlon Rustamov");
 
     const listCall = callAt("GET", 0);
+    expect(getCalls("GET")).toHaveLength(1);
     expect(listCall.url).toBe("http://admin.test/api/admin/users");
     expect(listCall.query?.limit).toBe(50);
     // No filter is active on first paint, and "no filter" has to be an absent
@@ -355,7 +201,7 @@ describe("UsersScreen", () => {
     expect(listCall.query?.realtorStatus).toBeUndefined();
     expect(listCall.query?.cursor).toBeUndefined();
 
-    const agentRow = screen.getByText("Javlon Rustamov").closest("tr") as HTMLElement;
+    const agentRow = rowFor("Javlon Rustamov");
     expect(within(agentRow).getByText("javlon@lacasa.uz")).toBeTruthy();
     expect(within(agentRow).getByText("Agent")).toBeTruthy();
     expect(within(agentRow).getByText("Approved")).toBeTruthy();
@@ -363,63 +209,170 @@ describe("UsersScreen", () => {
     expect(within(agentRow).getByText("12")).toBeTruthy();
     expect(within(agentRow).getByText("14.03.2026")).toBeTruthy();
     expect(within(agentRow).getByText("a3f21e08…")).toBeTruthy();
+    // The full id is still reachable, for the cross-reference the prefix is
+    // only a handle for.
+    expect(within(agentRow).getByText("a3f21e08…").getAttribute("title")).toBe(AGENT.id);
 
-    const buyerRow = screen.getByText("Dilnoza Yusupova").closest("tr") as HTMLElement;
+    const buyerRow = rowFor("Dilnoza Yusupova");
     expect(within(buyerRow).getByText("Buyer")).toBeTruthy();
+    // `realtor: null` is not `realtorStatus: "none"`, so the cell says
+    // "no value" rather than inventing a status the payload does not carry.
     expect(within(buyerRow).getByText("—")).toBeTruthy();
     expect(within(buyerRow).queryByText("None")).toBeNull();
 
     // Keyset paging with no cursor left: an end marker, never a page number.
     expect(screen.getByText("End of list")).toBeTruthy();
+    // "2 accounts" with nothing left to fetch and "2 accounts loaded" with
+    // more behind it are different facts. No total is shown — the endpoint
+    // does not return one and the footer must never invent it.
+    expect(footerCount()).toBe("2 accounts");
+  });
+
+  it("exposes the toolbar as three named, pick-one controls", async () => {
+    mount();
+    await screen.findByText("Javlon Rustamov");
+
+    // A real group with real buttons, so a screen-reader user is told which of
+    // the filters they have landed in and which option is on.
+    const group = screen.getByRole("group", { name: "Role" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["All", "Buyer", "Agent", "Coworker", "Admin"]);
+    expect(within(group).getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+
+    const box = screen.getByLabelText("Search users");
+    expect(box.getAttribute("type")).toBe("search");
+    expect(box.getAttribute("placeholder")).toBe("Search name or email…");
+
+    const select = screen.getByLabelText("Realtor status") as HTMLSelectElement;
+    expect(Array.from(select.options).map((option) => option.value)).toEqual([
+      "all",
+      "none",
+      "pending",
+      "approved",
+      "rejected",
+    ]);
+    expect(Array.from(select.options).map((option) => option.text)).toEqual([
+      "Any realtor status",
+      "None",
+      "Pending",
+      "Approved",
+      "Rejected",
+    ]);
+    expect(select.value).toBe("all");
+
+    // The avatar fallback announces the person rather than announcing nothing.
+    expect(within(rowFor("Javlon Rustamov")).getByRole("img")).toHaveAttribute(
+      "aria-label",
+      "Javlon Rustamov",
+    );
+  });
+
+  it("shows the table's own skeleton while a page is pending, and no footer", async () => {
+    // The first load, caught before the transport's microtask resolves.
+    mount();
+    expect(screen.getAllByRole("columnheader")).toHaveLength(8);
+    expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(8 * 8);
+    expect(screen.queryByText("End of list")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    await screen.findByText("Javlon Rustamov");
+    expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(0);
+  });
+
+  it("drops to the skeleton on a filter change rather than holding the old rows", async () => {
+    mount();
+    await screen.findByText("Javlon Rustamov");
+
+    // Every filter combination is its own cache entry and there is no
+    // `placeholderData: keepPreviousData` — showing the last filter's rows
+    // under the new filter's controls is how an admin acts on the wrong row.
+    wire.respond = () => new Promise(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "Coworker" }));
+
+    await waitFor(() =>
+      expect(document.querySelectorAll(".MuiSkeleton-root")).toHaveLength(8 * 8),
+    );
+    expect(screen.queryByText("Javlon Rustamov")).toBeNull();
+  });
+
+  it("names the row action after the account it would change", async () => {
+    mount();
+    await screen.findByText("Javlon Rustamov");
+
+    // Four identical "Change role" buttons in a 50-row table are four buttons
+    // a screen-reader user cannot tell apart, on the one control here that
+    // changes someone's access.
+    expect(screen.getByRole("button", { name: "Change role for Javlon Rustamov" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Change role for Dilnoza Yusupova" })).toBeTruthy();
+  });
+
+  it("states that the order is structural and offers no control that could change it", async () => {
+    mount();
+    await screen.findByText("Javlon Rustamov");
+
+    expect(screen.getByText("Newest accounts first")).toBeTruthy();
+    // Deliberate absences: keyset paging fixes the order, and this screen has
+    // no refresh of its own (PRECEDENCE.md).
+    expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Plan" })).toBeNull();
   });
 
   it("pages with the cursor the server handed back, never a constructed one", async () => {
     wire.respond = (req) =>
       req.query?.cursor === "cursor-1"
-        ? usersPage([{ ...AGENT, id: "c0ffee00-0000-4000-8000-000000000001", fullName: "Kamola Rashidova" }])
+        ? usersPage([
+            { ...AGENT, id: "c0ffee00-0000-4000-8000-000000000001", fullName: "Kamola Rashidova" },
+          ])
         : usersPage([AGENT, BUYER], "cursor-1");
 
-    render(<UsersScreen />);
-    await settle();
+    mount();
+    await screen.findByText("Javlon Rustamov");
+    // More pages behind it, so the count says so.
+    expect(footerCount()).toBe("2 accounts loaded");
 
-    click(screen.getByRole("button", { name: /Load more/ }));
-    await settle();
+    fireEvent.click(screen.getByRole("button", { name: /Load more/ }));
+    await screen.findByText("Kamola Rashidova");
 
     expect(callAt("GET", 1).query?.cursor).toBe("cursor-1");
-    expect(screen.getByText("Kamola Rashidova")).toBeTruthy();
     // Appended, not replaced.
     expect(screen.getByText("Javlon Rustamov")).toBeTruthy();
   });
 
   it("shows the database-is-empty message when nothing is filtered away", async () => {
     wire.respond = () => usersPage([]);
-    render(<UsersScreen />);
-    await settle();
+    mount();
 
-    expect(screen.getByText("No accounts yet")).toBeTruthy();
+    expect(await screen.findByText("No accounts yet")).toBeTruthy();
     expect(screen.getByText(/check the environment strip/)).toBeTruthy();
   });
 
   it("distinguishes a filtered-away list from an empty one", async () => {
-    render(<UsersScreen />);
-    await settle();
+    mount();
+    await screen.findByText("Javlon Rustamov");
 
     wire.respond = () => usersPage([]);
-    click(screen.getByRole("button", { name: "Coworker" }));
-    await settle();
+    fireEvent.click(screen.getByRole("button", { name: "Coworker" }));
 
-    expect(screen.getByText("No accounts match these filters")).toBeTruthy();
+    expect(await screen.findByText("No accounts match these filters")).toBeTruthy();
     expect(screen.queryByText("No accounts yet")).toBeNull();
+    expect(
+      screen.getByText("No account on the platform has this combination of role and realtor status."),
+    ).toBeTruthy();
     expect(callAt("GET", 1).query?.role).toBe("coworker");
   });
 
   it("filters by realtor status server-side", async () => {
-    render(<UsersScreen />);
-    await settle();
+    mount();
+    await screen.findByText("Javlon Rustamov");
 
-    change(screen.getByLabelText("Realtor status"), "pending");
-    await settle();
+    fireEvent.change(screen.getByLabelText("Realtor status"), { target: { value: "pending" } });
 
+    await waitFor(() => expect(getCalls("GET")).toHaveLength(2));
     expect(callAt("GET", 1).query?.realtorStatus).toBe("pending");
   });
 
@@ -427,32 +380,58 @@ describe("UsersScreen", () => {
     wire.respond = () => {
       throw apiError("internal", "Database connection lost", 500);
     };
-    render(<UsersScreen />);
-    await settle();
+    mount();
 
-    const alert = screen.getByRole("alert");
+    const alert = await screen.findByRole("alert");
+    // The server's real words and the machine code an admin can act on —
+    // never a house phrase, on the screen that changes people's access.
     expect(within(alert).getByText("Database connection lost")).toBeTruthy();
     expect(within(alert).getByText("internal")).toBeTruthy();
 
     wire.respond = () => usersPage([AGENT, BUYER]);
-    click(screen.getByRole("button", { name: "Try again" }));
-    await settle();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
+    expect(await screen.findByText("Javlon Rustamov")).toBeTruthy();
+  });
+
+  it("keeps the rows and still states the failure when a later read fails", async () => {
+    wire.respond = (req) =>
+      req.query?.cursor === "cursor-1"
+        ? (() => {
+            throw apiError("internal", "Database connection lost", 500);
+          })()
+        : usersPage([AGENT, BUYER], "cursor-1");
+
+    mount();
+    await screen.findByText("Javlon Rustamov");
+
+    fireEvent.click(screen.getByRole("button", { name: /Load more/ }));
+
+    // Without this line a failed "Load more" would look exactly like reaching
+    // the end of the directory.
+    const strip = await screen.findByRole("alert");
+    expect(strip.textContent).toBe(
+      "Could not read the directory: Database connection lost. The rows above are from the last successful load.",
+    );
     expect(screen.getByText("Javlon Rustamov")).toBeTruthy();
   });
 
   it("debounces the search box instead of querying per keystroke", async () => {
     vi.useFakeTimers();
     try {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await flush();
       expect(getCalls("GET")).toHaveLength(1);
 
       const box = screen.getByLabelText("Search users");
-      change(box, "k");
-      change(box, "ka");
-      change(box, "kam");
-      await settle();
+      // The server rejects a `q` over 200 characters, so a pasted wall of text
+      // is truncated client-side rather than becoming a 400 to decode.
+      expect(box.getAttribute("maxlength")).toBe("200");
+
+      fireEvent.change(box, { target: { value: "k" } });
+      fireEvent.change(box, { target: { value: "ka" } });
+      fireEvent.change(box, { target: { value: "kam" } });
+      await flush();
 
       // Three keystrokes inside the debounce window are still zero requests.
       expect(getCalls("GET")).toHaveLength(1);
@@ -460,10 +439,19 @@ describe("UsersScreen", () => {
       act(() => {
         vi.advanceTimersByTime(300);
       });
-      await settle();
+      await flush();
 
       expect(getCalls("GET")).toHaveLength(2);
       expect(callAt("GET", 1).query?.q).toBe("kam");
+
+      // The debounce watches the TRIMMED value, so a trailing space after a
+      // settled term asks the database nothing new.
+      fireEvent.change(box, { target: { value: "kam " } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      await flush();
+      expect(getCalls("GET")).toHaveLength(2);
     } finally {
       vi.useRealTimers();
     }
@@ -471,39 +459,43 @@ describe("UsersScreen", () => {
 
   describe("changing a role", () => {
     it("never writes without a confirmation", async () => {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await screen.findByText("Javlon Rustamov");
 
-      const dialog = openRoleDialog("Javlon Rustamov");
+      const dialog = await openRoleDialog("Javlon Rustamov");
       expect(getCalls("PATCH")).toHaveLength(0);
-      // The record being acted on is restated in full, id and all.
+      expect(dialog.getAttribute("aria-modal")).toBe("true");
+      expect(within(dialog).getByRole("heading", { level: 3 }).textContent).toBe("Change role");
+      // The record being acted on is restated in full, id and all: a prefix is
+      // not proof of identity.
       expect(within(dialog).getByText(AGENT.id)).toBeTruthy();
+      expect(within(dialog).getByRole("button", { name: "Close" })).toBeTruthy();
+      // The option for the role the account already holds says so.
+      expect(within(dialog).getByRole("option", { name: "Agent (current)" })).toBeTruthy();
 
-      click(within(dialog).getByRole("button", { name: "Cancel" }));
-      await settle();
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
 
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
       expect(getCalls("PATCH")).toHaveLength(0);
-      expect(screen.queryByRole("dialog")).toBeNull();
     });
 
     it("refuses to submit a change to the role the account already holds", async () => {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await screen.findByText("Javlon Rustamov");
 
-      const dialog = openRoleDialog("Javlon Rustamov");
-      click(within(dialog).getByRole("button", { name: "Change to Agent" }));
-      await settle();
+      const dialog = await openRoleDialog("Javlon Rustamov");
+      fireEvent.click(within(dialog).getByRole("button", { name: "Change to Agent" }));
 
+      expect(await within(dialog).findByText(/already has/)).toBeTruthy();
       expect(getCalls("PATCH")).toHaveLength(0);
-      expect(within(dialog).getByText(/already has/)).toBeTruthy();
     });
 
     it("gives promotion to admin the strongest confirmation on the screen", async () => {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await screen.findByText("Dilnoza Yusupova");
 
-      const dialog = openRoleDialog("Dilnoza Yusupova");
-      change(within(dialog).getByLabelText("New role"), "admin");
+      const dialog = await openRoleDialog("Dilnoza Yusupova");
+      fireEvent.change(within(dialog).getByLabelText("New role"), { target: { value: "admin" } });
 
       expect(
         within(dialog).getByText("This is the strongest permission the platform has."),
@@ -515,42 +507,63 @@ describe("UsersScreen", () => {
     });
 
     it("explains what a demotion does and does not take with it", async () => {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await screen.findByText("Javlon Rustamov");
 
-      const dialog = openRoleDialog("Javlon Rustamov");
-      change(within(dialog).getByLabelText("New role"), "user");
+      const dialog = await openRoleDialog("Javlon Rustamov");
+      fireEvent.change(within(dialog).getByLabelText("New role"), { target: { value: "user" } });
 
       // Quoted off the row itself, so the reassurance is checkable.
       expect(within(dialog).getByText(/24 ads and 12 leads/)).toBeTruthy();
       expect(within(dialog).getByText(/Nothing is deleted/)).toBeTruthy();
+
+      // An account that owns nothing gets the shorter sentence instead of
+      // "0 ads and 0 leads stay put".
+      fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+      const buyerDialog = await openRoleDialog("Dilnoza Yusupova");
+      fireEvent.change(within(buyerDialog).getByLabelText("New role"), {
+        target: { value: "agent" },
+      });
+      fireEvent.change(within(buyerDialog).getByLabelText("New role"), {
+        target: { value: "user" },
+      });
+      expect(within(buyerDialog).queryByText(/Nothing is deleted/)).toBeNull();
     });
 
     it("sends the change, closes, and re-reads the list rather than patching it", async () => {
-      render(<UsersScreen />);
-      await settle();
+      const queryClient = createTestQueryClient();
+      const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+      mount(queryClient);
+      await screen.findByText("Javlon Rustamov");
 
       wire.respond = (req) => {
         if (req.method === "PATCH") return { user: { ...AGENT, role: "admin" } };
         return usersPage([{ ...AGENT, role: "admin" }, BUYER]);
       };
 
-      const dialog = openRoleDialog("Javlon Rustamov");
-      change(within(dialog).getByLabelText("New role"), "admin");
-      click(within(dialog).getByRole("button", { name: "Grant admin access" }));
-      await settle();
+      const dialog = await openRoleDialog("Javlon Rustamov");
+      fireEvent.change(within(dialog).getByLabelText("New role"), { target: { value: "admin" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Grant admin access" }));
+
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
       const patch = callAt("PATCH", 0);
       expect(patch.url).toBe(`http://admin.test/api/admin/users/${AGENT.id}/role`);
       expect(patch.body).toEqual({ role: "admin" });
 
-      expect(screen.queryByRole("dialog")).toBeNull();
-      // Both the directory and the overview's per-role counts go stale.
-      expect(wire.invalidated).toEqual([{ queryKey: ["users"] }, { queryKey: ["overview"] }]);
-      expect(getCalls("GET").length).toBeGreaterThan(1);
+      // Both the directory and the overview's per-role counts go stale — and
+      // nothing else: the applications list carries no role to go stale.
+      expect(invalidate.mock.calls.map((call) => call[0])).toEqual([
+        { queryKey: ["users"] },
+        { queryKey: ["overview"] },
+      ]);
 
-      const row = screen.getByText("Javlon Rustamov").closest("tr") as HTMLElement;
-      expect(within(row).getByText("Admin")).toBeTruthy();
+      await waitFor(() => expect(getCalls("GET").length).toBeGreaterThan(1));
+      await waitFor(() =>
+        expect(within(rowFor("Javlon Rustamov")).getByText("Admin")).toBeTruthy(),
+      );
     });
 
     it.each([
@@ -578,46 +591,64 @@ describe("UsersScreen", () => {
     ])(
       "turns the $code guard rail into its own sentence",
       async ({ code, status, role, subject, expected }) => {
-        render(<UsersScreen />);
-        await settle();
+        mount();
+        await screen.findByText(subject);
 
         wire.respond = (req) => {
           if (req.method === "PATCH") throw apiError(code, "server prose nobody reads", status);
           return usersPage([AGENT, BUYER]);
         };
 
-        const dialog = openRoleDialog(subject);
-        change(within(dialog).getByLabelText("New role"), role);
-        click(within(dialog).getByRole("button", { name: /^Change to / }));
-        await settle();
+        const dialog = await openRoleDialog(subject);
+        fireEvent.change(within(dialog).getByLabelText("New role"), { target: { value: role } });
+        fireEvent.click(within(dialog).getByRole("button", { name: /^Change to / }));
 
+        expect(await within(dialog).findByText(expected)).toBeTruthy();
         // The dialog stays open on a refusal: each of these is something the
         // admin can act on without losing their place.
         expect(screen.queryByRole("dialog")).not.toBeNull();
-        expect(within(dialog).getByText(expected)).toBeTruthy();
         // Never the server's raw prose, and never a generic failure line.
         expect(within(dialog).queryByText("server prose nobody reads")).toBeNull();
       },
     );
 
     it("does not carry one row's refusal into the next row's dialog", async () => {
-      render(<UsersScreen />);
-      await settle();
+      mount();
+      await screen.findByText("Javlon Rustamov");
 
       wire.respond = (req) => {
         if (req.method === "PATCH") throw apiError("last_admin", "last admin", 409);
         return usersPage([AGENT, BUYER]);
       };
 
-      const first = openRoleDialog("Javlon Rustamov");
-      change(within(first).getByLabelText("New role"), "user");
-      click(within(first).getByRole("button", { name: "Change to Buyer" }));
-      await settle();
-      expect(within(first).getByText(/only admin account left/)).toBeTruthy();
+      const first = await openRoleDialog("Javlon Rustamov");
+      fireEvent.change(within(first).getByLabelText("New role"), { target: { value: "user" } });
+      fireEvent.click(within(first).getByRole("button", { name: "Change to Buyer" }));
+      expect(await within(first).findByText(/only admin account left/)).toBeTruthy();
 
-      click(within(first).getByRole("button", { name: "Cancel" }));
-      const second = openRoleDialog("Dilnoza Yusupova");
+      fireEvent.click(within(first).getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+      // A `last_admin` message still on screen while a different account's
+      // dialog is open would read as a refusal of THIS change.
+      const second = await openRoleDialog("Dilnoza Yusupova");
       expect(within(second).queryByText(/only admin account left/)).toBeNull();
     });
   });
 });
+
+/**
+ * Under fake timers nothing drains on its own: react-query schedules its
+ * notifications with `setTimeout(cb, 0)` and the transport answers in a
+ * microtask, so a pass has to do both. Only the debounce test needs this —
+ * every other test uses RTL's real-timer `findBy*`/`waitFor`.
+ */
+async function flush(passes = 10): Promise<void> {
+  for (let i = 0; i < passes; i += 1) {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.advanceTimersByTime(0);
+    });
+  }
+}

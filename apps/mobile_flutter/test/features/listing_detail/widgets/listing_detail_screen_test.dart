@@ -12,6 +12,7 @@
 // (see listing_detail_providers.dart) and would otherwise race every error
 // assertion here against a timer. Same thing home_feed_screen_test.dart does.
 
+import '../../../support/ambient_repository_overrides.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,7 @@ import 'package:lacasa_mobile/features/listing_detail/widgets/listing_hero.dart'
 import 'package:lacasa_mobile/features/photo_gallery/photo_gallery.dart';
 import 'package:lacasa_mobile/navigation/app_router.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
+import 'package:lacasa_mobile/navigation/workspace_mode.dart';
 import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
@@ -46,6 +48,7 @@ void main() {
     final container = ProviderContainer(
       retry: (_, _) => null,
       overrides: [
+        ...ambientRepositoryOverrides(favourites: false, listingDetail: false),
         listingDetailRepositoryProvider.overrideWithValue(repository),
         favouriteAdIdsRepositoryProvider.overrideWithValue(
           FakeFavouriteAdIdsRepository(),
@@ -58,7 +61,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
+        child: MaterialApp.router(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: AppTheme.light(),
+          routerConfig: router,
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -101,14 +109,11 @@ void main() {
       await pumpDetail(tester, repository);
 
       expect(find.byType(ListingDetailScreen), findsOneWidget);
-      expect(
-        find.text('Bright 3-room apartment in Chilonzor'),
-        findsOneWidget,
-      );
+      expect(find.text('Bright 3-room apartment in Chilonzor'), findsOneWidget);
       expect(find.text('Chilonzor, Tashkent'), findsOneWidget);
       // The hero pill and the price footer both carry the price; the bottom
       // bar carries it a third time. All three are intentional.
-      expect(find.textContaining(r'$ 78,000'), findsWidgets);
+      expect(find.textContaining(r'$78,000'), findsWidgets);
       expect(find.text('Javlon Rustamov'), findsOneWidget);
       expect(find.text('Submit an application'), findsOneWidget);
     });
@@ -189,9 +194,13 @@ void main() {
       tester,
     ) async {
       // Everything optional absent: no description, no options, no nearby
-      // places, no rooms/area/floor.
+      // places, no rooms/area/floor — and a type/category this build does
+      // not recognize, so even the info tags resolve to nothing. The tags
+      // now live *inside* the Description pane (the mockup nests `.tags`
+      // in `data-pane-body="description"`), so they have to be gone too
+      // before that segment is genuinely empty.
       final repository = FakeListingDetailRepository(
-        ad: testAd(),
+        ad: testAd(type: 'not-a-known-type', category: 'not-a-known-category'),
         agent: testAgent(),
       );
 
@@ -202,7 +211,8 @@ void main() {
       expect(find.text('Sizes'), findsNothing);
       expect(find.text('Nearby Places'), findsNothing);
       // Location is the documented exception — "we don't know where this
-      // is" is information the buyer acts on.
+      // is" is information the buyer acts on. It is the only surviving
+      // pane, so it is also the selected one and its body is on screen.
       expect(find.text('Location'), findsOneWidget);
       expect(
         find.text('No location provided for this listing.'),
@@ -210,11 +220,33 @@ void main() {
       );
     });
 
+    testWidgets('the Description pane survives on its info tags alone', (
+      tester,
+    ) async {
+      // No description paragraph, but a stated type and category. The tags
+      // are that pane's body in the mockup, so the segment is not empty and
+      // must not be dropped — the counterpart to the test above.
+      final repository = FakeListingDetailRepository(
+        ad: testAd(type: 'residential', category: 'sale'),
+        agent: testAgent(),
+      );
+
+      await pumpDetail(tester, repository);
+
+      expect(find.text('Description'), findsOneWidget);
+      // Description is pane 0, so its body — the tags — is the one on screen.
+      expect(find.text('Residential'), findsOneWidget);
+      expect(find.text('Sale'), findsOneWidget);
+    });
+
     testWidgets('a malformed optionList drops the section without throwing', (
       tester,
     ) async {
       final repository = FakeListingDetailRepository(
-        ad: testAd(optionList: 'malformed-not-a-list', nearPlacesList: const []),
+        ad: testAd(
+          optionList: 'malformed-not-a-list',
+          nearPlacesList: const [],
+        ),
         agent: testAgent(),
       );
 
@@ -264,17 +296,35 @@ void main() {
 
       await pumpDetail(tester, repository);
 
+      // The bodies are `.pane`s behind a `.segs` segmented control now, not
+      // five stacked sections: Description is on by default, every other
+      // body is one tap on its segment away.
+      Future<void> openPane(String label) async {
+        final segment = find.text(label);
+        await tester.ensureVisible(segment);
+        await tester.pumpAndSettle();
+        await tester.tap(segment);
+        await tester.pumpAndSettle();
+      }
+
       expect(find.text('South-facing living room.'), findsOneWidget);
-      expect(find.text('Parking · Yes'), findsOneWidget);
-      expect(
-        find.text('Chilonzor metro station (7 min walk)'),
-        findsOneWidget,
-      );
       expect(find.text('Sizes'), findsOneWidget);
+
+      await openPane('Additional Information');
+      expect(find.text('Parking · Yes'), findsOneWidget);
+
+      await openPane('Sizes');
       expect(find.text('4 / 9'), findsOneWidget);
+
+      await openPane('Nearby Places');
+      expect(find.text('Chilonzor metro station (7 min walk)'), findsOneWidget);
+
+      await openPane('Location');
       expect(find.text('41.2810, 69.2050'), findsOneWidget);
-      // Price per m²: 78000 / 65 = 1200.
-      expect(find.textContaining(r'$ 1,200 / m²'), findsOneWidget);
+
+      // Price per m²: 78000 / 65 = 1200. The footer is outside the panes,
+      // so it stays on screen whichever segment is selected.
+      expect(find.textContaining(r'$1,200 / m²'), findsOneWidget);
     });
   });
 
@@ -309,15 +359,114 @@ void main() {
       expect(find.text('Agent details unavailable'), findsOneWidget);
     });
 
-    testWidgets('shows the agent stats line', (tester) async {
+    testWidgets('shows the agent rating, not a sales tally', (tester) async {
       final repository = FakeListingDetailRepository(
         ad: testAd(),
-        agent: testAgent(adsCount: 24, dealsClosedCount: 9),
+        agent: testAgent(
+          adsCount: 24,
+          dealsClosedCount: 9,
+          ratingAverage: 4.6,
+          ratingCount: 12,
+        ),
       );
 
       await pumpDetail(tester, repository);
 
-      expect(find.text('Agent · 24 listings · 9 closed'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('listingAgentRating')),
+        findsOneWidget,
+      );
+      expect(find.text('Review: 4.6/5'), findsOneWidget);
+      // `dealsClosedCount` is a sales-performance metric and has no place
+      // on a buyer surface; `adsCount` is an all-time AD_CREATED tally that
+      // disagrees with the agent-profile figure a tap away. Neither may
+      // come back — this is the assertion that says so.
+      expect(find.textContaining('9 closed'), findsNothing);
+      expect(find.textContaining('24 listings'), findsNothing);
+    });
+
+    testWidgets('an unreviewed agent gets copy, never a zero-star row', (
+      tester,
+    ) async {
+      final repository = FakeListingDetailRepository(
+        ad: testAd(),
+        agent: testAgent(),
+      );
+
+      await pumpDetail(tester, repository);
+
+      expect(find.text('No reviews yet'), findsOneWidget);
+      expect(find.textContaining('/5'), findsNothing);
+    });
+  });
+
+  // §9.6 — the hero used to put a play glyph on a video slide and hand the
+  // tap to a gallery with no player in it. These tests pin the replacement:
+  // the slide *names* the medium and never advertises playback.
+  group('hero video slide', () {
+    const videoMedia = <Map<String, dynamic>>[
+      {'url': 'https://example.test/tour.mp4', 'mediaType': 'video', 'position': 0},
+    ];
+    const photoThenVideo = <Map<String, dynamic>>[
+      {'url': 'https://example.test/a.jpg', 'mediaType': 'photo', 'position': 0},
+      {'url': 'https://example.test/tour.mp4', 'mediaType': 'video', 'position': 1},
+    ];
+
+    testWidgets('badges a video slide instead of promising playback', (
+      tester,
+    ) async {
+      await pumpDetail(
+        tester,
+        FakeListingDetailRepository(
+          ad: testAd(media: videoMedia),
+          agent: testAgent(),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('listingHeroVideoBadge')), findsOneWidget);
+      expect(find.text('Video'), findsOneWidget);
+      // The whole point of the change: the "press here and it plays" glyph
+      // must not come back while the gallery still refuses to play it.
+      expect(find.byIcon(Icons.play_circle_outline_rounded), findsNothing);
+      expect(find.byIcon(Icons.play_arrow_rounded), findsNothing);
+    });
+
+    testWidgets('leaves a photo-only hero unbadged', (tester) async {
+      await pumpDetail(
+        tester,
+        FakeListingDetailRepository(
+          ad: testAd(photos: const ['https://example.test/a.jpg']),
+          agent: testAgent(),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('listingHeroVideoBadge')), findsNothing);
+      expect(find.text('Video'), findsNothing);
+    });
+
+    testWidgets('the badge follows the visible slide, not the ad', (
+      tester,
+    ) async {
+      await pumpDetail(
+        tester,
+        FakeListingDetailRepository(
+          ad: testAd(media: photoThenVideo),
+          agent: testAgent(),
+        ),
+      );
+
+      // Slide 1 is a photo — badging it would mislabel it just as surely as
+      // the old play glyph mislabeled the video.
+      expect(find.byKey(const ValueKey('listingHeroVideoBadge')), findsNothing);
+
+      // A plain `drag` of half the 800px viewport does not turn the page:
+      // `tester.drag` eats `kTouchSlop` first, so the release lands just
+      // under the 50% mark at zero velocity and `PageScrollPhysics` snaps
+      // back to slide 1. A fling carries the velocity that commits the page.
+      await tester.fling(find.byType(PageView), const Offset(-400, 0), 1000);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('listingHeroVideoBadge')), findsOneWidget);
     });
   });
 
@@ -450,9 +599,7 @@ void main() {
               lat: 41.335,
               lng: 69.32,
             ),
-            agent: testAgent(
-              fullName: 'Shahnoza Yoldosheva-Abdullayeva',
-            ),
+            agent: testAgent(fullName: 'Shahnoza Yoldosheva-Abdullayeva'),
           ),
         );
 
@@ -498,8 +645,19 @@ void main() {
         tester,
         FakeListingDetailRepository(ad: testAd(), agent: testAgent()),
       );
+      // Browse mode before the role, for the same reason the coworker case
+      // below needs it: in the default `WorkspaceMode.work`, `_redirect`
+      // bounces an agent off `/home/listing/:id` altogether, and this test
+      // would then pass on an empty screen instead of on the role rule.
+      container
+          .read(workspaceModeProvider.notifier)
+          .setMode(WorkspaceMode.browse);
       container.read(authSessionProvider.notifier).setRole(UserRole.agent);
       await tester.pumpAndSettle();
+
+      // The screen is genuinely still here — i.e. the two absences below are
+      // the rule firing, not the router having navigated away.
+      expect(find.byType(ListingDetailScreen), findsOneWidget);
 
       expect(find.byKey(const ValueKey('favourite-ad-1001')), findsNothing);
       expect(find.text('Save the Place'), findsNothing);
@@ -515,6 +673,15 @@ void main() {
         tester,
         FakeListingDetailRepository(ad: testAd(), agent: testAgent()),
       );
+      // Browse mode first, *then* the role. `_redirect` bounces any
+      // agent/coworker session out of a buyer-shell location while
+      // `WorkspaceMode.work` (the default) is in force, so a coworker put on
+      // `/home/listing/:id` in work mode never reaches this screen at all —
+      // the listing detail a coworker can actually open is the browse-shell
+      // one, which is the session this rule is about.
+      container
+          .read(workspaceModeProvider.notifier)
+          .setMode(WorkspaceMode.browse);
       container.read(authSessionProvider.notifier).setRole(UserRole.coworker);
       await tester.pumpAndSettle();
 

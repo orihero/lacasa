@@ -30,7 +30,7 @@
 /// untouched — nothing was actually seen.
 ///
 /// **An unrecognized [NotificationKind.unknown] row is dropped, not
-/// rendered.** [WorkNotificationFixture] — the shape this whole screen is
+/// rendered.** [WorkNotification] — the shape this whole screen is
 /// built around — has exactly 4 [WorkNotificationKind] values with no
 /// "other" case and no icon for one (`NotificationRow._iconFor` is an
 /// exhaustive switch); a kind this build doesn't know about is the server
@@ -44,6 +44,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import 'notifications_repository.dart';
 import 'notifications_watermark_repository.dart';
+import './work_notification.dart';
 
 class LiveNotificationsRepository implements NotificationsRepository {
   const LiveNotificationsRepository(this._api, this._watermark, this._l10n);
@@ -57,19 +58,19 @@ class LiveNotificationsRepository implements NotificationsRepository {
   /// abstraction has no `BuildContext` anywhere in its contract), so the
   /// caller resolves [AppLocalizations] once from the ambient `MaterialApp`
   /// locale and hands it in, the same shape [fetchNotifications]'s own
-  /// return type ([WorkNotificationFixture.relativeTime]) already commits
+  /// return type ([WorkNotification.relativeTime]) already commits
   /// to: a pre-formatted string, not a lazily-localized one.
   final AppLocalizations _l10n;
 
   @override
-  Future<List<WorkNotificationFixture>> fetchNotifications() async {
+  Future<List<WorkNotification>> fetchNotifications() async {
     final since = await _watermark.load();
     final notifications = await _api.notifications.fetch(since: since);
 
-    final rows = <WorkNotificationFixture>[
+    final rows = <WorkNotification>[
       for (final n in notifications)
         if (_mapKind(n.kind) case final kind?)
-          WorkNotificationFixture(
+          WorkNotification(
             id: n.id,
             kind: kind,
             title: n.title,
@@ -86,6 +87,13 @@ class LiveNotificationsRepository implements NotificationsRepository {
 
     return rows;
   }
+
+  /// "The agent has seen everything up to now" — the exact thing the
+  /// watermark stores, so marking all read is just pushing it to now. The
+  /// next fetch sends this as `since`, and the server's
+  /// `unread = createdAt > since` then reports every current row as read.
+  @override
+  Future<void> markAllRead() => _watermark.save(DateTime.now());
 }
 
 WorkNotificationKind? _mapKind(NotificationKind kind) => switch (kind) {
@@ -104,9 +112,15 @@ WorkNotificationKind? _mapKind(NotificationKind kind) => switch (kind) {
 /// there is exactly one caller.
 String _relativeTime(AppLocalizations l10n, DateTime dt) {
   final diff = DateTime.now().difference(dt);
-  if (diff.isNegative || diff.inMinutes < 1) return l10n.notificationsRelativeJustNow;
-  if (diff.inMinutes < 60) return l10n.notificationsRelativeMinutesAgo(diff.inMinutes);
-  if (diff.inHours < 24) return l10n.notificationsRelativeHoursAgo(diff.inHours);
+  if (diff.isNegative || diff.inMinutes < 1) {
+    return l10n.notificationsRelativeJustNow;
+  }
+  if (diff.inMinutes < 60) {
+    return l10n.notificationsRelativeMinutesAgo(diff.inMinutes);
+  }
+  if (diff.inHours < 24) {
+    return l10n.notificationsRelativeHoursAgo(diff.inHours);
+  }
   if (diff.inDays == 1) return l10n.notificationsRelativeYesterday;
   return l10n.notificationsRelativeDaysAgo(diff.inDays);
 }

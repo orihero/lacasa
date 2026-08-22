@@ -224,17 +224,31 @@ class SaveThePlaceButton extends ConsumerWidget {
     );
   }
 
+  /// Byte-for-byte the same contract as [FavouriteButton]'s own `_toggle`,
+  /// because this button and the hero's heart write the same state and must
+  /// therefore fail the same way — see this file's doc comment on why there
+  /// is only one piece of state, and `favourite_button.dart`'s on why a
+  /// signed-out tap is an invitation rather than a failed request. The
+  /// session is read before the optimistic flip, so a signed-out tap never
+  /// shows a "Saved" label it is about to take back, and never blames the
+  /// network for a missing account.
   Future<void> _toggle(BuildContext context, WidgetRef ref) async {
+    if (!ref.read(authSessionProvider).isSignedIn) {
+      showSignInToSavePrompt(context);
+      return;
+    }
+
     try {
       await ref.read(favouriteAdIdsProvider.notifier).toggle(ad.id);
     } on ApiException {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).listingFavouriteUpdateErrorMessage,
-          ),
-        ),
+      // The themed §5 toast, not a bare SnackBar: Share on this same screen
+      // already used LaCasaToast, so the two adjacent actions on
+      // `listing-detail` were rendering visibly different components for
+      // the same job.
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).listingFavouriteUpdateErrorMessage,
       );
     }
   }

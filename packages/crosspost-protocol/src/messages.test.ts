@@ -27,7 +27,6 @@ describe('isAssistedChannel', () => {
   it('rejects channels outside the assisted subset', () => {
     expect(isAssistedChannel('TELEGRAM')).toBe(false);
     expect(isAssistedChannel('YOUTUBE')).toBe(false);
-    expect(isAssistedChannel('REALTING')).toBe(false);
   });
 
   it('rejects non-string input', () => {

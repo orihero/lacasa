@@ -28,6 +28,59 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../theme/theme.dart';
+import 'tap_target.dart';
+
+/// Makes a state that does not scroll pull-to-refreshable.
+///
+/// [RefreshIndicator] arms itself off a [ScrollNotification] from a
+/// descendant scrollable — so on the one screen state where a manual
+/// refresh matters most, the *empty* one, there is nothing to pull. A
+/// board that reads "No leads yet." because a coworker's lead hasn't been
+/// fetched since the app launched is precisely the case §9.3 of the UX
+/// audit describes, and wrapping only the populated list would have left
+/// it the one place the gesture doesn't work.
+///
+/// This gives such a state a real, always-overscrollable viewport whose
+/// content is at least as tall as the viewport itself, so the child still
+/// renders centred and full-bleed while the pull gesture reaches the
+/// indicator above it.
+///
+/// [ScrollConfiguration] with `overscroll: false` matches every other
+/// scroller in this app: Android's stretch overscroll isolates a scrollable
+/// into its own layer and renders the backdrop-sampling glass lenses inside
+/// it black at the edges. It suppresses the *glow/stretch* only — a
+/// [RefreshIndicator] is a separate widget and is unaffected.
+///
+/// **Give this a bounded height.** It is meant for the child of an
+/// [Expanded]/sliver fill; under an unbounded parent the viewport constraint
+/// it reads is infinite and the `minHeight` below would assert.
+class RefreshableFill extends StatelessWidget {
+  const RefreshableFill({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ScrollConfiguration(
+          behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+          child: SingleChildScrollView(
+            // Not the default physics: a viewport whose content exactly
+            // fills it has no scroll extent, and the default physics refuse
+            // to accept a drag at all in that case — which is the whole
+            // situation this widget exists for.
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(child: child),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 /// A pulsing placeholder box standing in for a photo/line of text while a
 /// list loads.
@@ -136,8 +189,16 @@ class RailRetryCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: type.bodySmall.copyWith(color: colors.ink2),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          GestureDetector(
+          // No extra SizedBox: [TapTarget]'s 48dp minimum already puts ~15dp
+          // of transparent padding above and below the Retry label, which is
+          // more separation than the AppSpacing.sm gap it replaces. Stacking
+          // both would push the card visibly taller for no gain.
+          //
+          // The label used to be a bare [GestureDetector] around 10dp type —
+          // the smallest hit target in the app, on the one control whose
+          // entire job is to be findable after something already went wrong.
+          TapTarget(
+            semanticsLabel: AppLocalizations.of(context).sharedRetryLabel,
             onTap: onRetry,
             child: Text(
               AppLocalizations.of(context).sharedRetryLabel,
@@ -179,6 +240,14 @@ class FullWidthState extends StatelessWidget {
         vertical: AppSpacing.xxl,
       ),
       child: Column(
+        // Shrink-wrap so a caller that wraps this in a `Center` (leads-list,
+        // leads-kanban, coworkers-list) actually gets a centered state: an
+        // `Align` loosens its child's constraints, which a `MainAxisSize.max`
+        // Column would immediately re-expand to fill, leaving the content
+        // pinned to the top and the `Center` inert. Under a *tight* parent
+        // (an `Expanded`, a sliver fill) this is a no-op — the column still
+        // takes the full height.
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: colors.faint, size: 36),
           const SizedBox(height: AppSpacing.base),
@@ -189,8 +258,13 @@ class FullWidthState extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.base),
-            GestureDetector(
-              onTap: onAction,
+            // The pill's own padding already gets it close to 48dp tall but
+            // not reliably past it (and never at all horizontally for a
+            // short label), so the floor is enforced here rather than left
+            // to whatever the caller's copy happens to measure.
+            TapTarget(
+              semanticsLabel: actionLabel!,
+              onTap: onAction!,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xl,

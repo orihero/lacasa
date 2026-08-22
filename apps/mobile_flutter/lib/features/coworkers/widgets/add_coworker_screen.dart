@@ -126,7 +126,9 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
     final password = _password.text;
 
     setState(() {
-      _fullNameError = fullName.isEmpty ? l10n.coworkersFullNameRequiredError : null;
+      _fullNameError = fullName.isEmpty
+          ? l10n.coworkersFullNameRequiredError
+          : null;
       _phoneError = phone.isEmpty
           ? l10n.coworkersPhoneRequiredError
           : (Formatters.isValidUzPhone(phone)
@@ -135,9 +137,7 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       _emailError = email.isEmpty ? l10n.coworkersEmailRequiredError : null;
       _passwordError = password.isEmpty
           ? l10n.coworkersPasswordRequiredError
-          : (password.length < 6
-                ? l10n.coworkersPasswordTooShortError
-                : null);
+          : (password.length < 6 ? l10n.coworkersPasswordTooShortError : null);
     });
 
     return _fullNameError == null &&
@@ -154,7 +154,10 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
     // `hasPendingUploads`, whose "block Save with a message" precedent this
     // mirrors rather than awaiting the upload inline.
     if (_avatarUploading) {
-      LaCasaToast.showError(context, AppLocalizations.of(context).coworkersUploadWaitMessage);
+      LaCasaToast.showError(
+        context,
+        AppLocalizations.of(context).coworkersUploadWaitMessage,
+      );
       return;
     }
 
@@ -162,7 +165,10 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
     // See the file doc comment: by the time Save is reachable, any avatar
     // upload already finished (or was never started) — this now describes
     // the create call itself, not a deferred avatar step.
-    LaCasaToast.showPending(context, AppLocalizations.of(context).coworkersUploadingToastLabel);
+    LaCasaToast.showPending(
+      context,
+      AppLocalizations.of(context).coworkersUploadingToastLabel,
+    );
 
     try {
       await ref
@@ -183,14 +189,19 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       ref.invalidate(dashboardCoworkersProvider);
 
       if (!mounted) return;
-      LaCasaToast.showSuccess(context, AppLocalizations.of(context).coworkersCreatedToastMessage);
+      LaCasaToast.showSuccess(
+        context,
+        AppLocalizations.of(context).coworkersCreatedToastMessage,
+      );
       _leaveToCoworkersList();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       LaCasaToast.showError(
         context,
-        AppLocalizations.of(context).coworkersCreateErrorToastMessage(_messageFor(context, e)),
+        AppLocalizations.of(
+          context,
+        ).coworkersCreateErrorToastMessage(_messageFor(context, e)),
       );
     }
   }
@@ -223,7 +234,10 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              NavRow(title: l10n.coworkersCreateScreenTitle, onBack: _handleCancel),
+              NavRow(
+                title: l10n.coworkersCreateScreenTitle,
+                onBack: _handleCancel,
+              ),
               Expanded(child: _bodyFor(l10n, session)),
             ],
           ),
@@ -274,7 +288,8 @@ class _AddCoworkerScreenState extends ConsumerState<AddCoworkerScreen> {
       avatarUrl: _avatarUrl,
       onAvatarUploaded: (url) => setState(() => _avatarUrl = url),
       onAvatarError: (message) => LaCasaToast.showError(context, message),
-      onAvatarUploadStateChanged: (busy) => setState(() => _avatarUploading = busy),
+      onAvatarUploadStateChanged: (busy) =>
+          setState(() => _avatarUploading = busy),
       submitting: _submitting,
       onCancel: _handleCancel,
       onSave: _submit,
@@ -425,7 +440,10 @@ class _FormBody extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _SecondaryButton(label: l10n.coworkersCancelButtonLabel, onTap: onCancel),
+                  child: _SecondaryButton(
+                    label: l10n.coworkersCancelButtonLabel,
+                    onTap: onCancel,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.base),
                 Expanded(
@@ -512,21 +530,24 @@ class _SecondaryButton extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
+    // `.btn--ghost glf` — `.btn--ghost` contributes only `color:var(--ink)`,
+    // so the surface is the flat-form glass (white with a hairline rim), not
+    // a grey fill.
     return Semantics(
       button: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          borderRadius: BorderRadius.circular(AppRadii.pillButton),
           height: 52,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
-          ),
           child: Text(
             label,
-            style: type.rowTitle.copyWith(color: colors.ink2),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: type.rowTitle.copyWith(color: colors.ink),
           ),
         ),
       ),

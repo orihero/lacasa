@@ -8,7 +8,11 @@
 /// subtitle, the three field labels, both validation messages, the success
 /// toast and the button label are all quoted from §3.11 rather than
 /// paraphrased, because three independent implementations are meant to
-/// agree on them.
+/// agree on them. The one string §3.11 does *not* name is the Message
+/// field's placeholder, which comes from the mockup instead: it is
+/// instructional ("I'd like to view this apartment this week." — it tells
+/// the user what to write), unlike Full name's, which is sample data
+/// ("Dilnoza Yusupova") and is deliberately not ported.
 ///
 /// **The 500-character message cap matches the spec and the server.**
 /// `contactSchema` (`packages/domain/src/schemas/contact.ts`) and
@@ -139,9 +143,11 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.contactSendSuccessToast)),
-      );
+      // The themed §5 toast rather than a bare SnackBar — floating, on
+      // `colors.card`, with a success glyph. A raw `SnackBar` here rendered
+      // Material's docked dark-grey default, which looks like a different
+      // app from every other confirmation in the product.
+      LaCasaToast.showSuccess(context, l10n.contactSendSuccessToast);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -185,19 +191,16 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
+      // `.sh{left:8px;right:8px;bottom:8px;border-radius:34px;
+      // padding:10px 18px 22px}` — the sheet floats inset from three edges
+      // with all four corners rounded, not edge-to-edge with a rounded top.
       child: Container(
+        margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
         decoration: BoxDecoration(
           color: colors.card,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadii.sheet),
-          ),
+          borderRadius: BorderRadius.circular(34),
         ),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.base,
-          AppSpacing.xl,
-          AppSpacing.xl,
-        ),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 22),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -212,16 +215,27 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                       style: type.sheetTitle.copyWith(color: colors.ink),
                     ),
                   ),
-                  Semantics(
-                    button: true,
-                    label: l10n.contactSheetCloseLabel,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => Navigator.of(context).pop(),
+                  // `.sh__h .rnd{width:34px;height:34px;font-size:16px;
+                  // color:var(--ink);background:var(--sunk)}` — the painted
+                  // chip keeps the mockup's 34px; [TapTarget] supplies the
+                  // 48dp hit box it was 14dp short of, and the `button` +
+                  // label semantics this used to hand-roll.
+                  TapTarget(
+                    key: const ValueKey('contactSheet-close'),
+                    semanticsLabel: l10n.contactSheetCloseLabel,
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: colors.sunk,
+                        shape: BoxShape.circle,
+                      ),
                       child: Icon(
                         Icons.close_rounded,
-                        size: 20,
-                        color: colors.ink2,
+                        size: 16,
+                        color: colors.ink,
                       ),
                     ),
                   ),
@@ -232,6 +246,8 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                 l10n.contactSheetSubtitle,
                 style: type.bodySmall.copyWith(color: colors.muted),
               ),
+              if (widget.prefill.hasContext)
+                _PrefillCard(prefill: widget.prefill),
               const SizedBox(height: AppSpacing.section),
               _Field(
                 label: l10n.contactFullNameFieldLabel,
@@ -244,6 +260,7 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
                 label: l10n.contactPhoneFieldLabel,
                 controller: _phone,
                 hintText: '+998901234567',
+                hint: l10n.contactPhoneFieldHint,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.next,
                 // The wire pattern allows only a leading + and digits;
@@ -257,9 +274,22 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
               _Field(
                 label: l10n.contactMessageFieldLabel,
                 controller: _message,
+                // `<textarea class="ta glf" placeholder="I'd like to view
+                // this apartment this week.">` — instructional example copy,
+                // not demo data, which is why the Message field gets a
+                // placeholder and Full name (whose mockup placeholder is a
+                // person's name) does not.
+                hintText: l10n.contactMessageFieldHintText,
+                // `.ta{height:auto;min-height:96px}` — the empty box is a
+                // fixed ~4-line panel, not a one-line field that grows.
+                minLines: 4,
                 maxLines: 4,
                 maxLength: contactMessageMaxLength,
                 keyboardType: TextInputType.multiline,
+                // `<span class="hint">0 / 200</span>` — the count, at this
+                // build's reconciled 500 cap (see this file's doc comment;
+                // SCREENS.md §3.11 wins over the mockup on the number).
+                showCounter: true,
               ),
               if (_error case final error?) ...[
                 const SizedBox(height: AppSpacing.base),
@@ -307,6 +337,76 @@ class _ContactSheetState extends ConsumerState<_ContactSheet> {
   }
 }
 
+/// `.prefill glf` — the context card between the subtitle and the first
+/// field: a 28px avatar, the listing (or agent) title in ink, and the
+/// "{agent} · {district}, {city}" meta line under it. It exists so the user
+/// can see *what* they are writing about; a sheet opened from a bare
+/// "Contact Us" link has no such context and renders no card at all.
+class _PrefillCard extends StatelessWidget {
+  const _PrefillCard({required this.prefill});
+
+  final ContactPrefill prefill;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final subtitle = prefill.contextSubtitle;
+
+    // `.prefill{margin-top:14px;border-radius:16px;padding:11px 13px;
+    // gap:10px;font-size:10.5px;line-height:1.5;color:var(--muted)}`.
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: GlassSurface(
+        variant: GlassVariant.flatForm,
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+        child: Row(
+          children: [
+            AgentAvatar(
+              avatarUrl: prefill.contextAvatarUrl,
+              fullName: prefill.contextAvatarName ?? '',
+              size: 28,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // `.prefill b{font-size:11.5px;font-weight:600;
+                  // color:var(--ink)}`.
+                  Text(
+                    prefill.contextTitle!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.rowTitle.copyWith(
+                      fontSize: 11.5,
+                      height: 1.5,
+                      color: colors.ink,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: type.specMeta.copyWith(
+                        fontWeight: FontWeight.w400,
+                        height: 1.5,
+                        color: colors.muted,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// A labelled input on the `.glf` flat-glass material — the one glass
 /// variant meant to sit under text the user is reading and editing (see
 /// [GlassVariant.flatForm]).
@@ -315,8 +415,11 @@ class _Field extends StatelessWidget {
     required this.label,
     required this.controller,
     this.hintText,
+    this.hint,
+    this.showCounter = false,
     this.keyboardType,
     this.textInputAction,
+    this.minLines,
     this.maxLines = 1,
     this.maxLength,
     this.inputFormatters,
@@ -325,8 +428,26 @@ class _Field extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String? hintText;
+
+  /// The static `.hint` helper line under the input — the Phone field's
+  /// "+998 and nine digits" rule, stated before a failed submit rather
+  /// than only after one. Mutually exclusive with [showCounter] in
+  /// practice: no field in this sheet has both a rule and a counter.
+  final String? hint;
+
+  /// Renders a live `{length} / {maxLength}` count on the `.hint` line
+  /// below the input.
+  final bool showCounter;
+
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
+
+  /// The field's resting height in lines. Left `null` on the single-line
+  /// fields, where it would be redundant; the Message box sets it so the
+  /// empty textarea is already `.ta`'s full-height panel rather than a
+  /// one-line field that grows as the user types.
+  final int? minLines;
+
   final int maxLines;
   final int? maxLength;
   final List<TextInputFormatter>? inputFormatters;
@@ -357,6 +478,7 @@ class _Field extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             textInputAction: textInputAction,
+            minLines: minLines,
             maxLines: maxLines,
             maxLength: maxLength,
             inputFormatters: inputFormatters,
@@ -368,14 +490,37 @@ class _Field extends StatelessWidget {
               hintText: hintText,
               hintStyle: type.body.copyWith(color: colors.faint),
               // The default counter would sit inside the glass panel and
-              // push its height around as the user types.
+              // push its height around as the user types; the `.hint` line
+              // below carries it instead.
               counterText: '',
             ),
           ),
         ),
+        // `.hint{margin-top:6px;padding-left:3px;font-size:10.5px;
+        // line-height:1.5;color:var(--faint)}`.
+        if (hint != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 3),
+            child: Text(hint!, style: _hintStyle(type, colors)),
+          ),
+        if (showCounter && maxLength != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 3),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, _) => Text(
+                '${value.text.length} / $maxLength',
+                style: _hintStyle(type, colors),
+              ),
+            ),
+          ),
       ],
     );
   }
+
+  TextStyle _hintStyle(LaCasaTypography type, LaCasaColors colors) => type
+      .specMeta
+      .copyWith(fontWeight: FontWeight.w400, height: 1.5, color: colors.faint);
 }
 
 class _SendButton extends StatelessWidget {
@@ -418,9 +563,22 @@ class _SendButton extends StatelessWidget {
                     valueColor: AlwaysStoppedAnimation(Colors.white),
                   ),
                 )
-              : Text(
-                  AppLocalizations.of(context).contactSendButtonLabel,
-                  style: type.rowTitle.copyWith(color: Colors.white),
+              // `<i data-i="paper-plane-tilt-fill"></i>Send message` with
+              // `.btn{gap:8px}` and `.btn .i{font-size:17px}`.
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.send_rounded,
+                      size: 17,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      AppLocalizations.of(context).contactSendButtonLabel,
+                      style: type.rowTitle.copyWith(color: Colors.white),
+                    ),
+                  ],
                 ),
         ),
       ),

@@ -7,24 +7,22 @@
  * that package's tsup config builds only `src/index.ts` and deliberately
  * keeps its test doubles out of the public entry point), so the real
  * `admin.listAudit()` resource runs and the assertions land on the request
- * that would leave the browser. That is the only way to prove the two
- * claims this screen's honesty rests on: that the filters are applied by the
- * SERVER rather than to an already-loaded page, and that the opaque keyset
- * cursor is handed back verbatim.
+ * that would leave the browser. That is the only way to prove the two claims
+ * this screen's honesty rests on: that the filters are applied by the SERVER
+ * rather than to an already-loaded page, and that the opaque keyset cursor is
+ * handed back verbatim.
  *
  * Lives under src/screens/audit/__tests__/ rather than next to the hook
- * because src/data/ is shared ground — this agent owns the audit screen's
+ * because src/data/ is shared ground — this suite owns the audit screen's
  * directory and useAudit.ts itself, not a test slot in src/data/.
  *
- * No React is mounted here at all. `auditQueryOptions` is a plain function
- * for exactly that reason (see its own comment): @tanstack/react-query is
- * hoisted to the repo root and binds the root's React 18, so nothing that
- * calls its hooks can render in this workspace's tests today.
+ * No React is mounted here at all, which is why `auditQueryOptions` is a
+ * plain function rather than something only reachable through a hook.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TransportRequest } from "@lacasa/api-client";
 import { AUDIT_PAGE_SIZE, auditQueryOptions, auditRowsOf } from "@/data/useAudit";
-import { queryKeys } from "@/data/queryKeys";
+import { queryKeys } from "@/lib/queryKeys";
 
 const fake = vi.hoisted(() => ({
   calls: [] as unknown[],

@@ -21,6 +21,13 @@ import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/home_feed_providers.dart';
 
+/// `.grid{gap:13px;grid-template-columns:1fr 1fr}` with a fixed
+/// `.vcard__ph{height:116px}` photo band over `.vcard__b{padding:8px 2px 0}`
+/// — at the mockup's 390px viewport that is a 168.5x189 cell. The photo
+/// stays [Expanded] rather than fixed-height (see [CompactListingCard]), so
+/// the band is reproduced by the cell ratio instead.
+const double _cellAspectRatio = 0.88;
+
 class ExploreNearbyGrid extends ConsumerWidget {
   const ExploreNearbyGrid({super.key});
 
@@ -34,7 +41,7 @@ class ExploreNearbyGrid extends ConsumerWidget {
           List.generate(
             4,
             (index) => AspectRatio(
-              aspectRatio: 0.66,
+              aspectRatio: _cellAspectRatio,
               child: ShimmerBox(
                 borderRadius: BorderRadius.circular(AppRadii.control),
               ),
@@ -79,11 +86,19 @@ class ExploreNearbyGrid extends ConsumerWidget {
   Widget _grid(List<Widget> children) {
     return GridView.count(
       crossAxisCount: 2,
+      // Not redundant. With a null `padding`, `BoxScrollView.buildSlivers`
+      // adopts the ambient `MediaQuery.padding`'s vertical insets as the
+      // grid's own — sensible for a scroller that *is* the page, wrong for one
+      // nested mid-feed, where the status bar and the tab bar's height reappear
+      // as dead space under the `.sec` heading and below the last row. Only
+      // `.grid{margin-top:12px}` (the [AppSpacing.base] gap in [_Shell]) sits
+      // between the heading and the first cell.
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 13,
       crossAxisSpacing: 13,
-      childAspectRatio: 0.66,
+      childAspectRatio: _cellAspectRatio,
       children: children,
     );
   }

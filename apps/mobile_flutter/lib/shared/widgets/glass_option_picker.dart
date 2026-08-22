@@ -93,7 +93,9 @@ class _GlassOptionPickerSheet extends StatelessWidget {
     final anyRowCount = anyLabel == null ? 0 : 1;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: FractionallySizedBox(
         heightFactor: 0.75,
         child: Container(
@@ -110,7 +112,10 @@ class _GlassOptionPickerSheet extends StatelessWidget {
               Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: colors.line, borderRadius: AppRadii.pill),
+                decoration: BoxDecoration(
+                  color: colors.line,
+                  borderRadius: AppRadii.pill,
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -122,33 +127,45 @@ class _GlassOptionPickerSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(title, style: type.sheetTitle.copyWith(color: colors.ink)),
+                      child: Text(
+                        title,
+                        style: type.sheetTitle.copyWith(color: colors.ink),
+                      ),
                     ),
                     GestureDetector(
                       key: const ValueKey('glassOptionPicker-close'),
                       onTap: () => Navigator.of(context).pop(),
-                      child: Icon(Icons.close_rounded, color: colors.ink2, size: 22),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: colors.ink2,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+                  behavior: const MaterialScrollBehavior().copyWith(
+                    overscroll: false,
+                  ),
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.screenGutter,
                       vertical: AppSpacing.base,
                     ),
                     itemCount: options.length + anyRowCount,
-                    separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.sm),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
                       if (anyLabel != null && index == 0) {
                         return _OptionRow(
                           key: const ValueKey('glassOption-any'),
                           label: anyLabel!,
                           selected: current == null,
-                          onTap: () => Navigator.of(context).pop(const _PickedOption(null)),
+                          onTap: () => Navigator.of(
+                            context,
+                          ).pop(const _PickedOption(null)),
                         );
                       }
                       final option = options[index - anyRowCount];
@@ -156,7 +173,8 @@ class _GlassOptionPickerSheet extends StatelessWidget {
                         key: ValueKey('glassOption-$option'),
                         label: option,
                         selected: option == current,
-                        onTap: () => Navigator.of(context).pop(_PickedOption(option)),
+                        onTap: () =>
+                            Navigator.of(context).pop(_PickedOption(option)),
                       );
                     },
                   ),
@@ -172,7 +190,12 @@ class _GlassOptionPickerSheet extends StatelessWidget {
 }
 
 class _OptionRow extends StatelessWidget {
-  const _OptionRow({super.key, required this.label, required this.selected, required this.onTap});
+  const _OptionRow({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final String label;
   final bool selected;
@@ -195,20 +218,31 @@ class _OptionRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(label, style: type.rowTitle.copyWith(color: colors.ink))),
+            Expanded(
+              child: Text(
+                label,
+                style: type.rowTitle.copyWith(color: colors.ink),
+              ),
+            ),
             Container(
               width: 20,
               height: 20,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: selected ? AppAccent.color : colors.line, width: 1.5),
+                border: Border.all(
+                  color: selected ? AppAccent.color : colors.line,
+                  width: 1.5,
+                ),
               ),
               child: selected
                   ? Container(
                       width: 12,
                       height: 12,
-                      decoration: const BoxDecoration(shape: BoxShape.circle, color: AppAccent.color),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppAccent.color,
+                      ),
                     )
                   : null,
             ),
@@ -271,23 +305,36 @@ class GlassPickerField extends StatelessWidget {
             // is dimmed but still tappable-to-retry), never alongside a
             // real [onTap].
             onTap: enabled ? onTap : onRetry,
+            // `.inp,.ta,.selbox` is a single rule in the source —
+            // `height:52px;padding:0 16px;font-size:13px;border-radius:18px`
+            // — so this picker and the `ListingTextField` beside it must
+            // not drift: City and District sit side by side with text
+            // inputs in the same form, and a 44 vs 52 mismatch there is
+            // directly visible.
             child: GlassSurface(
               variant: GlassVariant.flatForm,
               borderRadius: BorderRadius.circular(AppRadii.control),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: 4),
-              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              height: 52,
+              alignment: Alignment.centerLeft,
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       value ?? placeholder,
                       overflow: TextOverflow.ellipsis,
-                      style: type.body.copyWith(color: value == null ? colors.faint : colors.ink),
+                      style: type.body.copyWith(
+                        fontSize: 13,
+                        color: value == null ? colors.faint : colors.ink,
+                      ),
                     ),
                   ),
+                  // `.selbox .i{font-size:15px;color:var(--muted)}`.
                   Icon(
-                    onRetry != null ? Icons.refresh_rounded : Icons.expand_more_rounded,
-                    size: 18,
+                    onRetry != null
+                        ? Icons.refresh_rounded
+                        : Icons.expand_more_rounded,
+                    size: 15,
                     color: colors.muted,
                   ),
                 ],
@@ -300,12 +347,18 @@ class GlassPickerField extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 14, color: AppStatusColors.errorText),
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 14,
+                color: AppStatusColors.errorText,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   errorText!,
-                  style: type.bodySmall.copyWith(color: AppStatusColors.errorText),
+                  style: type.bodySmall.copyWith(
+                    color: AppStatusColors.errorText,
+                  ),
                 ),
               ),
             ],

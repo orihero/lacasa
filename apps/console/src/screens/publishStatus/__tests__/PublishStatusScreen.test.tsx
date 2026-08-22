@@ -3,8 +3,8 @@
  * file's header for why `PublishStatusScreen` itself, the router-wired
  * wrapper, isn't rendered here) against a mocked data layer, asserting the
  * states, the derived counts (hasFailedChannel / hasAnyAttempt), and the
- * data-honesty behaviour: never a fabricated value, Realting scoped out,
- * the retry gap named rather than hidden.
+ * data-honesty behaviour: never a fabricated value, and the retry gap named
+ * rather than hidden.
  */
 import { screen, within } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
@@ -221,7 +221,7 @@ describe("publish-status body", () => {
     expect(navigate).toHaveBeenCalledWith("/ads/ad-a/edit");
   });
 
-  it("renders one row per real channel with real status/automation/external/last-attempt data, never Realting, and keeps the accent to exactly the Retry CTA", () => {
+  it("renders one row per real channel with real status/automation/external/last-attempt data, and keeps the accent to exactly the Retry CTA", () => {
     usePublishStatusForAdMock.mockReturnValue(
       fakeQuery({
         isPending: false,
@@ -247,10 +247,6 @@ describe("publish-status body", () => {
             },
             { channel: "OLX", status: "DRAFTED_AWAITING_REVIEW", externalUrl: null, externalId: null, lastAttemptAt: null, errorMessage: null },
             { channel: "YOUTUBE", status: "PENDING", externalUrl: null, externalId: null, lastAttemptAt: null, errorMessage: null },
-            // A real REALTING row, exactly as GET /publish/ads/:adId/status
-            // actually returns it (ALL_CHANNELS includes it) — must not
-            // render as a 5th row (see channelCapability.ts's file header).
-            { channel: "REALTING", status: "PENDING", externalUrl: null, externalId: null, lastAttemptAt: null, errorMessage: null },
           ],
         },
       }),
@@ -259,9 +255,8 @@ describe("publish-status body", () => {
 
     const table = screen.getByRole("table");
     const rows = within(table).getAllByRole("row");
-    // 1 header row + exactly 4 channel rows — Realting excluded.
+    // 1 header row + exactly 4 channel rows.
     expect(rows).toHaveLength(5);
-    expect(within(table).queryByText("Realting")).not.toBeInTheDocument();
 
     expect(within(table).getByText("Telegram")).toBeInTheDocument();
     expect(within(table).getByText("Published")).toBeInTheDocument();

@@ -1,0 +1,32 @@
+// LoadMore — the bordered strip under a table, inside the Panel's edge.
+@import "../responsive.scss";
+
+.load-more {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 15px;
+  border-top: 1px solid #dedede;
+
+  .load-more__count {
+    font-size: 12px;
+    color: #8d99ae;
+  }
+
+  // The numbers themselves are records, so they are read in the same monospace
+  // face as every other count and id on this surface.
+  .load-more__value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: #2b2d42;
+  }
+
+  .load-more__action {
+    margin-left: auto;
+  }
+
+  .load-more__end {
+    font-size: 12px;
+    color: #8d99ae;
+  }
+}

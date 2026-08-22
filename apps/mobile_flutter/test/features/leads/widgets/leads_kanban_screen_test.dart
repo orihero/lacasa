@@ -10,9 +10,11 @@ import 'package:go_router/go_router.dart';
 import 'package:lacasa_mobile/api/api.dart';
 import 'package:lacasa_mobile/features/leads/leads.dart';
 import 'package:lacasa_mobile/features/leads/state/kanban_move_providers.dart';
+import 'package:lacasa_mobile/features/leads/state/leads_providers.dart';
 import 'package:lacasa_mobile/features/leads/state/leads_repository_provider.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../support/fake_leads_repository.dart';
@@ -24,6 +26,10 @@ void main() {
     WidgetTester tester, {
     required FakeLeadsRepository repository,
     UserRole? role = UserRole.agent,
+    // The first-load skeleton shimmers forever (`ShimmerBox` repeats), so the
+    // one test that observes it must not settle — same reasoning as
+    // `saved_listings_screen_test.dart`'s own loading test.
+    bool settle = true,
   }) async {
     final container = ProviderContainer(
       retry: (retryCount, error) => null,
@@ -57,7 +63,11 @@ void main() {
         child: MaterialApp.router(localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, theme: AppTheme.light(), routerConfig: router),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
     return container;
   }
 
@@ -174,7 +184,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('moveToSheet-could_not_connect')));
       await tester.pumpAndSettle();
 
-      expect(find.text("Couldn't move — try again."), findsOneWidget);
+      // The note is the tappable Retry row now, not the old bare
+      // "Couldn't move — try again." text — see `kanban_move_providers.dart`'s
+      // doc comment on why that extension of ruling 7.5's mechanism landed.
+      expect(find.text("Couldn't move"), findsOneWidget);
+      expect(find.byKey(const ValueKey('kanbanCardRetry-lead-1')), findsOneWidget);
       expect(repo.updateCallCount, 1);
 
       // The DOM-only assertion above can't distinguish "the card is stuck
@@ -191,8 +205,190 @@ void main() {
         isEmpty,
         reason: 'a failed move must clear its optimistic override',
       );
-      expect(moveState.failed, contains('lead-1'));
+      expect(
+        moveState.failed,
+        containsPair(
+          'lead-1',
+          // The origin half is what lets the row be retired by *any* later
+          // status change, not only one that lands on the destination —
+          // see `kanban_move_providers.dart`'s doc comment.
+          (destination: LeadStatus.couldNotConnect, origin: LeadStatus.newLead),
+        ),
+      );
       expect(moveState.displayStatus(lead), LeadStatus.newLead);
+    });
+  });
+
+  group('failed move — Retry (kanban_move_providers.dart)', () {
+    testWidgets('tapping Retry re-fires the same move and clears the row on '
+        'success', (tester) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final repo = FakeLeadsRepository(
+        leads: [lead],
+        updateError: const NetworkException('offline'),
+      );
+      final container = await pumpScreen(tester, repository: repo);
+
+      await tester.longPress(find.byKey(const ValueKey('kanbanCard-lead-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('moveToSheet-could_not_connect')));
+      await tester.pumpAndSettle();
+
+      expect(repo.updateCallCount, 1);
+      expect(find.byKey(const ValueKey('kanbanCardRetry-lead-1')), findsOneWidget);
+
+      // The network comes back, and the agent taps the row rather than
+      // rediscovering long-press → "Move to…" → the same column.
+      repo.updateError = null;
+      await tester.tap(find.byKey(const ValueKey('kanbanCardRetry-lead-1')));
+      await tester.pumpAndSettle();
+
+      expect(repo.updateCallCount, 2);
+      expect(
+        repo.lastUpdateInput!.status!.value,
+        LeadStatus.couldNotConnect,
+        reason: 'Retry re-attempts the destination the failed move wanted',
+      );
+      expect(container.read(kanbanMoveProvider).failed, isEmpty);
+      expect(find.byKey(const ValueKey('kanbanCardRetry-lead-1')), findsNothing);
+    });
+
+    testWidgets('fixing the status elsewhere retires the failure row without '
+        'a retry', (tester) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final repo = FakeLeadsRepository(
+        leads: [lead],
+        updateError: const NetworkException('offline'),
+      );
+      final container = await pumpScreen(tester, repository: repo);
+
+      await tester.longPress(find.byKey(const ValueKey('kanbanCard-lead-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('moveToSheet-could_not_connect')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isNotEmpty);
+
+      // Exactly what `lead-detail`'s own Save does: a plain `PATCH` that
+      // happens to set the status the failed move was after. Before this
+      // pass the red note outlived it — the card sat in the right column
+      // under a permanent failure label.
+      repo.updateError = null;
+      await container
+          .read(leadsProvider.notifier)
+          .updateLead(
+            'lead-1',
+            const LeadWriteInput(
+              status: OptionalField(LeadStatus.couldNotConnect),
+            ),
+          );
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isEmpty);
+      expect(find.byKey(const ValueKey('kanbanCardRetry-lead-1')), findsNothing);
+    });
+
+    testWidgets('fixing the status into some OTHER column retires the failure '
+        'row too', (tester) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final repo = FakeLeadsRepository(
+        leads: [lead],
+        updateError: const NetworkException('offline'),
+      );
+      final container = await pumpScreen(tester, repository: repo);
+
+      await tester.longPress(find.byKey(const ValueKey('kanbanCard-lead-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('moveToSheet-could_not_connect')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isNotEmpty);
+
+      // The agent gives up on Could Not Connect and files the lead as
+      // Rejected from `lead-detail` instead. The card leaves New for a
+      // column the failed attempt never named — so a prune keyed on
+      // "did it reach the destination?" leaves the red row sitting on a
+      // card that has since moved perfectly well, which is the same
+      // permanent lie that prune exists to remove, just narrowed.
+      repo.updateError = null;
+      await container
+          .read(leadsProvider.notifier)
+          .updateLead(
+            'lead-1',
+            const LeadWriteInput(status: OptionalField(LeadStatus.rejected)),
+          );
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isEmpty);
+      expect(find.byKey(const ValueKey('kanbanCardRetry-lead-1')), findsNothing);
+    });
+
+    testWidgets('a refetch that leaves the status alone keeps the failure row', (
+      tester,
+    ) async {
+      final lead = makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova');
+      final repo = FakeLeadsRepository(
+        leads: [lead],
+        updateError: const NetworkException('offline'),
+      );
+      final container = await pumpScreen(tester, repository: repo);
+
+      await tester.longPress(find.byKey(const ValueKey('kanbanCard-lead-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('moveToSheet-could_not_connect')));
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isNotEmpty);
+
+      // Guards the widened prune from over-firing: an unrelated edit (here a
+      // comment) re-fetches the whole list without touching this lead's
+      // status, and the move it reports has genuinely still not happened.
+      repo.updateError = null;
+      await container
+          .read(leadsProvider.notifier)
+          .updateLead(
+            'lead-1',
+            const LeadWriteInput(comment: OptionalField('called, no answer')),
+          );
+      await tester.pumpAndSettle();
+
+      expect(container.read(kanbanMoveProvider).failed, isNotEmpty);
+      expect(
+        find.byKey(const ValueKey('kanbanCardRetry-lead-1')),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('first load (SCREENS.md §31 — a skeleton, not a bare spinner)', () {
+    testWidgets('shows the shimmer board while the first list is in flight', (
+      tester,
+    ) async {
+      final hold = Completer<void>();
+      final repo = FakeLeadsRepository(
+        leads: [makeLead(id: 'lead-1', fullName: 'Dilnoza Yusupova')],
+        hold: hold,
+      );
+      // Deliberately not settling — `ShimmerBox` repeats forever, so
+      // `pumpAndSettle` here would hang.
+      await pumpScreen(tester, repository: repo, settle: false);
+      await tester.pump();
+
+      expect(find.byKey(const ValueKey('leadsKanban-loading')), findsOneWidget);
+      expect(find.byType(ShimmerBox), findsWidgets);
+      expect(
+        find.byType(CircularProgressIndicator),
+        findsNothing,
+        reason:
+            'the sibling list view over this same provider shimmers; a bare '
+            'spinner one toggle tap away is the defect',
+      );
+
+      hold.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('leadsKanban-loading')), findsNothing);
+      expect(find.byKey(const ValueKey('kanbanCard-lead-1')), findsOneWidget);
     });
   });
 

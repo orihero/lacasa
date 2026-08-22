@@ -8,18 +8,78 @@
 ///
 /// ## Where its listings come from
 ///
-/// It **watches [displayedSearchResultsProvider]**, the same provider the
-/// results list renders from, rather than treating the `List<Ad>` handed to
-/// it via `extra:` as its content. That is what makes the "Filters" button
-/// mean anything: applying filters updates the shared provider, and the
-/// pins change under the user without a round trip back to the list. A
-/// snapshot passed by value would have left the button applying filters to
-/// a screen that could not show the result.
+/// In its default (search) mode it **watches [searchResultsProvider]**, the
+/// same provider the results list renders from, rather than treating the
+/// `List<Ad>` handed to it via `extra:` as its content. That is what makes
+/// the "Filters" button mean anything: applying filters updates the shared
+/// provider, and the pins change under the user without a round trip back
+/// to the list. A snapshot passed by value would have left the button
+/// applying filters to a screen that could not show the result.
+///
+/// It watches the *paged* provider rather than the unwrapped
+/// `displayedSearchResultsProvider` specifically so it can see
+/// [SearchResultsPage.nextCursor] — see "How much of the market is on the
+/// map" below.
+///
+/// ## When the pins on screen are not the answer
+///
+/// Riverpod hands a *reloading* provider back as `AsyncLoading` that still
+/// carries the previous value, and an `AsyncError` raised by a reload keeps
+/// it too (`AsyncValue.copyWithPrevious`). Read naively that is a map which
+/// answers a filter the user has already replaced — silently for the whole
+/// round trip, and permanently if the re-fetch throws.
+///
+/// The fix is deliberately *not* to blank the pins into a skeleton the way
+/// the results list does. A skeleton is right for a list, whose rows carry
+/// no state of their own; this map carries the user's pan and zoom, and a
+/// map with no pins is already this screen's picture for "no matches" — so
+/// blanking it would throw away their orientation to show them a different,
+/// possibly wrong, answer. Instead the stale pins stay and the chrome says
+/// they are stale: [_MapUpdatingNote] while the re-fetch is in flight,
+/// [_MapResultsErrorNote] (with a retry) when it failed. What does *not*
+/// survive the window is [_MapPartialResultsNote] — see its gate in `build`.
 ///
 /// The `extra:` payload is still honoured, as a **fallback** for the cases
 /// no caller controls — a deep link straight to `/map-view`, or a restored
 /// route stack — exactly the defensive reading `photo_gallery`'s route does
 /// with its own untyped `extra`. It is never preferred over live state.
+///
+/// ## How much of the market is on the map
+///
+/// `GET /ads` answers 20 rows by default and the map has no scroll of its
+/// own, so a search matching 500 listings used to open a map of 20 pins
+/// with the camera fitted neatly around them — a picture that says "this is
+/// the market" about 4% of it. The camera fit made it worse, not better:
+/// the closer the frame hugs the pins, the more complete the extent looks.
+///
+/// So whenever the current page still has a [SearchResultsPage.nextCursor],
+/// [_MapPartialResultsNote] says so above the Filters button — "Showing the
+/// first 20 matches · Load more" — and its action calls the same
+/// [SearchResultsNotifier.loadMore] the results list's infinite scroll
+/// calls, so the pins the user asks for land on this screen and in the list
+/// behind it at once.
+///
+/// **The dropped-pins note still counts loaded ads, not matched ones**, and
+/// that is a wire limitation rather than a choice: `AdPage` carries `items`
+/// and `nextCursor` and no total, so "17 of 500 on the map" is a number
+/// this client cannot know. What it *can* know is "there are more than
+/// these", which is exactly what [_MapPartialResultsNote] renders directly
+/// beneath it — the two chips together read "17 of 20 on the map" /
+/// "Showing the first 20 matches · Load more", which is honest. Give
+/// `GET /ads?paged=true` a `total` and the note can take the real
+/// denominator with no other change.
+///
+/// ## Opened from one listing ([MapViewScreen.focusAd])
+///
+/// SCREENS.md §3.7's Location section pushes here to answer one question —
+/// "where is *this* flat?". Watching the search provider for that entry was
+/// a defect: a buyer who tapped one listing's map got, a second later, up
+/// to 20 unrelated listings, the camera framed around all of them, their
+/// own listing unselected, and a Filters button for a search they never
+/// ran. [focusAd] is that entry's mode. It suppresses the search watch
+/// entirely (so no fetch is even started), plots and pre-selects the single
+/// ad, and hides both the Filters button and the partial-results note,
+/// neither of which means anything when the content is one property.
 ///
 /// ## Clustering
 ///
@@ -44,6 +104,7 @@ import '../../../navigation/route_paths.dart';
 import '../../../shared/map/map_attribution.dart';
 import '../../../shared/map/map_defaults.dart';
 import '../../../shared/map/map_tile_layer_provider.dart';
+import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../filter/filter.dart';
 import '../../search/state/search_providers.dart';
@@ -53,11 +114,30 @@ import 'map_pin_marker.dart';
 import 'map_preview_card.dart';
 
 class MapViewScreen extends ConsumerStatefulWidget {
-  const MapViewScreen({super.key, this.fallbackAds = const []});
+  const MapViewScreen({
+    super.key,
+    this.fallbackAds = const [],
+    this.focusAd,
+    this.branchPrefix = RoutePaths.search,
+  });
 
   /// The `extra:` payload, used only when live search state has nothing —
   /// see this file's doc comment.
   final List<Ad> fallbackAds;
+
+  /// Set by a caller that opened this map to answer "where is *this* one?"
+  /// — `listing-detail`'s Location section. Non-null puts the screen in the
+  /// single-listing mode described in this file's doc comment: the search
+  /// provider is not watched at all, this ad is the whole content, and it
+  /// opens pre-selected.
+  final Ad? focusAd;
+
+  /// The shell branch this map was opened from, used to build the preview
+  /// card's push target — the same contract `ListingDetailScreen` and
+  /// `AgentProfileScreen` already take. It used to be hardcoded `/search`,
+  /// which grafted a detail page onto the Search tab's stack for a listing
+  /// the user had reached from Home.
+  final String branchPrefix;
 
   @override
   ConsumerState<MapViewScreen> createState() => _MapViewScreenState();
@@ -68,6 +148,19 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
   /// an [Ad] so a re-fetch that returns a new instance of the same listing
   /// keeps the card open instead of silently closing it.
   String? _selectedAdId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Single-listing mode opens with its one ad already selected: the user
+    // asked about that property, so making them hunt for and tap its pin to
+    // see which one it is would be asking the question back at them. Gated
+    // on `hasPin` because an ad with no coordinates draws no pin and gets
+    // `_MapEmptyState` instead — a preview card floating over "we don't
+    // know where this is" would be a second, contradictory answer.
+    final focusAd = widget.focusAd;
+    if (focusAd != null && focusAd.hasPin) _selectedAdId = focusAd.id;
+  }
 
   final _controller = MapController();
 
@@ -139,11 +232,43 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final results = ref.watch(displayedSearchResultsProvider);
+    final focusAd = widget.focusAd;
 
-    final ads = results.value ?? widget.fallbackAds;
+    // Deliberately a conditional watch: in single-listing mode subscribing
+    // to `searchResultsProvider` would *start* the search fetch (its
+    // `build` is the request), which is the whole defect §4.5 records.
+    // Riverpod drops a dependency that a rebuild didn't re-watch, and
+    // `focusAd` never changes for a given widget, so the subscription set
+    // here is stable.
+    final results = focusAd == null
+        ? ref.watch(searchResultsProvider)
+        : null;
+    final page = results?.value;
+
+    final ads = focusAd != null
+        ? <Ad>[focusAd]
+        : (page?.items ?? widget.fallbackAds);
+    final isLoading = results?.isLoading ?? false;
+
+    // The two flags that keep this screen from presenting a superseded
+    // answer as the current one — see this file's "When the pins on screen
+    // are not the answer".
+    //
+    // `isStale` is the case with something already drawn: the pins below are
+    // the *previous* filter set's (or the `extra:` snapshot's) and a fetch is
+    // in flight to replace them. When there is nothing drawn at all the
+    // [_MapLoadingVeil] already covers the wait, which is why this is not
+    // simply `isLoading`.
+    //
+    // `failure` is deliberately suppressed while a fetch is in flight:
+    // Riverpod 3's AsyncValue can be `hasError` and `isLoading` at once (a
+    // retry over a failed load), and an error a new attempt is already
+    // answering is not worth putting in front of the user.
+    final isStale = isLoading && ads.isNotEmpty;
+    final failure = isLoading ? null : results?.error;
+
     final pins = pinnableAds(ads);
-    _frameCamera(pins, settled: !results.isLoading);
+    _frameCamera(pins, settled: !isLoading);
 
     final selected = _selectedAdId == null
         ? null
@@ -217,12 +342,17 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
             ),
           ),
           _MapTopBar(onBack: _close, onShowList: _close),
-          if (results.isLoading && ads.isEmpty)
+          if (isLoading && ads.isEmpty)
             const Positioned.fill(child: _MapLoadingVeil())
-          else if (pins.isEmpty)
+          else if (pins.isEmpty && failure == null)
             // An empty map centred on Tashkent with no pins and no
             // explanation reads as broken, not as "no matches" — see
             // README.md's map-view gap note this closes.
+            //
+            // Gated on there being no [failure] because "No listings match
+            // your search" is a claim about the market, and a fetch that
+            // never came back is not evidence for it. That case gets
+            // [_MapResultsErrorNote]'s sentence (and its retry) instead.
             Positioned.fill(child: _MapEmptyState(hasResults: ads.isNotEmpty)),
           Positioned(
             left: AppSpacing.screenGutter,
@@ -232,19 +362,52 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // `.map__flt` is centred *above* the preview card
+                // (`bottom:214px` vs the card's `bottom:96px`), not in a row
+                // beside a count pill.
+                if (pins.length != ads.length)
+                  _DroppedPinsNote(
+                    pinnedCount: pins.length,
+                    totalCount: ads.length,
+                  ),
+                // One slot directly above the Filters button, for whatever
+                // is currently true about the result set — they are the same
+                // kind of statement ("there is more of this search than you
+                // can see" / "this isn't the answer yet" / "we couldn't get
+                // the answer") and sit next to the control that caused it.
+                //
+                // The order is not arbitrary. [_MapPartialResultsNote] must
+                // not render while the set behind it is superseded: its tap
+                // calls `SearchResultsNotifier.loadMore`, which reads
+                // `state.value` — the old page — and immediately assigns
+                // `AsyncData`, clearing the in-flight reload's loading flag,
+                // firing a request against the *old* cursor, and getting
+                // overwritten by the reload it just made invisible.
+                if (isStale)
+                  const _MapUpdatingNote()
+                else if (failure != null)
+                  _MapResultsErrorNote(
+                    error: failure,
+                    onRetry: () => ref.invalidate(searchResultsProvider),
+                  )
+                else if (page != null && page.nextCursor != null)
+                  _MapPartialResultsNote(
+                    loadedCount: ads.length,
+                    isLoadingMore: page.isLoadingMore,
+                    onLoadMore: () =>
+                        ref.read(searchResultsProvider.notifier).loadMore(),
+                  ),
+                if (focusAd == null)
+                  Center(child: _MapFiltersButton(onTap: _openFilters)),
                 if (selected != null) ...[
+                  const SizedBox(height: AppSpacing.base),
                   MapPreviewCard(
                     ad: selected,
-                    onTap: () =>
-                        context.push('/search/listing/${selected.id}'),
+                    onTap: () => context.push(
+                      '${widget.branchPrefix}/listing/${selected.id}',
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.base),
                 ],
-                _MapFooterRow(
-                  pinnedCount: pins.length,
-                  totalCount: ads.length,
-                  onFilters: _openFilters,
-                ),
               ],
             ),
           ),
@@ -284,15 +447,21 @@ class _MapTopBar extends StatelessWidget {
               onTap: onBack,
             ),
             const SizedBox(width: AppSpacing.base),
+            // `.nav__t--pill{height:38px;border-radius:19px;padding:0 15px;
+            // font-size:12.5px;font-weight:600;color:#1b1b23}` — dark ink on
+            // light glass, not white: the glass is light and the tiles below
+            // it are lighter still.
             GlassSurface(
               borderRadius: AppRadii.pill,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
+              height: 38,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 15),
               child: Text(
                 l10n.mapTitleLabel,
-                style: type.rowTitle.copyWith(color: Colors.white),
+                style: type.rowTitle.copyWith(
+                  fontSize: 12.5,
+                  color: mapChromeInk,
+                ),
               ),
             ),
             const Spacer(),
@@ -308,84 +477,328 @@ class _MapTopBar extends StatelessWidget {
   }
 }
 
-/// The floating "Filters" button §3.6 asks for, plus the pin count.
+/// The floating "Filters" button §3.6 asks for: `<button class="btn btn--sm
+/// btn--ink map__flt">` — `.btn--ink{background:var(--pill);color:var(
+/// --pill-ink)}`, `.btn--sm{height:44px;border-radius:22px;padding:0 18px;
+/// font-size:12.5px}` — centred over the map, not an accent-pink button
+/// pushed to the right edge.
+class _MapFiltersButton extends StatelessWidget {
+  const _MapFiltersButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          decoration: BoxDecoration(
+            color: colors.pill,
+            borderRadius: AppRadii.pill,
+            boxShadow: AppShadows.selectedPillLarge,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.tune_rounded, size: 16, color: colors.pillInk),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                l10n.mapFiltersButtonLabel,
+                style: type.rowTitle.copyWith(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: colors.pillInk,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// **Only rendered when the two counts differ.** An ad with no coordinates
+/// cannot be drawn (see `map_pin.dart`), and a map silently showing 6 pins
+/// for 8 results is a map that lies about the result set — "6 of 8 on the
+/// map" is the smallest honest way to say so.
 ///
-/// **The count is two numbers, not one**, whenever they differ: an ad with
-/// no coordinates cannot be drawn (see `map_pin.dart`), and a map silently
-/// showing 6 pins for 8 results is a map that lies about the result set.
-/// "6 of 8 on the map" is the smallest honest way to say it.
-class _MapFooterRow extends StatelessWidget {
-  const _MapFooterRow({
-    required this.pinnedCount,
-    required this.totalCount,
-    required this.onFilters,
-  });
+/// The mockup has no counter of any kind, and it is right about the common
+/// case: when every result *is* plotted, "8 on the map" restates what the
+/// user can already see and costs a pill of chrome to do it. So the honest
+/// note survives, and only in the case that makes it honest.
+class _DroppedPinsNote extends StatelessWidget {
+  const _DroppedPinsNote({required this.pinnedCount, required this.totalCount});
 
   final int pinnedCount;
   final int totalCount;
-  final VoidCallback onFilters;
 
   @override
   Widget build(BuildContext context) {
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final l10n = AppLocalizations.of(context);
 
-    return Row(
-      children: [
-        GlassSurface(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Center(
+        child: GlassSurface(
           borderRadius: AppRadii.pill,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
+          height: 30,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
           child: Text(
-            pinnedCount == totalCount
-                ? l10n.mapPinnedAllCountLabel(pinnedCount)
-                : l10n.mapPinnedPartialCountLabel(pinnedCount, totalCount),
-            style: type.micro.copyWith(color: Colors.white),
+            l10n.mapPinnedPartialCountLabel(pinnedCount, totalCount),
+            style: type.micro.copyWith(color: mapChromeInk),
           ),
         ),
-        const Spacer(),
-        Semantics(
-          button: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onFilters,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: 13,
-              ),
-              decoration: BoxDecoration(
-                color: AppAccent.color,
-                borderRadius: AppRadii.pill,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+      ),
+    );
+  }
+}
+
+/// **The map's one admission that it is not showing the whole market**, and
+/// the only way to make it show more.
+///
+/// `GET /ads` answers 20 rows a page; the results *list* hides that with an
+/// infinite scroll, and the map, having no scroll at all, used to hide it
+/// completely — 20 pins under a camera fitted snugly around them, with no
+/// gesture anywhere on the screen that could add a 21st. This chip is
+/// rendered exactly when [SearchResultsPage.nextCursor] is non-null, i.e.
+/// exactly when the sentence is true.
+///
+/// **The whole chip is the button**, not just the "Load more" half: it is a
+/// floating 34dp pill over map imagery, and splitting a 10px caption into a
+/// dead part and a live part at that size gives the user a target they have
+/// to aim at. [TapTarget] then lifts the hit box to 48dp of transparent
+/// padding, same as every other small control in the app.
+///
+/// Tapping calls the same [SearchResultsNotifier.loadMore] the results
+/// list's scroll listener calls — one cursor, one page, shared state — so
+/// the pins the user asks for here are also in the list when they toggle
+/// back to it. `loadMore` is its own re-entrancy guard, which is why the
+/// in-flight spinner replaces the label without also blocking the tap.
+class _MapPartialResultsNote extends StatelessWidget {
+  const _MapPartialResultsNote({
+    required this.loadedCount,
+    required this.isLoadingMore,
+    required this.onLoadMore,
+  });
+
+  /// How many matches are actually plotted-or-droppable right now — the
+  /// loaded page, which is what "the first {n}" means. Not a total: the
+  /// wire carries none (see this file's doc comment).
+  final int loadedCount;
+
+  final bool isLoadingMore;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+
+    final countLabel = l10n.mapPartialResultsLabel(loadedCount);
+    final actionLabel = l10n.sharedLoadMoreLabel;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Center(
+        child: TapTarget(
+          key: const ValueKey('mapLoadMore'),
+          semanticsLabel: '$countLabel · $actionLabel',
+          onTap: onLoadMore,
+          child: GlassSurface(
+            borderRadius: AppRadii.pill,
+            height: 34,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Flexible + ellipsis so the ru/uz renderings of both
+                // halves (~30% longer) shorten the caption rather than
+                // overflowing the pill on a 360dp phone.
+                Flexible(
+                  child: Text(
+                    countLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.micro.copyWith(color: mapChromeInk),
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.tune_rounded,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  '·',
+                  style: type.micro.copyWith(color: mapChromeInk),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                if (isLoadingMore)
+                  const SizedBox(
+                    key: ValueKey('mapLoadMoreSpinner'),
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
                   Text(
-                    l10n.mapFiltersButtonLabel,
-                    style: type.label.copyWith(color: Colors.white),
+                    actionLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.micro.copyWith(
+                      color: AppAccent.color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+/// **Says the pins under it belong to the filter set the user just
+/// replaced.**
+///
+/// Applying filters re-runs [searchResultsProvider], and a reload keeps its
+/// previous value, so for the whole round trip this map draws the *old*
+/// answer. Before this chip existed the sheet simply closed and nothing
+/// changed — no spinner, no veil, no dimming — and then, a second later, the
+/// pins silently swapped. A user who filtered to 2-room flats spent that
+/// window reading a map of 1-room ones with no way to tell.
+///
+/// Deliberately the smallest possible statement rather than the
+/// [_MapLoadingVeil] or a skeleton: see this file's "When the pins on screen
+/// are not the answer" for why blanking a map costs more than it buys. The
+/// pill borrows [_MapPartialResultsNote]'s exact geometry because it takes
+/// that widget's slot while it is showing.
+class _MapUpdatingNote extends StatelessWidget {
+  const _MapUpdatingNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Center(
+        child: GlassSurface(
+          key: const ValueKey('mapUpdatingNote'),
+          borderRadius: AppRadii.pill,
+          height: 34,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                l10n.mapUpdatingResultsLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: type.micro.copyWith(color: mapChromeInk),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// **The failed-fetch half of the same problem.** An [AsyncError] raised by
+/// a reload retains the previous value exactly as [AsyncLoading] does, so a
+/// filter apply that throws used to leave the pre-filter pins, the
+/// pre-filter counts and the Load-more chip on screen *forever*, with no
+/// message and no way to try again — the one state where "re-render in
+/// place" is indistinguishable from the app working.
+///
+/// The copy comes from [describeReadError], not from a string of this
+/// screen's own, so that a connectivity failure says "you are offline" here
+/// in the same words every other read surface uses (see
+/// `shared/widgets/read_error.dart` for why one fact must not read as a
+/// dozen unrelated ones). Its non-offline fallback is `search`'s own
+/// [AppLocalizations.searchResultsRetryMessage] rather than a duplicate
+/// `map`-prefixed key: this pill and `search_results_list`'s error state
+/// report the *same failure of the same provider*, and giving the two
+/// surfaces two different sentences for it would be the same defect at
+/// smaller scale.
+///
+/// Sized by its content rather than pinned to the 34dp pill height: the
+/// offline sentence is long, and a capsule that clips it to "No connection.
+/// Check your netw…" would be a status chip that withholds the status.
+class _MapResultsErrorNote extends StatelessWidget {
+  const _MapResultsErrorNote({required this.error, required this.onRetry});
+
+  final Object error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final l10n = AppLocalizations.of(context);
+
+    final message = describeReadError(
+      l10n,
+      error,
+      fallback: l10n.searchResultsRetryMessage,
+    );
+    final actionLabel = l10n.sharedRetryLabel;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Center(
+        child: TapTarget(
+          key: const ValueKey('mapResultsError'),
+          semanticsLabel: '$message · $actionLabel',
+          onTap: onRetry,
+          child: GlassSurface(
+            borderRadius: AppRadii.pill,
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(readErrorIcon(error), size: 14, color: mapChromeInk),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    message,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: type.micro.copyWith(color: mapChromeInk),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  actionLabel,
+                  maxLines: 1,
+                  style: type.micro.copyWith(
+                    color: AppAccent.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -393,7 +806,9 @@ class _MapFooterRow extends StatelessWidget {
 /// Covers the map while the very first result set is still in flight, so
 /// the user isn't looking at an empty city wondering whether that is the
 /// answer. Only shown when there is genuinely nothing to draw yet — a
-/// filter change over existing pins re-renders in place instead.
+/// filter change over existing pins keeps those pins and labels them stale
+/// with [_MapUpdatingNote] instead, for the reasons in this file's "When the
+/// pins on screen are not the answer".
 class _MapLoadingVeil extends StatelessWidget {
   const _MapLoadingVeil();
 
@@ -460,9 +875,7 @@ class _MapEmptyState extends StatelessWidget {
                 const SizedBox(height: AppSpacing.base),
                 Text(
                   hasResults
-                      ? AppLocalizations.of(
-                          context,
-                        ).mapNoLocationResultsMessage
+                      ? AppLocalizations.of(context).mapNoLocationResultsMessage
                       : AppLocalizations.of(context).mapNoResultsMessage,
                   textAlign: TextAlign.center,
                   style: type.body.copyWith(color: colors.ink2),
@@ -476,9 +889,13 @@ class _MapEmptyState extends StatelessWidget {
   }
 }
 
-/// `.rnd` over the map — same 42px glass circle `listing_detail_nav.dart`
-/// floats over its hero, for the same reason: the surface underneath is
-/// imagery, not app chrome.
+/// `.nav .rnd{width:38px;height:38px;font-size:18px;color:var(--ink)}` — the
+/// map's chrome sits inside a `.nav`, so it takes the dark-ink treatment
+/// rather than `.rnd`'s white-on-photo default. White glyphs on light glass
+/// over light OSM tiles are close to invisible.
+const Color mapChromeInk = Color(0xFF1B1B23);
+
+/// `.nav .rnd` over the map — a 38px glass circle with a dark ink glyph.
 class _RoundGlassButton extends StatelessWidget {
   const _RoundGlassButton({
     required this.icon,
@@ -501,10 +918,10 @@ class _RoundGlassButton extends StatelessWidget {
         child: GlassSurface(
           variant: GlassVariant.onPhoto,
           borderRadius: AppRadii.pill,
-          width: 42,
-          height: 42,
+          width: 38,
+          height: 38,
           alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: Colors.white),
+          child: Icon(icon, size: 18, color: mapChromeInk),
         ),
       ),
     );

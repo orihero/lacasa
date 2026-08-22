@@ -1,41 +1,68 @@
 /**
- * Table — the control room's `.tbl`: 38px rows, a sunk uppercase header, a
- * half-strength hairline between rows and nothing else. Backs the Users
- * table, the Audit log and the Overview queue list.
+ * Table primitives — MUI's table in apps/web's exact shape.
  *
- * Deliberately NOT apps/console's zebra-striped, pill-shaped table. Density
- * is the point here (see tailwind.config.js rule 4): an admin scans hundreds
- * of rows looking for the one that is wrong, so rows are separated by a
- * hairline rather than by alternating fills, which at this row height would
- * turn the table into a barcode.
+ * The house pattern is apps/web/src/components/coworkerList/CoworkerList.jsx
+ * (web-design-contract.md §7): one component per line from a deep MUI path,
+ * `<Paper sx={{ width: "100%", overflow: "hidden" }}>` (that is `Panel`) around
+ * `<TableContainer sx={{ maxHeight: 540 }}>` around
+ * `<Table stickyHeader aria-label="sticky table">`. Reproduced here once as a
+ * primitive rather than copy-pasted into four screens, because unlike apps/web
+ * this app renders the same table shape on three screens that all have to agree
+ * about skeleton rhythm, mono columns and row actions.
  *
- * `border-collapse` (not the console's `border-separate` + rounded end caps)
- * because these rows are records in a ledger, not cards in a list — a
- * continuous rule from column one to column N is exactly what a ledger wants.
+ * Three deliberate departures from the copy-paste, all forced by specs that
+ * outrank the design contract (PRECEDENCE.md):
  *
- * `CellMain`'s `thumb` slot is a bare `ReactNode`, not a photo URL: the same
- * cell shape carries a round `Avatar` (users, applications), a 26px square
- * listing thumb, or a plain status glyph (the Overview queue rows). This
- * primitive lays out whichever one the screen hands it; it doesn't impose a
- * shape.
+ *  1. NO `TablePagination`. Every admin list is keyset-paged on
+ *     `(createdAt desc, id desc)` behind an opaque cursor; there is no total
+ *     and no way to jump to page 7, so a numbered pager could only lie. The
+ *     footer is `LoadMore` (conflict 1).
+ *  2. NO `role="checkbox"` on rows. apps/web puts it on every row and it is
+ *     simply wrong; here it would also overwrite the row's real ARIA role, and
+ *     this app's screens are queried by role in their tests (conflict 8).
+ *  3. NO row `onClick`. Nothing in this app opens a record by clicking its
+ *     row — the deleted app's `TR.onClick` had no call site — so the
+ *     keyboard-operable-row machinery is not ported either (PRECEDENCE.md,
+ *     "Drop the dead exports"). Row-level affordances are `RowAction`s, which
+ *     are real buttons with real accessible names.
  */
+import Button from "@mui/material/Button";
+import MuiTable from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
 import type { ReactNode } from "react";
-import clsx from "clsx";
 import type { IconComponent } from "./icons";
+import "./table.scss";
 
-export function Table({ children, className }: { children: ReactNode; className?: string }) {
+export function Table({
+  children,
+  /**
+   * apps/web's `<TableContainer sx={{ maxHeight: 540 }}>`. The sticky header
+   * needs a bounded scroller to stick against, and the page itself must not be
+   * the scroller — a nine-column users table has to slide sideways INSIDE this
+   * box rather than taking the rail and topbar with it.
+   */
+  maxHeight = 540,
+  ariaLabel = "sticky table",
+}: {
+  children: ReactNode;
+  maxHeight?: number | string;
+  ariaLabel?: string;
+}) {
   return (
-    // The horizontal scroller lives here rather than on the page: a Users
-    // table with 9 columns overflows a narrow window, and the whole page
-    // sliding sideways would take the rail and topbar with it.
-    <div className="overflow-x-auto">
-      <table className={clsx("w-full border-collapse text-body", className)}>{children}</table>
-    </div>
+    <TableContainer className="tbl" sx={{ maxHeight }}>
+      <MuiTable stickyHeader aria-label={ariaLabel}>
+        {children}
+      </MuiTable>
+    </TableContainer>
   );
 }
 
 export function THead({ children }: { children: ReactNode }) {
-  return <thead>{children}</thead>;
+  return <TableHead>{children}</TableHead>;
 }
 
 export function TH({
@@ -44,66 +71,37 @@ export function TH({
   children,
 }: {
   align?: "left" | "right";
-  width?: string;
+  /** A fixed column width, as apps/web's `style={{ minWidth: column.minWidth }}`. */
+  width?: number | string;
   children?: ReactNode;
 }) {
   return (
-    <th
-      style={width ? { width } : undefined}
-      className={clsx(
-        "whitespace-nowrap border-b border-line bg-sunk px-[13px] py-2 text-caps font-bold uppercase tracking-caps-wide text-faint",
-        align === "right" ? "text-right" : "text-left",
-      )}
+    <TableCell
+      align={align}
+      className="tbl__th"
+      style={width === undefined ? undefined : { width, minWidth: width }}
     >
       {children}
-    </th>
+    </TableCell>
   );
 }
 
 export function TBody({ children }: { children: ReactNode }) {
-  return <tbody>{children}</tbody>;
+  return <TableBody>{children}</TableBody>;
 }
 
 export function TR({
   selected,
-  onClick,
   children,
 }: {
+  /** A selection state, distinct from hover — not used by any screen yet. */
   selected?: boolean;
-  onClick?: () => void;
   children: ReactNode;
 }) {
   return (
-    <tr
-      onClick={onClick}
-      // A bare <tr onClick> is invisible to a keyboard-only admin — no native
-      // focus, no Enter/Space activation. Every row-level affordance on this
-      // surface opens a record an admin may then act destructively on, so it
-      // has to be reachable the same way a mouse reaches it.
-      tabIndex={onClick ? 0 : undefined}
-      role={onClick ? "button" : undefined}
-      onKeyDown={
-        onClick
-          ? (event) => {
-              if (event.key !== "Enter" && event.key !== " ") return;
-              event.preventDefault();
-              onClick();
-            }
-          : undefined
-      }
-      className={clsx(
-        // The last row's rule would otherwise double up with the enclosing
-        // Panel's own bottom border, which reads as a 2px seam on a dark
-        // canvas. Expressed here rather than on TD because "am I the last
-        // row?" is a fact about the row, and a TD cannot see it.
-        "h-row [&:last-child>td]:border-b-0",
-        selected ? "bg-acc-soft" : "hover:bg-sunk",
-        onClick &&
-          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-acc",
-      )}
-    >
+    <TableRow hover selected={selected}>
       {children}
-    </tr>
+    </TableRow>
   );
 }
 
@@ -114,60 +112,61 @@ export function TD({
   className,
 }: {
   align?: "left" | "right";
-  /** UUIDs, timestamps, counts, phone numbers — see tailwind.config.js rule 3. */
+  /** UUIDs, timestamps, counts, phone numbers — anything read character by character. */
   mono?: boolean;
   children?: ReactNode;
   className?: string;
 }) {
+  const classes = ["tbl__td", mono ? "tbl__td--mono" : "", className ?? ""]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <td
-      className={clsx(
-        "border-b border-line-2 px-[13px] py-[7px] align-middle text-body text-ink",
-        mono && "font-mono text-record",
-        align === "right" ? "text-right" : "text-left",
-        className,
-      )}
-    >
+    <TableCell align={align} className={classes}>
       {children}
-    </td>
+    </TableCell>
   );
 }
 
 export function CellMain({
+  /**
+   * An arbitrary node, not a photo URL: the same cell carries a round `Avatar`
+   * on users and applications, a square listing thumb, or a plain status glyph
+   * on the overview queue. This primitive lays out whatever it is handed and
+   * imposes no shape.
+   */
   thumb,
   icon: Icon,
-  iconClassName,
   title,
   sub,
 }: {
   thumb?: ReactNode;
   icon?: IconComponent;
-  iconClassName?: string;
   title: ReactNode;
   sub?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-[9px]">
-      {thumb ?? (Icon ? <Icon size={16} className={clsx("shrink-0", iconClassName)} /> : null)}
-      <div className="min-w-0">
-        <div className="truncate text-body font-semibold leading-tight text-ink">{title}</div>
-        {sub != null ? (
-          <span className="block truncate text-mini leading-tight text-muted">{sub}</span>
-        ) : null}
+    <div className="cell-main">
+      {thumb ?? (Icon ? <Icon size={16} aria-hidden="true" /> : null)}
+      <div className="cell-main__text">
+        <div className="cell-main__title">{title}</div>
+        {sub != null ? <span className="cell-main__sub">{sub}</span> : null}
       </div>
     </div>
   );
 }
 
-/**
- * The right-aligned row-action cluster (`.acts`) — small, quiet buttons that
- * only take on colour on hover, so a table of 200 rows isn't a wall of
- * green and red. `tone` decides which colour they take: `ok` for granting,
- * `no` for refusing.
- */
+/** The right-aligned cluster of row-level buttons. */
 export function RowActions({ children }: { children: ReactNode }) {
-  return <div className="flex justify-end gap-[3px]">{children}</div>;
+  return <div className="row-actions">{children}</div>;
 }
+
+const ROW_ACTION_COLOR: Record<"neutral" | "ok" | "no", string> = {
+  neutral: "#2b2d42",
+  // The settled-good green from apps/web's StatusCell (`accepted`).
+  ok: "#28a745",
+  // `.icons { color: rgb(235, 59, 59); }` — apps/web's row-level destructive.
+  no: "rgb(235, 59, 59)",
+};
 
 export function RowAction({
   icon: Icon,
@@ -179,33 +178,40 @@ export function RowAction({
 }: {
   icon: IconComponent;
   /**
-   * Required even when `children` gives the button visible text — an
-   * icon-only action ("view", "lock") would otherwise announce as nothing,
-   * and these are the controls that change someone's account.
+   * REQUIRED, and used as both `aria-label` and `title`, even when `children`
+   * gives the button visible text. These are the controls that change someone
+   * else's account: `Approve Dilnoza Yusupova` is what a screen reader has to
+   * announce, and it is what the screens' tests select on.
    */
   label: string;
+  /** `ok` grants, `no` refuses, `neutral` merely navigates or filters. */
   tone?: "neutral" | "ok" | "no";
   onClick?: () => void;
   disabled?: boolean;
-  /** Optional visible text next to the glyph (the mockup's "Review", "Keep"). */
+  /** Optional visible text beside the glyph. */
   children?: ReactNode;
 }) {
   return (
-    <button
+    <Button
       type="button"
-      onClick={onClick}
-      disabled={disabled}
+      variant="text"
+      size="small"
+      className="row-action"
       aria-label={label}
       title={label}
-      className={clsx(
-        "inline-flex h-[25px] items-center gap-1.5 rounded-act border border-transparent px-2 text-record font-semibold text-muted transition-colors hover:border-line hover:bg-sunk focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc disabled:cursor-not-allowed disabled:opacity-40",
-        tone === "ok" && "hover:border-ok hover:text-ok",
-        tone === "no" && "hover:border-err hover:text-err",
-        tone === "neutral" && "hover:text-ink",
-      )}
+      onClick={onClick}
+      disabled={disabled}
+      sx={{
+        minWidth: 0,
+        padding: "4px 8px",
+        fontSize: "13px",
+        gap: "6px",
+        color: ROW_ACTION_COLOR[tone],
+        "&:hover": { backgroundColor: "#eeeeee" },
+      }}
     >
-      <Icon size={13} className="shrink-0" />
+      <Icon size={14} aria-hidden="true" />
       {children}
-    </button>
+    </Button>
   );
 }

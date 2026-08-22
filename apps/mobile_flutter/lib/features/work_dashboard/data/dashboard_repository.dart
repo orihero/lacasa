@@ -1,7 +1,9 @@
-/// Data-access seam for `dashboard` (SCREENS.md §24). Two implementations
-/// exist: [FixtureDashboardRepository] (bundled seed data, no network) and
-/// [LiveDashboardRepository] (the real [LaCasaApi]) — see `dashboard_mode.dart`
-/// for which one the app wires up by default and how to switch.
+/// Data-access seam for `dashboard` (SCREENS.md §24). One implementation
+/// ships — [LiveDashboardRepository], over the real [LaCasaApi]. The
+/// fixture repository and the `dashboard_mode.dart` compile-time switch
+/// that used to choose between the two are gone; the seam stays because it
+/// is what `test/features/work_dashboard/support/fake_dashboard_repository
+/// .dart` overrides, which is the only other implementation anywhere.
 ///
 /// **Why six methods instead of one "dashboard snapshot" call.** The build
 /// contract's Riverpod convention (`WORK_TAB_CONTRACT.md` §6) asks for
@@ -17,11 +19,10 @@
 /// /statistics/ads` only ever returns period totals — that's still true, and
 /// [fetchAdsStatistics] still backs the stat tiles from it. But `GET
 /// /statistics/ads/series` now exists and returns a real, server-bucketed
-/// day/hour series, so `widgets/ads_statistics_panel.dart` no longer needs to
-/// read `WorkDashboardChartFixture` directly nor degrade live mode to a
-/// 2-bar comparison — both modes plot a real [AdsSeries] through this one
-/// method, [FixtureDashboardRepository] building its [AdsSeries] from the
-/// same `workDashboardChartFixture` seed points it always used.
+/// day/hour series, so `widgets/ads_statistics_panel.dart` no longer reads
+/// `WorkDashboardChartFixture` directly nor degrades to a 2-bar comparison
+/// when there is no seed data — it plots one real [AdsSeries] from this one
+/// method.
 library;
 
 import '../../../api/api.dart';
@@ -42,10 +43,11 @@ abstract class DashboardRepository {
   /// `GET /statistics/coworkers`-shaped raw events, always the full
   /// unfiltered history (ruling 7.2 — this endpoint ignores any date range).
   /// Backs the Coworker statistics section's "Ads count" column (folded by
-  /// [ActivityEvent.coworkerId]/[ActivityEventStage.adCreated], filtered
-  /// client-side by the time-range selector in live mode only — see
+  /// [ActivityEvent.coworkerId]/[ActivityEventStage.adCreated], and filtered
+  /// client-side by the time-range selector — unconditionally now that every
+  /// timestamp reaching it is a real one; see
   /// `state/dashboard_providers.dart`'s `coworkerStatRowsProvider` doc
-  /// comment for why the fixture side of that fold stays unfiltered).
+  /// comment for the gate that used to sit in front of that fold).
   Future<List<ActivityEvent>> fetchCoworkerActivity();
 
   /// The caller's complete ad list, every stage, no pagination (same

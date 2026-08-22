@@ -3,9 +3,21 @@
 /// block (role badge, avatar, fullName, phone as a `tel:` link), then Account
 /// and Session rows.
 ///
-/// **Router wiring**: takes no constructor arguments; reads
-/// `authSessionProvider` itself. `profile_role_screen.dart`'s agent/coworker
-/// branch becomes `const ProfileAgentScreen()`.
+/// **Router wiring**: reads `authSessionProvider` itself, and takes a
+/// [ProfileAgentScreen.branchPrefix] naming the branch root it is mounted
+/// under, because it is now mounted in *two* places (see `app_router.dart`'s
+/// two-shell note):
+///
+/// - the buyer shell's Profile tab, via `profile_role_screen.dart` —
+///   `const ProfileAgentScreen()`, i.e. the `/profile` default;
+/// - the agent shell's own Profile tab — `ProfileAgentScreen(branchPrefix:
+///   RoutePaths.workProfile)`.
+///
+/// Every row below pushes `'$branchPrefix/…'` so it lands in whichever tree
+/// the screen is currently in, the same convention `settings_screen.dart`
+/// and `listing_detail_screen.dart` already follow. The prefix is also how
+/// this screen knows which shell it is in, and therefore which direction the
+/// Browse/Work switch below should point.
 ///
 /// **The role badge shows the RAW wire string** — `"agent"` or `"coworker"`,
 /// lowercase, un-prettified — because §3.16 says "Role badge (raw string
@@ -26,27 +38,19 @@
 /// it falls back to copying the number instead, with the toast saying so
 /// honestly rather than pretending the tap did nothing.
 ///
-/// **Two rows have no route yet** — "Connected Accounts" and "Messages".
-/// `route_paths.dart` already has `RoutePaths.profileEdit`/`profileSaved`/
-/// `profileSettings` (used below) but no Profile-branch equivalent of
-/// `RoutePaths.workConnectedAccounts` or a Messages path at all. This isn't
-/// solved by reusing `RoutePaths.workConnectedAccounts`: that path lives
-/// under the *Work* shell branch, and `route_paths.dart`'s own comment on
-/// `agentsListingDetail` explains why a pushed screen needs its own copy of
-/// the route per branch it can be pushed from ("a pushed screen stays in the
-/// back stack of the tab it was opened from") — pushing a `/work/...` path
-/// from the Profile tab would switch the visible tab to Work, which is not
-/// what tapping a Profile row should do. So both rows below push a literal,
-/// not-yet-registered path (`/profile/connected-accounts`,
-/// `/profile/messages`) that follows the exact naming `profileEdit`/
-/// `profileSaved`/`profileSettings` already use. Per this task's brief
-/// ("Rows pointing at screens that do not exist yet ... must still be
-/// rendered and must navigate — the integration step wires the routes"),
-/// wiring these up is: add `RoutePaths.profileConnectedAccounts =
-/// '/profile/connected-accounts'` and `RoutePaths.profileMessages =
-/// '/profile/messages'`, register both routes in `app_router.dart`'s Profile
-/// branch, and (optionally, purely mechanical) swap the two literal strings
-/// below for the new constants.
+/// **Every row's destination is registered now.** "Connected Accounts" and
+/// "Messages" used to push literal, not-yet-declared `/profile/...` strings;
+/// both routes exist in both shells today, and both rows build their path
+/// from [ProfileAgentScreen.branchPrefix] instead of a literal — which is
+/// also what stopped them from being a per-shell special case.
+///
+/// **The Workspace group is the Browse/Work switch** (see
+/// `navigation/workspace_mode.dart`). It is one row whose direction follows
+/// the shell this screen is in: in the agent shell it offers Browse ("look at
+/// the marketplace like a client"), in the buyer shell it offers the way back
+/// to the workspace. Tapping it only calls `setMode` — `app_router.dart`'s
+/// redirect listens to that provider and performs the shell swap, so this
+/// screen deliberately does not navigate itself.
 library;
 
 import 'package:flutter/material.dart';
@@ -57,18 +61,30 @@ import '../../../api/api.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
+import '../../../navigation/workspace_mode.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../language/language.dart';
 
 class ProfileAgentScreen extends ConsumerWidget {
-  const ProfileAgentScreen({super.key});
+  const ProfileAgentScreen({super.key, this.branchPrefix = RoutePaths.profile});
+
+  /// The branch root this screen is mounted under — `/profile` in the buyer
+  /// shell (the default), `/work/profile` in the agent shell. Every row
+  /// below pushes `'$branchPrefix/…'`; see this file's doc comment.
+  final String branchPrefix;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
     final session = ref.watch(authSessionProvider);
+    // Which way the Workspace row points. Derived from the prefix rather
+    // than from `workspaceModeProvider` itself: the mounted shell *is* the
+    // mode as far as this screen is concerned, and reading the shell avoids
+    // a frame in which the row offers to take the agent where they already
+    // are (the mode flips first, the redirect lands a frame later).
+    final inAgentShell = branchPrefix == RoutePaths.workProfile;
     // `role == UserRole.agent` specifically (not just "not coworker") — a
     // `null` role never reaches this screen (`profile_role_screen.dart`
     // only builds it for agent/coworker), but `setRole`'s test/dev escape
@@ -76,6 +92,10 @@ class ProfileAgentScreen extends ConsumerWidget {
     // role, and "agent only" should stay false rather than true by default
     // in that case.
     final isAgent = session.role == UserRole.agent;
+    // Same source `settings`'s own Language row subtitle reads — see
+    // `language_sheet.dart` for why a still-loading read shows English.
+    final selectedLanguage =
+        ref.watch(languageProvider).value ?? AppLanguage.en;
 
     return Scaffold(
       backgroundColor: colors.screen,
@@ -120,17 +140,26 @@ class ProfileAgentScreen extends ConsumerWidget {
                     title: AppLocalizations.of(
                       context,
                     ).profileAgentEditProfileRowTitle,
-                    onTap: () => context.push(RoutePaths.profileEdit),
+                    subtitle: AppLocalizations.of(
+                      context,
+                    ).profileAgentEditProfileRowSubtitle,
+                    onTap: () => context.push('$branchPrefix/edit'),
                   ),
                   if (isAgent) ...[
                     const SizedBox(height: AppSpacing.base),
                     ListRow(
-                      icon: Icons.link_rounded,
+                      // `stack-fill` in the mockup — layered sheets, one per
+                      // connected channel, not a chain link. Matched by
+                      // `settings_screen.dart`'s row for the same destination.
+                      icon: Icons.layers_rounded,
                       title: AppLocalizations.of(
                         context,
                       ).profileAgentConnectedAccountsRowTitle,
-                      // Not yet in RoutePaths — see this file's doc comment.
-                      onTap: () => context.push('/profile/connected-accounts'),
+                      subtitle: AppLocalizations.of(
+                        context,
+                      ).profileAgentConnectedAccountsRowSubtitle,
+                      onTap: () =>
+                          context.push('$branchPrefix/connected-accounts'),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.base),
@@ -139,7 +168,10 @@ class ProfileAgentScreen extends ConsumerWidget {
                     title: AppLocalizations.of(
                       context,
                     ).profileAgentSettingsRowTitle,
-                    onTap: () => context.push(RoutePaths.profileSettings),
+                    subtitle: AppLocalizations.of(
+                      context,
+                    ).profileAgentSettingsRowSubtitle,
+                    onTap: () => context.push('$branchPrefix/settings'),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
@@ -147,8 +179,10 @@ class ProfileAgentScreen extends ConsumerWidget {
                     title: AppLocalizations.of(
                       context,
                     ).profileAgentMessagesRowTitle,
-                    // Not yet in RoutePaths — see this file's doc comment.
-                    onTap: () => context.push('/profile/messages'),
+                    subtitle: AppLocalizations.of(
+                      context,
+                    ).profileAgentMessagesRowSubtitle,
+                    onTap: () => context.push('$branchPrefix/messages'),
                   ),
                   const SizedBox(height: AppSpacing.base),
                   ListRow(
@@ -156,7 +190,48 @@ class ProfileAgentScreen extends ConsumerWidget {
                     title: AppLocalizations.of(
                       context,
                     ).profileAgentLanguageRowTitle,
+                    // `.lrow__s` — the current selection, in its own name
+                    // ("English" / "O‘zbekcha" / "Русский"), read from the
+                    // same provider `language_sheet.dart` writes.
+                    subtitle: selectedLanguage.nativeName,
                     onTap: () => showLanguageSheet(context),
+                  ),
+                  const SizedBox(height: AppSpacing.section),
+                  ListRowGroupLabel(
+                    AppLocalizations.of(
+                      context,
+                    ).profileAgentWorkspaceGroupLabel,
+                  ),
+                  ListRow(
+                    key: const ValueKey('profileAgentWorkspaceModeRow'),
+                    icon: inAgentShell
+                        ? Icons.travel_explore_rounded
+                        : Icons.dashboard_rounded,
+                    title: inAgentShell
+                        ? AppLocalizations.of(
+                            context,
+                          ).profileAgentBrowseModeRowTitle
+                        : AppLocalizations.of(
+                            context,
+                          ).profileAgentWorkModeRowTitle,
+                    subtitle: inAgentShell
+                        ? AppLocalizations.of(
+                            context,
+                          ).profileAgentBrowseModeRowSubtitle
+                        : AppLocalizations.of(
+                            context,
+                          ).profileAgentWorkModeRowSubtitle,
+                    // Sets the mode and nothing else — `app_router.dart`'s
+                    // `_AuthRouterRefresh` listens to this provider and the
+                    // redirect swaps the shell. Navigating here too would
+                    // race that redirect to the same destination.
+                    onTap: () => ref
+                        .read(workspaceModeProvider.notifier)
+                        .setMode(
+                          inAgentShell
+                              ? WorkspaceMode.browse
+                              : WorkspaceMode.work,
+                        ),
                   ),
                   const SizedBox(height: AppSpacing.section),
                   ListRowGroupLabel(
@@ -259,7 +334,6 @@ class _AgentIdentityCard extends ConsumerWidget {
       ),
     );
   }
-
 }
 
 /// `.st st--acc` — the raw-string role pill. Deliberately not capitalized or
@@ -276,12 +350,36 @@ class _RoleBadge extends StatelessWidget {
     return Container(
       height: 23,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: AppStatusColors.accentStatusBg,
         borderRadius: BorderRadius.circular(AppRadii.sm),
       ),
-      child: Text(role, style: type.caption.copyWith(color: AppAccent.color)),
+      // `.st{flex:none;display:inline-flex}` — the pill hugs its label. The
+      // shrink-wrapping `Align` (rather than the `alignment:` argument this
+      // used to pass, which resolves to `constraints.biggest` and stretched
+      // the badge across the whole identity card inside the name row's
+      // bounded `Wrap`) is also what keeps the label vertically centred in
+      // the tight 23px box.
+      child: Align(
+        widthFactor: 1,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // `.st::before` — a 5px `currentColor` status dot, 5px before
+            // the label.
+            Container(
+              width: 5,
+              height: 5,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppAccent.color,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(role, style: type.caption.copyWith(color: AppAccent.color)),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,0 +1,45 @@
+// The topbar — apps/web's navbar geometry (`display: flex; justify-content:
+// space-between; align-items: center`), shortened from its 100px landing
+// height to something a records screen can afford, and sat on the white panel.
+//
+// It is sticky against #root, the app's scroll container (index.scss), offset
+// by the shell's 10px gutter so the grey canvas shows above it rather than the
+// table sliding under a floating bar.
+@import "../responsive.scss";
+
+.admin-topbar {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 60px;
+  flex: none;
+  padding: 0 15px;
+  background-color: #ffffff;
+  // The list-row hairline, doing the job the console's navbar does with a gap.
+  border-bottom: 1px solid #dedede;
+
+  // The page's one <h1>. apps/web's own page title is
+  // `.title h1 { font-weight: 300; }` at 2rem; this is the same face one step
+  // down, because it sits in a bar rather than at the top of a column.
+  .admin-topbar__title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: #2b2d42;
+  }
+
+  .admin-topbar__tools {
+    display: flex;
+    align-items: center;
+    // `.ads-tools { display: flex; gap: 10px; }`
+    gap: 10px;
+    flex: none;
+  }
+}

@@ -80,7 +80,14 @@ class RatingStars extends StatelessWidget {
             child: Icon(
               i < filled ? Icons.star_rounded : Icons.star_outline_rounded,
               size: starSize,
-              color: i < filled ? AppStatusColors.ratingStar : colors.faint,
+              // `glyphTrack`, not `faint`: the empty star has to read as
+              // *weaker* than the filled one, and `faint` is a text token
+              // held to a 4.5:1 floor, which made empty stars (4.94:1 on
+              // white) out-shout filled ones (2.07:1) and inverted the
+              // row. See `LaCasaColors.glyphTrack`.
+              color: i < filled
+                  ? AppStatusColors.ratingStar
+                  : colors.glyphTrack,
             ),
           ),
         if (showLabel) ...[
@@ -89,7 +96,7 @@ class RatingStars extends StatelessWidget {
             child: Text(
               AppLocalizations.of(
                 context,
-              ).sharedRatingLabel(rating.toStringAsFixed(1), count),
+              ).sharedRatingLabel(rating.toStringAsFixed(1)),
               overflow: TextOverflow.ellipsis,
               style: type.bodySmall.copyWith(color: colors.muted),
             ),

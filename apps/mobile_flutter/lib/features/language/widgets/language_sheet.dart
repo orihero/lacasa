@@ -70,65 +70,63 @@ class _LanguageSheet extends ConsumerWidget {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.card,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadii.sheet),
-          ),
-        ),
+      // `.sh{position:absolute;left:8px;right:8px;bottom:8px}` — the panel
+      // floats clear of the screen edges rather than sitting flush against
+      // them, which is what lets all four of its corners round.
+      child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xl,
-          AppSpacing.base,
-          AppSpacing.xl,
-          AppSpacing.xl,
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.md,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _grabHandle(colors),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.languageSheetTitle,
-                    style: type.sheetTitle.copyWith(color: colors.ink),
-                  ),
-                ),
-                Semantics(
-                  button: true,
-                  label: l10n.languageSheetCloseLabel,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Icon(
-                      Icons.close_rounded,
-                      size: 20,
-                      color: colors.ink2,
+        child: GlassSurface(
+          variant: GlassVariant.onSurface,
+          borderRadius: BorderRadius.circular(AppRadii.sheet),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.base,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _grabHandle(colors),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.languageSheetTitle,
+                      style: type.sheetTitle.copyWith(color: colors.ink),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.section),
-            for (final language in AppLanguage.values) ...[
-              _LanguageRow(
-                language: language,
-                selected: language == selected,
-                // The notifier itself no-ops nothing special for a re-tap
-                // of the already-selected row — it just re-saves the same
-                // value, which is harmless and keeps this row identical to
-                // its siblings rather than special-cased.
-                onTap: () async {
-                  await ref.read(languageProvider.notifier).select(language);
-                  if (context.mounted) Navigator.of(context).pop();
-                },
+                  _CloseButton(
+                    label: l10n.languageSheetCloseLabel,
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-              if (language != AppLanguage.values.last)
-                const SizedBox(height: AppSpacing.base),
+              const SizedBox(height: AppSpacing.section),
+              for (final language in AppLanguage.values) ...[
+                _LanguageRow(
+                  language: language,
+                  selected: language == selected,
+                  // The notifier itself no-ops nothing special for a re-tap
+                  // of the already-selected row — it just re-saves the same
+                  // value, which is harmless and keeps this row identical to
+                  // its siblings rather than special-cased.
+                  onTap: () async {
+                    await ref.read(languageProvider.notifier).select(language);
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
+                ),
+                if (language != AppLanguage.values.last)
+                  const SizedBox(height: AppSpacing.base),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -143,6 +141,46 @@ class _LanguageSheet extends ConsumerWidget {
         decoration: BoxDecoration(
           color: colors.line,
           borderRadius: AppRadii.pill,
+        ),
+      ),
+    );
+  }
+}
+
+/// `.sh__h .rnd` — the sheet header's close control: a 34px round `--sunk`
+/// chip, not a bare glyph. Sized inside a 44px box so the tap target clears
+/// the platform minimum even though the chip itself is smaller.
+class _CloseButton extends StatelessWidget {
+  const _CloseButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Center(
+            child: Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: colors.sunk,
+              ),
+              child: Icon(Icons.close_rounded, size: 16, color: colors.ink),
+            ),
+          ),
         ),
       ),
     );
@@ -184,10 +222,24 @@ class _LanguageRow extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // `.lrow__sp` — the abbreviation SCREENS.md §3.20 quotes as
+              // the row's title, with the language's own name for itself
+              // underneath (the mockup's `.lrow__s` second line).
               Expanded(
-                child: Text(
-                  language.label,
-                  style: type.rowTitle.copyWith(color: colors.ink),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      language.label,
+                      style: type.rowTitle.copyWith(color: colors.ink),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      language.nativeName,
+                      style: type.bodySmall.copyWith(color: colors.muted),
+                    ),
+                  ],
                 ),
               ),
               _RadioIndicator(selected: selected),
@@ -211,27 +263,18 @@ class _RadioIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
 
+    // `inset 0 0 0 7px var(--accent)` is a single 7px-thick accent ring on
+    // the 22px circle — one solid donut with an 8px hole, not a thin outline
+    // with a separate dot floating inside it.
     return Container(
       width: 22,
       height: 22,
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? AppAccent.color : colors.line,
-          width: 1.5,
-        ),
+        border: selected
+            ? Border.all(color: AppAccent.color, width: 7)
+            : Border.all(color: colors.line, width: 1.5),
       ),
-      child: selected
-          ? Container(
-              width: 14,
-              height: 14,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppAccent.color,
-              ),
-            )
-          : null,
     );
   }
 }

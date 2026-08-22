@@ -21,7 +21,6 @@
 /// directly rather than through here.
 library;
 
-export 'data/auth_mode.dart';
 export 'data/auth_repository.dart';
 export 'state/auth_repository_provider.dart';
 export 'widgets/login_screen.dart';

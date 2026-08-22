@@ -161,9 +161,8 @@ describe("deriveChannelBadges", () => {
       { channel: "TELEGRAM", status: "PUBLISHED" },
       { channel: "YOUTUBE", status: "FAILED" },
       { channel: "OLX", status: "DRAFTED_AWAITING_REVIEW" },
-      { channel: "REALTING", status: "PENDING" },
     ]);
-    expect(badges.map((b) => b.label)).toEqual(["TG", "YT failed", "OLX awaiting review", "RE not published"]);
+    expect(badges.map((b) => b.label)).toEqual(["TG", "YT failed", "OLX awaiting review"]);
   });
 
   it("renders an unrecognized channel/status verbatim in a neutral tone rather than dropping it", () => {

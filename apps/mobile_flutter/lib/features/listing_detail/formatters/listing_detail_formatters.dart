@@ -149,7 +149,7 @@ abstract final class ListingDetailFormatters {
     final grouped = Formatters.groupedNumber(value);
     final body = ad.priceType == CurrencyCode.uzs
         ? '$grouped ${l10n.listingEditorPriceTypeUzsOption}'
-        : '\$ $grouped';
+        : '\$$grouped';
     return '$body / m²';
   }
 }

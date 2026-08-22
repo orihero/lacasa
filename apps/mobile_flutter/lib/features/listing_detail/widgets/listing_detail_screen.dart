@@ -43,10 +43,11 @@ import 'listing_agent_row.dart';
 import 'listing_chip_sections.dart';
 import 'listing_detail_bottom_bar.dart';
 import 'listing_detail_nav.dart';
-import 'listing_detail_section.dart';
+import 'listing_detail_panes.dart';
 import 'listing_hero.dart';
 import 'listing_info_tags.dart';
 import 'listing_location_section.dart';
+import 'listing_overview_panel.dart';
 import 'listing_price_footer.dart';
 import 'listing_sizes_section.dart';
 import 'listing_tour_section.dart';
@@ -81,7 +82,8 @@ class ListingDetailScreen extends ConsumerWidget {
               error: error,
               onRetry: () => ref.invalidate(listingDetailProvider(adId)),
             ),
-            data: (ad) => _ListingDetailBody(ad: ad, branchPrefix: branchPrefix),
+            data: (ad) =>
+                _ListingDetailBody(ad: ad, branchPrefix: branchPrefix),
           ),
           // Back is available in every state, including the error one —
           // a user who deep-linked to a dead listing must still be able to
@@ -113,6 +115,8 @@ class ListingDetailScreen extends ConsumerWidget {
         title: ad.title,
         adId: ad.id,
         agentName: agent?.fullName,
+        location: '${ad.district}, ${ad.city}',
+        agentAvatarUrl: agent?.avatar,
       ),
     );
   }
@@ -126,8 +130,6 @@ class _ListingDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
     final l10n = AppLocalizations.of(context);
     final description = ad.description?.trim();
 
@@ -155,7 +157,16 @@ class _ListingDetailBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListingInfoTags(ad: ad),
+                // `.panel` — the mockup opens `.det__b` with the Overview
+                // card (fact rail + 3-up photo grid) before anything else.
+                // It restates what the hero pills and the Sizes pane
+                // already carry; see `listing_overview_panel.dart` for why
+                // that repetition is the point, and for the conditions
+                // under which it renders away entirely.
+                ListingOverviewPanel(
+                  ad: ad,
+                  onOpenGallery: (index) => _openGallery(context, index),
+                ),
                 // SCREENS.md §7's tour link sits with the photo/video
                 // carousel; it renders here instead purely as a matter of
                 // this section's own honest-gap mechanism (absent for
@@ -163,33 +174,38 @@ class _ListingDetailBody extends StatelessWidget {
                 // `listing_tour_section.dart`'s doc comment for why it
                 // pushes a full screen rather than embedding inline.
                 ListingTourSection(ad: ad),
-                ListingDetailSection(
-                  title: l10n.listingDescriptionSectionTitle,
-                  child: description == null || description.isEmpty
-                      ? null
-                      : Text(
-                          description,
-                          style: type.body.copyWith(color: colors.ink2),
-                        ),
-                ),
-                ListingDetailSection(
-                  title: l10n.listingAdditionalInfoSectionTitle,
-                  child: buildAdditionalInfoOrNull(ad),
-                ),
-                ListingDetailSection(
-                  title: l10n.listingSizesSectionTitle,
-                  child: ListingSizesSection.buildOrNull(l10n, ad),
-                ),
-                ListingDetailSection(
-                  title: l10n.listingNearbyPlacesSectionTitle,
-                  child: buildNearbyPlacesOrNull(ad),
-                ),
-                ListingDetailSection(
-                  title: l10n.listingLocationSectionTitle,
-                  // Always rendered — see this section's own doc comment
-                  // for why it's the one exception to the drop-if-empty
-                  // rule the other four follow.
-                  child: ListingLocationSection(ad: ad),
+                // `.segs` + `.pane`: one body at a time, not five stacked
+                // headed sections. The section titles double as the segment
+                // labels, so no new copy is involved.
+                ListingDetailPanes(
+                  panes: [
+                    ?paneOrNull(
+                      l10n.listingDescriptionSectionTitle,
+                      _buildDescriptionPane(context, ad, description),
+                    ),
+                    ?paneOrNull(
+                      l10n.listingAdditionalInfoSectionTitle,
+                      buildAdditionalInfoOrNull(ad),
+                    ),
+                    ?paneOrNull(
+                      l10n.listingSizesSectionTitle,
+                      ListingSizesSection.buildOrNull(l10n, ad),
+                    ),
+                    ?paneOrNull(
+                      l10n.listingNearbyPlacesSectionTitle,
+                      buildNearbyPlacesOrNull(ad),
+                    ),
+                    // Always present — see `listing_location_section.dart`
+                    // for why it's the one exception to the drop-if-empty
+                    // rule the other panes follow.
+                    ListingDetailPane(
+                      label: l10n.listingLocationSectionTitle,
+                      child: ListingLocationSection(
+                        ad: ad,
+                        branchPrefix: branchPrefix,
+                      ),
+                    ),
+                  ],
                 ),
                 ListingAgentRow(
                   ad: ad,
@@ -203,6 +219,35 @@ class _ListingDetailBody extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// The Description pane: the paragraph, then the Type/Category/Repair/
+  /// Furniture chips 11dp below it (`.tags{margin-top:11px}`) — the mockup
+  /// nests them inside this pane rather than floating them above the body.
+  /// Null when the ad carries neither, so the segment disappears with them.
+  static Widget? _buildDescriptionPane(
+    BuildContext context,
+    Ad ad,
+    String? description,
+  ) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+    final tags = ListingInfoTags.buildOrNull(context, ad);
+    final hasDescription = description != null && description.isNotEmpty;
+    if (!hasDescription && tags == null) return null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // `.pane p{font-size:12px;line-height:1.66;color:var(--ink-2)}`.
+        if (hasDescription)
+          Text(description, style: type.body.copyWith(color: colors.ink2)),
+        if (tags != null) ...[
+          if (hasDescription) const SizedBox(height: 11),
+          tags,
+        ],
+      ],
     );
   }
 

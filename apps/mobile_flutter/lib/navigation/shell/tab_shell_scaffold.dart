@@ -35,11 +35,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../theme/theme.dart';
 import 'glass_tab_bar.dart';
+import 'tab_item.dart';
 
 class TabShellScaffold extends StatelessWidget {
-  const TabShellScaffold({super.key, required this.navigationShell});
+  const TabShellScaffold({
+    super.key,
+    required this.navigationShell,
+    required this.items,
+  });
 
   final StatefulNavigationShell navigationShell;
+
+  /// Which tab row this shell draws — `buyerTabItems` or `agentTabItems`.
+  /// Passed down rather than derived here because the app declares two
+  /// shells and each one already knows which it is; see `tab_item.dart`.
+  final List<TabItem> items;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +59,10 @@ class TabShellScaffold extends StatelessWidget {
       extendBody: true,
       backgroundColor: colors.screen,
       body: navigationShell,
-      bottomNavigationBar: GlassTabBar(navigationShell: navigationShell),
+      bottomNavigationBar: GlassTabBar(
+        navigationShell: navigationShell,
+        items: items,
+      ),
     );
   }
 }

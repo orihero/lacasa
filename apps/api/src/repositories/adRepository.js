@@ -15,6 +15,15 @@ export function findManyAds(prisma, { where, orderBy, take }) {
   return prisma.ad.findMany({ where, include: AD_INCLUDE, orderBy, ...(take ? { take } : {}) });
 }
 
+// Row count for the same `where` findManyAds would have run, without
+// selecting (or joining `photos` onto) a single row. Its one caller is
+// listAds()'s `?countOnly=true` branch, which exists so the mobile filter
+// sheet's live "Apply Filters (N)" preview can stop downloading the entire
+// serialized result set just to read `.length` off it.
+export function countAds(prisma, { where }) {
+  return prisma.ad.count({ where });
+}
+
 export function findAdById(prisma, id) {
   return prisma.ad.findUnique({ where: { id }, include: AD_INCLUDE });
 }

@@ -24,6 +24,22 @@ enum AppLanguage {
     AppLanguage.ru => 'Ru',
   };
 
+  /// The language's own name for itself — the mockup's second line on every
+  /// `language-sheet` radio row (`<span class="lrow__s">English</span>`) and
+  /// the subtitle every "Language" row shows for the current selection
+  /// (`settings`, `profile-buyer`, `profile-agent`).
+  ///
+  /// Deliberately **not** an ARB string: a native name is written the same
+  /// way whatever locale the surrounding UI is in (a Russian speaker still
+  /// sees "O‘zbekcha", not "Узбекский"), so translating it would be wrong
+  /// rather than merely redundant. [label] stays the abbreviated
+  /// "En"/"Uz"/"Ru" SCREENS.md §3.20 quotes for the radio-row title.
+  String get nativeName => switch (this) {
+    AppLanguage.en => 'English',
+    AppLanguage.uz => 'O‘zbekcha',
+    AppLanguage.ru => 'Русский',
+  };
+
   /// ISO 639-1 code. Not consumed by anything today — see this file's doc
   /// comment.
   String get wire => switch (this) {

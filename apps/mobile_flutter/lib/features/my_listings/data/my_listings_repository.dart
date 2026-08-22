@@ -53,6 +53,53 @@ abstract class MyListingsRepository {
     String? cursor,
   });
 
+  /// The All/Active/Sold/Draft segmented counts the header strip renders
+  /// (`widgets/my_listings_stage_strip.dart`), straight off
+  /// `GET /my/ads/stage-counts` via [AgentAdsResource.stageCounts].
+  ///
+  /// **A second round trip on purpose, not a fold of [fetchMyAdsPage]'s
+  /// result.** `apps/console`'s own `MyAdsScreen` derives its counts from
+  /// the already-fetched list, which works there because that screen fetches
+  /// the whole table at once. This screen does not: SCREENS.md §25's
+  /// "Infinite scroll" is real keyset paging (see this file's doc comment),
+  /// so at any moment the client holds one page of ten and folding it would
+  /// print "10 active · 0 sold · 0 drafts" for an agent with two hundred ads
+  /// — a wrong number, growing as the user scrolls.
+  /// [AgentAdsResource.stageCounts]'s own doc comment records the one way
+  /// the two can disagree (something changed between the two calls), which
+  /// is a far smaller error than "whatever happens to be loaded".
+  ///
+  /// **Unfiltered by design** — the endpoint takes no query params at all,
+  /// so these are counts over the agent's whole table, not over the list
+  /// currently narrowed by the CRM filter sheet. The strip therefore keeps
+  /// answering "how many drafts do I have?" even while the list below it
+  /// shows one city; see `my_listings_stage_strip.dart` for why that is the
+  /// question the strip is there to answer.
+  Future<AdStageCounts> fetchStageCounts();
+
+  /// Per-ad publish state for the row-level channel badges (§9.2 of the UX
+  /// audit) — one batched `GET /publish/status?adIds=…` for every ad
+  /// currently on screen, via [PublishResource.statusForAds].
+  ///
+  /// **Batched, never per row.** `PublishResource.statusForAd` (singular)
+  /// exists for `publish-status` (§29) and would mean one request per
+  /// visible row — ten on the first page, growing with every `loadMore`.
+  /// The batch route was added for exactly this caller; its own doc comment
+  /// names "the lean batched form `my-listings` (§25) needs for its channel
+  /// badges".
+  ///
+  /// Two shape differences from the singular route that the badge widget
+  /// depends on, both documented on [PublishResource.statusForAds]:
+  /// an ad with no publish attempt at all maps to an **empty list** rather
+  /// than five synthesized PENDING rows, and each [ChannelStatus] carries
+  /// only `channel`/`status` (no `externalUrl`/`lastAttemptAt`/
+  /// `errorMessage`). A badge therefore renders "never attempted" from the
+  /// *absence* of a row, and anything richer than a tint has to be read on
+  /// `publish-status` itself, which is what tapping the strip opens.
+  Future<Map<String, List<ChannelStatus>>> fetchPublishStatuses(
+    List<String> adIds,
+  );
+
   /// Backs the row-level "Author" column (SCREENS.md §25) — see
   /// `state/my_listings_providers.dart#resolveAdAuthorName`'s doc comment
   /// for exactly how an [Ad]'s `coworkerId` resolves against this list

@@ -25,6 +25,7 @@ import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../state/regions_repository_provider.dart';
 import 'filter_option_picker_sheet.dart';
+import 'filter_picker_field.dart';
 
 class FilterCityDistrictSection extends ConsumerWidget {
   const FilterCityDistrictSection({
@@ -59,20 +60,20 @@ class FilterCityDistrictSection extends ConsumerWidget {
             children: [
               FieldLabel(l10n.filterCityFieldLabel),
               regionsAsync.when(
-                loading: () => _PickerField(
+                loading: () => FilterPickerField(
                   key: const ValueKey('filterField-city'),
                   value: null,
                   placeholder: l10n.filterRegionsLoadingPlaceholder,
                   enabled: false,
                 ),
-                error: (error, stackTrace) => _PickerField(
+                error: (error, stackTrace) => FilterPickerField(
                   key: const ValueKey('filterField-city'),
                   value: null,
                   placeholder: l10n.filterRegionsErrorPlaceholder,
                   enabled: false,
                   onRetry: () => ref.invalidate(regionsDataProvider),
                 ),
-                data: (regions) => _PickerField(
+                data: (regions) => FilterPickerField(
                   key: const ValueKey('filterField-city'),
                   value: city,
                   placeholder: l10n.filterCityAnyOptionLabel,
@@ -99,13 +100,13 @@ class FilterCityDistrictSection extends ConsumerWidget {
             children: [
               FieldLabel(l10n.filterDistrictFieldLabel),
               regionsAsync.when(
-                loading: () => _PickerField(
+                loading: () => FilterPickerField(
                   key: const ValueKey('filterField-district'),
                   value: null,
                   placeholder: l10n.filterRegionsLoadingPlaceholder,
                   enabled: false,
                 ),
-                error: (error, stackTrace) => _PickerField(
+                error: (error, stackTrace) => FilterPickerField(
                   key: const ValueKey('filterField-district'),
                   value: null,
                   placeholder: l10n.filterRegionsErrorPlaceholder,
@@ -114,7 +115,9 @@ class FilterCityDistrictSection extends ConsumerWidget {
                 data: (regions) {
                   final selectedRegion = city == null
                       ? null
-                      : regions.regions.where((r) => r.name == city).firstOrNull;
+                      : regions.regions
+                            .where((r) => r.name == city)
+                            .firstOrNull;
                   final districtEnabled = selectedRegion != null;
                   final districtOptions = selectedRegion == null
                       ? const <String>[]
@@ -123,7 +126,7 @@ class FilterCityDistrictSection extends ConsumerWidget {
                             .map((d) => d.name)
                             .toList();
 
-                  return _PickerField(
+                  return FilterPickerField(
                     key: const ValueKey('filterField-district'),
                     value: district,
                     placeholder: districtEnabled
@@ -149,68 +152,6 @@ class FilterCityDistrictSection extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// A tappable `GlassSurface` styled like `FilterTextField` (same material,
-/// same border radius) but read-only — a chevron replaces the text cursor
-/// as the "this opens something" affordance.
-class _PickerField extends StatelessWidget {
-  const _PickerField({
-    super.key,
-    required this.value,
-    required this.placeholder,
-    required this.enabled,
-    this.onTap,
-    this.onRetry,
-  });
-
-  final String? value;
-  final String placeholder;
-  final bool enabled;
-  final VoidCallback? onTap;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-
-    return Opacity(
-      opacity: enabled ? 1 : 0.5,
-      child: GestureDetector(
-        onTap: enabled ? onTap : onRetry,
-        child: GlassSurface(
-          variant: GlassVariant.flatForm,
-          borderRadius: BorderRadius.circular(AppRadii.control),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: 4,
-          ),
-          height: 44,
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value ?? placeholder,
-                  overflow: TextOverflow.ellipsis,
-                  style: type.body.copyWith(
-                    color: value == null ? colors.faint : colors.ink,
-                  ),
-                ),
-              ),
-              Icon(
-                onRetry != null
-                    ? Icons.refresh_rounded
-                    : Icons.expand_more_rounded,
-                size: 18,
-                color: colors.muted,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

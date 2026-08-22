@@ -34,6 +34,23 @@
 /// [savedListingsProvider] and shows a dedicated sign-in prompt instead,
 /// with its own copy (SCREENS.md defines no string for this exact case, so
 /// this is written to match the app's voice rather than quoted from §3.17).
+///
+/// **…but not during a cold start (this run's audit §7.6).** On relaunch,
+/// `AuthSessionNotifier.build` returns `signedOut(isRestoring: true)` and
+/// validates the persisted token against `/me` on a microtask, so for one
+/// round trip `isSignedIn` is `false` for a user who *is* signed in. Reading
+/// that flag alone, this screen asserted "Sign in to see your saved
+/// listings" to somebody who had never signed out — an outright false
+/// statement with a button that would have made them do it again. Nothing
+/// in `lib/` read [AuthSessionState.isRestoring] before this change.
+///
+/// While the restore is in flight the body renders
+/// [SavedListingsSkeletonGrid] — the same placeholder a pending
+/// `savedListingsProvider` fetch shows — because that is honestly what the
+/// state is: the answer has not arrived. It resolves into either the real
+/// grid or the sign-in prompt within the one round trip
+/// (`auth_session.dart`'s 8s ceiling is a failure bound, not a typical
+/// wait), and no copy makes a claim about the user in the meantime.
 library;
 
 import 'package:flutter/material.dart';
@@ -45,6 +62,12 @@ import '../../../navigation/auth_session.dart';
 import '../../../navigation/route_paths.dart';
 import '../../../theme/theme.dart';
 import 'saved_listings_grid.dart';
+
+/// Which of the three bodies below to build. Named rather than inlined as a
+/// pair of booleans so the "restoring" case reads as its own state and not
+/// as a qualifier on "signed out" — conflating the two is exactly the bug
+/// this file's §7.6 note describes.
+enum _Body { restoring, grid, signedOut }
 
 class SavedListingsScreen extends ConsumerWidget {
   const SavedListingsScreen({
@@ -59,8 +82,17 @@ class SavedListingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final isSignedIn = ref.watch(
-      authSessionProvider.select((state) => state.isSignedIn),
+    // One `select` over both flags rather than two: they change together
+    // (the restore resolving flips `isRestoring` off and, usually,
+    // `isSignedIn` on) and a single record keeps that one rebuild.
+    final body = ref.watch(
+      authSessionProvider.select(
+        (state) => state.isSignedIn
+            ? _Body.grid
+            : state.isRestoring
+            ? _Body.restoring
+            : _Body.signedOut,
+      ),
     );
 
     return Scaffold(
@@ -73,14 +105,20 @@ class SavedListingsScreen extends ConsumerWidget {
           children: [
             _NavRow(onBack: () => _pop(context)),
             Expanded(
-              child: isSignedIn
-                  ? SavedListingsGrid(
-                      onOpenListing: (adId) =>
-                          context.push('$branchPrefix/listing/$adId'),
-                    )
-                  : _SignedOutState(
-                      onSignIn: () => context.push(RoutePaths.login),
-                    ),
+              child: switch (body) {
+                _Body.grid => SavedListingsGrid(
+                  onOpenListing: (adId) =>
+                      context.push('$branchPrefix/listing/$adId'),
+                ),
+                // See the file doc comment's §7.6 note — this is "we don't
+                // know yet", not "you are logged out".
+                _Body.restoring => const SavedListingsSkeletonGrid(
+                  key: ValueKey('savedListingsRestoringSkeleton'),
+                ),
+                _Body.signedOut => _SignedOutState(
+                  onSignIn: () => context.push(RoutePaths.login),
+                ),
+              },
             ),
           ],
         ),
@@ -121,17 +159,35 @@ class _NavRow extends StatelessWidget {
         children: [
           Semantics(
             button: true,
-            label: AppLocalizations.of(context).savedListingsNavBackSemanticsLabel,
+            label: AppLocalizations.of(
+              context,
+            ).savedListingsNavBackSemanticsLabel,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onBack,
+              // `.nav .rnd{width:38px;height:38px;font-size:18px;
+              // color:var(--ink)}` — a 38px round glass chip inside the
+              // 44px tap target, not a bare glyph on the screen background,
+              // and an 18px glyph inside it: the same rule (and the same
+              // rendering) `shared/widgets/nav_row.dart` gives every other
+              // header in the app, `edit-profile`'s included.
               child: SizedBox(
                 width: 44,
                 height: 44,
-                child: Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: colors.ink,
+                child: Center(
+                  child: GlassSurface(
+                    variant: GlassVariant.onSurface,
+                    borderRadius: AppRadii.pill,
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    distortionWidth: 8,
+                    child: Icon(
+                      Icons.arrow_back_rounded,
+                      size: 18,
+                      color: colors.ink,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -171,11 +227,7 @@ class _SignedOutState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.favorite_border_rounded,
-              color: colors.faint,
-              size: 36,
-            ),
+            Icon(Icons.favorite_border_rounded, color: colors.faint, size: 36),
             const SizedBox(height: AppSpacing.base),
             Text(
               AppLocalizations.of(context).savedListingsSignInPromptMessage,

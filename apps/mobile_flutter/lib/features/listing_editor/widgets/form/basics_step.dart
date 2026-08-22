@@ -84,138 +84,149 @@ class BasicsStep extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final regionsAsync = ref.watch(regionsDataProvider);
 
+    final Widget cityField = regionsAsync.when(
+      loading: () => GlassPickerField(
+        key: const ValueKey('listingField-city'),
+        label: l10n.listingEditorCityFieldLabel,
+        value: null,
+        placeholder: l10n.filterRegionsLoadingPlaceholder,
+        errorText: fields.cityError,
+        enabled: false,
+      ),
+      error: (error, stackTrace) => GlassPickerField(
+        key: const ValueKey('listingField-city'),
+        label: l10n.listingEditorCityFieldLabel,
+        value: null,
+        placeholder: l10n.filterRegionsErrorPlaceholder,
+        errorText: fields.cityError,
+        enabled: false,
+        onRetry: () => ref.invalidate(regionsDataProvider),
+      ),
+      data: (regions) {
+        final currentCity = fields.city.text.trim().isEmpty
+            ? null
+            : fields.city.text;
+        return GlassPickerField(
+          key: const ValueKey('listingField-city'),
+          label: l10n.listingEditorCityFieldLabel,
+          value: currentCity,
+          placeholder: '',
+          errorText: fields.cityError,
+          onTap: () async {
+            final selected = await showGlassOptionPicker(
+              context,
+              title: l10n.filterCityPickerTitle,
+              options: regions.regions.map((r) => r.name).toList(),
+              current: currentCity,
+            );
+            if (selected == currentCity) return;
+            fields.city.text = selected!;
+            // A new City almost certainly invalidates whichever
+            // District was picked under the old one — District is
+            // *scoped* to City (§26's cascade), not just gated on it
+            // being non-empty, so carrying a stale District across a
+            // City change would silently mismatch the two on submit.
+            fields.district.text = '';
+            _handleChanged(l10n);
+          },
+        );
+      },
+    );
+
+    final Widget districtField = regionsAsync.when(
+      loading: () => GlassPickerField(
+        key: const ValueKey('listingField-district'),
+        label: l10n.listingEditorDistrictFieldLabel,
+        value: null,
+        placeholder: l10n.filterRegionsLoadingPlaceholder,
+        errorText: fields.districtError,
+        enabled: false,
+      ),
+      error: (error, stackTrace) => GlassPickerField(
+        key: const ValueKey('listingField-district'),
+        label: l10n.listingEditorDistrictFieldLabel,
+        value: null,
+        placeholder: l10n.filterRegionsErrorPlaceholder,
+        errorText: fields.districtError,
+        enabled: false,
+      ),
+      data: (regions) {
+        final currentCity = fields.city.text.trim().isEmpty
+            ? null
+            : fields.city.text;
+        final currentDistrict = fields.district.text.trim().isEmpty
+            ? null
+            : fields.district.text;
+        final selectedRegion = currentCity == null
+            ? null
+            : regions.regions.where((r) => r.name == currentCity).firstOrNull;
+        final districtEnabled = currentCity != null;
+        // See this file's own doc comment for why an unmatched City
+        // (`selectedRegion == null` despite non-empty text) falls back
+        // to the full district list rather than disabling the field.
+        final districtOptions = !districtEnabled
+            ? const <String>[]
+            : selectedRegion != null
+            ? regions.districts
+                  .where((d) => d.regionId == selectedRegion.id)
+                  .map((d) => d.name)
+                  .toList()
+            : regions.districts.map((d) => d.name).toList();
+
+        return GlassPickerField(
+          key: const ValueKey('listingField-district'),
+          label: l10n.listingEditorDistrictFieldLabel,
+          value: currentDistrict,
+          placeholder: districtEnabled
+              ? ''
+              : l10n.listingEditorDistrictDisabledHint,
+          errorText: fields.districtError,
+          enabled: districtEnabled,
+          onTap: districtEnabled
+              ? () async {
+                  final selected = await showGlassOptionPicker(
+                    context,
+                    title: l10n.filterDistrictPickerTitle,
+                    options: districtOptions,
+                    current: currentDistrict,
+                  );
+                  if (selected == currentDistrict) return;
+                  fields.district.text = selected!;
+                  _handleChanged(l10n);
+                }
+              : null,
+        );
+      },
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListingTextField(
           key: const ValueKey('listingField-title'),
           label: l10n.listingEditorTitleFieldLabel,
-          required: true,
           controller: fields.title,
           errorText: fields.titleError,
           textCapitalization: TextCapitalization.sentences,
           onChanged: () => _handleChanged(l10n),
         ),
         const SizedBox(height: AppSpacing.lg),
-        regionsAsync.when(
-          loading: () => GlassPickerField(
-            key: const ValueKey('listingField-city'),
-            label: l10n.listingEditorCityFieldLabel,
-            required: true,
-            value: null,
-            placeholder: l10n.filterRegionsLoadingPlaceholder,
-            errorText: fields.cityError,
-            enabled: false,
-          ),
-          error: (error, stackTrace) => GlassPickerField(
-            key: const ValueKey('listingField-city'),
-            label: l10n.listingEditorCityFieldLabel,
-            required: true,
-            value: null,
-            placeholder: l10n.filterRegionsErrorPlaceholder,
-            errorText: fields.cityError,
-            enabled: false,
-            onRetry: () => ref.invalidate(regionsDataProvider),
-          ),
-          data: (regions) {
-            final currentCity = fields.city.text.trim().isEmpty ? null : fields.city.text;
-            return GlassPickerField(
-              key: const ValueKey('listingField-city'),
-              label: l10n.listingEditorCityFieldLabel,
-              required: true,
-              value: currentCity,
-              placeholder: '',
-              errorText: fields.cityError,
-              onTap: () async {
-                final selected = await showGlassOptionPicker(
-                  context,
-                  title: l10n.filterCityPickerTitle,
-                  options: regions.regions.map((r) => r.name).toList(),
-                  current: currentCity,
-                );
-                if (selected == currentCity) return;
-                fields.city.text = selected!;
-                // A new City almost certainly invalidates whichever
-                // District was picked under the old one — District is
-                // *scoped* to City (§26's cascade), not just gated on it
-                // being non-empty, so carrying a stale District across a
-                // City change would silently mismatch the two on submit.
-                fields.district.text = '';
-                _handleChanged(l10n);
-              },
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        regionsAsync.when(
-          loading: () => GlassPickerField(
-            key: const ValueKey('listingField-district'),
-            label: l10n.listingEditorDistrictFieldLabel,
-            required: true,
-            value: null,
-            placeholder: l10n.filterRegionsLoadingPlaceholder,
-            errorText: fields.districtError,
-            enabled: false,
-          ),
-          error: (error, stackTrace) => GlassPickerField(
-            key: const ValueKey('listingField-district'),
-            label: l10n.listingEditorDistrictFieldLabel,
-            required: true,
-            value: null,
-            placeholder: l10n.filterRegionsErrorPlaceholder,
-            errorText: fields.districtError,
-            enabled: false,
-          ),
-          data: (regions) {
-            final currentCity = fields.city.text.trim().isEmpty ? null : fields.city.text;
-            final currentDistrict = fields.district.text.trim().isEmpty
-                ? null
-                : fields.district.text;
-            final selectedRegion = currentCity == null
-                ? null
-                : regions.regions.where((r) => r.name == currentCity).firstOrNull;
-            final districtEnabled = currentCity != null;
-            // See this file's own doc comment for why an unmatched City
-            // (`selectedRegion == null` despite non-empty text) falls back
-            // to the full district list rather than disabling the field.
-            final districtOptions = !districtEnabled
-                ? const <String>[]
-                : selectedRegion != null
-                ? regions.districts
-                      .where((d) => d.regionId == selectedRegion.id)
-                      .map((d) => d.name)
-                      .toList()
-                : regions.districts.map((d) => d.name).toList();
-
-            return GlassPickerField(
-              key: const ValueKey('listingField-district'),
-              label: l10n.listingEditorDistrictFieldLabel,
-              required: true,
-              value: currentDistrict,
-              placeholder: districtEnabled ? '' : l10n.listingEditorDistrictDisabledHint,
-              errorText: fields.districtError,
-              enabled: districtEnabled,
-              onTap: districtEnabled
-                  ? () async {
-                      final selected = await showGlassOptionPicker(
-                        context,
-                        title: l10n.filterDistrictPickerTitle,
-                        options: districtOptions,
-                        current: currentDistrict,
-                      );
-                      if (selected == currentDistrict) return;
-                      fields.district.text = selected!;
-                      _handleChanged(l10n);
-                    }
-                  : null,
-            );
-          },
+        // `.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}` — the
+        // mockup pairs City and District on one line (the same shape
+        // `details_step.dart` uses for Rooms/Area). Top-aligned so one
+        // field's error line doesn't drag the other's control down.
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: cityField),
+            const SizedBox(width: kListingFieldPairGap),
+            Expanded(child: districtField),
+          ],
         ),
         const SizedBox(height: AppSpacing.lg),
         ListingTextField(
           key: const ValueKey('listingField-address'),
           label: l10n.listingEditorAddressFieldLabel,
-          required: true,
           controller: fields.address,
           errorText: fields.addressError,
           onChanged: () => _handleChanged(l10n),
@@ -224,7 +235,6 @@ class BasicsStep extends ConsumerWidget {
         ListingTextField(
           key: const ValueKey('listingField-reference'),
           label: l10n.listingEditorReferenceFieldLabel,
-          required: true,
           controller: fields.reference,
           errorText: fields.referenceError,
           hintText: l10n.listingEditorReferenceHint,

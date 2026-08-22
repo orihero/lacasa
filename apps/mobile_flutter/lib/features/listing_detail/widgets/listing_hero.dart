@@ -14,11 +14,23 @@
 /// Tapping it still opens the gallery, which has its own honest "No photos
 /// available for this listing" state; that is a better answer than a dead
 /// tap target that silently does nothing.
+///
+/// **A video slide is labeled, not advertised as playable.** It used to
+/// carry `Icons.play_circle_outline_rounded` — the universal "press here
+/// and it plays" glyph — while the gallery it opens has no video player at
+/// all and answers with "Video preview isn't available in the gallery yet."
+/// Two taps from a promise to a refusal, on the richest asset a listing
+/// carries. Until a real player lands, the slide states the medium instead
+/// of promising an action: a neutral `videocam_outlined` placeholder plus a
+/// "Video" badge ([_VideoBadge]). The badge is not a button and does not
+/// look like one — the exit from a video slide belongs on the gallery's own
+/// tile, where the URL is in hand.
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../api/api.dart';
+import '../../../l10n/generated/app_localizations.dart';
 import '../../../shared/shared.dart';
 import '../../../theme/theme.dart';
 import '../../photo_gallery/data/gallery_item.dart';
@@ -76,10 +88,40 @@ class _ListingHeroState extends State<ListingHero> {
             children: [
               _slides(),
               const _HeroVeil(),
+              // Mirrors the slide counter's vertical arithmetic on the
+              // opposite edge, so the badge clears `.hero__nav`'s back
+              // button the same way the counter clears share/save. Gated on
+              // the *visible* slide: a hero whose second slide is a video
+              // must not claim the first one is.
+              if (_currentIsVideo)
+                Positioned(
+                  left: AppSpacing.lg,
+                  top:
+                      MediaQuery.of(context).padding.top +
+                      AppSpacing.base +
+                      42 +
+                      AppSpacing.sm,
+                  child: const _VideoBadge(
+                    key: ValueKey('listingHeroVideoBadge'),
+                  ),
+                ),
               if (_items.length > 1)
                 Positioned(
                   right: AppSpacing.lg,
-                  top: AppSpacing.lg + 44,
+                  // Below `.hero__nav`, which floats over this hero from
+                  // the screen's own Stack (`listing_detail_nav.dart`) at
+                  // `top: AppSpacing.base` *inside a SafeArea*, with 42px
+                  // buttons. The hero is the first child of an unpadded
+                  // ListView, so it starts at y=0 and receives no status-
+                  // bar inset of its own — a fixed offset therefore drew
+                  // the counter underneath the share/save buttons on every
+                  // device with a notch. Mirror the nav's own arithmetic
+                  // instead, plus a gap.
+                  top:
+                      MediaQuery.of(context).padding.top +
+                      AppSpacing.base +
+                      42 +
+                      AppSpacing.sm,
                   child: _SlideCounter(
                     current: _index + 1,
                     total: _items.length,
@@ -97,6 +139,12 @@ class _ListingHeroState extends State<ListingHero> {
       ),
     );
   }
+
+  /// True when the slide currently in view is a video, so the badge tracks
+  /// the carousel rather than the ad as a whole.
+  bool get _currentIsVideo =>
+      _index < _items.length &&
+      _items[_index].mediaType == AdMediaType.video;
 
   Widget _slides() {
     if (_items.isEmpty) {
@@ -117,14 +165,21 @@ class _ListingHeroState extends State<ListingHero> {
           behavior: HitTestBehavior.opaque,
           onTap: () => widget.onOpenGallery(i),
           // A video's poster frame isn't something the wire gives us, so a
-          // non-photo slide shows the placeholder here and is playable (or
-          // honestly refused) in the gallery, which owns that decision —
-          // see `gallery_media_view.dart`.
+          // non-photo slide shows the placeholder here; the gallery owns
+          // what happens next — see `gallery_media_view.dart`.
+          //
+          // `videocam_outlined`, never a play glyph: the placeholder names
+          // what the slide holds without claiming a tap starts playback
+          // this build cannot deliver (see this file's doc comment). The
+          // `unknown` media type keeps a question mark for the same reason
+          // — it is honestly unidentified, not a video.
           child: ListingPhoto(
             url: item.isPhoto ? item.url : null,
-            icon: item.isPhoto
-                ? Icons.image_rounded
-                : Icons.play_circle_outline_rounded,
+            icon: switch (item.mediaType) {
+              AdMediaType.photo => Icons.image_rounded,
+              AdMediaType.video => Icons.videocam_outlined,
+              AdMediaType.unknown => Icons.help_outline_rounded,
+            },
           ),
         );
       },
@@ -156,6 +211,42 @@ class _HeroVeil extends StatelessWidget {
             stops: [0.0, 0.30, 0.62, 1.0],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A glass pill naming the visible slide's medium. Deliberately the same
+/// `GlassVariant.onPhoto` chrome as [_SlideCounter] — informational hero
+/// furniture, not a control — because the one thing this badge must not do
+/// is read as "tap me to play". See this file's doc comment for the
+/// promise-then-refuse loop it replaced.
+class _VideoBadge extends StatelessWidget {
+  const _VideoBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final type = Theme.of(context).extension<LaCasaTypography>()!;
+
+    return GlassSurface(
+      variant: GlassVariant.onPhoto,
+      borderRadius: AppRadii.pill,
+      distortionWidth: 7,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.videocam_outlined,
+            size: 13,
+            color: Colors.white,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            AppLocalizations.of(context).listingHeroVideoBadgeLabel,
+            style: type.caption.copyWith(color: Colors.white),
+          ),
+        ],
       ),
     );
   }

@@ -11,14 +11,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/contact_mode.dart';
 import '../data/contact_repository.dart';
-import '../data/fixture_contact_repository.dart';
 import '../data/live_contact_repository.dart';
 
 final contactRepositoryProvider = Provider<ContactRepository>((ref) {
-  if (useLiveContactApi) {
-    return LiveContactRepository(LaCasaApi.create());
-  }
-  return const FixtureContactRepository();
+  return LiveContactRepository(LaCasaApi.create());
 });

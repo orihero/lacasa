@@ -6,14 +6,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
-import '../data/fixture_leads_repository.dart';
-import '../data/leads_mode.dart';
 import '../data/leads_repository.dart';
 import '../data/live_leads_repository.dart';
 
 final leadsRepositoryProvider = Provider<LeadsRepository>((ref) {
-  if (useLiveLeadsApi) {
-    return LiveLeadsRepository(LaCasaApi.create());
-  }
-  return FixtureLeadsRepository();
+  return LiveLeadsRepository(LaCasaApi.create());
 });

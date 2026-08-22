@@ -46,26 +46,62 @@ class StatusPill extends StatelessWidget {
     final (Color background, Color foreground) = switch (tone) {
       StatusTone.ok => (AppStatusColors.successBg, AppStatusColors.successText),
       StatusTone.info => (AppStatusColors.infoBg, AppStatusColors.infoText),
-      StatusTone.warn => (AppStatusColors.warningBg, AppStatusColors.warningText),
+      StatusTone.warn => (
+        AppStatusColors.warningBg,
+        AppStatusColors.warningText,
+      ),
       StatusTone.err => (AppStatusColors.errorBg, AppStatusColors.errorText),
       StatusTone.mute => (colors.sunk, colors.muted),
       StatusTone.accent => (AppStatusColors.accentStatusBg, AppAccent.color),
     };
 
+    // `.st{height:23px;border-radius:12px;padding:0 10px;gap:5px;
+    // font-size:9.5px;font-weight:600;letter-spacing:.2px}` with
+    // `.st::before{width:5px;height:5px;border-radius:50%;
+    // background:currentColor}` — the leading dot is on the base rule, so
+    // every status vocabulary in the source carries it, not just one.
+    // 9.5/600/+0.2 is exactly the `caption` role.
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 3),
+      height: 23,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      // No `alignment:` — a Container given one expands to its parent's
+      // width, and this pill is laid out beside text in Rows, Wraps and
+      // Columns that all expect it to be as wide as its own label. The
+      // Row below centres the content vertically by itself.
       decoration: BoxDecoration(color: background, borderRadius: AppRadii.pill),
-      child: Text(
-        label,
-        style: type.micro.copyWith(color: foreground, fontWeight: FontWeight.w700),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(
+              color: foreground,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: type.caption.copyWith(color: foreground),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// `AdStage` — Active (ok/green) / Sold (info/blue) / Draft (warn/amber),
-/// matching `apps/console`'s tone assignment exactly (see the web/console
-/// survey's wire-format table).
+/// `AdStage` — Active (ok/green) / Sold (mute/grey) / Draft (warn/amber).
+/// Active and Draft match `apps/console`'s tone assignment (see the
+/// web/console survey's wire-format table); **Sold deliberately diverges**
+/// from console's blue. The mobile mockup's only Sold pill is
+/// `.st st--mute`, and it reserves `.st--info` for the lead "New" pill —
+/// a sold listing is closed/inactive there, which grey says and blue does
+/// not.
 class AdStagePill extends StatelessWidget {
   const AdStagePill({super.key, required this.stage});
 
@@ -76,7 +112,7 @@ class AdStagePill extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final (label, tone) = switch (stage) {
       AdStage.active => (l10n.sharedAdStageActiveLabel, StatusTone.ok),
-      AdStage.sold => (l10n.sharedAdStageSoldLabel, StatusTone.info),
+      AdStage.sold => (l10n.sharedAdStageSoldLabel, StatusTone.mute),
       AdStage.draft => (l10n.sharedAdStageDraftLabel, StatusTone.warn),
       AdStage.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
@@ -107,8 +143,14 @@ class LeadStatusPill extends StatelessWidget {
         l10n.sharedLeadStatusNeedToCallBackLabel,
         StatusTone.warn,
       ),
-      LeadStatus.rejected => (l10n.sharedLeadStatusRejectedLabel, StatusTone.err),
-      LeadStatus.accepted => (l10n.sharedLeadStatusAcceptedLabel, StatusTone.ok),
+      LeadStatus.rejected => (
+        l10n.sharedLeadStatusRejectedLabel,
+        StatusTone.err,
+      ),
+      LeadStatus.accepted => (
+        l10n.sharedLeadStatusAcceptedLabel,
+        StatusTone.ok,
+      ),
       LeadStatus.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
     return StatusPill(label: label, tone: tone);
@@ -127,13 +169,22 @@ class PublishStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final (label, tone) = switch (status) {
-      PublishStatus.pending => (l10n.sharedPublishStatusPendingLabel, StatusTone.mute),
+      PublishStatus.pending => (
+        l10n.sharedPublishStatusPendingLabel,
+        StatusTone.mute,
+      ),
       PublishStatus.draftedAwaitingReview => (
         l10n.sharedPublishStatusAwaitingReviewLabel,
         StatusTone.warn,
       ),
-      PublishStatus.published => (l10n.sharedPublishStatusPublishedLabel, StatusTone.ok),
-      PublishStatus.failed => (l10n.sharedPublishStatusFailedLabel, StatusTone.err),
+      PublishStatus.published => (
+        l10n.sharedPublishStatusPublishedLabel,
+        StatusTone.ok,
+      ),
+      PublishStatus.failed => (
+        l10n.sharedPublishStatusFailedLabel,
+        StatusTone.err,
+      ),
       PublishStatus.unknown => (l10n.sharedStatusUnknownLabel, StatusTone.mute),
     };
     return StatusPill(label: label, tone: tone);

@@ -245,6 +245,12 @@ void main() {
           find.widgetWithText(TextField, 'Dilnoza Yusupova'),
           '',
         );
+        // Scroll it into view first. The default 800x600 test viewport is
+        // shorter than a real phone, and edit-profile's form is tall enough
+        // that Save sits just below the fold — tapping a finder that is off
+        // screen silently misses (it warns, then asserts nothing happened).
+        await tester.ensureVisible(find.text('Save'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
 
@@ -262,6 +268,8 @@ void main() {
         );
         // "Save" itself is localized (editProfileSaveButtonLabel) — the
         // English label would not exist on screen under uz.
+        await tester.ensureVisible(find.text('Saqlash'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Saqlash'));
         await tester.pumpAndSettle();
 
@@ -278,6 +286,8 @@ void main() {
           find.widgetWithText(TextField, '+998901112233'),
           '+99890111',
         );
+        await tester.ensureVisible(find.text('Сохранить'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Сохранить'));
         await tester.pumpAndSettle();
 

@@ -31,12 +31,41 @@ import '../../../shared/map/map_attribution.dart';
 import '../../../shared/map/map_defaults.dart';
 import '../../../shared/map/map_tile_layer_provider.dart';
 import '../../../theme/theme.dart';
+// The args type only, not the feature barrel: `map_view.dart` also exports
+// the screen, which drags in the marker-cluster package this section has no
+// use for. `map_view_args.dart` imports nothing but `api` and `route_paths`.
+import '../../map_view/map_view_args.dart';
 import '../formatters/listing_detail_formatters.dart';
 
 class ListingLocationSection extends ConsumerWidget {
-  const ListingLocationSection({super.key, required this.ad});
+  const ListingLocationSection({
+    super.key,
+    required this.ad,
+    this.branchPrefix = RoutePaths.home,
+  });
 
   final Ad ad;
+
+  /// Which shell branch this section was rendered inside — the same
+  /// contract [ListingDetailScreen] itself takes, defaulted the same way.
+  /// Handed to `map-view` so the preview card there pushes
+  /// `'$branchPrefix/listing/:id'` and a listing reached from Home stays on
+  /// Home's stack instead of grafting onto Search's.
+  final String branchPrefix;
+
+  /// Opens `map-view` on **this** listing.
+  ///
+  /// `focusAd`, not a one-element list: this tap asks "where is *this*
+  /// flat?", and the bare-list payload the section used to send made
+  /// `map-view` answer a different question — it fell through to search
+  /// mode, started the search fetch, and replaced this ad with up to 20
+  /// unrelated ones. See `map_view_args.dart`.
+  void _openMapView(BuildContext context) {
+    context.push(
+      RoutePaths.mapView,
+      extra: MapViewArgs(focusAd: ad, branchPrefix: branchPrefix),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -50,10 +79,12 @@ class ListingLocationSection extends ConsumerWidget {
       ad.city,
     ].where((part) => part.trim().isNotEmpty).join(', ');
 
+    // This detector is what makes the caption bar tappable; the map
+    // imagery above it needs `MapOptions.onTap` as well — see below.
     return GestureDetector(
       key: const ValueKey('listingLocationMap'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => context.push(RoutePaths.mapView, extra: <Ad>[ad]),
+      onTap: () => _openMapView(context),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: SizedBox(
@@ -73,6 +104,19 @@ class ListingLocationSection extends ConsumerWidget {
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.none,
                   ),
+                  // **The same destination as the enclosing detector, and
+                  // it has to be stated twice.** `InteractiveFlag.none`
+                  // turns off pan/zoom but does not stop `flutter_map`'s
+                  // interactive viewer from entering the gesture arena for
+                  // taps. Being the deeper recognizer it is accepted first,
+                  // so the ancestor `GestureDetector` is rejected and a tap
+                  // anywhere on the map imagery did nothing at all — only
+                  // the ~40px caption strip, which has no competing
+                  // recognizer over it, ever opened `map-view`. Routing
+                  // this callback to the same place restores the whole
+                  // 168px box as one target, which is what the
+                  // expand affordance in the caption promises.
+                  onTap: (_, _) => _openMapView(context),
                 ),
                 children: [
                   ref.watch(mapTileLayerProvider),

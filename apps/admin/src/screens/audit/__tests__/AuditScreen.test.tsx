@@ -3,26 +3,19 @@
  * is useAudit.test.ts, which drives the real api-client resource against a
  * fake Transport and asserts the outbound request).
  *
- * `@/data/useAudit`'s two hooks and `@/ui/icons` are mocked, following the
- * pattern apps/console/src/screens/leads/__tests__ established, and for the
- * same underlying defect: @tanstack/react-query and @phosphor-icons/react are
- * both hoisted to the repo ROOT (they satisfy every workspace's range with
- * one copy), where their internal `require("react")` finds the root's React
- * 18 — while this app renders through its own nested React 19. Two React
- * instances in one tree throws on the first hook or the first foreign
- * element. Confirmed here, not assumed: mounting a bare `<Button
- * icon={CheckIcon}>` fails with "A React Element from an older version of
- * React was rendered", and a real `<QueryClientProvider>` fails with "Cannot
- * read properties of null (reading 'useEffect')" — despite the `dedupe`
- * already present in vitest.config.ts, which does not reach these two.
- * Mocking exactly those two module boundaries leaves the screen, all of
- * src/ui, src/shell and the row/filter/drawer logic running for real.
+ * Only `@/data/useAudit`'s two hooks are mocked, so the query envelope can be
+ * posed exactly (pending, error-with-rows, error-without-rows, last page) —
+ * states that are otherwise only reachable by choreographing a server. The
+ * screen, every ui/ primitive, the row/filter/drawer logic, i18next and MUI
+ * all run for real. `auditRowsOf` is deliberately NOT mocked (importOriginal
+ * keeps it), so the page-flattening the table depends on is the real
+ * implementation.
  *
- * `auditRowsOf` is deliberately NOT mocked (importOriginal keeps it), so the
- * page-flattening the table depends on is the real implementation.
+ * Nothing else needs faking: unlike the deleted build, this app has exactly
+ * one React in the tree, so react-query's provider and lucide's icons mount
+ * normally.
  */
-import { act } from "react";
-import { fireEvent, screen, within } from "@testing-library/dom";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@lacasa/domain";
 import type { AdminAuditRow } from "@lacasa/api-client";
@@ -34,21 +27,12 @@ import {
   type AuditPage,
   type AuditQueryResult,
 } from "@/data/useAudit";
-import { render } from "@/test/render";
+import { renderWithProviders } from "@/test/render";
 import { AuditScreen } from "../AuditScreen";
 
 vi.mock("@/data/useAudit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/data/useAudit")>();
   return { ...actual, useAuditEvents: vi.fn(), useRefreshAudit: vi.fn() };
-});
-
-// A prop-less stand-in: forwarding Phosphor's `size`/`weight` onto a real
-// <svg> would only add "unknown DOM attribute" noise to every test's output.
-vi.mock("@/ui/icons", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/ui/icons")>();
-  const FakeIcon = () => <svg aria-hidden="true" data-testid="fake-icon" />;
-  const faked = Object.fromEntries(Object.keys(actual).map((key) => [key, FakeIcon]));
-  return { ...actual, ...faked };
 });
 
 const AGENT = { id: "9c6e41af-0000-4000-8000-00000000000a", fullName: "Javlon Karimov" };
@@ -95,6 +79,10 @@ function lastFilters(): AuditFilters | undefined {
   return vi.mocked(useAuditEvents).mock.calls.at(-1)?.[0];
 }
 
+function render() {
+  return renderWithProviders(<AuditScreen />, { withAuth: false });
+}
+
 function button(name: RegExp | string): HTMLButtonElement {
   return screen.getByRole("button", { name }) as HTMLButtonElement;
 }
@@ -115,16 +103,8 @@ function rows() {
   return within(screen.getByRole("table"));
 }
 
-function press(element: Element) {
-  act(() => {
-    fireEvent.click(element);
-  });
-}
-
 function selectType(value: string) {
-  act(() => {
-    fireEvent.change(screen.getByLabelText("Event type"), { target: { value } });
-  });
+  fireEvent.change(screen.getByLabelText("Event type"), { target: { value } });
 }
 
 let refresh: ReturnType<typeof vi.fn>;
@@ -151,7 +131,7 @@ describe("AuditScreen", () => {
       ]),
     });
 
-    render(<AuditScreen />);
+    render();
 
     expect(rows().getByText("3-room in Chilonzor")).toBeTruthy();
     expect(rows().getByText("Dilnoza Yusupova")).toBeTruthy();
@@ -165,7 +145,7 @@ describe("AuditScreen", () => {
   });
 
   it("states permanently that this is agent activity, not a full audit trail", () => {
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByText(/not a complete audit trail/i)).toBeTruthy();
     expect(screen.getByText(/not recorded anywhere/i)).toBeTruthy();
@@ -174,14 +154,14 @@ describe("AuditScreen", () => {
   it("keeps that caveat on screen when the log is empty, where it matters most", () => {
     mockQuery({ data: loaded([]) });
 
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByText("No activity recorded")).toBeTruthy();
     expect(screen.getByText(/not a complete audit trail/i)).toBeTruthy();
   });
 
   it("ships no severity or level column", () => {
-    render(<AuditScreen />);
+    render();
 
     const headers = screen
       .getAllByRole("columnheader")
@@ -192,14 +172,14 @@ describe("AuditScreen", () => {
   it("shows a skeleton, not an empty state, while the first page is in flight", () => {
     mockQuery({ data: undefined, isPending: true, isFetching: true });
 
-    const { container } = render(<AuditScreen />);
+    const { container } = render();
 
     expect(container.querySelectorAll("tbody tr").length).toBe(8);
     expect(screen.queryByText("No activity recorded")).toBeNull();
   });
 
   it("asks the data layer for the event type rather than filtering loaded rows", () => {
-    render(<AuditScreen />);
+    render();
 
     selectType("olx_crosspost_aborted");
 
@@ -210,9 +190,9 @@ describe("AuditScreen", () => {
   });
 
   it("narrows the log to a row's agent, then clears it again from the chip", () => {
-    render(<AuditScreen />);
+    render();
 
-    press(button(/Filter the log to Javlon Karimov/i));
+    fireEvent.click(button(/Filter the log to Javlon Karimov/i));
 
     expect(lastFilters()?.agentId).toBe(AGENT.id);
     expect(button(/Agent: Javlon Karimov/)).toBeTruthy();
@@ -222,7 +202,7 @@ describe("AuditScreen", () => {
     // events their coworkers caused, since `agentId` is the owning agent.
     expect(screen.getByText(/including their coworkers/i)).toBeTruthy();
 
-    press(button(/Agent: Javlon Karimov/));
+    fireEvent.click(button(/Agent: Javlon Karimov/));
 
     expect(lastFilters()?.agentId).toBeUndefined();
     expect(screen.queryByRole("button", { name: /Agent: Javlon Karimov/ })).toBeNull();
@@ -231,7 +211,7 @@ describe("AuditScreen", () => {
   it("offers no agent filter on an event that records none", () => {
     mockQuery({ data: loaded([makeRow({ agent: null })]) });
 
-    render(<AuditScreen />);
+    render();
 
     expect(button("No agent recorded on this event").disabled).toBe(true);
     expect(screen.getByText("unattributed")).toBeTruthy();
@@ -240,7 +220,7 @@ describe("AuditScreen", () => {
   it("tells an empty filter result apart from an empty log, and can clear back", () => {
     mockQuery({ data: loaded([]) });
 
-    render(<AuditScreen />);
+    render();
     selectType("ig_assist_aborted");
 
     expect(screen.getByText("No events match these filters")).toBeTruthy();
@@ -248,7 +228,7 @@ describe("AuditScreen", () => {
 
     // Two ways out of the dead end, and both have to work: the toolbar link
     // and the button inside the empty state.
-    press(firstButton("Clear filters"));
+    fireEvent.click(firstButton("Clear filters"));
 
     expect(lastFilters()).toEqual({ type: undefined, agentId: undefined });
     expect(screen.getByText("No activity recorded")).toBeTruthy();
@@ -262,8 +242,8 @@ describe("AuditScreen", () => {
       ]),
     });
 
-    render(<AuditScreen />);
-    press(firstButton("Inspect event details"));
+    render();
+    fireEvent.click(firstButton("Inspect event details"));
 
     expect(screen.getByText(/"channel": "olx"/)).toBeTruthy();
     // Full UUIDs, not the table's truncated prefixes — the point of the
@@ -271,12 +251,14 @@ describe("AuditScreen", () => {
     expect(screen.getByText("3f0a11c2-0000-4000-8000-000000000001")).toBeTruthy();
     expect(screen.getByText("a3f21e08-0000-4000-8000-00000000000b")).toBeTruthy();
 
-    press(firstButton("Inspect event details"));
+    // The first row's eye now reads "Hide event details", so the first
+    // "Inspect" control is the SECOND row's — one drawer at a time.
+    fireEvent.click(firstButton("Inspect event details"));
 
     expect(screen.queryByText(/"channel": "olx"/)).toBeNull();
     expect(screen.getByText(/"channel": "instagram"/)).toBeTruthy();
 
-    press(button("Hide event details"));
+    fireEvent.click(button("Hide event details"));
 
     expect(screen.queryByText(/"channel": "instagram"/)).toBeNull();
   });
@@ -284,8 +266,8 @@ describe("AuditScreen", () => {
   it("says so when an event carries no meta, rather than showing an empty drawer", () => {
     mockQuery({ data: loaded([makeRow({ meta: null })]) });
 
-    render(<AuditScreen />);
-    press(button("Inspect event details"));
+    render();
+    fireEvent.click(button("Inspect event details"));
 
     expect(screen.getByText("This event recorded no meta.")).toBeTruthy();
   });
@@ -299,7 +281,7 @@ describe("AuditScreen", () => {
       ]),
     });
 
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByText("Kamola Rustamova")).toBeTruthy();
     expect(screen.getByText("coworker · for Javlon Karimov")).toBeTruthy();
@@ -308,7 +290,7 @@ describe("AuditScreen", () => {
   it("marks a deleted subject as absent instead of leaving a blank cell", () => {
     mockQuery({ data: loaded([makeRow({ ad: null, lead: null })]) });
 
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByTitle(/has been deleted/i).textContent).toBe("—");
   });
@@ -316,8 +298,8 @@ describe("AuditScreen", () => {
   it("pages forward only while the server says there is more", () => {
     const query = mockQuery({ data: loaded([makeRow()], "cursor-50"), hasNextPage: true });
 
-    render(<AuditScreen />);
-    press(button("Load more"));
+    render();
+    fireEvent.click(button("Load more"));
 
     expect(query.fetchNextPage).toHaveBeenCalledTimes(1);
     // "1 events loaded", not "1 of ~n": the endpoint returns no total and the
@@ -328,7 +310,7 @@ describe("AuditScreen", () => {
   });
 
   it("marks the end of the list rather than leaving a dead pager", () => {
-    render(<AuditScreen />);
+    render();
 
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText("End of list")).toBeTruthy();
@@ -341,7 +323,7 @@ describe("AuditScreen", () => {
       error: new ApiError("forbidden", "Admin role required", 403),
     });
 
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByText("Admin role required")).toBeTruthy();
     expect(screen.queryByText("No activity recorded")).toBeNull();
@@ -349,7 +331,7 @@ describe("AuditScreen", () => {
     // be read as "the log is complete and quiet".
     expect(screen.getByText(/not a complete audit trail/i)).toBeTruthy();
 
-    press(button("Try again"));
+    fireEvent.click(button("Try again"));
     expect(query.refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -361,7 +343,7 @@ describe("AuditScreen", () => {
       error: new ApiError("internal", "Upstream timed out", 500),
     });
 
-    render(<AuditScreen />);
+    render();
 
     expect(screen.getByText("3-room in Chilonzor")).toBeTruthy();
     expect(within(screen.getByRole("alert")).getByText(/Upstream timed out/)).toBeTruthy();
@@ -369,12 +351,12 @@ describe("AuditScreen", () => {
   });
 
   it("refreshes the stream on demand, and says so while it is refetching", () => {
-    render(<AuditScreen />);
-    press(button(/^Refresh$/));
+    render();
+    fireEvent.click(button(/^Refresh$/));
     expect(refresh).toHaveBeenCalledTimes(1);
 
     mockQuery({ isFetching: true });
-    const { container } = render(<AuditScreen />);
+    const { container } = render();
     expect(within(container).getByRole("button", { name: /Refreshing/ })).toBeTruthy();
   });
 });

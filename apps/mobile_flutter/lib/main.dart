@@ -30,6 +30,13 @@
 /// `navigation/auth_session.dart`'s `AuthSessionNotifier` — see that file's
 /// "Startup restore" doc section for the full reasoning and the rejected
 /// alternative (blocking here too, onboarding-style).
+///
+/// **The third read is the workspace mode** — Browse or Work, i.e. which of
+/// the app's two shells a returning agent belongs in. It qualifies on
+/// exactly the onboarding grounds rather than the auth-token ones: the
+/// router's synchronous `redirect` needs the answer on the first route it
+/// resolves, and it is a single local keystore lookup with no network in
+/// sight. See `navigation/workspace_mode.dart`.
 library;
 
 import 'package:flutter/material.dart';
@@ -39,6 +46,7 @@ import 'api/api.dart';
 import 'app.dart';
 import 'features/onboarding/onboarding.dart';
 import 'navigation/auth_session.dart';
+import 'navigation/workspace_mode.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +68,16 @@ Future<void> main() async {
     hasPersistedAuthToken = false;
   }
 
+  // The third and last of this function's keystore reads, and it clears the
+  // same bar the other two do: `app_router.dart`'s synchronous `redirect`
+  // consults the workspace mode on the very first route it resolves, so a
+  // returning agent whose mode is only known a frame later would launch into
+  // the wrong shell and get yanked into the other one. `read()` fails closed
+  // to `WorkspaceMode.work` on its own (see workspace_mode.dart) — no
+  // try/catch needed here, unlike the token read above.
+  final workspaceModeRepository = SecureWorkspaceModeRepository();
+  final workspaceMode = await workspaceModeRepository.read();
+
   runApp(
     ProviderScope(
       overrides: [
@@ -68,6 +86,12 @@ Future<void> main() async {
           () => SeededOnboardingSeenNotifier(hasSeenOnboarding),
         ),
         hasPersistedAuthTokenProvider.overrideWithValue(hasPersistedAuthToken),
+        workspaceModeRepositoryProvider.overrideWithValue(
+          workspaceModeRepository,
+        ),
+        workspaceModeProvider.overrideWith(
+          () => SeededWorkspaceModeNotifier(workspaceMode),
+        ),
       ],
       child: const App(),
     ),

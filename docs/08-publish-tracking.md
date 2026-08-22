@@ -5,8 +5,8 @@
 > with worked JSON examples and the exact migration-plan diff.
 
 Design doc for a single data model + API surface covering every publish
-channel: Telegram, Instagram, YouTube, the new OLX extension-assisted flow,
-and the future Realting.uz feed. Builds on Phase E of
+channel: Telegram, Instagram, YouTube and the new OLX extension-assisted
+flow. Builds on Phase E of
 `docs/05-migration-plan.md`; see §3 for how it slots into the phase plan.
 
 ## 1. Why one model for four very different flows
@@ -17,7 +17,6 @@ and the future Realting.uz feed. Builds on Phase E of
 | Instagram | `POST /publish/instagram` | server (stored agent IG token) | carousel container published |
 | YouTube | client-side OAuth upload (unchanged) | browser, user's own Google session | video id exists, but server never saw it happen — needs a report-back call |
 | OLX | extension fills the real OLX form | **a human**, in their own logged-in tab | form is drafted; publish is a human act, not an API call |
-| Realting (future) | scheduled feed generation | Realting's crawler pulls the feed | ad appears in the generated XML/YML — a batch sync, not a per-ad click |
 
 Despite the different mechanics, the dashboard needs one answer to "is this
 ad live on channel X": a single `AdPublication` row per `(ad, channel)`,
@@ -35,7 +34,6 @@ enum PublishChannel {
   INSTAGRAM
   YOUTUBE
   OLX
-  REALTING
 }
 
 enum PublishStatus {
@@ -56,7 +54,7 @@ model AdPublication {
   externalUrl String? @map("external_url") // https://t.me/..., https://instagram.com/p/..., https://youtu.be/..., https://olx.uz/...
 
   // Free-form audit payload: TG chatIds used, IG creation-container id,
-  // the OLX field-map the LLM produced, the Realting feed row, etc.
+  // the OLX field-map the LLM produced, etc.
   payload Json? @default("{}")
 
   attempts      Int       @default(0)
@@ -64,7 +62,7 @@ model AdPublication {
   publishedAt   DateTime? @map("published_at") @db.Timestamptz()
   errorMessage  String?   @map("error_message")
 
-  // Who triggered this attempt — null for system/cron-driven channels (Realting).
+  // Who triggered this attempt — null once that user's account is deleted.
   requestedById String? @map("requested_by_id") @db.Uuid
   requestedBy   User?   @relation("PublicationRequestedBy", fields: [requestedById], references: [id], onDelete: SetNull)
 
@@ -104,9 +102,9 @@ Notes on the design choices:
   mirroring how `AD_SOLD` etc. work today — out of scope here but a natural
   follow-up).
 - **`payload Json?`** carries whatever is channel-specific instead of adding
-  five sets of nullable channel-specific columns: TG `chatIds` used, IG
-  container id mid-publish, the OLX LLM field-map for debugging/replay, the
-  Realting feed generation batch id. For `INSTAGRAM` specifically,
+  four sets of nullable channel-specific columns: TG `chatIds` used, IG
+  container id mid-publish, the OLX LLM field-map for debugging/replay. For
+  `INSTAGRAM` specifically,
   `payload.mechanism` is `"graph-api"` or `"extension-assisted"` — Instagram
   is the one channel with two publish mechanisms (`09-instagram-onboarding.md`),
   and the status grid should surface which one produced a given row.
@@ -116,9 +114,9 @@ Notes on the design choices:
   API-driven channel goes `PENDING → PUBLISHED|FAILED` directly. Modeling it
   as a status value (not a separate boolean) keeps the grid a single enum
   switch in the UI.
-- **`requestedById` is nullable with `SetNull`** — Realting rows are written
-  by a cron job with no acting user; TG/IG/OLX rows are written by the
-  agent/coworker who clicked publish (same pattern as `Ad.coworkerId`).
+- **`requestedById` is nullable with `SetNull`** — TG/IG/OLX rows are
+  written by the agent/coworker who clicked publish (same pattern as
+  `Ad.coworkerId`), and the row outlives that account being deleted.
 
 ## 3. Reconciling with the migration plan: Phase E extension + new Phase F
 
@@ -143,11 +141,6 @@ Recommendation: **split it.**
 - **Renumber the existing Phase F ("Cleanup") to Phase G.** It doesn't
   depend on OLX work and can still run in parallel/after, just shifted down
   numerically so "Phase F" consistently means the OLX work going forward.
-- **Realting.uz is not a phase yet** — flag it as a backlog item ("Phase H —
-  Realting feed sync", batch/passive, no per-click UI) and reserve the enum
-  value now (`REALTING` in `PublishChannel`) purely so the eventual feed
-  worker doesn't require another migration to add a channel. No routes for
-  it are being built in this doc.
 
 Suggested edit to `docs/05-migration-plan.md` (already applied — shown here
 for the reasoning trail):
@@ -186,12 +179,6 @@ for the reasoning trail):
     (+ YT client-side OAuth vars until YT publishing moves server-side).
  4. Update Vercel setup or move hosting; the SPA now needs the API deployed
     alongside it (out of scope for local-dev milestone).
-+
-+## Phase H (backlog, not scheduled) — Realting.uz feed sync
-+
-+Passive batch sync via generated XML/YML feed, not a per-ad click. Needs its
-+own design pass (field-mapping to Realting's schema, feed hosting, cron
-+cadence) before it becomes a real phase.
 ```
 
 ## 4. API additions
@@ -221,7 +208,7 @@ caller needs it).
 
 `GET /ads/:id/publish-status` response shape, concretely, for an ad that's
 live on Telegram, failed on Instagram, has an OLX draft awaiting review, and
-hasn't touched YouTube or Realting:
+hasn't touched YouTube:
 
 ```json
 {
@@ -230,8 +217,7 @@ hasn't touched YouTube or Realting:
     { "channel": "TELEGRAM",  "status": "PUBLISHED",              "externalUrl": "https://t.me/c/123/45", "externalId": "45",  "lastAttemptAt": "2026-07-29T10:00:00Z", "errorMessage": null },
     { "channel": "INSTAGRAM", "status": "FAILED",                 "externalUrl": null,                    "externalId": null,  "lastAttemptAt": "2026-07-29T10:01:00Z", "errorMessage": "IG token expired" },
     { "channel": "YOUTUBE",   "status": "PENDING",                "externalUrl": null,                    "externalId": null,  "lastAttemptAt": null,                   "errorMessage": null },
-    { "channel": "OLX",       "status": "DRAFTED_AWAITING_REVIEW","externalUrl": null,                    "externalId": null,  "lastAttemptAt": "2026-07-30T09:00:00Z", "errorMessage": null },
-    { "channel": "REALTING",  "status": "PENDING",                "externalUrl": null,                    "externalId": null,  "lastAttemptAt": null,                   "errorMessage": null }
+    { "channel": "OLX",       "status": "DRAFTED_AWAITING_REVIEW","externalUrl": null,                    "externalId": null,  "lastAttemptAt": "2026-07-30T09:00:00Z", "errorMessage": null }
   ]
 }
 ```
@@ -285,18 +271,3 @@ trail (`payload.fieldMap`, `attempts`, `lastAttemptAt`) all server-side and
 centralized — the extension is a thin DOM executor with no secrets and no
 business logic, which also makes it easy to review/reason about from a
 browser-store-listing security standpoint.
-
-## 6. Realting.uz (future, not built here)
-
-Different shape entirely, noted so the schema doesn't need to change again
-later: no per-ad endpoint. A scheduled worker walks all `stage=ACTIVE` ads,
-generates the XML/YML feed at a stable public URL (e.g.
-`GET /feeds/realting.xml`, public/unauthenticated — Realting's crawler pulls
-it, nothing pushes to Realting), and upserts `AdPublication(channel=
-REALTING)` per ad as it writes the feed: `PUBLISHED` once included, `FAILED`
-per-row if an ad fails Realting's required-field validation (e.g. missing
-`area`), with `errorMessage` holding the validation reason and `payload`
-holding the feed generation batch id/timestamp. `requestedById` stays null
-(cron-driven, no acting user). This is why `REALTING` is in the enum today
-even though no route consumes it yet — reserving the value avoids a second
-migration when Phase H actually starts.

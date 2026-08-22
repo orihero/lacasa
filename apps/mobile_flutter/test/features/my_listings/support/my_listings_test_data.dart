@@ -53,6 +53,24 @@ Ad myListingAd({
   });
 }
 
+/// One row of `GET /publish/status?adIds=…`'s per-ad list, built from the
+/// wire shape that route actually answers.
+///
+/// The batch route returns **only** `channel`/`status` — no `externalUrl`,
+/// `externalId`, `lastAttemptAt` or `errorMessage` (see
+/// `PublishResource.statusForAds`) — so this builder takes only those two.
+/// Filling the other fields in a fixture would let a test assert against a
+/// response the server does not send.
+ChannelStatus myListingsChannelStatus({
+  required Channel channel,
+  required PublishStatus status,
+}) {
+  return ChannelStatus.fromJson({
+    'channel': channel.wire,
+    'status': status.wire,
+  });
+}
+
 Coworker myListingsCoworker({
   required String id,
   required String fullName,

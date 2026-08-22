@@ -18,18 +18,13 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/api.dart';
-import 'favourite_ad_ids_mode.dart';
 import 'favourite_ad_ids_repository.dart';
-import 'fixture_favourite_ad_ids_repository.dart';
 import 'live_favourite_ad_ids_repository.dart';
 
 final favouriteAdIdsRepositoryProvider = Provider<FavouriteAdIdsRepository>((
   ref,
 ) {
-  if (useLiveFavouritesApi) {
-    return LiveFavouriteAdIdsRepository(LaCasaApi.create());
-  }
-  return const FixtureFavouriteAdIdsRepository();
+  return LiveFavouriteAdIdsRepository(LaCasaApi.create());
 });
 
 /// Optimistic favourite/save toggle: flips [state] immediately, then

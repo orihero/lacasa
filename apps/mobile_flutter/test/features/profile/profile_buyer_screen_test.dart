@@ -255,6 +255,193 @@ void main() {
     });
   });
 
+  // §7.5 — `RealtorProfile.status` was parsed off the wire and read by
+  // nothing, so a person who signed up as a Realtor (which creates a
+  // `role: "user"` account pending approval) landed here and was invited to
+  // apply again via the Google Form. A rejected applicant was told nothing.
+  group('realtor application status', () {
+    testWidgets('no application at all keeps §3.15\'s Register as Agent row', (
+      tester,
+    ) async {
+      await pumpScreen(tester, user: buyer);
+
+      expect(
+        find.byKey(const ValueKey('profileBuyerRegisterAsAgentRow')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('profileBuyerRealtorPendingCard')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a pending application replaces the row with an under-review '
+        'card and hides the Google Form', (tester) async {
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-pending',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          phoneNumber: '+998901112233',
+          realtor: realtorApplication(status: 'pending'),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('profileBuyerRealtorPendingCard')),
+        findsOneWidget,
+      );
+      expect(find.text('Realtor application under review'), findsOneWidget);
+      // The number §3.13's verification note promised to call.
+      expect(
+        find.text(
+          "We'll call +998901112233 — usually within one business day.",
+        ),
+        findsOneWidget,
+      );
+      // The whole point: no second application while the first is open.
+      expect(find.text('Register as Agent'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('profileBuyerRegisterAsAgentRow')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('an agency applicant is called on the office phone they gave', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-agency',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          phoneNumber: '+998901112233',
+          realtor: realtorApplication(
+            status: 'pending',
+            kind: 'agency',
+            agencyName: 'La Casa Realty',
+            officePhone: '+998712001020',
+          ),
+        ),
+      );
+
+      expect(
+        find.text(
+          "We'll call +998712001020 — usually within one business day.",
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an applicant with no number at all gets the no-phone copy', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-nophone',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          realtor: realtorApplication(status: 'pending'),
+        ),
+      );
+
+      expect(
+        find.text("We'll call you — usually within one business day."),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a pending card shows when the application was submitted', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-applied',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          phoneNumber: '+998901112233',
+          realtor: realtorApplication(
+            status: 'pending',
+            appliedAt: '2026-08-12T09:30:00.000Z',
+          ),
+        ),
+      );
+
+      // Local time, formatted through Formatters.date — asserted by prefix
+      // so the test doesn't depend on the runner's time zone.
+      expect(find.textContaining('Applied 1'), findsOneWidget);
+    });
+
+    testWidgets('a rejected application says so and offers Contact Us', (
+      tester,
+    ) async {
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-rejected',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          phoneNumber: '+998901112233',
+          realtor: realtorApplication(status: 'rejected'),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('profileBuyerRealtorRejectedCard')),
+        findsOneWidget,
+      );
+      expect(find.text('Realtor application not approved'), findsOneWidget);
+      expect(find.text('Register as Agent'), findsNothing);
+
+      await tester.tap(
+        find.byKey(const ValueKey('profileBuyerRealtorContactAction')),
+      );
+      await tester.pumpAndSettle();
+
+      // The §3.11 sheet, identified by its own subtitle — "Contact Us"
+      // itself is on screen twice at this point (the action and the sheet
+      // title).
+      expect(
+        find.textContaining('We welcome all your concerns'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an approved application falls back to today\'s row', (
+      tester,
+    ) async {
+      // Unreachable in practice — approval promotes the account to
+      // `role: "agent"`, which renders `profile-agent` — so this pins the
+      // deliberate "keep the previous behaviour" fallback rather than a
+      // fourth invented state. See profile_buyer_screen.dart.
+      await pumpScreen(
+        tester,
+        user: authUser(
+          id: 'user-approved',
+          fullName: 'Dilnoza Yusupova',
+          email: 'dilnoza@example.com',
+          role: 'user',
+          phoneNumber: '+998901112233',
+          realtor: realtorApplication(status: 'approved'),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('profileBuyerRegisterAsAgentRow')),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('layout holds at real phone widths', () {
     for (final size in const [
       (label: 'small android', size: Size(360, 800)),

@@ -1,6 +1,9 @@
 /// `leads-list` (SCREENS.md §30) — header "Leads", "+ Add new lead" →
 /// `create-lead`, a view-toggle icon → `leads-kanban`. Rows tap into
 /// `lead-detail` via [showLeadDetailSheet].
+///
+/// Also the home of [refreshLeads], the pull-to-refresh action both this
+/// screen and `leads-kanban` run — see that function's doc comment.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,6 +18,35 @@ import '../state/leads_providers.dart';
 import 'lead_detail_sheet.dart';
 import 'lead_list_row.dart';
 import 'leads_nav_actions.dart';
+
+/// Re-fetches [leadsProvider] and completes only once the new list has
+/// landed, so a [RefreshIndicator] holds its spinner for the round trip
+/// instead of snapping shut on the synchronous `invalidate`.
+///
+/// **Why the leads CRM needs this more than any other list.** Leads are
+/// team-wide, not per-user: a coworker's call, or an entry made in the web
+/// console, is a row this agent is expected to act on. [leadsProvider] is a
+/// plain (non-`autoDispose`) provider, so once it has loaded it is never
+/// rebuilt — switching tabs keeps it, backgrounding the app keeps it, and
+/// the only other `ref.invalidate(leadsProvider)` in the feature is the
+/// Retry button on the error state, which never renders while the list is
+/// merely stale. A lead added at 10am was invisible until the process was
+/// killed.
+///
+/// Shared by `leads-list` and `leads-kanban` rather than written twice
+/// because they are two views of exactly this one provider, one toggle tap
+/// apart; two copies would be two chances for the gesture to mean something
+/// different on each. Errors are swallowed: the screen's own `hasError`
+/// branch renders the failure with a Retry, and rejecting here would raise
+/// an unhandled zone error on top of it.
+Future<void> refreshLeads(WidgetRef ref) async {
+  ref.invalidate(leadsProvider);
+  try {
+    await ref.read(leadsProvider.future);
+  } catch (_) {
+    // Rendered by the caller's own error branch.
+  }
+}
 
 class LeadsListScreen extends ConsumerWidget {
   const LeadsListScreen({super.key});
@@ -67,6 +99,24 @@ class _LeadsListBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+
+    // The indicator wraps *every* state, not just the populated list. The
+    // empty state is the one this matters most on — "No leads yet." on a
+    // board a coworker added a lead to twenty minutes ago is precisely the
+    // stale read [refreshLeads] exists to clear — and a state with nothing
+    // to scroll gives a [RefreshIndicator] no notification to arm from, so
+    // those branches go through [RefreshableFill].
+    return RefreshIndicator(
+      key: const ValueKey('leadsList-refresh'),
+      onRefresh: () => refreshLeads(ref),
+      color: AppAccent.color,
+      backgroundColor: colors.card,
+      child: _body(context, ref),
+    );
+  }
+
+  Widget _body(BuildContext context, WidgetRef ref) {
     final leadsAsync = ref.watch(leadsProvider);
     final l10n = AppLocalizations.of(context);
 
@@ -78,7 +128,7 @@ class _LeadsListBody extends ConsumerWidget {
     if (leadsAsync.hasValue) {
       final leads = leadsAsync.value!;
       if (leads.isEmpty) {
-        return Center(
+        return RefreshableFill(
           child: FullWidthState(
             icon: Icons.groups_outlined,
             message: l10n.leadsEmptyMessage,
@@ -88,6 +138,9 @@ class _LeadsListBody extends ConsumerWidget {
       return ScrollConfiguration(
         behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
         child: ListView.builder(
+          // A team of two with three leads does not fill a phone, and a
+          // short list under the default physics accepts no drag at all.
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.fromLTRB(
             AppSpacing.screenGutter,
             AppSpacing.sm,
@@ -107,7 +160,7 @@ class _LeadsListBody extends ConsumerWidget {
     }
 
     if (leadsAsync.hasError) {
-      return Center(
+      return RefreshableFill(
         child: FullWidthState(
           icon: Icons.error_outline_rounded,
           message: l10n.leadsLoadErrorMessage,
@@ -142,4 +195,3 @@ class _LoadingList extends StatelessWidget {
     );
   }
 }
-

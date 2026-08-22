@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../api/api.dart';
 import '../../../../l10n/generated/app_localizations.dart';
+import '../../../../shared/platform/media_picker.dart';
 import '../../../../shared/shared.dart';
 
 enum MediaUploadStatus { uploading, done, failed }
@@ -32,14 +33,36 @@ class ListingMediaUpload {
   ListingMediaUpload({
     required this.id,
     required this.isVideo,
-    required this.previewBytes,
-    this.fileName,
+    required this.source,
   });
 
   final String id;
   final bool isVideo;
-  final Uint8List previewBytes;
-  final String? fileName;
+
+  /// The picked file itself, kept for the lifetime of the tile rather than
+  /// only its bytes.
+  ///
+  /// **Why the whole [PickedMedia] and not just `previewBytes`.** A failed
+  /// tile needs to be able to re-fire the *same* upload
+  /// (`photos_step.dart`'s `retryUpload`), and
+  /// `UploadsRepository.upload` takes a [PickedMedia] — it needs
+  /// `fileName`/`mimeType` for the presign call as much as `bytes` for the
+  /// PUT body. Holding the bytes alone would have made a per-tile retry
+  /// impossible without sending the user back through the OS picker, which
+  /// is not a retry at all. This costs nothing extra in memory:
+  /// [PickedMedia.bytes] is the exact same [Uint8List] instance the preview
+  /// already retained (a 70MB video's bytes were always held here), so this
+  /// field adds one object reference plus two short strings.
+  final PickedMedia source;
+
+  /// What the photo tile's thumbnail decodes — the picked bytes,
+  /// unmodified.
+  Uint8List get previewBytes => source.bytes;
+
+  /// The picked file's name for the video tile's title line, or `null` when
+  /// the picker handed back an empty one so the caller's own
+  /// `listingEditorVideoFallbackFileName` still applies.
+  String? get fileName => source.fileName.isEmpty ? null : source.fileName;
 
   MediaUploadStatus status = MediaUploadStatus.uploading;
 
@@ -142,14 +165,35 @@ class ListingFormFields {
   /// caller actually sends on `photos[]` (folded in with any pre-existing
   /// URLs `edit-listing`'s own grid already tracks). A still-uploading or
   /// failed item contributes nothing here; it is not lost, just not ready
-  /// to submit yet — `hasPendingUploads` tells a caller whether to wait.
+  /// to submit yet.
+  ///
+  /// **This list is only safe to submit once BOTH [hasPendingUploads] and
+  /// [hasFailedUploads] are false** — see [hasFailedUploads]'s own comment
+  /// for the bug that omitting the second check produced.
   List<String> get uploadedMediaUrls => [
     for (final m in media)
       if (m.status == MediaUploadStatus.done && m.url != null) m.url!,
   ];
 
+  /// A photo/video whose upload is still in the air — the caller should
+  /// wait rather than submit, since it has no URL for `photos[]` *yet*.
   bool get hasPendingUploads =>
       media.any((m) => m.status == MediaUploadStatus.uploading);
+
+  /// A photo/video whose upload **failed** — the caller must block submit,
+  /// since it will never have a URL for `photos[]` unless the user retries
+  /// or removes it.
+  ///
+  /// **Why this is a separate getter and not folded into
+  /// [hasPendingUploads].** They call for different words and a different
+  /// recovery: "wait a moment" versus "this one didn't upload". Both
+  /// wizards used to guard on [hasPendingUploads] alone, so a `failed` tile
+  /// sailed through the guard, contributed nothing to [uploadedMediaUrls],
+  /// and the ad was published without a photo the user could still see
+  /// sitting in the picker — behind a "Successfully created" toast, which
+  /// is the exact silent-drop this app's honesty rule exists to prevent.
+  bool get hasFailedUploads =>
+      media.any((m) => m.status == MediaUploadStatus.failed);
 
   String? titleError;
   String? cityError;

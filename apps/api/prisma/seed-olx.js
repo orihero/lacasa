@@ -1,8 +1,25 @@
-// Demo listings scraped from OLX.uz's public real-estate tree (8 subcategories:
-// apartments/houses/commercial/land x sale/rent, plus daily rentals) and mapped
-// onto the Ad model. Runs on top of `npm run seed` -- that one owns the
-// currency rate, the nearby-place options this script's nearPlaces values must
-// match, and agent@lacasa.dev.
+// Real listings scraped from OLX.uz's public real-estate tree and mapped onto
+// the Ad model: 48 ads, 6 in each of 8 subcategories (apartments/houses/
+// commercial/land x sale/rent, plus daily rentals), all in Tashkent across 11
+// city districts. Runs on top of `npm run seed` -- that one owns the currency
+// rate, the nearby-place options this script's nearPlaces values must match,
+// and agent@lacasa.dev. Use `npm run seed:olx` to run both in order.
+//
+// Every row in seed-data/olx-listings.json is a real, then-live OLX ad: its
+// `olxId` is the numeric id OLX prints on the detail page and `sourceUrl` is
+// the page it was read from, so any field here can be checked against the
+// original. Each was extracted and then independently re-fetched and verified
+// before being written -- but OLX ads are taken down all the time, so expect
+// `sourceUrl`s to 404 as the set ages. Re-scrape rather than hand-edit.
+//
+// ONE FIELD IS NOT SCRAPED: lat/lng. OLX detail pages do not expose listing
+// coordinates, so rather than leave the listing-detail map pin empty on every
+// ad, each row carries its *district's* approximate centre, offset by a small
+// deterministic amount derived from the olxId so that same-district pins do
+// not all stack on one point. These are neighbourhood-accurate, not
+// address-accurate, and nothing else in the seed data is approximated this
+// way. If real coordinates ever matter here, geocode `district` + `title`
+// rather than trusting these.
 //
 // Idempotent: every ad carries reference "OLX-<olxId>", and the run deletes any
 // ad already holding one of this file's references before recreating it, so
@@ -50,6 +67,19 @@ const AGENTS = [
     realtorKind: "SOLO",
   },
 ];
+
+// One plain USER alongside the agents. Every seeded account was an AGENT
+// before this, so there was no way to look at the app the way a buyer does
+// — the role gates on the notification bell, the favourite hearts and the
+// whole Work tab all read the other branch. The mobile login screen's
+// debug-only shortcut signs in as this account (see
+// `apps/mobile_flutter/lib/features/auth/widgets/login_screen.dart`), so
+// renaming it means updating that too.
+const BUYER = {
+  email: "user@lacasa.dev",
+  fullName: "Dev Buyer",
+  phoneNumber: "+998900000001",
+};
 
 // OLX prices in "у.е." (conventional units) are dollars in practice; the only
 // other currency the feed uses is UZS.
@@ -193,6 +223,22 @@ async function main() {
     );
   }
 
+  // `update` forces the role back to USER on a re-run: this account exists
+  // to be the buyer's-eye view, and a role changed by hand while testing
+  // would otherwise stick and quietly make the next run's "sign in as user"
+  // land somewhere else entirely.
+  const { email: buyerEmail, ...buyerRest } = BUYER;
+  await prisma.user.upsert({
+    where: { email: buyerEmail },
+    update: { role: "USER" },
+    create: {
+      ...buyerRest,
+      email: buyerEmail,
+      passwordHash: await bcrypt.hash("password123", 10),
+      role: "USER",
+    },
+  });
+
   const references = listings.map((listing) => `OLX-${listing.olxId}`);
   const stale = await prisma.ad.findMany({
     where: { reference: { in: references } },
@@ -233,6 +279,9 @@ async function main() {
   console.log(
     `OLX seed complete: ${listings.length} ads across ${agents.length} agents` +
       (removed ? ` (replaced ${removed} from a previous run)` : ""),
+  );
+  console.log(
+    `Accounts (password123): ${AGENTS.map((a) => a.email).join(", ")}, ${BUYER.email}`,
   );
   console.table(byBucket);
 }

@@ -51,10 +51,24 @@ List<FilterOption<AdType>> filterTypeOptions(AppLocalizations l10n) => [
   FilterOption(AdType.nonresidential, l10n.filterTypeNonresidentialOptionLabel),
 ];
 
-/// SCREENS.md marks `withFurniture` as this field's **default** — see
-/// `widgets/filter_sheet.dart`'s `_seedDefaults` for where that default is
-/// actually applied (on first open / after Reset, never silently
-/// overwriting a previously-applied `null`/"any" choice).
+/// SCREENS.md §3.5 marks `withFurniture` as this field's **default**, and
+/// this list deliberately does *not* honour that: on a search filter,
+/// "unset" means "any", so a pre-selected chip would apply a constraint
+/// the buyer never chose (the full argument lives in
+/// `widgets/filter_sheet.dart`'s library doc comment, under "No invented
+/// defaults"). The sheet therefore opens with neither chip lit and
+/// `null` as the field's value.
+///
+/// The follow-up that would honour the mockup's appearance *and* keep
+/// "apply nothing" reachable is to prepend an explicit `FilterOption(
+/// null, <"Any furniture">)` here (widening this to
+/// `List<FilterOption<Furniture?>>`, which `ChoiceChipGroup<Furniture?>`
+/// already accepts unchanged) so that "any" becomes a visible,
+/// selectable, initially-selected chip rather than an invisible empty
+/// state. That needs a new localized label — no existing ARB key fits,
+/// and `filterCityAnyOptionLabel`/`filterDistrictAnyOptionLabel`/
+/// `filterPriceAnyOptionLabel` are all field-specific — so it is blocked
+/// on l10n rather than on this file.
 List<FilterOption<Furniture>> filterFurnitureOptions(AppLocalizations l10n) => [
   FilterOption(Furniture.withFurniture, l10n.filterFurnitureWithOptionLabel),
   FilterOption(
@@ -63,8 +77,9 @@ List<FilterOption<Furniture>> filterFurnitureOptions(AppLocalizations l10n) => [
   ),
 ];
 
-/// SCREENS.md marks `notRepaired` as this field's **default** — same note
-/// as [filterFurnitureOptions].
+/// SCREENS.md §3.5 marks `notRepaired` as this field's **default**, which
+/// this list likewise does not honour — same reasoning, same blocked
+/// follow-up, as [filterFurnitureOptions].
 List<FilterOption<Repairment>> filterRepairOptions(AppLocalizations l10n) => [
   FilterOption(Repairment.notRepaired, l10n.filterRepairNotRepairedOptionLabel),
   FilterOption(Repairment.normal, l10n.filterRepairNormalOptionLabel),

@@ -14,9 +14,18 @@ import 'package:lacasa_mobile/features/filter/filter.dart';
 import 'package:lacasa_mobile/l10n/generated/app_localizations.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
+import '../../support/ambient_repository_overrides.dart';
+
 void main() {
   Widget openButton(Future<void> Function(BuildContext context) onOpen) {
     return ProviderScope(
+      // The repository providers now build live implementations around
+      // `LaCasaApi.create()` unconditionally, so anything the sheet touches
+      // incidentally (the live count row's `filterRepository`, the
+      // City/District cascade's `regionsRepository`) would fire real HTTP
+      // and hang `pumpAndSettle`. Nothing here asserts on filtered content,
+      // so the inert ambient set is exactly right.
+      overrides: [...ambientRepositoryOverrides()],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

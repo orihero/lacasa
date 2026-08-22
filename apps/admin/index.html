@@ -6,12 +6,12 @@
     <!-- Desktop-only surface by design: the control room is read at a desk,
          against a wide records table. Agents on the move get the Flutter app,
          agents at work get apps/console, buyers get apps/web. -->
-    <!-- `color-scheme: dark` on the document (not just the body background)
-         so the browser paints its own chrome — scrollbars, form controls, the
-         flash before the first paint — dark too. A white scrollbar down the
-         side of the control room is the exact "this looks like the console"
-         confusion the palette exists to prevent. -->
-    <meta name="color-scheme" content="dark" />
+    <!-- No `color-scheme: dark` meta any more. The previous build was a dark
+         surface and told the browser so, so its own chrome (scrollbars, form
+         controls, the flash before first paint) came up dark to match. This
+         rebuild is apps/web's console: white panels on the #f5f6fa canvas, so
+         the browser's light defaults are now the correct ones and forcing dark
+         would put a black scrollbar down the side of a white app. -->
     <title>La Casa — Control Room</title>
   </head>
   <body>

@@ -23,6 +23,7 @@ import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../../shared/support/fake_favourite_ad_ids_repository.dart';
+import '../../../support/ambient_repository_overrides.dart';
 import '../support/fake_listing_detail_repository.dart';
 import '../support/fake_webview_platform.dart';
 import '../support/listing_detail_test_ads.dart';
@@ -36,6 +37,7 @@ void main() {
     final container = ProviderContainer(
       retry: (_, _) => null,
       overrides: [
+        ...ambientRepositoryOverrides(favourites: false, listingDetail: false),
         listingDetailRepositoryProvider.overrideWithValue(repository),
         favouriteAdIdsRepositoryProvider.overrideWithValue(
           FakeFavouriteAdIdsRepository(),

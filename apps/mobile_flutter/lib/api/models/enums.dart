@@ -259,42 +259,159 @@ enum LeadStatus {
 /// Postgres enum, NOT lowercased like every other enum in this file — kept
 /// verbatim rather than normalized, since `[wire]` round-trips it straight
 /// into query strings/bodies unchanged.
+///
+/// **This enum holds two different kinds of member, and confusing them is
+/// the one expensive mistake available here.** The first four —
+/// [telegram], [instagram], [youtube], [olx] — are *wire*
+/// members: the server's `Channel` Postgres enum, one-for-one. The four
+/// after them — [threads], [facebookMarketplace], [x], [linkedin] — are
+/// *display-only* members: channels the product surfaces name and shows in
+/// their visibly-disabled state (WORK_TAB_CONTRACT.md ruling 7.13, the same
+/// treatment ruling 7.10 gave YouTube), for which `apps/api` has no route,
+/// no enum value and no publish call in this build. They exist so the
+/// publish surfaces can render an honest, localized "why not" line for each
+/// one instead of pretending the channel doesn't exist; they must never
+/// reach the network. [fromWire] cannot produce one, [wire] throws for one,
+/// and [allChannels] does not contain one — see each member below for the
+/// reasoning behind those three decisions.
 enum Channel {
   telegram,
   instagram,
   youtube,
   olx,
-  realting,
+  // ---- display-only from here down (no server representation) ----------
+  // Deliberately placed AFTER the wire members and BEFORE [unknown], and
+  // `unknown` stays last, which is the shape every enum in this file has.
+  threads,
+  facebookMarketplace,
+  x,
+  linkedin,
   unknown;
 
+  /// Deliberately gains **no** cases for the four display-only members.
+  /// The server's `Channel` enum has no `THREADS`/`FACEBOOK_MARKETPLACE`/
+  /// `X`/`LINKEDIN` value, so those strings can never arrive; adding arms
+  /// for them would document a wire contract `apps/api` does not have, and
+  /// would make a display-only channel reachable from decoded JSON — which
+  /// is precisely what keeps a permanently-PENDING publish-status row from
+  /// being possible. Anything unrecognized keeps falling through to
+  /// [unknown], the same forward-compatibility default every enum here has.
   static Channel fromWire(String? value) => switch (value) {
     'TELEGRAM' => Channel.telegram,
     'INSTAGRAM' => Channel.instagram,
     'YOUTUBE' => Channel.youtube,
     'OLX' => Channel.olx,
-    'REALTING' => Channel.realting,
     _ => Channel.unknown,
   };
 
+  /// Invariant across this whole file: `wire` returns a string the live API
+  /// understands. The four display-only members have no such string, so
+  /// they throw rather than invent one — following [unknown]'s own
+  /// precedent below. Returning `'THREADS'` instead would quietly break the
+  /// invariant and ship a request the API 400s on; throwing keeps the type
+  /// honest, and because this switch is exhaustive the compiler forces any
+  /// future caller to confront the arm rather than discover it in prod.
+  /// Blast radius today is nil: nothing calls `wire` on a display-only
+  /// channel, and nothing can, since [fromWire] can never produce one.
   String get wire => switch (this) {
     Channel.telegram => 'TELEGRAM',
     Channel.instagram => 'INSTAGRAM',
     Channel.youtube => 'YOUTUBE',
     Channel.olx => 'OLX',
-    Channel.realting => 'REALTING',
+    Channel.threads => throw StateError(
+      'Channel.threads is display-only — no server publish endpoint exists '
+      'for it in this build',
+    ),
+    Channel.facebookMarketplace => throw StateError(
+      'Channel.facebookMarketplace is display-only — no server publish '
+      'endpoint exists for it in this build',
+    ),
+    Channel.x => throw StateError(
+      'Channel.x is display-only — no server publish endpoint exists for it '
+      'in this build',
+    ),
+    Channel.linkedin => throw StateError(
+      'Channel.linkedin is display-only — no server publish endpoint exists '
+      'for it in this build',
+    ),
     Channel.unknown => throw StateError('Channel.unknown has no wire value'),
   };
 
   /// `GET /publish/ads/:adId/status`'s fixed response order
-  /// (`ALL_CHANNELS`) — always exactly these 5, in this order, synthesizing
+  /// (`ALL_CHANNELS`) — always exactly these 4, in this order, synthesizing
   /// a PENDING placeholder for any channel with no publish attempt yet.
+  ///
+  /// Do not append app-only display channels here — see
+  /// [publishSurfaceChannels]. This list is a description of *someone
+  /// else's* response, not of our UI: every entry in it becomes a row on
+  /// `publish-status`, and the server synthesizes that row as PENDING when
+  /// no attempt exists. A channel with no publish endpoint would therefore
+  /// grow a PENDING row on every ad forever, one that no action in the app
+  /// could ever clear. The guard test `test/api/channel_display_list_test
+  /// .dart` pins this list at exactly these 4 in exactly this order.
   static const List<Channel> allChannels = [
     Channel.telegram,
     Channel.instagram,
     Channel.youtube,
     Channel.olx,
-    Channel.realting,
   ];
+
+  /// App-side display order for the publish surfaces. **NOT a wire contract
+  /// and NOT a superset of [allChannels] — never feed this list to anything
+  /// that builds publish-status rows, or every ad grows a permanently-
+  /// PENDING row per app-only channel.**
+  ///
+  /// The two lists answer two different questions. [allChannels] answers
+  /// "what does `GET /publish/ads/:adId/status` return?" — the server owns
+  /// it and we only mirror it. This one answers "which channels does the
+  /// app *show* a publish row for, top to bottom?" — we own it outright,
+  /// and it is allowed to name channels the API has never heard of, because
+  /// each of those rows is rendered visibly disabled with its own honest
+  /// reason (ruling 7.13) rather than as a control that would 404.
+  ///
+  /// Order matches `publish_section.dart`'s shipped row order, with the
+  /// four display-only channels appended after [olx]. [unknown] is
+  /// deliberately absent: it is a decode fallback, never a surface.
+  static const List<Channel> publishSurfaceChannels = [
+    Channel.instagram,
+    Channel.telegram,
+    Channel.youtube,
+    Channel.olx,
+    Channel.threads,
+    Channel.facebookMarketplace,
+    Channel.x,
+    Channel.linkedin,
+  ];
+
+  /// The two channels `PublishResource` has a real server-to-server publish
+  /// call for (`publishInstagram`/`publishTelegram`, i.e. `POST
+  /// /publish/instagram` and `POST /publish/telegram`). This is the
+  /// predicate the publish
+  /// surfaces branch on for enabled-vs-visibly-disabled, so that "is this
+  /// button live?" reads as a documented fact about the API rather than as
+  /// a hardcoded `enabled: false` repeated once per row.
+  ///
+  /// [youtube] is false because `POST /publish/youtube` is report-back
+  /// only — there is no server-side upload to trigger from a button; [olx]
+  /// because cross-posting runs from the desktop extension; the four
+  /// display-only members because nothing exists behind them at all;
+  /// [unknown] because it is a fallback.
+  ///
+  /// Note this is **not** the same question `publish_status_screen.dart`'s
+  /// `_isRetryableChannel` asks, even though the two happen to list the
+  /// same members today: a retryable row additionally needs a *stored*
+  /// original request server-side. Don't collapse them.
+  bool get hasServerPublishPath => switch (this) {
+    Channel.telegram => true,
+    Channel.instagram => true,
+    Channel.youtube => false,
+    Channel.olx => false,
+    Channel.threads => false,
+    Channel.facebookMarketplace => false,
+    Channel.x => false,
+    Channel.linkedin => false,
+    Channel.unknown => false,
+  };
 }
 
 /// `AdPublication.status` — also the raw upper-case Postgres enum, same

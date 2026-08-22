@@ -149,6 +149,31 @@ class GlassSurface extends StatelessWidget {
         ? (material.borderColor ?? lineColor)
         : material.borderColor;
 
+    // **The lens takes its size from its child**, so a stated [width]/
+    // [height] alone does not make the *glass* that size — it only sizes
+    // the box around it. Left as-is, `GlassSurface(width: 40, height: 40,
+    // alignment: center, child: Icon(size: 19))` painted a 19dp disc
+    // floating in a 40dp box: every round glass button in the app
+    // (favourite hearts, header actions, nav back/close chips) rendered at
+    // its glyph's size rather than the size the source CSS states. This
+    // [Align] hands the lens the sized axes so it fills them, and keeps
+    // shrink-wrapping the axes the caller left unsized (factor `1.0`).
+    //
+    // Deliberately *inside* the lens, with the outer [Container]'s own
+    // [alignment] left untouched: that outer alignment also decides
+    // whether the box expands to its parent, which many call sites depend
+    // on, so the box's geometry is unchanged in every case — only the
+    // glass grows into the size that was already being reserved for it.
+    final Widget inner =
+        (alignment != null && (width != null || height != null))
+        ? Align(
+            alignment: alignment!,
+            widthFactor: width == null ? 1.0 : null,
+            heightFactor: height == null ? 1.0 : null,
+            child: child,
+          )
+        : child;
+
     final lens = LiquidGlassLens(
       style: LiquidGlassStyle(
         shape: LiquidGlassShape(
@@ -175,7 +200,7 @@ class GlassSurface extends StatelessWidget {
           chromaticAberration: material.chromaticAberration,
         ),
       ),
-      child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
+      child: Padding(padding: padding ?? EdgeInsets.zero, child: inner),
     );
 
     // The drop shadow is painted here, outside the lens: it must not be

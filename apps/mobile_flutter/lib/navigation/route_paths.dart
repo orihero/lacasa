@@ -4,24 +4,72 @@
 ///
 /// Grouped by shell branch per the build spec's route tree; top-level
 /// (root-navigator) routes listed last.
+///
+/// **Two shells, two branch sets.** `app_router.dart` declares a *buyer*
+/// shell (`/home`, `/search`, `/agents`, `/profile` — 4 tabs, branch indices
+/// 0–3) and an *agent* shell (everything under `/work` — 5 tabs, its own
+/// branch indices 0–4). Which one a session is in is decided by role plus
+/// `navigation/workspace_mode.dart`'s Browse/Work switch, never by a path
+/// appearing in both trees: every path below belongs to exactly one shell.
 abstract final class RoutePaths {
-  // ---- Branch 0: Home -------------------------------------------------
+  // ---- Buyer shell, branch 0: Home ------------------------------------
   static const home = '/home';
   static const homeListingDetail = '/home/listing/:id';
   static const homeAgentProfile = '/home/agent/:id';
   static const homeNotifications = '/home/notifications';
 
-  // ---- Branch 1: Search -------------------------------------------------
+  // ---- Buyer shell, branch 1: Search --------------------------------------
   static const search = '/search';
   static const searchAgentProfile = '/search/agent/:id';
   static const searchListingDetail = '/search/listing/:id';
 
-  // ---- Branch 2: Work ----------------------------------------------------
+  // ==== AGENT SHELL =========================================================
+  // A second `StatefulShellRoute` with its own five branches, entered by an
+  // agent/coworker session whose workspace mode is `WorkspaceMode.work`. The
+  // buyer shell above is not mounted at the same time and vice versa — see
+  // `app_router.dart`'s two-shell note and `workspace_mode.dart`.
+  //
+  // Every route below is nested under the branch root that owns it, which is
+  // what makes a deep link (or a hardware Back) resolve to a stack with a
+  // real screen underneath it — `/work/my-listings/edit-listing/:id` builds
+  // `[my-listings, edit-listing]`, not a lone page over nothing. The old
+  // flat layout (`/work/edit-listing/:id`, a direct child of a `/work`
+  // placeholder page) is what M7 — a Back press stranding the user on a
+  // permanently blank screen — came out of; the nesting here is the
+  // structural fix, and it retired the self-correcting `_WorkPlaceholder`
+  // widget that used to paper over it.
+
   // `/work` itself is redirect-only (see app_router.dart's `_redirect`):
-  // coworker -> workMyListings, agent -> workDashboard.
+  // coworker -> workMyListings, agent -> workDashboard. It is deliberately
+  // NOT a declared route in either shell — every arrival is redirected
+  // before matching, which is why the back-arrow fallbacks scattered across
+  // the Work screens (`context.go(RoutePaths.work)`) always land on the
+  // right per-role screen rather than needing to know which one that is.
   static const work = '/work';
+
+  // ---- Agent shell, branch 0: Dashboard ------------------------------------
   static const workDashboard = '/work/dashboard';
+
+  // `notifications` (§22) is reached from the bell in any Work header, and
+  // the Dashboard is the branch that owns that header — nesting it here (as
+  // opposed to the old top-level `/work/notifications`) is what gives a bell
+  // tap something to go back to.
+  static const workNotifications = '/work/dashboard/notifications';
+
+  // ---- Agent shell, branch 1: My Ads ---------------------------------------
   static const workMyListings = '/work/my-listings';
+
+  // `my-listings`' row tap (outside thumbnail/edit icon) pushes
+  // `listing-detail` (§25) — every branch that can reach a listing carries
+  // its own copy of that route (see [agentsListingDetail]'s note on why).
+  static const workListingDetail = '/work/my-listings/listing/:id';
+
+  // §27/§29 — both reached from a `my-listings` row, and both nested under
+  // it for the back-stack reason in this section's header comment.
+  static const workEditListing = '/work/my-listings/edit-listing/:id';
+  static const workPublishStatus = '/work/my-listings/publish-status/:id';
+
+  // ---- Agent shell, branch 2: Leads ----------------------------------------
   static const workLeads = '/work/leads';
   static const workLeadsKanban = '/work/leads/kanban';
 
@@ -34,6 +82,8 @@ abstract final class RoutePaths {
   // `filter-sheet`'s own convention (opened via a `show...Sheet` function,
   // never `context.push`).
   static const workCreateLead = '/work/leads/create';
+
+  // ---- Agent shell, branch 3: Team -----------------------------------------
   static const workCoworkers = '/work/coworkers';
 
   // `add-coworker` (§37) is PUSHED, same reasoning as [workCreateLead]
@@ -43,30 +93,24 @@ abstract final class RoutePaths {
   // segment must be matched before a same-position dynamic one.
   static const workAddCoworker = '/work/coworkers/create';
   static const workCoworkerDetail = '/work/coworkers/:id';
-  static const workSettings = '/work/settings';
-  static const workConnectedAccounts = '/work/connected-accounts';
-  static const workEditListing = '/work/edit-listing/:id';
-  static const workPublishStatus = '/work/publish-status/:id';
 
-  // `notifications` (§22) and `messages` (§23) are each reachable from
-  // more than one branch in SCREENS.md — `notifications` from "Bell icon
-  // (any header)", `messages` from `profile-agent`'s row. Home already has
-  // its own `homeNotifications`/`profileMessages` below; these are the
-  // Work branch's own copies, so a bell/Messages tap from inside `/work/*`
-  // (e.g. `dashboard`'s header) pushes into the Work tab's own back stack
-  // instead of crossing into another tab — the same `branchPrefix`
-  // reasoning `agentsListingDetail`'s note documents, applied to these two
-  // instead of `listing-detail`.
-  static const workNotifications = '/work/notifications';
-  static const workMessages = '/work/messages';
+  // ---- Agent shell, branch 4: Profile --------------------------------------
+  // The agent's own `profile-agent` screen (§3.16), rendered by the same
+  // `ProfileAgentScreen` the buyer shell's `/profile` shows an agent in
+  // Browse mode — one widget, handed a different `branchPrefix` per shell so
+  // its rows push into whichever tree it is currently in. This is also where
+  // the Browse/Work switch lives.
+  static const workProfile = '/work/profile';
+  static const workProfileEdit = '/work/profile/edit';
+  static const workSettings = '/work/profile/settings';
+  static const workConnectedAccounts = '/work/profile/connected-accounts';
 
-  // `my-listings`' row tap (outside thumbnail/edit icon) pushes
-  // `listing-detail` (§25) — every other branch already carries its own
-  // copy of this route (see [agentsListingDetail]'s note on why); Work's
-  // was missing until this pass added it.
-  static const workListingDetail = '/work/listing/:id';
+  // `messages` (§23) is reached from `profile-agent`'s row, so it belongs to
+  // this branch. `notifications` (§22), reached from the header bell, sits
+  // under the Dashboard branch instead — see [workNotifications].
+  static const workMessages = '/work/profile/messages';
 
-  // ---- Branch 3: Agents --------------------------------------------------
+  // ---- Buyer shell, branch 2: Agents ---------------------------------------
   static const agents = '/agents';
   static const agentProfile = '/agents/:id';
 
@@ -86,7 +130,8 @@ abstract final class RoutePaths {
   // contract meaning something different per branch.
   static const agentsAgentProfile = '/agents/agent/:id';
 
-  // ---- Branch 4: Profile (one route; content switches on role) -----------
+  // ---- Buyer shell, branch 3: Profile (one route; content switches on
+  // role) --------------------------------------------------------------
   static const profile = '/profile';
   static const profileEdit = '/profile/edit';
   static const profileSaved = '/profile/saved';

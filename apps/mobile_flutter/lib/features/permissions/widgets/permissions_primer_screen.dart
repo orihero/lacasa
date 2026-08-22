@@ -86,8 +86,8 @@ class _PermissionsPrimerScreenState
     // a subtype of [PermissionGateway] — Dart only promotes a local
     // variable's type through a pattern match, not a bare `is` test,
     // when the tested type sits outside the variable's declared hierarchy.
-    if (ref.read(permissionGatewayProvider) case final PermissionStatusGateway
-        gateway) {
+    if (ref.read(permissionGatewayProvider)
+        case final PermissionStatusGateway gateway) {
       for (final entry in Map.of(_outcomes).entries) {
         if (entry.value == PermissionOutcome.unavailable ||
             entry.value == PermissionOutcome.granted) {
@@ -116,8 +116,8 @@ class _PermissionsPrimerScreenState
   /// always capable in practice; the type check just keeps this callable
   /// without a cast.
   Future<void> _openSettings() async {
-    if (ref.read(permissionGatewayProvider) case final PermissionStatusGateway
-        gateway) {
+    if (ref.read(permissionGatewayProvider)
+        case final PermissionStatusGateway gateway) {
       await gateway.openSettings();
       // No further state change here: whether the settings page actually
       // opened or the user changed anything is unknowable until they come
@@ -165,10 +165,34 @@ class _PermissionsPrimerScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.xxl),
+              // The mockup's `.hero-ic gl` — a 66px glass badge with an
+              // accent sparkle, the same shape `login`/`register` use
+              // (`auth_form_widgets.dart`'s `AuthHeroIcon`), followed by
+              // its own 20px bottom margin.
+              GlassSurface(
+                width: 66,
+                height: 66,
+                alignment: Alignment.center,
+                borderRadius: BorderRadius.circular(AppRadii.cardXl),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 29,
+                  color: AppAccent.color,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.section),
               Text(
-                // §3.2's header, with its ellipsis character.
+                // §3.2's header, with its ellipsis character. `.lead`
+                // (23px) — not `.hero`/`.nav__t`.
                 l10n.permissionsHeaderTitle,
-                style: type.heroTitle.copyWith(color: colors.ink),
+                style: type.displayLead.copyWith(color: colors.ink),
+              ),
+              // `.lead__p{margin-top:10px;font-size:12px;line-height:1.65;
+              // color:var(--muted)}` — `type.body` is that rule exactly.
+              const SizedBox(height: 10),
+              Text(
+                l10n.permissionsPrimerLeadBody,
+                style: type.body.copyWith(color: colors.muted),
               ),
               const SizedBox(height: AppSpacing.xxl),
               _PermissionRow(
@@ -188,17 +212,28 @@ class _PermissionsPrimerScreenState
                 onAllow: () => _request(AppPermission.notifications),
                 onOpenSettings: _openSettings,
               ),
-              const Spacer(),
-              _SecondaryButton(
-                label: l10n.permissionsNotNowButtonLabel,
-                onTap: _notNow,
+              // `.btns` sits directly under `.stack`, not pinned to the
+              // bottom of the screen — the pair is part of the copy block.
+              const SizedBox(height: AppSpacing.xxl),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SecondaryButton(
+                      label: l10n.permissionsNotNowButtonLabel,
+                      onTap: _notNow,
+                    ),
+                  ),
+                  // `.btns{gap:10px}` — between AppSpacing.md (8) and
+                  // AppSpacing.base (12), so stated outright.
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _PrimaryButton(
+                      label: l10n.permissionsContinueButtonLabel,
+                      onTap: _continue,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.base),
-              _PrimaryButton(
-                label: l10n.permissionsContinueButtonLabel,
-                onTap: _continue,
-              ),
-              const SizedBox(height: AppSpacing.xl),
             ],
           ),
         ),
@@ -231,27 +266,30 @@ class _PermissionRow extends StatelessWidget {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colors.card,
-        borderRadius: BorderRadius.circular(AppRadii.cardXl),
+    // `.lrow gl` — the same glass row, radius, padding and icon chip
+    // `shared/widgets/list_row.dart` already renders this element with;
+    // this screen was the one outlier drawing an opaque card instead.
+    return GlassSurface(
+      variant: GlassVariant.onSurface,
+      borderRadius: BorderRadius.circular(AppRadii.card),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.base,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 36,
+                height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: colors.sunk,
                   borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
-                child: Icon(icon, size: 19, color: AppAccent.color),
+                child: Icon(icon, size: 17, color: colors.ink),
               ),
               const SizedBox(width: AppSpacing.base),
               Expanded(
@@ -271,67 +309,88 @@ class _PermissionRow extends StatelessWidget {
                   ],
                 ),
               ),
+              // The `.btn--sm.btn--ink` pill sits inline at the row's
+              // right edge, vertically centred against the copy.
+              if (outcome == null) ...[
+                const SizedBox(width: AppSpacing.base),
+                _AllowButton(onTap: onAllow),
+              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.base),
-          _AllowControl(
-            outcome: outcome,
-            onAllow: onAllow,
-            onOpenSettings: onOpenSettings,
-          ),
+          // Once asked, the answer replaces the pill — but it stays under
+          // the copy rather than in the pill's slot: three of the five
+          // outcome strings ("Not allowed — you can change this in system
+          // settings" and friends) are full sentences that cannot be read
+          // inside a 44px pill's footprint.
+          if (outcome case final answered?) ...[
+            const SizedBox(height: AppSpacing.base),
+            _OutcomeStatus(outcome: answered, onOpenSettings: onOpenSettings),
+          ],
         ],
       ),
     );
   }
 }
 
-/// The per-row **"Allow"** button and, once asked, what came back. Every
-/// outcome gets its own honest line rather than collapsing to a checkmark —
-/// "we never asked", "you said no", "you can't say yes from here anymore",
-/// and "this build can't ask" are four different facts, and none may be
-/// displayed as another.
-class _AllowControl extends StatelessWidget {
-  const _AllowControl({
-    required this.outcome,
-    required this.onAllow,
-    required this.onOpenSettings,
-  });
+/// The per-row **"Allow"** pill, shown only before the row has been asked
+/// about — the mockup's `.btn.btn--sm.btn--ink`.
+class _AllowButton extends StatelessWidget {
+  const _AllowButton({required this.onTap});
 
-  final PermissionOutcome? outcome;
-  final VoidCallback onAllow;
-  final VoidCallback onOpenSettings;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<LaCasaColors>()!;
     final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final l10n = AppLocalizations.of(context);
 
-    return switch (outcome) {
-      null => Align(
-        alignment: Alignment.centerLeft,
-        child: Semantics(
-          button: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onAllow,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl,
-                vertical: AppSpacing.md,
-              ),
-              decoration: BoxDecoration(
-                color: colors.sunk,
-                borderRadius: AppRadii.pill,
-              ),
-              child: Text(
-                l10n.permissionsAllowButtonLabel,
-                style: type.label.copyWith(color: AppAccent.color),
-              ),
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        // `.btn--sm{height:44px;border-radius:22px;font-size:12.5px;
+        // width:auto;padding:0 18px}` + `.btn--ink`.
+        child: Container(
+          height: 44,
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          decoration: BoxDecoration(
+            color: colors.pill,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: AppShadows.selectedPillLarge,
+          ),
+          child: Text(
+            AppLocalizations.of(context).permissionsAllowButtonLabel,
+            style: type.rowTitle.copyWith(
+              fontSize: 12.5,
+              letterSpacing: 0.1,
+              color: colors.pillInk,
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// What came back once a row has been asked about. Every outcome gets its
+/// own honest line rather than collapsing to a checkmark — "you said no",
+/// "you can't say yes from here anymore", and "this build can't ask" are
+/// three different facts, and none may be displayed as another. (The
+/// fourth state, "we never asked", is the [_AllowButton] itself.)
+class _OutcomeStatus extends StatelessWidget {
+  const _OutcomeStatus({required this.outcome, required this.onOpenSettings});
+
+  final PermissionOutcome outcome;
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<LaCasaColors>()!;
+    final l10n = AppLocalizations.of(context);
+
+    return switch (outcome) {
       PermissionOutcome.granted => _StatusLine(
         icon: Icons.check_circle_rounded,
         color: AppStatusColors.successText,
@@ -419,6 +478,13 @@ class _StatusLine extends StatelessWidget {
   }
 }
 
+/// `.btn{font-size:13.5px;font-weight:600;letter-spacing:.1px}` — the
+/// footer-button label shared by both halves of the `.btns` pair.
+/// [LaCasaTypography.cardTitle] is the 13.5px step; the weight and tracking
+/// are the button variant's own.
+TextStyle _buttonLabel(LaCasaTypography type) =>
+    type.cardTitle.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.1);
+
 class _PrimaryButton extends StatelessWidget {
   const _PrimaryButton({required this.label, required this.onTap});
 
@@ -439,12 +505,16 @@ class _PrimaryButton extends StatelessWidget {
           height: 54,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: AppAccent.color,
+            // `.btn--acc` — the accent *gradient* plus its glow, the same
+            // material `auth_form_widgets.dart`'s AuthPrimaryButton uses,
+            // not a flat accent fill.
+            gradient: AppAccent.gradient,
             borderRadius: BorderRadius.circular(AppRadii.pillButton),
+            boxShadow: AppShadows.accentGlow,
           ),
           child: Text(
             label,
-            style: type.label.copyWith(color: Colors.white, fontSize: 15),
+            style: _buttonLabel(type).copyWith(color: Colors.white),
           ),
         ),
       ),
@@ -468,15 +538,20 @@ class _SecondaryButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          height: 50,
+        // `.btn--ghost glf` — `.btn--ghost` contributes only
+        // `color:var(--ink)`, so the surface is the flat-form glass (white
+        // with a hairline rim), not a grey fill.
+        child: GlassSurface(
+          variant: GlassVariant.flatForm,
+          // `.btn` is one height for every variant — the ghost half of a
+          // `.btns` pair is not shorter than the accent half.
+          height: 54,
           alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.sunk,
-            borderRadius: BorderRadius.circular(AppRadii.pillButton),
+          borderRadius: BorderRadius.circular(AppRadii.pillButton),
+          child: Text(
+            label,
+            style: _buttonLabel(type).copyWith(color: colors.ink),
           ),
-          child: Text(label, style: type.label.copyWith(color: colors.ink2)),
         ),
       ),
     );

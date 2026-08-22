@@ -308,9 +308,9 @@ export async function publishTelegramDirect(ctx, { adId, caption, imageUrls, cha
 // retry. YOUTUBE never had one -- reportYoutubeStatus is a report-back for
 // an upload the browser already performed under the user's own Google
 // session, so there is no server-side call to redo. OLX goes through the
-// browser extension with a human clicking OLX's own Publish button, and
-// REALTING is a cron-driven feed sync -- neither has a server-side "attempt"
-// this endpoint could repeat. apps/console permanently disables the same
+// browser extension with a human clicking OLX's own Publish button, so it
+// has no server-side "attempt" this endpoint could repeat either.
+// apps/console permanently disables the same
 // Retry affordance for the same reason; this map is what finally lets
 // Telegram/Instagram diverge from that blanket "disabled" state. Keyed by
 // the lowercase :channel route param, same convention CHANNELS above uses.
@@ -319,7 +319,6 @@ const NON_RETRYABLE_REASONS = {
   youtube:
     "YouTube has no server-side publish call to retry -- the browser performs the upload itself under your own Google session. Upload again and report the result.",
   olx: "OLX posting happens through the browser extension with a human reviewing and clicking Publish. Retry the cross-post from the extension instead.",
-  realting: "Realting listings sync through a scheduled feed, not a per-ad publish call. There is nothing here to retry.",
 };
 
 // The ownership signal retry actually has for a draft- id, closing the hole

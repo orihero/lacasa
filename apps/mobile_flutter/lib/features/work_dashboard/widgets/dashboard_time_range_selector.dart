@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../theme/theme.dart';
+import '../../../shared/shared.dart';
 import '../state/dashboard_providers.dart';
 
 /// [StatisticsFilter]'s display label — a top-level function taking
@@ -40,77 +40,27 @@ class DashboardTimeRangeSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(dashboardTimeRangeProvider);
+    final l10n = AppLocalizations.of(context);
 
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: _displayOrder.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final option = _displayOrder[index];
-          return _RangeChip(
-            key: ValueKey('dashboardRange-${option.name}'),
-            option: option,
-            selected: option == selected,
-            onTap: () =>
-                ref.read(dashboardTimeRangeProvider.notifier).select(option),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _RangeChip extends StatelessWidget {
-  const _RangeChip({
-    super.key,
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final StatisticsFilter option;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<LaCasaColors>()!;
-    final type = Theme.of(context).extension<LaCasaTypography>()!;
-    final foreground = selected ? colors.pillInk : colors.ink;
-    final label = _filterLabel(AppLocalizations.of(context), option);
-
-    final content = Text(
-      label,
-      style: type.rowTitle.copyWith(color: foreground),
-    );
-
-    return Semantics(
-      button: true,
+    // `.opts{display:flex;flex-wrap:wrap;gap:7px}` /
+    // `.opt{height:38px;border-radius:19px;padding:0 15px;font-size:12px;
+    // font-weight:500}` / `.opt.on{background:var(--pill);
+    // color:var(--pill-ink);box-shadow:0 8px 16px -8px rgba(21,21,27,.6)}`
+    // — exactly the box [ChoiceChipGroup] already renders, so this row
+    // reuses it rather than keeping a second, drifting copy of `.opt`.
+    // [allowDeselect] is `false`: the dashboard always has a range, so
+    // re-tapping the selected chip re-selects it instead of clearing to
+    // `null`.
+    return ChoiceChipGroup<StatisticsFilter>(
+      keyPrefix: 'dashboardRange',
+      options: [
+        for (final option in _displayOrder)
+          ChoiceOption(option, _filterLabel(l10n, option)),
+      ],
       selected: selected,
-      label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: selected
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: colors.pill,
-                  borderRadius: AppRadii.pill,
-                ),
-                alignment: Alignment.center,
-                child: content,
-              )
-            : GlassSurface(
-                variant: GlassVariant.onSurface,
-                borderRadius: AppRadii.pill,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                alignment: Alignment.center,
-                child: content,
-              ),
-      ),
+      allowDeselect: false,
+      onChanged: (option) =>
+          ref.read(dashboardTimeRangeProvider.notifier).select(option!),
     );
   }
 }

@@ -1,69 +1,118 @@
 /**
- * Button — the control room's `.btn` (mockups/build/web-admin.src.html
- * `.btn`/`.btn--a`/`.btn--g`/`.btn--ok`/`.btn--x`). Four variants, and which
- * one a control gets is a statement about consequence, not about emphasis:
+ * Button — MUI's Button wearing apps/web's five-line accent block.
  *
- *   · `ghost`   — the default. Reads, filters, exports, "cancel". Most
- *                 buttons on this surface are this, and that is correct.
- *   · `accent`  — amber. The one "do the main thing here" control per screen.
- *   · `approve` — green. Grants something (approve an application). Green
- *                 because it is the only colour an admin should ever be able
- *                 to hit twice without re-reading the row.
- *   · `danger`  — magenta. IRREVERSIBLE. Rejecting an application, demoting
- *                 the last admin, anything that cannot be undone from this
- *                 UI. Never use it for merely-unusual actions; if magenta
- *                 starts appearing on reversible controls it stops carrying
- *                 the warning, which is the whole reason the brand colour is
- *                 quarantined to this variant (see tailwind.config.js).
+ * apps/web has no shared Button: the rule
  *
- * `icon`/`iconRight` take an `IconComponent` reference, not a pre-built
- * element, so this component controls size uniformly. Weight defaults to
- * Phosphor's "regular" — a call site that needs a specific weight passes a
- * small inline wrapper (`icon={(p) => <CheckIcon weight="bold" {...p} />}`)
- * rather than this component guessing a weight per glyph.
+ *   button { padding: 12px 24px; background-color: #fece51; cursor: pointer; border: none; }
+ *
+ * is repeated verbatim in fourteen SCSS files (web-design-contract.md §2.1),
+ * and inside MUI surfaces it switches to `<Button variant="contained">`. This
+ * app is MUI end to end, so the rule lives once, in the theme, and this
+ * component's only job is to map a CONSEQUENCE onto it.
+ *
+ * Which variant a control gets is a statement about consequence, not emphasis:
+ *
+ *   · `ghost`   — the default, and correctly most of them: reads, filters,
+ *                 refreshes, "Try again", "Cancel". apps/web's quiet control is
+ *                 the filter bar's `1px solid #e0e0e0` box, so that is what a
+ *                 ghost button is. (Inside an MUI dialog apps/web's cancel is
+ *                 likewise an outlined MUI Button, not the page-body navy.)
+ *   · `accent`  — La Casa yellow. The one "do the main thing here" control per
+ *                 screen.
+ *   · `approve` — green. Grants something. The only colour an admin should ever
+ *                 be able to hit twice without re-reading the row.
+ *   · `danger`  — apps/web's `.delete-btn` red. IRREVERSIBLE: rejecting an
+ *                 application, demoting an admin. Never for merely-unusual
+ *                 actions — if it starts appearing on reversible controls it
+ *                 stops carrying the warning.
+ *
+ * `type` defaults to `"button"`, so no button in this app can submit a form by
+ * accident. `icon`/`iconRight` take a component reference, not an element, so
+ * every glyph in a button is 14px without the call site saying so.
  */
+import MuiButton from "@mui/material/Button";
+import type { SxProps, Theme } from "@mui/material/styles";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import clsx from "clsx";
 import type { IconComponent } from "./icons";
 
-const button = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-control border px-[13px] py-1.5 text-body font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc focus-visible:ring-offset-2 focus-visible:ring-offset-app disabled:cursor-not-allowed disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        ghost: "border-line bg-sunk text-ink hover:bg-card",
-        accent: "border-transparent bg-acc text-on-acc hover:bg-acc/90",
-        approve: "border-transparent bg-ok text-on-ok hover:bg-ok/90",
-        danger: "border-danger bg-danger-soft text-danger hover:bg-danger/25",
-      },
-    },
-    defaultVariants: { variant: "ghost" },
-  },
-);
+export type ButtonVariant = "ghost" | "accent" | "approve" | "danger";
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof button> {
+const MUI_VARIANT: Record<ButtonVariant, "outlined" | "contained"> = {
+  ghost: "outlined",
+  accent: "contained",
+  approve: "contained",
+  danger: "contained",
+};
+
+const MUI_COLOR: Record<ButtonVariant, "inherit" | "primary" | "error"> = {
+  ghost: "inherit",
+  accent: "primary",
+  approve: "inherit",
+  danger: "error",
+};
+
+/**
+ * Only what the theme cannot already say. `accent` and `danger` are empty
+ * because `containedPrimary` (yellow on black) and `palette.error`
+ * (rgb(216, 72, 53)) are already the theme's — restating them here is how one
+ * yellow becomes two.
+ */
+const VARIANT_SX: Record<ButtonVariant, SxProps<Theme>> = {
+  ghost: {
+    // apps/web's filter-control border, on the white panel, with the list-row
+    // hover underneath it. 11px/23px rather than 12px/24px so an outlined
+    // button and a contained one line up to the same box once the 1px border
+    // is counted.
+    padding: "11px 23px",
+    border: "1px solid #e0e0e0",
+    backgroundColor: "#ffffff",
+    color: "#2b2d42",
+    "&:hover": { backgroundColor: "#eeeeee", borderColor: "#e0e0e0" },
+  },
+  accent: {},
+  approve: {
+    // StatusCell's `accepted` green. apps/web has no green button of its own;
+    // this is its green, in the button box every other button here uses.
+    backgroundColor: "#28a745",
+    color: "#ffffff",
+    "&:hover": { backgroundColor: "#28a745" },
+  },
+  danger: {},
+};
+
+/**
+ * All native button props except `color`: React types it as the legacy HTML
+ * string attribute, MUI types it as its own palette union, and the two cannot
+ * be spread onto the same element. The variant decides the colour here anyway.
+ */
+export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "color"> {
+  variant?: ButtonVariant;
   icon?: IconComponent;
   iconRight?: IconComponent;
   children?: ReactNode;
 }
 
 export function Button({
-  variant,
+  variant = "ghost",
   icon: Icon,
   iconRight: IconRight,
   children,
-  className,
   type = "button",
+  className,
   ...props
 }: ButtonProps) {
   return (
-    <button type={type} className={clsx(button({ variant }), className)} {...props}>
-      {Icon ? <Icon size={13} className="shrink-0" /> : null}
+    <MuiButton
+      type={type}
+      variant={MUI_VARIANT[variant]}
+      color={MUI_COLOR[variant]}
+      className={className}
+      sx={{ gap: "8px", ...VARIANT_SX[variant] }}
+      {...props}
+    >
+      {Icon ? <Icon size={14} aria-hidden="true" /> : null}
       {children}
-      {IconRight ? <IconRight size={13} className="shrink-0" /> : null}
-    </button>
+      {IconRight ? <IconRight size={14} aria-hidden="true" /> : null}
+    </MuiButton>
   );
 }

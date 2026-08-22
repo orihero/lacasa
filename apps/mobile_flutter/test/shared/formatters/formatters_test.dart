@@ -67,12 +67,12 @@ void main() {
   group('Formatters.price', () {
     test('a USD sale ad has no suffix', () {
       final ad = Ad.fromJson(_adJson(price: 78000, category: 'sale'));
-      expect(Formatters.price(ad), r'$ 78,000');
+      expect(Formatters.price(ad), r'$78,000');
     });
 
     test('a USD rent ad gets a /month suffix', () {
       final ad = Ad.fromJson(_adJson(price: 900, category: 'rent'));
-      expect(Formatters.price(ad), r'$ 900/month');
+      expect(Formatters.price(ad), r'$900/month');
     });
 
     // Regression coverage for finding M1: a UZS ad must never render with
@@ -99,7 +99,33 @@ void main() {
       final ad = Ad.fromJson(
         _adJson(price: 100, category: 'sale', priceType: 'not-a-currency'),
       );
-      expect(Formatters.price(ad), r'$ 100');
+      expect(Formatters.price(ad), r'$100');
+    });
+  });
+
+  // The map pin's label: rounded to fit a 30dp capsule, and — unlike
+  // Formatters.price — deliberately lossy, which is why the pin keeps the
+  // exact string for its semantics label.
+  group('Formatters.abbreviatedPrice', () {
+    test('thousands abbreviate to k, with no /month suffix on a rent ad', () {
+      final sale = Ad.fromJson(_adJson(price: 78000, category: 'sale'));
+      final rent = Ad.fromJson(_adJson(price: 1200, category: 'rent'));
+      expect(Formatters.abbreviatedPrice(sale), r'$78k');
+      expect(Formatters.abbreviatedPrice(rent), r'$1.2k');
+    });
+
+    test('under a thousand stays whole; millions abbreviate to M', () {
+      final small = Ad.fromJson(_adJson(price: 350, category: 'rent'));
+      final big = Ad.fromJson(_adJson(price: 1250000, category: 'sale'));
+      expect(Formatters.abbreviatedPrice(small), r'$350');
+      expect(Formatters.abbreviatedPrice(big), r'$1.3M');
+    });
+
+    test('a UZS ad abbreviates with the so\'m suffix, never a \$ prefix', () {
+      final ad = Ad.fromJson(
+        _adJson(price: 800000, category: 'sale', priceType: 'uzs'),
+      );
+      expect(Formatters.abbreviatedPrice(ad), "800k so'm");
     });
   });
 

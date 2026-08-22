@@ -1,21 +1,27 @@
 /**
  * CountBreakdown — a labelled count list with a proportional bar, used by the
  * overview's two distribution panels (the lead pipeline and the publication
- * outcomes). The mockup's `.bar`, in list form.
+ * outcomes).
  *
- * DELIBERATELY COLOURLESS. @/lib/labels gives every one of these buckets a
- * Tag tone, and rendering them here would put amber on `need_to_call_back` and
- * on `drafted_awaiting_review` — but on THIS screen amber is spent on the two
- * tiles an admin can act on, and a third and fourth amber mark two panels down
- * would dilute exactly the signal the tiles exist to carry. The bars are
+ * DELIBERATELY COLOURLESS. `@/lib/labels` gives several of these buckets a Tag
+ * tone, and rendering them here would put accent yellow on `need_to_call_back`
+ * and on `drafted_awaiting_review` — but on THIS screen the accent is spent on
+ * the two tiles an admin can act on, and a third and fourth mark two panels
+ * down would dilute exactly the signal those tiles exist to carry. The bars are
  * neutral ink; the tones stay meaningful on the screens that act on those rows.
+ * This is an intentional deviation, not an oversight.
  *
- * The bar is `aria-hidden` and carries no number of its own: it is a shape
- * that makes the distribution scannable, and the count next to it is the fact.
- * A row whose count did not arrive renders as an em dash with an empty bar
- * rather than as a confident zero-width zero (lib/format.ts's rule).
+ * Publication status and lead status also render as PLAIN TEXT here, never as a
+ * `Tag` (PRECEDENCE.md, factual correction 5) — which is why neither has a tone
+ * map in `@/lib/labels` at all.
+ *
+ * The bar is `aria-hidden` and carries no number of its own: it is a shape that
+ * makes the distribution scannable, and the count next to it is the fact. A row
+ * whose count did not arrive renders as an em dash with an empty bar rather
+ * than as a confident zero-width zero (lib/format.ts's rule).
  */
 import { formatCount } from "@/lib/format";
+import "./countBreakdown.scss";
 
 export interface BreakdownRow {
   /** Stable react key — the wire key of the bucket. */
@@ -33,20 +39,19 @@ export interface BreakdownRow {
  */
 export function CountBreakdown({ rows, total }: { rows: BreakdownRow[]; total: number }) {
   return (
-    <dl className="flex flex-col gap-2.5 px-[15px] py-[13px]">
+    <dl className="breakdown">
       {rows.map((row) => {
+        // The truthiness check on `row.value` is load-bearing: a value of 0 AND
+        // a value of undefined both give a share of 0, and a total of 0 gives
+        // every row a share of 0. The clamp guards a bucket that exceeds a
+        // stale total.
         const share = total > 0 && row.value ? Math.min(100, (row.value / total) * 100) : 0;
         return (
-          <div key={row.key} className="grid grid-cols-[1fr_auto] items-baseline gap-x-3">
-            <dt className="truncate text-small text-ink-2">{row.label}</dt>
-            <dd className="font-mono text-record tabular-nums text-ink">
-              {formatCount(row.value)}
-            </dd>
-            <div
-              aria-hidden="true"
-              className="col-span-2 mt-1.5 h-1.5 overflow-hidden rounded-act bg-sunk"
-            >
-              <span className="block h-full rounded-act bg-muted" style={{ width: `${share}%` }} />
+          <div className="breakdown__row" key={row.key}>
+            <dt className="breakdown__label">{row.label}</dt>
+            <dd className="breakdown__value">{formatCount(row.value)}</dd>
+            <div className="breakdown__bar" aria-hidden="true">
+              <span className="breakdown__fill" style={{ width: `${share}%` }} />
             </div>
           </div>
         );

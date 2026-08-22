@@ -21,17 +21,29 @@ class KanbanColumn extends StatelessWidget {
     required this.status,
     required this.leads,
     required this.pendingLeadIds,
-    required this.failedLeadIds,
+    required this.failedDestinations,
     required this.onCardTap,
     required this.onCardLongPress,
+    required this.onCardRetry,
   });
 
   final LeadStatus status;
   final List<Lead> leads;
   final Set<String> pendingLeadIds;
-  final Set<String> failedLeadIds;
+
+  /// lead id → the column that lead's last failed move attempt wanted, straight
+  /// off [KanbanMoveState.failedDestinations]. A card with no entry here shows
+  /// no failure row at all.
+  final Map<String, LeadStatus> failedDestinations;
+
   final ValueChanged<Lead> onCardTap;
   final ValueChanged<Lead> onCardLongPress;
+
+  /// Re-runs a failed move — the lead plus the destination its failed attempt
+  /// was aiming for, which is everything `leads_kanban_screen.dart` needs to
+  /// replay the very same move (gate sheet included, for the three gated
+  /// columns).
+  final void Function(Lead lead, LeadStatus destination) onCardRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -44,13 +56,27 @@ class KanbanColumn extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            // `.kb__n{margin-left:auto}` — the count sits against the
+            // column's right edge, whatever the pill's width. `spaceBetween`
+            // rather than a `Spacer`: a `Spacer` is a second (tight) flex
+            // child, so it would split the free space evenly with the
+            // `Flexible` below — halving the pill's ceiling *and* leaving
+            // the count stranded mid-row whenever the pill shrink-wraps.
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              LeadStatusPill(status: status),
-              const SizedBox(width: AppSpacing.sm),
+              // Flexible so the longest localized status label ("Qayta
+              // qo'ng'iroq qilish kerak") ellipsizes inside the pill
+              // instead of overflowing this row on a 360dp phone — the
+              // pill is `.st`-sized (23dp tall, `0 10px` + a 5px dot) and
+              // that vocabulary is the widest one it renders.
+              Flexible(child: LeadStatusPill(status: status)),
+              // Floor on the pill↔count gap for the widest-pill case, where
+              // `spaceBetween` has no free space left to distribute.
+              const SizedBox(width: AppSpacing.md),
               Text(
                 '${leads.length}',
                 style: LaCasaTypography.tabular(
-                  type.rowTitle,
+                  type.label,
                 ).copyWith(color: colors.muted),
               ),
             ],
@@ -65,7 +91,9 @@ class KanbanColumn extends StatelessWidget {
                     ),
                   )
                 : ScrollConfiguration(
-                    behavior: const MaterialScrollBehavior().copyWith(overscroll: false),
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      overscroll: false,
+                    ),
                     child: ListView.builder(
                       padding: EdgeInsets.only(
                         bottom: MediaQuery.of(context).padding.bottom + 100,
@@ -73,12 +101,16 @@ class KanbanColumn extends StatelessWidget {
                       itemCount: leads.length,
                       itemBuilder: (context, index) {
                         final lead = leads[index];
+                        final failedDestination = failedDestinations[lead.id];
                         return KanbanCard(
                           lead: lead,
                           pending: pendingLeadIds.contains(lead.id),
-                          failed: failedLeadIds.contains(lead.id),
+                          failedDestination: failedDestination,
                           onTap: () => onCardTap(lead),
                           onLongPress: () => onCardLongPress(lead),
+                          onRetry: failedDestination == null
+                              ? () {}
+                              : () => onCardRetry(lead, failedDestination),
                         );
                       },
                     ),

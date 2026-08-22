@@ -1,0 +1,13 @@
+// The 404's one piece of styling: the pathname, echoed back as a record.
+//
+// Everything else on this screen comes from ui/States' EmptyState, whose title
+// is a plain <div> rather than a heading — the topbar owns the page's one
+// <h1>, so a not-found screen contains no heading element of its own.
+@import "../responsive.scss";
+
+.not-found__path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: #8d99ae;
+  word-break: break-all;
+}

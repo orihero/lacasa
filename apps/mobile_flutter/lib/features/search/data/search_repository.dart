@@ -1,8 +1,9 @@
-/// Data-access seam for the `listing-search` screen (SCREENS.md §3.4). Two
-/// implementations exist: [FixtureSearchRepository] (bundled SCREENS.md
-/// §4.1 seed data, no network) and [LiveSearchRepository] (the real
-/// [LaCasaApi]) — see `search_mode.dart` for which one the app wires up by
-/// default and how to switch.
+/// Data-access seam for the `listing-search` screen (SCREENS.md §3.4). One
+/// implementation ships in the app — `LiveSearchRepository`, over the real
+/// [LaCasaApi]; the seam stays an interface so tests can substitute a
+/// double (`test/features/search/support/fake_search_repository.dart`).
+/// The bundled `FixtureSearchRepository` and the `search_mode.dart`
+/// compile-time switch this comment used to describe are both gone.
 ///
 /// **No longer client-side.** `GET /ads` gained `?q=`, a whitelisted
 /// `?sort=`, and opt-in keyset paging (`docs/04-api-spec.md`'s Ads
@@ -23,9 +24,7 @@ abstract class SearchRepository {
   /// One page of the filtered browse feed backing the results list. Already
   /// scoped to active listings by the server (`GET /ads` always filters
   /// `stage: "ACTIVE"` regardless of [filters] — see `ads_resource.dart`),
-  /// or, for the fixture, by construction (mirrors that same scoping so the
-  /// fixture and the live API never disagree about what a public search can
-  /// surface).
+  /// so no implementation of this seam needs to re-apply that scoping.
   ///
   /// [filters.q] is the free-text query (case-insensitive substring, OR'd
   /// across title/description/address/district/city — see [AdFilters.q]'s

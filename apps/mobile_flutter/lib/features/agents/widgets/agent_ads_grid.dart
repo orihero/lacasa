@@ -60,9 +60,7 @@ class AgentAdsGrid extends ConsumerWidget {
         child: LayoutBuilder(
           builder: (context, constraints) => RailRetryCard(
             width: constraints.maxWidth,
-            message: AppLocalizations.of(
-              context,
-            ).agentsAdsGridLoadErrorMessage,
+            message: AppLocalizations.of(context).agentsAdsGridLoadErrorMessage,
             onRetry: () => ref.invalidate(agentAdsProvider(agentId)),
           ),
         ),
@@ -99,6 +97,13 @@ class AgentAdsGrid extends ConsumerWidget {
   Widget _grid(List<Widget> children) {
     return GridView.count(
       crossAxisCount: 2,
+      // Not redundant. With a null `padding`, `BoxScrollView.buildSlivers`
+      // adopts the ambient `MediaQuery.padding`'s vertical insets as the
+      // grid's own — here that is the tab bar's height, re-added under the
+      // last row on top of the scroller's own deliberate bottom padding. The
+      // enclosing `SafeArea(bottom: false)` is why only the bottom half of
+      // this shows up. Same fix as `home/widgets/explore_nearby_grid.dart`.
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 13,
@@ -114,8 +119,9 @@ class _Shell extends StatelessWidget {
 
   final Widget child;
 
-  /// Rendered as "Ads List (n)" when known. Omitted while loading and on
-  /// error, where any number would be a claim the widget can't back up.
+  /// Rendered as the heading row's trailing "{n} active" when known.
+  /// Omitted while loading and on error, where any number would be a claim
+  /// the widget can't back up.
   final int? count;
 
   @override
@@ -128,13 +134,36 @@ class _Shell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            count == null
-                ? AppLocalizations.of(context).agentsAdsGridHeading
-                : AppLocalizations.of(
+          // A `.sec` row: `.sec h2` heading plus the trailing muted `.link`
+          // count ("24 active"), not one "Ads List (24)" string — the
+          // mockup styles the two halves differently and the count is
+          // dropped entirely when it isn't known.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Text(
+                  AppLocalizations.of(context).agentsAdsGridHeading,
+                  overflow: TextOverflow.ellipsis,
+                  style: type.sectionHeading.copyWith(color: colors.ink),
+                ),
+              ),
+              if (count != null) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  AppLocalizations.of(
                     context,
-                  ).agentsAdsGridHeadingWithCount(count!),
-            style: type.panelHeading.copyWith(color: colors.ink),
+                  ).agentsAdsGridActiveCountLabel(count!),
+                  // `.link{font-size:11.5px;font-weight:500;color:var(--muted)}`.
+                  style: type.specMeta.copyWith(
+                    fontSize: 11.5,
+                    color: colors.muted,
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: AppSpacing.base),
           child,

@@ -1,29 +1,35 @@
 /**
- * InlineBanner — a dismissible strip above the table for facts that arrived
- * AFTER the page rendered: "another admin already decided this one", "the
- * background refresh failed".
+ * InlineBanner — a strip above the table for facts that arrived AFTER the page
+ * rendered: "another admin already decided this one", "the background refresh
+ * failed".
  *
- * Why not ui/States' `Notice`, which is the same shape? Two reasons, and both
- * are about this surface's colour discipline rather than about layout:
+ * Why not `ui/States`' Notice, which is the same shape? Two reasons, and both
+ * are about meaning rather than layout:
  *
- *  · Notice only offers `acc` (amber) and `danger` (magenta). Amber on this
- *    surface means WAITING ON YOU (tailwind.config.js rule 2, labels.ts's tone
- *    allocation) and magenta means IRREVERSIBLE — a message saying a decision
- *    has already been taken is neither. Painting it amber would put a second
- *    kind of amber next to the pending queue's badge and cost that badge its
- *    meaning; painting it magenta would imply something was destroyed.
- *  · Notice is permanent. These two messages are transient by nature: the
- *    stale-decision one is answered by the refetch it announces, and a banner
- *    that cannot be cleared becomes wallpaper long before it stops being
+ *  · Notice offers only `acc` and `danger`. On this surface the accent yellow
+ *    means WAITING ON YOU and the `.delete-btn` red means IRREVERSIBLE — and a
+ *    message saying a decision has already been taken is neither. Painting it
+ *    yellow would put a second kind of yellow next to the pending queue's badge
+ *    and cost that badge its meaning; painting it red would imply something was
+ *    destroyed. So `neutral` is the app canvas grey with the plain hairline, and
+ *    `error` is apps/web's warm blush behind its settled-outcome red.
+ *  · Notice is permanent, and both of these messages are transient by nature:
+ *    the stale-decision one is answered by the refetch it announces, and a
+ *    banner that cannot be cleared becomes wallpaper long before it stops being
  *    displayed.
  *
- * So: `neutral` uses the plain sunk/hairline record palette, and `error` uses
- * the semantic `err` status colour — which is the settled-outcome red the tag
- * scale already uses, not the quarantined magenta.
+ * `role="status"`, NEVER `alert`. Both messages would interrupt a screen reader
+ * mid-sentence if announced assertively, and neither is urgent enough to justify
+ * that on a screen where the admin is part-way through a decision. The
+ * applications suite asserts that no element on the 409 path carries `alert` —
+ * the only `alert` this screen may ever render is the in-dialog error of a
+ * decision that genuinely failed.
  */
 import type { ReactNode } from "react";
-import clsx from "clsx";
-import { InfoIcon, WarningCircleIcon, XIcon } from "@/ui/icons";
+import { useTranslation } from "react-i18next";
+import { IconButton } from "@/ui/IconButton";
+import { CircleAlert, Info, X } from "@/ui/icons";
+import "./inlineBanner.scss";
 
 export type InlineBannerTone = "neutral" | "error";
 
@@ -37,34 +43,20 @@ export function InlineBanner({
   /** Renders the close affordance. Omit for a banner that must stay put. */
   onDismiss?: () => void;
 }) {
+  const { t } = useTranslation();
   const isError = tone === "error";
-  const Icon = isError ? WarningCircleIcon : InfoIcon;
+  const Icon = isError ? CircleAlert : Info;
 
   return (
-    <div
-      // `status`, never `alert`: both of these interrupt a screen reader mid
-      // sentence if announced assertively, and neither is urgent enough to
-      // justify that on a screen where the admin is mid-decision.
-      role="status"
-      className={clsx(
-        "mb-3.5 flex items-start gap-2.5 rounded-panel border px-3 py-2.5",
-        isError ? "border-err/40 bg-err-soft" : "border-line bg-sunk",
-      )}
-    >
-      <Icon
-        size={15}
-        className={clsx("mt-px flex-none", isError ? "text-err" : "text-muted")}
-      />
-      <div className="min-w-0 text-small leading-relaxed text-ink-2">{children}</div>
+    <div role="status" className={isError ? "inline-banner inline-banner--error" : "inline-banner"}>
+      <span className="inline-banner__icon">
+        <Icon size={16} aria-hidden="true" />
+      </span>
+      <div className="inline-banner__text">{children}</div>
       {onDismiss ? (
-        <button
-          type="button"
-          aria-label="Dismiss"
-          onClick={onDismiss}
-          className="-my-0.5 -mr-1 ml-auto grid h-[25px] w-[25px] flex-none place-items-center rounded-act text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-acc"
-        >
-          <XIcon size={12} />
-        </button>
+        <span className="inline-banner__dismiss">
+          <IconButton icon={X} label={t("dismiss")} size="sm" onClick={onDismiss} />
+        </span>
       ) : null}
     </div>
   );

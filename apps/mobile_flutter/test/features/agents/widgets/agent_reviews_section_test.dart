@@ -14,6 +14,7 @@ import 'package:lacasa_mobile/features/agents/widgets/agent_reviews_section.dart
 import 'package:lacasa_mobile/features/agents/widgets/rating_input.dart';
 import 'package:lacasa_mobile/navigation/auth_session.dart';
 import 'package:lacasa_mobile/navigation/route_paths.dart';
+import 'package:lacasa_mobile/shared/shared.dart';
 import 'package:lacasa_mobile/theme/theme.dart';
 
 import '../../auth/support/auth_test_data.dart';
@@ -434,6 +435,52 @@ void main() {
       expect(repo.deleteMyAgentReviewCallCount, 0);
       // Sheet stays open — cancelling the alert only dismisses the alert.
       expect(find.text('Edit Your Review'), findsOneWidget);
+    });
+  });
+
+  group('timezone', () {
+    // `AgentReview.createdAt` comes off the wire through
+    // `dateTimeFromWireTimestamp`, which builds its `DateTime` with
+    // `isUtc: true`, and `Formatters.date` reads plain calendar/clock fields
+    // off whatever it is handed. Without `.toLocal()` a review left at 09:00
+    // Tashkent rendered "04:00", and one left before 05:00 local rendered on
+    // the previous day — right beside the reviewer's name.
+    //
+    // The expectation is derived rather than hardcoded for the same reason
+    // `kanban_column_test.dart`'s timezone group derives its own: a test
+    // process's local zone is whatever the machine is set to and Dart fixes
+    // it at process start, so a literal would only be right on one machine.
+    // Under UTC this is a tautology; under every other zone — including this
+    // app's own UTC+5 market — it fails the moment the conversion is dropped.
+    testWidgets('a review tile dates the instant in local time', (
+      tester,
+    ) async {
+      const seconds = 1754784000;
+      await pumpSection(
+        tester,
+        repository: FakeAgentsRepository(
+          reviews: [
+            agentReview(
+              id: 'review-1',
+              rating: 5,
+              comment: 'Great agent.',
+              authorId: 'buyer-1',
+              authorFullName: 'A Buyer',
+              createdAtSeconds: seconds,
+            ),
+          ],
+        ),
+      );
+
+      final createdAt = DateTime.fromMillisecondsSinceEpoch(
+        seconds * 1000,
+        isUtc: true,
+      );
+      expect(
+        find.text(Formatters.date(createdAt.toLocal())),
+        findsOneWidget,
+        reason: 'the raw UTC clock fields must not reach the review tile',
+      );
     });
   });
 

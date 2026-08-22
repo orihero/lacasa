@@ -36,6 +36,11 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
   /// listen to the same drag at once.
   bool _swipeLocked = false;
 
+  /// SCREENS.md §5 ("Gallery swipe"): "tapping the image toggles the
+  /// thumbnail strip and counter chrome". The mockup's stage carries the
+  /// same `data-gal-chrome` hook.
+  bool _chromeVisible = true;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +61,22 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
+  }
+
+  /// A tap anywhere on the stage flips the chrome — except while the slide
+  /// is pinch-zoomed, where a tap is part of the zoom interaction and
+  /// hiding the way out mid-gesture would be hostile.
+  void _toggleChrome() {
+    if (_swipeLocked) return;
+    setState(() => _chromeVisible = !_chromeVisible);
+  }
+
+  /// SCREENS.md §5: "swipe down or tap 'X' dismisses to listing-detail".
+  /// Velocity-gated so a slow vertical drag inside a zoomed photo (which
+  /// pans instead) never closes the screen out from under the user.
+  void _onVerticalDragEnd(DragEndDetails details) {
+    if (_swipeLocked) return;
+    if ((details.primaryVelocity ?? 0) > 320) _close();
   }
 
   void _jumpTo(int index) {
@@ -83,57 +104,79 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        PageView.builder(
-          controller: _pageController,
-          physics: _swipeLocked
-              ? const NeverScrollableScrollPhysics()
-              : const PageScrollPhysics(),
-          itemCount: _items.length,
-          onPageChanged: (i) {
-            setState(() {
-              _currentIndex = i;
-              _swipeLocked = false;
-            });
-          },
-          itemBuilder: (context, i) {
-            return GalleryMediaView(
-              key: ValueKey('gallery-slide-$i-${_items[i].url}'),
-              item: _items[i],
-              onZoomChanged: (zoomed) {
-                if (i != _currentIndex) return;
-                if (zoomed != _swipeLocked) {
-                  setState(() => _swipeLocked = zoomed);
-                }
-              },
-            );
-          },
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _toggleChrome,
+          onVerticalDragEnd: _onVerticalDragEnd,
+          child: PageView.builder(
+            controller: _pageController,
+            physics: _swipeLocked
+                ? const NeverScrollableScrollPhysics()
+                : const PageScrollPhysics(),
+            itemCount: _items.length,
+            onPageChanged: (i) {
+              setState(() {
+                _currentIndex = i;
+                _swipeLocked = false;
+              });
+            },
+            itemBuilder: (context, i) {
+              return GalleryMediaView(
+                key: ValueKey('gallery-slide-$i-${_items[i].url}'),
+                item: _items[i],
+                onZoomChanged: (zoomed) {
+                  if (i != _currentIndex) return;
+                  if (zoomed != _swipeLocked) {
+                    setState(() => _swipeLocked = zoomed);
+                  }
+                },
+              );
+            },
+          ),
         ),
-        GalleryTopOverlay(
-          currentIndex: _currentIndex,
-          total: _items.length,
-          onClose: _close,
-        ),
-        if (_items.length > 1) ...[
-          Positioned(
-            left: AppSpacing.xl,
-            right: AppSpacing.xl,
-            bottom:
-                AppSpacing.lg +
-                GalleryThumbnailStrip.reservedHeight +
-                AppSpacing.sm,
-            child: Center(
-              child: GalleryPageDots(
-                total: _items.length,
-                currentIndex: _currentIndex,
+        // All of the chrome fades together on tap, and stops taking taps
+        // while it is out of the way.
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: !_chromeVisible,
+            child: AnimatedOpacity(
+              opacity: _chromeVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  GalleryTopOverlay(
+                    currentIndex: _currentIndex,
+                    total: _items.length,
+                    onClose: _close,
+                    onStep: (delta) => _jumpTo(_currentIndex + delta),
+                  ),
+                  if (_items.length > 1) ...[
+                    Positioned(
+                      left: AppSpacing.xl,
+                      right: AppSpacing.xl,
+                      bottom:
+                          GalleryThumbnailStrip.bottomInset +
+                          GalleryThumbnailStrip.reservedHeight +
+                          AppSpacing.sm,
+                      child: Center(
+                        child: GalleryPageDots(
+                          total: _items.length,
+                          currentIndex: _currentIndex,
+                        ),
+                      ),
+                    ),
+                    GalleryThumbnailStrip(
+                      items: _items,
+                      currentIndex: _currentIndex,
+                      onSelect: _jumpTo,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-          GalleryThumbnailStrip(
-            items: _items,
-            currentIndex: _currentIndex,
-            onSelect: _jumpTo,
-          ),
-        ],
+        ),
       ],
     );
   }
@@ -152,9 +195,7 @@ class _EmptyGallery extends StatelessWidget {
       children: [
         Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

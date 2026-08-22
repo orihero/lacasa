@@ -1,81 +1,47 @@
 /**
  * OverviewScreen.test — mounts the real screen against a mocked data layer
- * (`@/data/useOverview`), the same way apps/console tests its screens: the
- * hook is the seam, so no fetch, no QueryClient and no token storage need to
- * exist for a render.
+ * (`@/data/useOverview`): the hook is the seam, so no fetch, no token storage
+ * and no msw handler need to exist for a render. The hook itself is tested
+ * separately, in ./useOverview.test.tsx, where the thing under test is the
+ * cache key the rail's badges subscribe to.
  *
- * Two dependencies are replaced with stand-ins for a reason that has nothing
- * to do with this screen — react-router-dom and @phosphor-icons/react are
- * both hoisted to the workspace root and load the root's React 18 while every
- * file under src/ loads this app's nested React 19. See each `vi.mock` below;
- * apps/console's leads test hit the identical wall and documents the same
- * root cause.
+ * The deleted build's suite also mocked `react-router-dom` and the icon package
+ * to work around a React 18/19 hoisting conflict in that workspace. That
+ * conflict is gone — this app is on React 18 alongside apps/web, with exactly
+ * one React in the tree — so both stand-ins are dropped and the real router
+ * renders real `<a href>`s. Only the assertions were behaviour.
  *
- * Beyond the happy path, three of these tests exist to pin down rules that are
+ * Beyond the happy path, four of these tests exist to pin down rules that are
  * easy to "tidy" away later:
- *   · amber appears on exactly the two actionable tiles, and NOT on a queue of
- *     zero (StatTile's header);
+ *   · the emphasis appears on exactly the two actionable tiles, and NOT on a
+ *     queue of zero (StatTile's header);
  *   · a bucket the payload omits renders as an em dash, never as 0
  *     (lib/format.ts's header);
- *   · nothing on this screen mentions MRR, premium or plans — the mockup has
- *     tiles for all three and no model backs any of them.
+ *   · a denominator is withheld entirely when one of its parts is missing;
+ *   · nothing on this screen mentions MRR, premium, plans, tours or reports —
+ *     the mockup has tiles for all of them and no model backs any of them.
  */
-import type { ReactNode } from "react";
 import { act } from "react";
-import { screen, within } from "@testing-library/dom";
+import { screen, within } from "@testing-library/react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminOverview } from "@lacasa/api-client";
 import { ApiError } from "@lacasa/domain";
+import i18n from "@/i18n";
 import { EM_DASH, formatDateTime } from "@/lib/format";
 import { useOverview } from "@/data/useOverview";
-import { render } from "@/test/render";
+import { renderWithProviders } from "@/test/render";
 import { OverviewScreen } from "../OverviewScreen";
 
 vi.mock("@/data/useOverview", () => ({ useOverview: vi.fn() }));
 
-/**
- * react-router-dom is mocked down to the one export this screen uses. It is
- * hoisted to the WORKSPACE ROOT (there is no copy under
- * apps/admin/node_modules, unlike react/react-dom), so its own
- * `require("react")` resolves the root's React 18 while every file under
- * src/ resolves this app's nested React 19 — and a real `<MemoryRouter>`
- * mounted through this file's (correctly nested) react-dom root dies on
- * `Cannot read properties of null (reading 'useRef')`, verified.
- * `resolve.dedupe` in vitest.config.ts does not reach it: vitest externalises
- * node_modules dependencies and hands them to Node's own resolution, which
- * dedupe never sees. Same class of failure apps/console documents for
- * @testing-library/react and @phosphor-icons/react.
- *
- * The stand-in still renders a real `<a href>`, so "which screen does this
- * tile send an admin to" is asserted against the DOM rather than against a
- * spy on a router call.
- */
-vi.mock("react-router-dom", () => ({
-  Link: ({ to, children, ...rest }: { to: string; children: ReactNode }) => (
-    <a href={to} {...rest}>
-      {children}
-    </a>
-  ),
-}));
-
-/**
- * Every Phosphor glyph, swapped for a bare `<svg>`. Same hoisting split as
- * above, one layer deeper: @phosphor-icons/react builds its elements with the
- * root's React 18 JSX runtime, and React 19's reconciler refuses them with "A
- * React Element from an older version of React was rendered" — also verified,
- * not assumed. Only the icon components are replaced; @/ui/icons' own
- * `IconComponent` type and any non-component export stay real.
- */
-vi.mock("@/ui/icons", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/ui/icons")>();
-  const FakeIcon = (props: Record<string, unknown>) => <svg data-testid="fake-icon" {...props} />;
-  const faked = Object.fromEntries(Object.keys(actual).map((key) => [key, FakeIcon]));
-  return { ...actual, ...faked };
-});
-
 type OverviewQuery = UseQueryResult<AdminOverview, ApiError>;
 
+/**
+ * The reference fixture, reproduced exactly: users 1284 / 1150 / 96 / 34 / 4,
+ * applications 3 / 96 / 12, ads 466 / 412 / 41 / 13, leads 124 with five
+ * buckets, publications 318 / 7 / 24 / 5 (which sum to 354), and two signups.
+ */
 function makeOverview(overrides: Partial<AdminOverview> = {}): AdminOverview {
   return {
     users: { total: 1284, buyers: 1150, agents: 96, coworkers: 34, admins: 4 },
@@ -131,16 +97,28 @@ function mockLoaded(data: AdminOverview = makeOverview()) {
 }
 
 function renderScreen() {
-  return render(<OverviewScreen />);
+  return renderWithProviders(<OverviewScreen />, { withAuth: false });
 }
 
-/** The tile that carries `label`, as the element that owns its border/wash. */
+/** The tile that carries `label`, as the element that owns its frame. */
 function tile(label: string): HTMLElement {
-  const heading = screen.getByText(label);
-  const element = heading.closest("a") ?? heading.parentElement?.parentElement;
+  const element = screen.getByText(label).closest(".stat-tile");
   if (!element) throw new Error(`No tile found for "${label}"`);
   return element as HTMLElement;
 }
+
+/**
+ * Whatever marks the surface's one emphasis treatment. In this build that is a
+ * class on the tile's own element; the assertions that matter are that there
+ * are exactly two of them and that they are these two tiles.
+ */
+function emphasised(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll(".stat-tile--alert"));
+}
+
+beforeAll(async () => {
+  await i18n.changeLanguage("en");
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -189,15 +167,18 @@ describe("OverviewScreen", () => {
     renderScreen();
 
     expect(tile("Pending applications").getAttribute("href")).toBe("/applications");
+    // The audit log is an imperfect fit and deliberately unfiltered — see the
+    // screen's header. What must never happen is a /publications route that
+    // does not exist.
     expect(tile("Failed publications").getAttribute("href")).toBe("/audit");
     expect(screen.getByRole("link", { name: "All users" }).getAttribute("href")).toBe("/users");
   });
 
-  it("spends the amber signal on those two tiles and on nothing else", () => {
+  it("spends the emphasis on those two tiles and on nothing else", () => {
     mockLoaded();
     const { container } = renderScreen();
 
-    const alerted = Array.from(container.querySelectorAll(".border-acc-line"));
+    const alerted = emphasised(container);
     expect(alerted).toHaveLength(2);
     expect(alerted.map((element) => element.textContent?.slice(0, 20))).toEqual([
       expect.stringContaining("Pending applications"),
@@ -214,7 +195,7 @@ describe("OverviewScreen", () => {
     );
     const { container } = renderScreen();
 
-    expect(container.querySelectorAll(".border-acc-line")).toHaveLength(0);
+    expect(emphasised(container)).toHaveLength(0);
     // Still a link, and still says which state it is in — an unlit tile has to
     // read as "nothing is waiting", not as a tile that failed to render.
     expect(tile("Pending applications").getAttribute("href")).toBe("/applications");
@@ -256,11 +237,12 @@ describe("OverviewScreen", () => {
     const row = screen.getByText(first.fullName).closest("tr");
     if (!row) throw new Error("signup row not rendered");
     expect(within(row).getByText(first.email)).toBeTruthy();
+    // Wire role `user` reads as "Buyer": on this surface every row is a user.
     expect(within(row).getByText("Buyer")).toBeTruthy();
     // Asserted against raw textContent rather than getByText: the formatter's
     // "dd.mm.yyyy | hh:mm" carries the locale's own spacing, which
-    // testing-library's default normalizer collapses on the DOM side but not
-    // on the expected side, so the two would never compare equal.
+    // testing-library's default normalizer collapses on the DOM side but not on
+    // the expected side, so the two would never compare equal.
     expect(row.textContent).toContain(formatDateTime(first.createdAt));
 
     expect(screen.getByText("Otabek Yusupov")).toBeTruthy();
@@ -273,6 +255,8 @@ describe("OverviewScreen", () => {
 
     expect(screen.getByText("No accounts yet")).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
+    // The way through to the directory survives the empty case.
+    expect(screen.getByRole("link", { name: "All users" })).toBeTruthy();
     // The aggregates are a separate fact and still render.
     expect(within(tile("Total users")).getByText("1,284")).toBeTruthy();
   });
@@ -313,10 +297,13 @@ describe("OverviewScreen", () => {
     });
     expect(refetch).toHaveBeenCalledTimes(1);
 
+    // A background refetch does not blank the screen: the numbers stay up and
+    // only the button changes.
     mockOverviewQuery({ data: makeOverview(), isFetching: true });
     rerender(<OverviewScreen />);
     const refreshing = screen.getByRole("button", { name: "Refreshing…" });
     expect((refreshing as HTMLButtonElement).disabled).toBe(true);
+    expect(within(tile("Total users")).getByText("1,284")).toBeTruthy();
   });
 
   it("claims nothing the schema cannot back", () => {
